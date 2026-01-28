@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop | DODCH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Desktop Sidebar -->
+    <aside id="desktop-sidebar">
+        <button class="sidebar-close-btn">&times;</button>
+        <div class="sidebar-header">
+            <div class="profile-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <span id="sidebar-user-name">Guest</span>
+            <button id="sidebar-login-btn">Login</button>
+        </div>
+        <nav class="sidebar-menu">
+            <a href="shop.html">Shop</a>
+            <a href="index.html#contact">Contact</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <button id="sidebar-logout-btn" style="display: none;">Logout</button>
+        </div>
+    </aside>
+    <div class="sidebar-overlay"></div>
+
+    <div id="custom-cursor"></div>
+    <div id="scroll-progress"></div>
+
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="preloader-logo">DODCH</div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="scrolled">
+        <div class="nav-container">
+            <div class="hamburger">
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="shop.html" style="color: var(--text-charcoal);">Shop</a></li>
+                
+                <li><a href="index.html#contact" style="color: var(--text-charcoal);">Contact</a></li>
+                <li><a href="#" id="login-btn" style="color: var(--text-charcoal);">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="login-text">Login</span>
+                </a></li>
+                <li class="nav-search-item">
+                    <div class="search-container">
+                        <input type="text" id="navbar-search-input" class="search-input" placeholder="Search...">
+                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                    </div>
+                </li>
+                <li><a href="#" id="cart-toggle" style="color: var(--text-charcoal);">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    <span id="cart-count-badge">0</span>
+                </a></li>
+            </ul>
+            <a href="shop.html" class="logo" style="color: var(--text-charcoal);">DODCH</a>
+        </div>
+    </nav>
+
+    <main>
+
+    <header class="page-header">
+        <h1 class="reveal">The Collection</h1>
+        <p class="reveal">Small-batch. Hand-poured. Mediterranean soul.</p>
+    </header>
+
+    <div class="container shop-layout">
+        <!-- Product Grid -->
+        <section class="shop-grid reveal">
+            <!-- Product 1 -->
+            <div class="product-card" data-category="hair-care" data-price="35">
+                <div class="product-image-wrapper">
+                    <a href="product.html"><img src="IMG_3256.PNG" alt="Glass Glow Shampoo" class="product-card-img"></a>
+                    <button class="quick-view-btn" data-id="glass-glow-shampoo" data-title="Glass Glow Shampoo" data-price="35.00" data-img="IMG_3256.PNG" data-desc="The Golden Standard of Mediterranean Hair. Infused with rare Prickly Pear Seed Oil for a mirror-like Glass Glow.">Quick View</button>
+                </div>
+                <div class="product-card-info">
+                    <a href="product.html"><h3 class="product-card-title">Glass Glow Shampoo</h3></a>
+                    <p class="product-card-price">From $35.00</p>
+                </div>
+            </div>
+
+            <!-- Product 2 (Demo) -->
+            <div class="product-card" data-category="treatments" data-price="85">
+                <div class="product-image-wrapper">
+                    <a href="product.html"><img src="IMG_3256.PNG" alt="Prickly Pear Pure Oil" class="product-card-img" style="filter: hue-rotate(15deg);"></a>
+                    <button class="quick-view-btn" data-id="pure-oil" data-title="Prickly Pear Pure Oil" data-price="85.00" data-img="IMG_3256.PNG" data-desc="100% Organic Cold-Pressed Oil. The ultimate elixir for hair and skin repair.">Quick View</button>
+                </div>
+                <div class="product-card-info">
+                    <a href="product.html"><h3 class="product-card-title">Prickly Pear Pure Oil</h3></a>
+                    <p class="product-card-price">$85.00</p>
+                </div>
+            </div>
+
+            <!-- Product 3 (Demo) -->
+            <div class="product-card" data-category="treatments" data-price="55">
+                <div class="product-image-wrapper">
+                    <a href="product.html"><img src="IMG_3256.PNG" alt="Silk & Wheat Hair Mask" class="product-card-img" style="filter: sepia(0.2);"></a>
+                    <button class="quick-view-btn" data-id="hair-mask" data-title="Silk & Wheat Hair Mask" data-price="55.00" data-img="IMG_3256.PNG" data-desc="Deep conditioning mask with hydrolyzed silk proteins for instant glass-like shine.">Quick View</button>
+                </div>
+                <div class="product-card-info">
+                    <a href="product.html"><h3 class="product-card-title">Silk & Wheat Hair Mask</h3></a>
+                    <p class="product-card-price">$55.00</p>
+                </div>
+            </div>
+
+            <!-- Product 4 (Demo) -->
+            <div class="product-card" data-category="sets" data-price="120">
+                <div class="product-image-wrapper">
+                    <a href="product.html"><img src="IMG_3256.PNG" alt="The Ritual Set" class="product-card-img" style="filter: contrast(1.1);"></a>
+                    <button class="quick-view-btn" data-id="ritual-set" data-title="The Ritual Set" data-price="120.00" data-img="IMG_3256.PNG" data-desc="The complete collection: Shampoo, Mask, and Oil. The full Mediterranean experience.">Quick View</button>
+                </div>
+                <div class="product-card-info">
+                    <a href="product.html"><h3 class="product-card-title">The Ritual Set</h3></a>
+                    <p class="product-card-price">$120.00</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="brand-col">
+                    <h4>DODCH</h4>
+                    <p>Hand-poured in Tunisia following strict artisanal Batch Records.</p>
+                </div>
+                <div class="footer-col newsletter-col">
+                    <h4>Join the Inner Circle</h4>
+                    <p>Subscribe for early access to Batch #002.</p>
+                    <form id="newsletter-form">
+                        <input type="email" placeholder="Your email address" required>
+                        <button type="submit">Subscribe</button>
+                    </form>
+                </div>
+                <div class="footer-col">
+                    <p class="disclaimer">This product enhances, moisturizes, and beautifies.</p>
+                </div>
+            </div>
+            <div class="copyright">
+                &copy; 2026 DODCH. All Rights Reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Cart Drawer -->
+    <div id="cart-overlay"></div>
+    <div id="cart-drawer">
+        <div class="cart-header">
+            <h3>Your Cart</h3>
+            <button id="close-cart-btn" class="close-btn">&times;</button>
+        </div>
+        <div class="cart-body" id="cart-items-container">
+            <div class="cart-empty">
+                <p>Your cart is empty.</p>
+            </div>
+        </div>
+        <div class="cart-footer">
+            <div class="subtotal-row">
+                <strong>Subtotal</strong>
+                <span id="cart-subtotal">$0.00</span>
+            </div>
+            <a href="checkout.html" class="cta-button checkout-btn">Proceed to Checkout</a>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Order | DODCH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Desktop Sidebar -->
+    <aside id="desktop-sidebar">
+        <button class="sidebar-close-btn">&times;</button>
+        <div class="sidebar-header">
+            <div class="profile-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <span id="sidebar-user-name">Guest</span>
+            <button id="sidebar-login-btn">Login</button>
+        </div>
+        <nav class="sidebar-menu">
+            <a href="shop.html">Shop</a>
+            <a href="index.html#contact">Contact</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <button id="sidebar-logout-btn" style="display: none;">Logout</button>
+        </div>
+    </aside>
+    <div class="sidebar-overlay"></div>
+
+    <div id="custom-cursor"></div>
+    <div id="scroll-progress"></div>
+
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="preloader-logo">DODCH</div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="scrolled">
+        <div class="nav-container">
+            <div class="hamburger">
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="shop.html" style="color: var(--text-charcoal);">Shop</a></li>
+                <li><a href="index.html#contact" style="color: var(--text-charcoal);">Contact</a></li>
+                <li><a href="#" id="login-btn" style="color: var(--text-charcoal);"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="login-text">Login</span>
+                </a></li>
+                <li class="nav-search-item">
+                    <div class="search-container">
+                        <input type="text" id="navbar-search-input" class="search-input" placeholder="Search...">
+                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                    </div>
+                </li>
+                <li><a href="#" id="cart-toggle" style="color: var(--text-charcoal);">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    <span id="cart-count-badge">0</span>
+                </a></li>
+            </ul>
+            <a href="shop.html" class="logo" style="color: var(--text-charcoal);">DODCH</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="account-container" id="tracking-info">
+            <div class="account-header reveal active">
+                <h1>Track Your Order</h1>
+                <p>Order #<span id="tracking-order-id">...</span></p>
+            </div>
+    
+            <div class="tracking-details-section reveal active">
+                <h2>Tracking Number: <span id="tracking-number">...</span></h2>
+                <div class="tracking-timeline">
+                    <!-- Timeline items are static for this demo -->
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4>Order Shipped</h4>
+                            <p>Your order has left our facility.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4>In Transit</h4>
+                            <p>Package is currently with the carrier.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4>Order Processed</h4>
+                            <p>Your order has been processed and is awaiting shipment.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4>Order Placed</h4>
+                            <p>We have received your order.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Smart Footer will be injected by script.js -->
+    <footer></footer>
+
+    <!-- Cart Drawer -->
+    <div id="cart-overlay"></div>
+    <div id="cart-drawer">
+        <!-- Cart content is managed by script.js -->
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>

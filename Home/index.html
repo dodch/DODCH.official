@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DODCH | The Golden Standard of Mediterranean Hair</title>
+    
+    <!-- Google Fonts: Playfair Display (Serif) & Montserrat (Sans-Serif) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Desktop Sidebar -->
+    <aside id="desktop-sidebar">
+        <button class="sidebar-close-btn">&times;</button>
+        <div class="sidebar-header">
+            <div class="profile-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <span id="sidebar-user-name">Guest</span>
+            <button id="sidebar-login-btn">Login</button>
+        </div>
+        <nav class="sidebar-menu">
+            <a href="shop.html">Shop</a>
+            <a href="index.html#contact">Contact</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <button id="sidebar-logout-btn" style="display: none;">Logout</button>
+        </div>
+    </aside>
+    <div class="sidebar-overlay"></div>
+
+    <!-- Custom Cursor -->
+    <div id="custom-cursor"></div>
+
+    <!-- Scroll Progress Bar -->
+    <div id="scroll-progress"></div>
+
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="preloader-logo">DODCH</div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="nav-container">
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="shop.html">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                    Shop
+                </a></li>
+                
+                <li><a href="#contact">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    Contact
+                </a></li>
+                <li><a href="#" id="login-btn">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span class="login-text">Login</span>
+                </a></li>
+                <li class="nav-search-item">
+                    <div class="search-container">
+                        <input type="text" id="navbar-search-input" class="search-input" placeholder="Search...">
+                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                    </div>
+                </li>
+                <li><a href="#" id="cart-toggle">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    <span id="cart-count-badge">0</span>
+                </a></li>
+            </ul>
+            <a href="shop.html" class="logo">DODCH</a>
+        </div>
+    </nav>
+
+    <main>
+
+    <!-- Hero Section -->
+    <header id="hero">
+        <div class="hero-bg-parallax">
+            <div class="hero-bg"></div>
+        </div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content reveal">
+            <h1>The Golden Standard of Mediterranean Hair.</h1>
+            <p class="sub-headline">Experience the "Solar-Floral" journey. With rare Prickly Pear Seed Oil.</p>
+        </div>
+        <div class="hero-cta-wrapper reveal">
+            <a href="product.html" class="cta-button">CLAIM YOUR BOTTLE</a>
+        </div>
+    </header>
+
+    <!-- Clean Promise Section -->
+    <section id="clean-promise" class="section-padding bg-white">
+        <div class="container">
+            <div class="grid-4">
+                <div class="promise-item reveal">
+                    <svg class="promise-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 0 0-8.6-4.95A10 10 0 0 1 12 2a10 10 0 0 1 8.6 15.05A10 10 0 0 0 12 22z"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+                    <h4>Zero Sulfates</h4>
+                    <p>No harsh stripping agents.</p>
+                </div>
+                <div class="promise-item reveal">
+                    <svg class="promise-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8a13 13 0 0 1 13-13 13 13 0 0 1 5.68 1.68"></path><line x1="2" y1="22" x2="22" y2="2"></line></svg>
+                    <h4>Zero Silicones</h4>
+                    <p>Pure shine without the heavy buildup.</p>
+                </div>
+                <div class="promise-item reveal">
+                    <svg class="promise-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+                    <h4>Zero Parabens</h4>
+                    <p>Preserved with care for your long-term health.</p>
+                </div>
+                <div class="promise-item reveal">
+                    <svg class="promise-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10a4 4 0 0 1-8 0"></path><path d="M12 14v-4"></path><path d="M12 2a10 10 0 0 0-10 10c0 5.52 4.48 10 10 10s10-4.48 10-10c0-5.52-4.48-10-10-10z"></path><path d="M7 19c-2.5-1.5-4-4-4-6.5"></path><path d="M17 19c2.5-1.5 4-4 4-6.5"></path></svg>
+                    <h4>Cruelty-Free</h4>
+                    <p>Never tested on animals.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Masterpiece Section -->
+    <section id="masterpiece" class="section-padding">
+        <div class="container">
+            <h2 class="section-title reveal">The Elixir of <span class="counter" data-target="10000">10,000</span> Seeds</h2>
+            
+            <div class="masterpiece-intro reveal">
+                <h3>Why it’s a Masterpiece</h3>
+                <p>Most shampoos are 90% water and cheap detergents. Glass Glow is different. It is a high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil.</p>
+                <p>At DODCH, we don’t believe in "trace amounts." We believe in results. To create the 10ml of pure oil used in our small-batch production, it required 10 kilograms of hand-selected fruit. Every bottle you hold contains the life-force of over 2,500 seeds, cold-pressed to preserve every drop of Vitamin E and Omega-6.</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Three Pillars Section -->
+    <section id="pillars" class="section-padding">
+        <div class="container">
+            <h2 class="section-title reveal">The Trinity</h2>
+            <div class="grid-3">
+                <!-- Column 1 -->
+                <div class="pillar-card reveal">
+                    <div class="pillar-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><circle cx="21" cy="6" r="2"></circle><circle cx="3" cy="10" r="2"></circle></svg>
+                    </div>
+                    <h3>The Marshmallow Foam</h3>
+                    <p>Powered by pure Sodium Cocoyl Isethionate (SCI). Experience a dense, cloud-like lather that cleanses deeply without stripping, respecting your hair’s natural pH of 5.5.</p>
+                </div>
+                <!-- Column 2 -->
+                <div class="pillar-card reveal">
+                    <div class="pillar-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#goldShimmer)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                            <defs>
+                                <linearGradient id="goldShimmer" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#D4AF37" />
+                                    <stop offset="50%" stop-color="#FFECB3" />
+                                    <stop offset="100%" stop-color="#D4AF37" />
+                                    <animate attributeName="x1" values="-150%; 150%" dur="3s" repeatCount="indefinite" />
+                                    <animate attributeName="x2" values="-50%; 250%" dur="3s" repeatCount="indefinite" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                        </svg>
+                    </div>
+                    <h3>The Liquid Gold</h3>
+                    <p>(Prickly Pear Seed Oil): With double the Vitamin E of Argan oil, this "dry oil" doesn't just sit on the surface. It penetrates the hair cortex to repair damage from the inside out, creating a mirror-like "Glass Glow" that reflects light from every angle.</p>
+                </div>
+                <!-- Column 3 -->
+                <div class="pillar-card reveal">
+                    <div class="pillar-icon">
+                        <svg class="bloom-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                            <g class="petals">
+                                <path d="M12 2c0 0-2 5-2 10s2 10 2 10 2-5 2-10-2-10-2-10z" />
+                                <path d="M12 2c0 0-2 5-2 10s2 10 2 10 2-5 2-10-2-10-2-10z" transform="rotate(45 12 12)" />
+                                <path d="M12 2c0 0-2 5-2 10s2 10 2 10 2-5 2-10-2-10-2-10z" transform="rotate(90 12 12)" />
+                                <path d="M12 2c0 0-2 5-2 10s2 10 2 10 2-5 2-10-2-10-2-10z" transform="rotate(135 12 12)" />
+                            </g>
+                            <circle cx="12" cy="12" r="2" />
+                        </svg>
+                    </div>
+                    <h3>The Scent Journey</h3>
+                    <p>A sophisticated "Solar-Floral" signature. The scent opens with the fresh, clean notes of Tunisian Orange Blossom (Néroli) and settles into a warm, lingering heart of Tropical Vanilla and Coconut.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Ritual Section -->
+    <section id="ritual" class="section-padding">
+        <div class="container">
+            <h2 class="section-title reveal">The Ritual</h2>
+            <div class="ritual-steps">
+                <div class="ritual-step reveal">
+                    <h4>1. The Dosage</h4>
+                    <p>Start with a coin-sized amount. For long or thick hair, use two full pumps.</p>
+                </div>
+                <div class="ritual-step reveal">
+                    <h4>2. The Activation</h4>
+                    <p>Rub the cream between your palms with a splash of water to activate the "Marshmallow Foam" before applying to the roots.</p>
+                </div>
+                <div class="ritual-step reveal">
+                    <h4>3. The Rinse</h4>
+                    <p>Massage into the scalp, let the "Solar-Floral" scent bloom for 60 seconds, and rinse with cool water to lock in the Prickly Pear shine.</p>
+                </div>
+            </div>
+            <div class="pro-tip-box reveal">
+                <h4>Founder’s Pro-Tip: The Double Wash</h4>
+                <p>"Because DODCH is sulfate-free and rich in Prickly Pear oil, the first wash focuses on breaking down oils, while the second wash creates the signature 'Marshmallow Foam.' If you don't get a big lather on the first try, don't add more product—just add more water, rinse, and repeat with a single pump. Your hair will stay clean and hydrated for longer."</p>
+            </div>
+            <div class="concentration-note reveal">
+                <p><strong>Concentrated Excellence:</strong> Because we use high-grade SCI and no cheap fillers, a little goes a long way. Use sparingly.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- The First Try Experience -->
+    <section id="experience" class="section-padding bg-white">
+        <div class="container">
+            <h2 class="section-title reveal">The Experience</h2>
+            <div class="experience-grid">
+                <!-- Card 1: Texture -->
+                <div class="experience-card reveal">
+                    <div class="experience-image">
+                        <img src="IMG_3256.PNG" alt="Pearlescent shampoo texture in hand">
+                    </div>
+                    <div class="experience-content">
+                        <h3>The Texture</h3>
+                        <p>The first thing you'll notice is the Pearlescent Texture—a thick, shimmering cream.</p>
+                    </div>
+                </div>
+                <!-- Card 2: Bloom -->
+                <div class="experience-card reveal">
+                    <div class="experience-image">
+                        <img src="IMG_3257.PNG" alt="Lather and foam blooming from the shampoo">
+                    </div>
+                    <div class="experience-content">
+                        <h3>The Bloom</h3>
+                        <p>As the hot water hits, the Orange Blossom 'blooms' in your shower.</p>
+                    </div>
+                </div>
+                <!-- Card 3: Aftermath -->
+                <div class="experience-card reveal">
+                    <div class="experience-image">
+                        <img src="IMG_3258.jpg" alt="Smooth, shiny hair after washing">
+                    </div>
+                    <div class="experience-content">
+                        <h3>The Aftermath</h3>
+                        <p>Hair that isn't just 'fixed,' but transformed. Strong, bouncy, and so smooth your fingers will glide through it effortlessly.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ingredient Transparency Section -->
+
+    <section id="ingredients" class="section-padding">
+        <div class="container">
+            <h2 class="section-title reveal">The Architecture of <span class="radiance-glow">Radiance</span></h2>
+            <p class="section-subheading reveal">
+                At DODCH, we believe repair should never feel heavy. Our formula combines rare Prickly Pear Seed Oil with a high-precision, dual-protein blend of Hydrolyzed Wheat and Pure Silk to transform hair from the inside out.
+            </p>
+            <div class="dual-action-grid">
+                <div class="action-card reveal">
+                    <div class="action-card-inner">
+                        <div class="action-card-front">
+                            <h4>Prickly Pear Seed Oil (The Desert Gold)</h4>
+                            <p>The heart of our formula. Packed with Vitamin E and Omega-6, it deeply nourishes and seals the cuticle without the greasy weight of traditional oils.</p>
+                        </div>
+                        <div class="action-card-back">
+                            <h4>Scientific Insight</h4>
+                            <p>High in Linoleic Acid (Omega-6), which reinforces the hair's lipid barrier, and Tocopherols (Vitamin E), which protect against oxidative stress.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-card reveal">
+                    <div class="action-card-inner">
+                        <div class="action-card-front">
+                            <h4>Wheat Protein (Internal Resilience)</h4>
+                            <p>These plant-based micro-proteins penetrate the hair’s inner cortex. They act like structural "bricks," plumping the hair from within to restore volume and prevent breakage.</p>
+                        </div>
+                        <div class="action-card-back">
+                            <h4>Scientific Insight</h4>
+                            <p>Composed of low molecular weight proteins that can penetrate the hair shaft, providing substantive repair and increasing moisture retention.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-card reveal">
+                    <div class="action-card-inner">
+                        <div class="action-card-front">
+                            <h4>Silk Protein (The Glass Shield)</h4>
+                            <p>Silk possesses the highest affinity for hair keratin. It weaves a microscopic, breathable film over the cuticle, locking in the Prickly Pear Seed Oil and reflecting light for a mirror-like "Glass Glow."</p>
+                        </div>
+                        <div class="action-card-back">
+                            <h4>Scientific Insight</h4>
+                            <p>Forms a crystalline protective barrier due to its high affinity with keratin. Its molecular structure reflects light for exceptional gloss.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h3 class="inci-title reveal">Full Ingredient Transparency</h3>
+            <div class="inci-list reveal">
+                <p class="inci-text">
+                    <span data-tooltip="Water">Aqua</span>, <span data-tooltip="Gentle Coconut-derived cleanser.">Sodium Cocoyl Isethionate (SCI)</span>, <span data-tooltip="A fatty alcohol that conditions and softens hair.">Cetyl Alcohol (Lanette 16)</span>, <span data-tooltip="Pure Tunisian Prickly Pear Seed Oil.">Opuntia Ficus-Indica (Prickly Pear) Seed Oil</span>, <span data-tooltip="Plant-based micro-proteins for internal resilience and volume.">Hydrolyzed Wheat Protein</span>, <span data-tooltip="Creates a breathable, light-reflecting shield for a 'Glass Glow'.">Hydrolyzed Silk</span>, <span data-tooltip="Pro-Vitamin B5 for strength.">Panthenol (Pro-Vitamin B5)</span>, <span data-tooltip="Our signature 'Solar-Floral' scent.">Parfum (Bespoke Fragrance)</span>, <span data-tooltip="A gentle, eco-certified preservative to keep the product fresh.">Benzyl Alcohol & Dehydroacetic Acid (Cosgard Preservative)</span>, <span data-tooltip="Balances the formula's pH to match your hair's natural acidity.">Citric Acid</span>.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Founder's Note -->
+    <section id="story" class="section-padding">
+        <div class="container reveal">
+            <blockquote class="founders-note">
+                "DODCH was born from a desire to merge Tunisian heritage with modern science. Every bottle in Batch #001 is pH-balanced and hand-poured with the same precision as a fine perfume. We don't just wash hair; we treat it like the treasure it is."
+            </blockquote>
+            <p class="batch-info">
+                <svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                Batch #001 — Limited to 15 Bottles
+            </p>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="section-padding bg-white">
+        <div class="container">
+            <h2 class="section-title reveal">What Our First Customers Say</h2>
+            <div class="testimonial-slider-container reveal">
+                <div class="testimonial-slider-wrapper">
+                    <!-- Slide 1 -->
+                    <div class="testimonial-slide">
+                        <div class="testimonial-stars">
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        </div>
+                        <p class="testimonial-text">"My hair has never felt so soft and looked so shiny. The scent is absolutely divine and lasts for days. I'm throwing out all my other shampoos. This is it."</p>
+                        <p class="testimonial-author">- Sarah K.</p>
+                    </div>
+                    <!-- Slide 2 -->
+                    <div class="testimonial-slide">
+                        <div class="testimonial-stars">
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        </div>
+                        <p class="testimonial-text">"I was skeptical about the 'marshmallow foam' but it's real! A tiny amount creates such a rich lather. My scalp feels clean but not stripped. Worth every penny."</p>
+                        <p class="testimonial-author">- Fatima B.</p>
+                    </div>
+                    <!-- Slide 3 -->
+                    <div class="testimonial-slide">
+                        <div class="testimonial-stars">
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        </div>
+                        <p class="testimonial-text">"The 'slip' is incredible. I have curly, tangle-prone hair and I could detangle with just my fingers after rinsing. This is a game-changer for my routine."</p>
+                        <p class="testimonial-author">- Chloe L.</p>
+                    </div>
+                </div>
+                <button class="slider-nav prev">&lt;</button>
+                <button class="slider-nav next">&gt;</button>
+                <div class="slider-pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="section-padding">
+        <div class="container">
+            <h2 class="section-title reveal">Get in Touch</h2>
+            <div class="contact-wrapper reveal">
+                <div class="contact-info">
+                    <h3>We'd love to hear from you.</h3>
+                    <p>Whether you have a question about our ingredients, your order, or just want to share your hair journey, we're here.</p>
+                    <div class="contact-details">
+                        <div class="contact-detail-item">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                            <span>hello@dodch.com</span>
+                        </div>
+                    </div>
+                    <div class="social-links">
+                        <a href="#" class="social-icon" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                        </a>
+                        <a href="#" class="social-icon" aria-label="TikTok" target="_blank" rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg>
+                        </a>
+                        <a href="https://www.facebook.com/profile.php?id=61586824002342" class="social-icon" aria-label="Facebook" target="_blank" rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="contact-form-container">
+                    <form id="contact-form">
+                        <div class="form-group">
+                            <label for="contact-name">Name</label>
+                            <input type="text" id="contact-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="contact-email">Email</label>
+                            <input type="email" id="contact-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="contact-message">Message</label>
+                            <textarea id="contact-message" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="cta-button contact-submit-btn">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    </main>
+
+    <!-- Footer / Legal -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="brand-col">
+                    <h4>DODCH</h4>
+                    <p>Hand-poured in Tunisia following strict artisanal Batch Records.</p>
+                </div>
+                <div class="footer-col newsletter-col">
+                    <h4>Join the Inner Circle</h4>
+                    <p>Subscribe for early access to Batch #002.</p>
+                    <form id="newsletter-form">
+                        <input type="email" placeholder="Your email address" required>
+                        <button type="submit">Subscribe</button>
+                    </form>
+                </div>
+                <div class="footer-col">
+                    <p class="disclaimer">This product enhances, moisturizes, and beautifies. It does not claim to cure or prevent medical conditions.</p>
+                </div>
+            </div>
+            <div class="copyright">
+                &copy; 2026 DODCH. All Rights Reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Cart Drawer -->
+    <div id="cart-overlay"></div>
+    <div id="cart-drawer">
+        <div class="cart-header">
+            <h3>Your Cart</h3>
+            <button id="close-cart-btn" class="close-btn">&times;</button>
+        </div>
+        <div class="cart-body" id="cart-items-container">
+            <div class="cart-empty">
+                <p>Your cart is empty.</p>
+            </div>
+        </div>
+        <div class="cart-footer">
+            <div class="subtotal-row">
+                <strong>Subtotal</strong>
+                <span id="cart-subtotal">$0.00</span>
+            </div>
+            <a href="checkout.html" class="cta-button checkout-btn">Proceed to Checkout</a>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
