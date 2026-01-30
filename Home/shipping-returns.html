@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipping & Returns | DODCH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav id="navbar" class="scrolled">
+        <div class="nav-container">
+            <div class="hamburger">
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="shop.html" style="color: var(--text-charcoal);">Shop</a></li>
+                <li><a href="#contact" style="color: var(--text-charcoal);">Contact</a></li>
+                <li><a href="#" id="login-btn" style="color: var(--text-charcoal);">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="login-text">Login</span>
+                </a></li>
+                <li class="nav-search-item">
+                    <div class="search-container">
+                        <input type="text" id="navbar-search-input" class="search-input" placeholder="Search...">
+                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                    </div>
+                </li>
+                <li><a href="#" id="cart-toggle" style="color: var(--text-charcoal);">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    <span id="cart-count-badge">0</span>
+                </a></li>
+            </ul>
+            <a href="index.html" class="logo" style="color: var(--text-charcoal);">DODCH</a>
+        </div>
+    </nav>
+
+    <main>
+        <header class="page-header">
+            <h1 class="reveal">Shipping & Returns</h1>
+        </header>
+
+        <section class="section-padding bg-white">
+            <div class="container" style="max-width: 800px;">
+                <div class="reveal">
+                    <h2 style="font-family: var(--font-serif); margin-bottom: 1.5rem; color: var(--accent-gold);">Shipping, Logistics & Quality Assurance</h2>
+
+                    <h3 style="font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">Distribution</h3>
+                    <p style="margin-bottom: 2rem;">
+                        We offer insured logistics services across the Tunisian Republic. Orders are typically dispatched within 24–48 hours of confirmation.
+                    </p>
+
+                    <h3 style="font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">Climatic Preservation</h3>
+                    <p style="margin-bottom: 2rem;">
+                        Our products contain high-purity natural lipids. While we formulate for stability, DODCH is not responsible for products compromised by improper storage (exposure to temperatures above 35°C or direct sunlight) following delivery.
+                    </p>
+
+                    <h3 style="font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">Sanitary Returns</h3>
+                    <p style="margin-bottom: 2rem;">
+                        In accordance with Article 37 of the Tunisian Consumer Protection Law, cosmetic products cannot be returned or exchanged once the safety seal is broken or the product has been opened. This policy ensures the highest standard of hygiene for all our clients.
+                    </p>
+
+                    <h3 style="font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">Damage Claims</h3>
+                    <p style="margin-bottom: 2rem;">
+                        In the rare event of a shipping error or physical damage upon arrival, claims must be submitted with photographic evidence within 48 hours of receipt.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer></footer>
+    <div id="cart-overlay"></div>
+    <div id="cart-drawer"><div class="cart-header"><h3>Your Cart</h3><button id="close-cart-btn" class="close-btn">&times;</button></div><div class="cart-body" id="cart-items-container"></div><div class="cart-footer"><div class="subtotal-row"><strong>Subtotal</strong><span id="cart-subtotal">$0.00</span></div><a href="checkout.html" class="cta-button checkout-btn">Proceed to Checkout</a></div></div>
+    <script type="module" src="script.js"></script>
+</body>
+</html>

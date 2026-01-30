@@ -1,16 +1,16 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBxAMaFnEznO-reO5KgUYux6XTjQiT0nUk",
-  authDomain: "dodch-f766d.firebaseapp.com",
-  projectId: "dodch-f766d",
-  storageBucket: "dodch-f766d.appspot.com",
-  messagingSenderId: "806139075119",
-  appId: "1:806139075119:web:1ad61826e445566734c4da",
-  measurementId: "G-F0F4LL6PHV"
+  apiKey: "AIzaSyBTz-7xkhelFZZUgAX6Qdc_sppiRzLDfhA",
+  authDomain: "dodch-96b15.firebaseapp.com",
+  projectId: "dodch-96b15",
+  storageBucket: "dodch-96b15.appspot.com",
+  messagingSenderId: "253879203711",
+  appId: "1:253879203711:web:879893218eb835e1bc0c4a",
+  measurementId: "G-4WJBPKNT1H"
 };
 
 // Initialize Firebase
@@ -21,7 +21,72 @@ const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 document.addEventListener('DOMContentLoaded', () => {
+    const initialHash = window.location.hash;
     
+    // --- Custom UI Helpers (Toast & Confirm) ---
+    window.showToast = (message, type = 'info') => {
+        const toast = document.createElement('div');
+        toast.className = `custom-toast ${type}`;
+        
+        let icon = '';
+        if (type === 'success') icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        else if (type === 'error') icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+        else icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+
+        toast.innerHTML = `${icon} <span>${message}</span>`;
+        document.body.appendChild(toast);
+
+        // Trigger animation
+        setTimeout(() => toast.classList.add('active'), 10);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('active');
+            setTimeout(() => toast.remove(), 400);
+        }, 3000);
+    };
+
+    window.showConfirm = (message, title = "Confirm Action") => {
+        return new Promise((resolve) => {
+            document.body.style.overflow = 'hidden'; // Lock scroll
+            const overlay = document.createElement('div');
+            overlay.className = 'confirm-overlay';
+            overlay.innerHTML = `
+                <div class="confirm-box">
+                    <h3 class="confirm-title">${title}</h3>
+                    <p class="confirm-message">${message}</p>
+                    <div class="confirm-actions">
+                        <button class="confirm-btn cancel">Cancel</button>
+                        <button class="confirm-btn confirm">Confirm</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            // Trigger animation
+            setTimeout(() => overlay.classList.add('active'), 10);
+
+            const close = (result) => {
+                overlay.classList.remove('active');
+                setTimeout(() => overlay.remove(), 300);
+                // Only restore scroll if no other modals are active
+                if (!document.querySelector('#cart-drawer.active, #desktop-sidebar.active, #qv-modal.active, #contact-popup.active')) {
+                    document.body.style.overflow = '';
+                }
+                resolve(result);
+            };
+
+            overlay.querySelector('.confirm-btn.confirm').addEventListener('click', () => close(true));
+            overlay.querySelector('.confirm-btn.cancel').addEventListener('click', () => close(false));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) close(false);
+            });
+        });
+    };
+
+    // Override native alert for consistency (optional, but good for catching stray alerts)
+    // window.alert = (msg) => window.showToast(msg);
+
     // Preloader Logic
     window.addEventListener('load', () => {
         const preloader = document.getElementById('preloader');
@@ -58,6 +123,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const promiseIcons = document.querySelectorAll('.promise-icon');
     const progressBar = document.getElementById('scroll-progress');
     
+    const updateNavbar = () => {
+        const scrollY = window.scrollY;
+        if (hero) {
+            // Home Page: Transparent/White at top, Solid/Dark when scrolled
+            if (scrollY > 50) {
+                navbar.classList.add('scrolled');
+                navbar.classList.remove('text-dark');
+            } else {
+                navbar.classList.remove('scrolled');
+                navbar.classList.remove('text-dark');
+            }
+        } else {
+            // Other Pages: Transparent/Dark at top, Solid/Dark when scrolled
+            if (scrollY > 50) {
+                navbar.classList.add('scrolled');
+                navbar.classList.remove('text-dark');
+            } else {
+                navbar.classList.remove('scrolled');
+                navbar.classList.add('text-dark');
+            }
+        }
+    };
+    
     // 2. Scroll Reveal Animation
     const revealElements = document.querySelectorAll('.reveal');
 
@@ -77,12 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', () => {
         const scrollY = window.scrollY;
 
-        // Navbar Logic
-        if (window.scrollY > 50) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
-        }
+        updateNavbar();
 
         // Hero Fade to Black & Blur Logic
         if (hero && heroOverlay) {
@@ -158,15 +241,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Trigger once on load to show hero content immediately
+    updateNavbar();
     revealOnScroll();
 
     // 3. Mobile Sidebar Toggle
     const hamburger = document.querySelector('.hamburger');
     const sidebar = document.getElementById('desktop-sidebar');
+    
+    // Add class to body if sidebar exists (for desktop layout spacing)
+    if (sidebar) {
+        document.body.classList.add('has-sidebar');
+    }
+
     const sidebarOverlay = document.querySelector('.sidebar-overlay');
     const sidebarCloseBtn = document.querySelector('.sidebar-close-btn');
 
     const closeSidebar = () => {
+        document.body.style.overflow = ''; // Restore scroll
         if (sidebar) sidebar.classList.remove('active');
         if (sidebarOverlay) sidebarOverlay.classList.remove('active');
         if (hamburger) hamburger.classList.remove('active');
@@ -174,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const openSidebar = () => {
+        document.body.style.overflow = 'hidden'; // Lock scroll
         if (sidebar) sidebar.classList.add('active');
         if (sidebarOverlay) sidebarOverlay.classList.add('active');
         if (hamburger) hamburger.classList.add('active');
@@ -431,32 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.title = docTitle;
     });
 
-    // 8. Custom Cursor Logic
-    const cursor = document.getElementById('custom-cursor');
-    
-    // Only run on devices that support hover (desktop)
-    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches && cursor) {
-        document.addEventListener('mousemove', (e) => {
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
-        });
-
-        // Add hover effect for interactive elements
-        const interactiveSelectors = 'a, button, .slider-nav, .pagination-dot, input, textarea, .pillar-card, .experience-card, .promise-item';
-        
-        document.addEventListener('mouseover', (e) => {
-            if (e.target.closest(interactiveSelectors)) {
-                cursor.classList.add('hovered');
-            } else {
-                cursor.classList.remove('hovered');
-            }
-        });
-        
-        // Hide cursor when leaving window
-        document.addEventListener('mouseleave', () => cursor.style.opacity = '0');
-        document.addEventListener('mouseenter', () => cursor.style.opacity = '1');
-    }
-
     // 9. Magnetic Button Effect
     const heroCTA = document.querySelector('#hero .cta-button');
     const heroSection = document.getElementById('hero');
@@ -516,8 +582,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- PRODUCT CATALOG (Single Source of Truth) ---
+    const productCatalog = {
+        'glass-glow-shampoo': {
+            name: "Glass Glow Shampoo",
+            subtitle: "The Elixir of 10,000 Seeds",
+            price: "35.00",
+            image: "IMG_3256.PNG",
+            description: "A high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil. Experience the 'Solar-Floral' journey with notes of Tunisian Orange Blossom and Tropical Vanilla.",
+            style: "" // CSS filter if needed
+        },
+        'pure-oil': {
+            name: "Prickly Pear Pure Oil",
+            subtitle: "100% Organic Cold-Pressed Elixir",
+            price: "85.00",
+            image: "IMG_3256.PNG",
+            description: "The ultimate luxury for hair and skin. Sourced from the finest seeds in Tunisia, this dry oil penetrates instantly to repair, nourish, and add a mirror-like shine without any greasy residue.",
+            style: "filter: hue-rotate(15deg);"
+        },
+        'hair-mask': {
+            name: "Silk & Wheat Hair Mask",
+            subtitle: "Deep Repair & Glass Shine",
+            price: "55.00",
+            image: "IMG_3256.PNG",
+            description: "Infused with hydrolyzed silk proteins and wheat amino acids. This mask reconstructs the hair fiber from within while creating a breathable shield on the surface for instant manageability.",
+            style: "filter: sepia(0.2);"
+        },
+        'ritual-set': {
+            name: "The Ritual Set",
+            subtitle: "The Complete Mediterranean Experience",
+            price: "120.00",
+            image: "IMG_3256.PNG",
+            description: "The full collection: Glass Glow Shampoo, Silk & Wheat Mask, and the Pure Oil. Designed to work in harmony for the ultimate hair transformation.",
+            style: "filter: contrast(1.1);"
+        }
+    };
+
     // 11. Product Page & Cart Logic
+    const CART_VERSION = 3; // Increment to force reset and clear stale/buggy data
     let cart = JSON.parse(localStorage.getItem('dodch_cart')) || [];
+    const storedVersion = parseInt(localStorage.getItem('dodch_cart_version') || '0');
+
+    // Force clear cart if version is old to remove any "Gloss Shampoo" bugs or stale data
+    if (storedVersion < CART_VERSION) {
+        console.warn("Cart version mismatch. Clearing old data to ensure accuracy.");
+        cart = [];
+        localStorage.setItem('dodch_cart', JSON.stringify(cart));
+        localStorage.setItem('dodch_cart_version', CART_VERSION);
+    }
+
     let currentUser = null;
 
     const cartToggle = document.getElementById('cart-toggle');
@@ -531,25 +644,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const sizeBtns = document.querySelectorAll('.size-btn');
     const priceDisplay = document.getElementById('product-price');
-    const addToCartBtn = document.querySelector('.add-to-cart-btn');
+    const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
 
     // Auth Logic
     const loginBtn = document.getElementById('login-btn');
     
     const handleLogin = async () => {
+        const googleIcon = `<svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 10px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg>`;
+        const confirmed = await window.showConfirm(`${googleIcon} Continue with Google Sign In?`, "Login");
+        if (!confirmed) return;
+
         try {
             // The onAuthStateChanged observer will handle the UI update without a reload.
             await signInWithPopup(auth, provider);
+            window.showToast("Successfully logged in!", "success");
         } catch (error) {
             console.error("Login failed", error);
-            alert("Login failed. Please ensure popups are enabled and try again. Check the console for more details.");
+            window.showToast("Login failed. Please try again.", "error");
         }
     };
 
     const handleLogout = async () => {
+        const confirmed = await window.showConfirm("Are you sure you want to log out?", "Logout");
+        if (!confirmed) return;
+
         try {
             // The onAuthStateChanged observer will handle the UI update without a reload.
             await signOut(auth);
+            window.showToast("Successfully logged out.", "success");
         } catch (error) {
             console.error("Logout failed", error);
         }
@@ -566,6 +688,62 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Login Page Logic ---
+    const loginForm = document.getElementById('login-form');
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    const toggleAuthMode = document.getElementById('toggle-auth-mode');
+    let isSignUp = false;
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const btn = loginForm.querySelector('button');
+            
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            try {
+                if (isSignUp) {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    window.showToast("Account created successfully!", "success");
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    window.showToast("Welcome back!", "success");
+                }
+                // Redirect to shop or account after delay
+                setTimeout(() => window.location.href = 'my-account.html', 1500);
+            } catch (error) {
+                console.error(error);
+                window.showToast(error.message, "error");
+                btn.innerText = isSignUp ? "Sign Up" : "Sign In";
+                btn.disabled = false;
+            }
+        });
+    }
+
+    if (googleLoginBtn) {
+        googleLoginBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 12px; vertical-align: middle;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg> Sign In with Google`;
+        googleLoginBtn.addEventListener('click', handleLogin);
+    }
+    
+    if (toggleAuthMode) toggleAuthMode.addEventListener('click', (e) => {
+        e.preventDefault();
+        isSignUp = !isSignUp;
+        document.querySelector('.auth-header h1').textContent = isSignUp ? "Create Account" : "Welcome Back";
+        document.querySelector('.auth-header p').textContent = isSignUp ? "Join the inner circle." : "Sign in to access your account.";
+        document.querySelector('.auth-btn').textContent = isSignUp ? "Sign Up" : "Sign In";
+        toggleAuthMode.textContent = isSignUp ? "Sign In" : "Sign Up";
+        toggleAuthMode.parentElement.innerHTML = isSignUp ? `Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign In</a>` : `Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign Up</a>`;
+        
+        // Re-attach listener since we replaced innerHTML
+        document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
+            // Simple reload to toggle back for simplicity in this snippet, or extract logic to function
+            location.reload(); 
+        });
+    });
+
     // Checkout Page Logic
     const checkoutItemsContainer = document.getElementById('checkout-items-container');
     const checkoutSubtotalEl = document.getElementById('checkout-subtotal');
@@ -577,8 +755,10 @@ document.addEventListener('DOMContentLoaded', () => {
         checkoutItemsContainer.innerHTML = '';
         let subtotal = 0;
 
-        cart.forEach(item => {
-            const itemTotal = parseFloat(item.price.replace('$', '')) * item.quantity;
+        cart.forEach((item, index) => {
+            let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
+            if (isNaN(priceVal)) priceVal = 0;
+            const itemTotal = priceVal * item.quantity;
             subtotal += itemTotal;
 
             const el = document.createElement('div');
@@ -589,23 +769,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div>
                         <h4>${item.name}</h4>
                         <p>Size: ${item.size} | Qty: ${item.quantity}</p>
+                        <button class="checkout-remove-btn" data-index="${index}" style="color: #ff4d4d; background: none; border: none; padding: 0; font-size: 0.8rem; text-decoration: underline; cursor: pointer; margin-top: 5px;">Remove</button>
                     </div>
                 </div>
-                <div class="summary-item-price">$${itemTotal.toFixed(2)}</div>
+                <div class="summary-item-price">${itemTotal.toFixed(2)} TND</div>
             `;
             checkoutItemsContainer.appendChild(el);
         });
 
-        if (checkoutSubtotalEl) checkoutSubtotalEl.innerText = `$${subtotal.toFixed(2)}`;
-        if (checkoutTotalEl) checkoutTotalEl.innerText = `$${subtotal.toFixed(2)}`;
+        if (checkoutSubtotalEl) checkoutSubtotalEl.innerText = `${subtotal.toFixed(2)} TND`;
+        if (checkoutTotalEl) checkoutTotalEl.innerText = `${subtotal.toFixed(2)} TND`;
+
+        // Add listeners for checkout remove buttons
+        document.querySelectorAll('.checkout-remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                cart.splice(index, 1);
+                updateCartUI();
+            });
+        });
     };
 
     const openCart = () => {
+        document.body.style.overflow = 'hidden'; // Lock scroll
         cartDrawer.classList.add('active');
         cartOverlay.classList.add('active');
     };
 
     const closeCart = () => {
+        document.body.style.overflow = ''; // Restore scroll
         cartDrawer.classList.remove('active');
         cartOverlay.classList.remove('active');
     };
@@ -613,6 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateCartUI = () => {
         // Save to storage whenever UI updates
         localStorage.setItem('dodch_cart', JSON.stringify(cart));
+        localStorage.setItem('dodch_cart_version', CART_VERSION);
         
         if (currentUser) {
             setDoc(doc(db, "carts", currentUser.uid), { items: cart });
@@ -654,8 +847,12 @@ document.addEventListener('DOMContentLoaded', () => {
             cartCountBadge.classList.toggle('visible', totalItems > 0);
         }
 
-        const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price.replace('$', '')) * item.quantity), 0);
-        if (cartSubtotalEl) cartSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+        const subtotal = cart.reduce((sum, item) => {
+            let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
+            if (isNaN(priceVal)) priceVal = 0;
+            return sum + (priceVal * item.quantity);
+        }, 0);
+        if (cartSubtotalEl) cartSubtotalEl.textContent = `${subtotal.toFixed(2)} TND`;
 
         document.querySelectorAll('.cart-item-remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -696,55 +893,243 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
     if (cartOverlay) cartOverlay.addEventListener('click', closeCart);
 
-    if (sizeBtns.length > 0 && priceDisplay) {
+    // Helper to find the correct product container
+    const findProductContainer = (element) => {
+        // 1. Try explicit classes first
+        let container = element.closest('.product-card, .product-item, .product-info, .collection-item, .item, .single-product-wrapper');
+        
+        // 2. If not found, traverse up to find a container with title and image
+        if (!container) {
+            let parent = element.parentElement;
+            // Traverse up to 10 levels to find a wrapper
+            for (let i = 0; i < 10; i++) {
+                if (!parent || parent.tagName === 'BODY') break;
+                
+                const hasTitle = parent.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5');
+                const hasImg = parent.querySelector('img');
+                const hasPrice = parent.querySelector('.product-price, .price, .money, #product-price');
+                
+                // Heuristic: A card shouldn't contain too many add-to-cart buttons (unless it's the wrapper for the whole page)
+                // If we are in a grid, the row might have 3 buttons. The card has 1.
+                const buttonsInParent = parent.querySelectorAll('.add-to-cart-btn');
+
+                // If it has a title and (image or price) and isn't a massive container (like the whole grid)
+                // We check if the parent is a 'section' or 'main' only if it seems to be a single product page
+                if (hasTitle && (hasImg || hasPrice) && buttonsInParent.length === 1) {
+                    container = parent;
+                    break;
+                }
+                
+                // If we are on a single product page, the section/main might contain the button
+                if ((parent.tagName === 'SECTION' || parent.tagName === 'MAIN') && hasTitle && hasPrice) {
+                     container = parent;
+                     break;
+                }
+
+                parent = parent.parentElement;
+            }
+        }
+        
+        // 3. Fallback to closest section or body (last resort)
+        // IMPORTANT: Do NOT fallback to document.body if there are multiple add-to-cart buttons on the page
+        if (!container) {
+            const allButtons = document.querySelectorAll('.add-to-cart-btn');
+            if (allButtons.length === 1) {
+                return document.body;
+            }
+            // If multiple buttons, fallback to the direct parent to avoid global scope pollution
+            return element.parentElement;
+        }
+        
+        return container;
+    };
+
+    if (sizeBtns.length > 0) {
         sizeBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Remove active class from all
-                sizeBtns.forEach(b => b.classList.remove('active'));
-                // Add active to clicked
-                btn.classList.add('active');
+            btn.addEventListener('click', (e) => {
+                const clickedBtn = e.currentTarget;
+                // Find the specific product container for this button
+                const container = findProductContainer(clickedBtn);
                 
-                // Update Price
-                const newPrice = btn.getAttribute('data-price');
-                priceDisplay.innerText = `$${newPrice}`;
+                // Remove active class from sibling buttons in this container only
+                if (container) {
+                    const containerBtns = container.querySelectorAll('.size-btn');
+                    containerBtns.forEach(b => b.classList.remove('active'));
+                }
                 
-                // Optional: Update image if you had different images per size
-                // const newImage = btn.getAttribute('data-image');
-                // if(newImage) document.getElementById('main-product-image').src = newImage;
+                // Add active to clicked button
+                clickedBtn.classList.add('active');
+
+                // Update Price within this container
+                // Try to find a price element with class first, then ID as fallback
+                if (container) {
+                    let localPrice = container.querySelector('.product-price, .price, #product-price');
+                    if (localPrice) {
+                        const newPrice = clickedBtn.getAttribute('data-price');
+                        localPrice.innerText = `$${newPrice}`;
+                    }
+                }
             });
         });
     }
 
-    if (addToCartBtn) {
-        addToCartBtn.addEventListener('click', () => {
-            const productName = document.querySelector('.product-info h1')?.textContent;
-            const activeSizeBtn = document.querySelector('.size-btn.active');
-            if (!productName || !activeSizeBtn) return;
+    if (addToCartBtns.length > 0) {
+        addToCartBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const clickedBtn = e.currentTarget;
+                // Attempt to find a container for the product (card, section, or wrapper)
+                const container = findProductContainer(clickedBtn);
 
-            const newItemId = `${productName}-${activeSizeBtn.dataset.size}`;
-            const existingItem = cart.find(item => item.id === newItemId);
+                // Find Product Name
+                // We search strictly within the container to avoid grabbing the first product's title
+                let nameEl = container ? container.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5') : null;
+                
+                const productName = nameEl ? nameEl.textContent.trim() : "Unknown Product";
+                
+                if (productName === "Unknown Product") {
+                    console.error("Could not detect product name. Container:", container);
+                    window.showToast("Error adding to cart. Please refresh.", "error");
+                    return;
+                }
 
-            if (existingItem) {
-                existingItem.quantity++;
-            } else {
-                const newItem = {
-                    id: newItemId,
-                    name: productName,
-                    size: activeSizeBtn.dataset.size,
-                    price: `$${parseFloat(activeSizeBtn.dataset.price).toFixed(2)}`,
-                    image: document.getElementById('main-product-image')?.src,
-                    quantity: 1
-                };
-                cart.push(newItem);
-            }
-            
-            updateCartUI();
-            openCart();
+                let size = "Standard";
+                let price = "0.00";
 
-            addToCartBtn.innerText = "Added to Cart";
-            setTimeout(() => addToCartBtn.innerText = "Add to Cart", 2000);
+                // Find Active Size Button within the container
+                const sizeBtnsInContainer = container ? container.querySelectorAll('.size-btn') : [];
+                
+                if (sizeBtnsInContainer.length > 0) {
+                    let activeSizeBtn = Array.from(sizeBtnsInContainer)
+                        .filter(b => b.classList.contains('active'))
+                        .find(b => !b.closest('.qv-modal-content'));
+                    
+                    if (!activeSizeBtn) {
+                        window.showToast("Please select a size.", "error");
+                        return;
+                    }
+                    size = activeSizeBtn.dataset.size;
+                    price = activeSizeBtn.dataset.price;
+                } else {
+                    // Fallback for products without size buttons
+                    const priceEl = container ? container.querySelector('.product-price, .price, #product-price') : null;
+                    if (priceEl) {
+                        price = priceEl.textContent.replace(/[^0-9.]/g, '');
+                    } else if (clickedBtn.dataset.price) {
+                        price = clickedBtn.dataset.price;
+                    }
+                }
+
+                // Find Image
+                let imageSrc = '';
+                // Prioritize image in container
+                const imgEl = container ? container.querySelector('img.product-image, img') : null;
+                if (imgEl) {
+                    imageSrc = imgEl.src;
+                } else {
+                    // Fallback only if we are sure it's a single product page
+                    const mainImg = document.getElementById('main-product-image');
+                    if (mainImg) imageSrc = mainImg.src;
+                }
+
+                const newItemId = `${productName}-${size}`;
+                const existingItem = cart.find(item => item.id === newItemId);
+
+                if (existingItem) {
+                    existingItem.quantity++;
+                } else {
+                    const newItem = {
+                        id: newItemId,
+                        name: productName,
+                        size: size,
+                        price: `${parseFloat(price).toFixed(2)} TND`,
+                        image: imageSrc,
+                        quantity: 1
+                    };
+                    cart.push(newItem);
+                }
+                
+                updateCartUI();
+                openCart();
+
+                const originalText = clickedBtn.innerText;
+                clickedBtn.innerText = "Added";
+                setTimeout(() => clickedBtn.innerText = originalText, 2000);
+            });
         });
     }
+
+    // --- DYNAMIC PRODUCT PAGE LOGIC ---
+    const initProductPage = () => {
+        const productDetailContainer = document.querySelector('.product-detail-container');
+        if (!productDetailContainer) return; // Not on product page
+
+        // Get Product ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        // Default to shampoo if no ID provided (or handle 404)
+        const product = productCatalog[productId] || productCatalog['glass-glow-shampoo'];
+
+        // Update DOM Elements
+        const titleEl = document.getElementById('product-title');
+        const subtitleEl = document.getElementById('product-subtitle');
+        const priceEl = document.getElementById('product-price');
+        const descEl = document.getElementById('product-description-text');
+        const imgEl = document.getElementById('main-product-image');
+
+        if (titleEl) titleEl.textContent = product.name;
+        if (subtitleEl) subtitleEl.textContent = product.subtitle;
+        if (priceEl) priceEl.textContent = `${product.price} TND`;
+        if (descEl) descEl.textContent = product.description;
+        
+        if (imgEl) {
+            imgEl.src = product.image;
+            if (product.style) imgEl.style = product.style;
+        }
+
+        // Update Page Title
+        document.title = `${product.name} | DODCH`;
+
+        // Update Size Buttons Price Data (Optional: You could make sizes dynamic too)
+        // For now, we scale the base price for demo purposes
+        const basePrice = parseFloat(product.price);
+        const sizeBtns = document.querySelectorAll('.size-btn');
+        sizeBtns.forEach(btn => {
+            const size = btn.dataset.size;
+            let multiplier = 1;
+            if (size === '100ml') multiplier = 1.8; // Example logic
+            if (size === '250ml') multiplier = 4.0;
+            if (size === '500ml') multiplier = 7.5;
+            
+            const calculatedPrice = (basePrice * multiplier).toFixed(2);
+            btn.dataset.price = calculatedPrice;
+            if (btn.classList.contains('active')) priceEl.textContent = `${calculatedPrice} TND`;
+        });
+
+        // Add "View Main Page" link for Glass Glow Shampoo
+        const productInfo = document.querySelector('.product-info');
+        const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
+        
+        const existingStoryBtn = document.getElementById('product-story-link');
+        if (existingStoryBtn) existingStoryBtn.remove();
+
+        if (addToCartBtn && (!productId || productId === 'glass-glow-shampoo')) {
+            const storyBtn = document.createElement('a');
+            storyBtn.id = 'product-story-link';
+            storyBtn.href = 'index.html';
+            storyBtn.textContent = 'View Main Page';
+            storyBtn.style.display = 'block';
+            storyBtn.style.textAlign = 'center';
+            storyBtn.style.marginTop = '1rem';
+            storyBtn.style.textDecoration = 'underline';
+            storyBtn.style.color = 'var(--text-charcoal)';
+            storyBtn.style.fontSize = '0.85rem';
+            
+            addToCartBtn.after(storyBtn);
+        }
+    };
+
+    initProductPage();
 
     // Sidebar Logic
     const sidebarUserName = document.getElementById('sidebar-user-name');
@@ -752,10 +1137,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
 
     if (sidebarLoginBtn) {
+        sidebarLoginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>Login`;
         sidebarLoginBtn.addEventListener('click', () => handleLogin());
     }
 
     if (sidebarLogoutBtn) {
+        sidebarLogoutBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>Logout`;
         sidebarLogoutBtn.addEventListener('click', () => {
             handleLogout();
         });
@@ -766,26 +1153,64 @@ document.addEventListener('DOMContentLoaded', () => {
         currentUser = user;
 
         // Update Navbar Login Button Text
-        const loginTextSpan = document.querySelector('#login-btn .login-text');
-        if (loginTextSpan) {
-            loginTextSpan.textContent = user ? 'Logout' : 'Login';
+        const loginBtn = document.getElementById('login-btn');
+        if (loginBtn) {
+            if (user) {
+                loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="login-text">Logout</span>`;
+            } else {
+                loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg><span class="login-text">Login</span>`;
+            }
         }
 
         // Update Sidebar UI
         if (sidebarUserName) {
+            const profileIcon = document.querySelector('.profile-icon');
             if (user) {
                 sidebarUserName.textContent = user.displayName || user.email || "Member";
+                if (profileIcon && user.photoURL) {
+                    profileIcon.innerHTML = `<img src="${user.photoURL}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                } else if (profileIcon) {
+                    profileIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+                }
+
                 if (sidebarLoginBtn) sidebarLoginBtn.style.display = 'none';
                 if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'block';
 
-                // Add My Account link to sidebar if it doesn't exist
-                const sidebarMenu = document.querySelector('.sidebar-menu');
-                if (sidebarMenu && !document.getElementById('sidebar-account-link')) {
-                    const accountLink = document.createElement('a');
-                    accountLink.href = 'my-account.html';
-                    accountLink.id = 'sidebar-account-link';
-                    accountLink.textContent = 'My Account';
-                    sidebarMenu.appendChild(accountLink);
+                // Add My Account button under username
+                let myAccountBtn = document.getElementById('sidebar-my-account-btn');
+                if (!myAccountBtn) {
+                    myAccountBtn = document.createElement('a');
+                    myAccountBtn.id = 'sidebar-my-account-btn';
+                    myAccountBtn.href = 'my-account.html';
+                    myAccountBtn.textContent = 'My Account';
+                    
+                    // Style to match the login button
+                    myAccountBtn.style.marginTop = '1rem';
+                    myAccountBtn.style.background = 'transparent';
+                    myAccountBtn.style.border = '1px solid var(--accent-gold)';
+                    myAccountBtn.style.color = 'var(--accent-gold)';
+                    myAccountBtn.style.padding = '0.5rem 1.5rem';
+                    myAccountBtn.style.cursor = 'pointer';
+                    myAccountBtn.style.textTransform = 'uppercase';
+                    myAccountBtn.style.fontSize = '0.8rem';
+                    myAccountBtn.style.letterSpacing = '1px';
+                    myAccountBtn.style.textDecoration = 'none';
+                    myAccountBtn.style.transition = 'all 0.3s ease';
+                    myAccountBtn.style.display = 'inline-block';
+                    myAccountBtn.style.borderRadius = '6px';
+
+                    myAccountBtn.addEventListener('mouseenter', () => {
+                        myAccountBtn.style.backgroundColor = 'var(--accent-gold)';
+                        myAccountBtn.style.color = '#fff';
+                    });
+                    myAccountBtn.addEventListener('mouseleave', () => {
+                        myAccountBtn.style.backgroundColor = 'transparent';
+                        myAccountBtn.style.color = 'var(--accent-gold)';
+                    });
+
+                    sidebarUserName.after(myAccountBtn);
+                } else {
+                    myAccountBtn.style.display = 'inline-block';
                 }
 
                 // Sync Cart from Firestore
@@ -798,12 +1223,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 sidebarUserName.textContent = "Guest";
+                if (profileIcon) {
+                    profileIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+                }
                 if (sidebarLoginBtn) sidebarLoginBtn.style.display = 'block';
                 if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'none';
                 
-                // Remove My Account link
-                const accountLink = document.getElementById('sidebar-account-link');
-                if (accountLink) accountLink.remove();
+                // Hide My Account button
+                const myAccountBtn = document.getElementById('sidebar-my-account-btn');
+                if (myAccountBtn) myAccountBtn.style.display = 'none';
             }
         }
 
@@ -846,11 +1274,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const statusClass = `status-${status.toLowerCase().replace(/\s+/g, '-')}`;
 
                                 let trackButtonHtml = '';
+                                let cancelButtonHtml = '';
+
                                 // If the order is shipped, create a track button.
                                 if (status.toLowerCase() === 'shipped') {
                                     // For this demo, we'll generate a fake tracking number if one isn't in the data.
                                     const trackingNumber = order.trackingNumber || `1Z${order.id.slice(0, 10).toUpperCase()}A0${Math.floor(Math.random() * 90 + 10)}`;
-                                    trackButtonHtml = `<a href="tracking.html?orderId=${order.id}&trackingNumber=${trackingNumber}" class="track-order-btn">Track Order</a>`;
+                                    const orderRefParam = order.orderReference ? `&orderRef=${order.orderReference}` : '';
+                                    trackButtonHtml = `<a href="tracking.html?orderId=${order.id}&trackingNumber=${trackingNumber}${orderRefParam}" class="track-order-btn">Track Order</a>`;
+                                } else if (status.toLowerCase() === 'pending') {
+                                    cancelButtonHtml = `<button class="cancel-order-btn" data-id="${order.id}" style="margin-left: 5px; color: #ff4d4d; background: none; border: 1px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer;">Cancel</button>`;
                                 }
                                 
                                 let itemsHtml = order.items.map(item => `
@@ -864,7 +1297,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 orderCard.classList.add('order-card', 'reveal', 'active');
                                 orderCard.innerHTML = `
                                     <div class="order-header">
-                                        <span>Order #${order.id.slice(0, 8).toUpperCase()}</span>
+                                        <span>Order #${order.orderReference || order.id.slice(0, 8).toUpperCase()}</span>
                                         <span>${date}</span>
                                     </div>
                                     <div class="order-items">
@@ -875,8 +1308,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <span class="status-badge ${statusClass}">${status}</span>
                                             <button class="reorder-btn" data-id="${order.id}">Reorder</button>
                                             ${trackButtonHtml}
+                                            ${cancelButtonHtml}
                                         </div>
-                                        <span style="color: var(--accent-gold);">$${total}</span>
+                                        <span style="color: var(--accent-gold);">${total} TND</span>
                                     </div>
                                 `;
                                 ordersList.appendChild(orderCard);
@@ -898,6 +1332,43 @@ document.addEventListener('DOMContentLoaded', () => {
                                         });
                                         updateCartUI();
                                         openCart();
+                                    }
+                                });
+                            });
+
+                            // Attach Cancel Event Listeners
+                            document.querySelectorAll('.cancel-order-btn').forEach(btn => {
+                                btn.addEventListener('click', async (e) => {
+                                    const confirmed = await window.showConfirm("Are you sure you want to cancel this order? This action cannot be undone.", "Cancel Order");
+                                    if (!confirmed) return;
+                                    
+                                    const btnElement = e.currentTarget;
+                                    const orderId = btnElement.getAttribute('data-id');
+                                    
+                                    btnElement.innerText = "Processing...";
+                                    btnElement.disabled = true;
+                                    btnElement.style.opacity = "0.5";
+
+                                    try {
+                                        await updateDoc(doc(db, "orders", orderId), {
+                                            status: "Cancelled"
+                                        });
+                                        
+                                        // Update UI locally
+                                        const orderCard = btnElement.closest('.order-card');
+                                        const statusBadge = orderCard.querySelector('.status-badge');
+                                        if (statusBadge) {
+                                            statusBadge.textContent = "Cancelled";
+                                            statusBadge.className = "status-badge status-cancelled";
+                                        }
+                                        btnElement.remove();
+                                        
+                                    } catch (error) {
+                                        console.error("Error cancelling order:", error);
+                                        window.showToast("Failed to cancel order.", "error");
+                                        btnElement.innerText = "Cancel";
+                                        btnElement.disabled = false;
+                                        btnElement.style.opacity = "1";
                                     }
                                 });
                             });
@@ -953,7 +1424,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
 
             if (cart.length === 0) {
-                alert("Your cart is empty.");
+                window.showToast("Your cart is empty.", "error");
                 return;
             }
 
@@ -966,7 +1437,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Set a timeout for the entire operation to prevent infinite loading
                 const operationTimeout = setTimeout(() => {
                     console.error("TIMEOUT: Firebase did not respond within 15 seconds.");
-                    alert("The server is not responding. Please check your internet connection and try again.");
+                    window.showToast("Server not responding. Please try again.", "error");
                     // Re-enable the button on failure
                     placeOrderBtn.innerText = "Place Order";
                     placeOrderBtn.style.opacity = "1";
@@ -974,21 +1445,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 15000); // 15 seconds
 
                 try {
+                    // Generate a unique reference code
+                    const orderRef = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
+
                     // Save Order to Firestore
                     const orderData = {
+                        orderReference: orderRef,
                         items: cart,
                         shipping: {
-                            email: document.getElementById('checkout-email').value,
+                            email: document.getElementById('checkout-email').value.trim(),
                             fullName: document.getElementById('checkout-name').value,
                             address: document.getElementById('checkout-address').value,
                             city: document.getElementById('checkout-city').value,
                             postalCode: document.getElementById('checkout-postal-code').value
                         },
                         total: cart.reduce((sum, item) => {
-                            let price = item.price;
+                            let price = String(item.price);
                             // Handle price if it's a string with $ or just a number
-                            if (typeof price === 'string') {
-                                price = parseFloat(price.replace('$', ''));
+                            if (price) {
+                                price = parseFloat(price.replace(/[^0-9.]/g, ''));
                             }
                             return sum + (price * item.quantity);
                         }, 0),
@@ -1016,7 +1491,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <div style="text-align: center; padding: 2rem 0; animation: fadeIn 0.5s ease;">
                                             <svg style="width: 60px; height: 60px; color: var(--accent-gold); margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                             <h2 style="border: none; margin-bottom: 0.5rem;">Order Confirmed</h2>
-                                            <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${docRef.id.slice(0, 8).toUpperCase()} is being prepared.</p>
+                                            <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${orderRef} has been received.</p>
                                             <a href="index.html" class="cta-button" style="margin-top: 2rem; display: inline-block; width: auto;">Return Home</a>
                                         </div>
                                     `;
@@ -1031,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         .catch(err => {
                             clearTimeout(operationTimeout); // Failure, so clear the timeout
                             console.error("CRITICAL: Error placing order:", err);
-                            alert("There was a critical error placing your order. Your cart has not been cleared. Please try again.");
+                            window.showToast("Error placing order. Please try again.", "error");
                             // Re-enable the button on failure
                             placeOrderBtn.innerText = "Place Order";
                             placeOrderBtn.style.opacity = "1";
@@ -1040,7 +1515,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (err) {
                     clearTimeout(operationTimeout); // Synchronous error, so clear the timeout
                     console.error("Synchronous Error preparing order:", err);
-                    alert("An error occurred while preparing your order. Please check your cart and try again.");
+                    window.showToast("Error preparing order.", "error");
                     placeOrderBtn.innerText = "Place Order";
                     placeOrderBtn.style.opacity = "1";
                     placeOrderBtn.style.pointerEvents = "auto";
@@ -1077,28 +1552,185 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 15. Smart Footer & Contact Popup
+    // 21. Breadcrumbs Logic
+    const initBreadcrumbs = () => {
+        const path = window.location.pathname;
+        const page = path.split("/").pop();
+        
+        // Skip for homepage
+        if (page === "" || page === "index.html") return;
+
+        const main = document.querySelector('main');
+        if (!main) return;
+
+        let crumbs = [{ name: "Home", url: "index.html" }];
+        let currentName = "";
+
+        // Determine current page hierarchy
+        if (page.includes("shop.html")) {
+            currentName = "Shop";
+        } else if (page.includes("about.html")) {
+            currentName = "About Us";
+        } else if (page.includes("careers.html")) {
+            currentName = "Careers";
+        } else if (page.includes("privacy-policy.html")) {
+            currentName = "Privacy Policy";
+        } else if (page.includes("terms-of-service.html")) {
+            currentName = "Terms of Service";
+        } else if (page.includes("shipping-returns.html")) {
+            currentName = "Shipping & Returns";
+        } else if (page.includes("faq.html")) {
+            currentName = "FAQ";
+        } else if (page.includes("checkout.html")) {
+            crumbs.push({ name: "Shop", url: "shop.html" });
+            currentName = "Checkout";
+        } else if (page.includes("my-account.html")) {
+            currentName = "My Account";
+        } else if (page.includes("tracking.html")) {
+            crumbs.push({ name: "My Account", url: "my-account.html" });
+            currentName = "Tracking";
+        } else if (page.includes("product.html")) {
+            crumbs.push({ name: "Shop", url: "shop.html" });
+            
+            // Get product name from URL param
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+            const product = productCatalog[productId] || productCatalog['glass-glow-shampoo'];
+            currentName = product ? product.name : "Product";
+        }
+
+        if (currentName) {
+            crumbs.push({ name: currentName, url: null });
+        }
+
+        // Build HTML
+        const breadcrumbHTML = `
+            <div class="breadcrumb-wrapper">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb" itemscope itemtype="https://schema.org/BreadcrumbList">
+                    ${crumbs.map((crumb, index) => {
+                        const isLast = index === crumbs.length - 1;
+                        
+                        if (isLast) {
+                            return `
+                            <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                                <span itemprop="name" class="breadcrumb-current">${crumb.name}</span>
+                                <meta itemprop="position" content="${index + 1}" />
+                            </li>`;
+                        } else {
+                            // Schema.org recommends absolute URLs for "item".
+                            const absoluteUrl = new URL(crumb.url, window.location.href).href;
+                            return `
+                            <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                                <a itemprop="item" href="${absoluteUrl}">
+                                    <span itemprop="name">${crumb.name}</span>
+                                </a>
+                                <meta itemprop="position" content="${index + 1}" />
+                                <span class="breadcrumb-separator" aria-hidden="true">&gt;</span>
+                            </li>`;
+                        }
+                    }).join('')}
+                    </ol>
+                </nav>
+            </div>
+        `;
+
+        // Inject at the top of main
+        main.insertAdjacentHTML('afterbegin', breadcrumbHTML);
+        document.body.classList.add('has-breadcrumbs');
+    };
+
+    initBreadcrumbs();
+
+    // 15. Smart Footer & Contact Section Injection
     const initSmartFooter = () => {
-        // We identify the "Shampoo Page" (Home) by the presence of the #hero element
-        const heroSection = document.getElementById('hero');
         const footer = document.querySelector('footer');
         
-        // If NOT homepage (no hero) and footer exists
-        if (!heroSection && footer) {
+        // Run on all pages if footer exists
+        if (footer) {
+            // 1. Inject "Get in Touch" Section BEFORE footer (only if not already present)
+            if (!document.getElementById('contact')) {
+                const contactSectionHTML = `
+                    <section id="contact" class="section-padding bg-white">
+                        <div class="container">
+                            <div class="contact-wrapper">
+                                <div class="contact-info">
+                                    <h3>Get in Touch</h3>
+                                    <p style="margin-bottom: 2rem; opacity: 0.8;">Have questions about our products or your order? We're here to help.</p>
+                                    
+                                    <div class="contact-detail-item">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                        <span>concierge@dodch.com</span>
+                                    </div>
+                                    
+                                    <div class="social-links">
+                                        <a href="#" class="social-icon" aria-label="Instagram" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
+                                        <a href="#" class="social-icon" aria-label="TikTok" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg></a>
+                                        <a href="https://www.facebook.com/profile.php?id=61586824002342" class="social-icon" aria-label="Facebook" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
+                                    </div>
+                                </div>
+                                
+                                <div class="contact-form-container">
+                                    <form id="main-contact-form">
+                                        <div class="form-group">
+                                            <input type="text" placeholder="Your Name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <input type="email" placeholder="Your Email" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <textarea rows="5" placeholder="Your Message" required></textarea>
+                                        </div>
+                                        <button type="submit" class="contact-submit-btn" style="background-color: var(--text-charcoal); color: #fff; padding: 1rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Send Message</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                `;
+                
+                footer.insertAdjacentHTML('beforebegin', contactSectionHTML);
+            }
+
             // Replace footer content
             footer.innerHTML = `
-                <div class="container footer-minimal">
-                    <div class="footer-luxury-text">
-                        "At DODCH, luxury is not just a label; it is an obsession. We source the rarest ingredients and adhere to uncompromising standards of quality to deliver an experience that transcends the ordinary."
-                    </div>
-                    
-                    <div class="footer-socials">
-                        <a href="#" class="social-icon" aria-label="Instagram" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
-                        <a href="#" class="social-icon" aria-label="TikTok" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg></a>
-                        <a href="https://www.facebook.com/profile.php?id=61586824002342" class="social-icon" aria-label="Facebook" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
-                    </div>
+                <div class="container">
+                    <div class="footer-content">
+                        <div class="footer-col brand-col">
+                            <h4>DODCH</h4>
+                            <div class="footer-luxury-text" style="margin: 0; text-align: left; font-size: 0.95rem; max-width: 300px;">
+                                "At DODCH, luxury is not just a label; it is an obsession. We source the rarest ingredients to deliver an experience that transcends the ordinary."
+                            </div>
+                        </div>
+                        
+                        <div class="footer-col">
+                            <h4>Company</h4>
+                            <ul style="list-style: none;">
+                                <li><a href="about.html" class="footer-link">About Us</a></li>
+                                <li><a href="careers.html" class="footer-link">Careers</a></li>
+                            </ul>
+                        </div>
 
-                    <button id="footer-contact-trigger" class="footer-contact-btn">Contact Concierge</button>
+                        <div class="footer-col">
+                            <h4>Legal & Support</h4>
+                            <ul style="list-style: none;">
+                                <li><a href="privacy-policy.html" class="footer-link">Privacy Policy</a></li>
+                                <li><a href="terms-of-service.html" class="footer-link">Terms of Service</a></li>
+                                <li><a href="shipping-returns.html" class="footer-link">Shipping & Returns</a></li>
+                                <li><a href="faq.html" class="footer-link">FAQ</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="footer-col">
+                            <h4>Collections</h4>
+                            <ul style="list-style: none;">
+                                <li><a href="shop.html" class="footer-link">Hair Care</a></li>
+                                <li><a href="shop.html" class="footer-link">Scalp Solutions</a></li>
+                                <li><a href="shop.html" class="footer-link">Accessories</a></li>
+                                <li><a href="shop.html" class="footer-link">Discovery Sets</a></li>
+                            </ul>
+                        </div>
+                    </div>
 
                     <div class="copyright">
                         &copy; 2026 DODCH. All Rights Reserved.
@@ -1106,83 +1738,98 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // Inject Popup HTML
-            const popupHTML = `
-                <div id="contact-popup" class="contact-popup-overlay">
-                    <div class="contact-popup-content">
-                        <button id="contact-popup-close" class="contact-popup-close">&times;</button>
-                        <h3 class="contact-popup-title">Concierge Service</h3>
-                        <p class="contact-popup-subtitle">How may we assist you today?</p>
-                        <form class="contact-popup-form" id="popup-contact-form">
-                            <div class="form-group">
-                                <input type="text" placeholder="Your Name" required>
-                            </div>
-                            <div class="form-group">
-                                <input type="email" placeholder="Your Email" required>
-                            </div>
-                            <div class="form-group">
-                                <textarea rows="4" placeholder="Your Message" required></textarea>
-                            </div>
-                            <button type="submit">Send Message</button>
-                        </form>
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', popupHTML);
-
-            // Bind Events
-            const triggerBtn = document.getElementById('footer-contact-trigger');
-            const popup = document.getElementById('contact-popup');
-            const closeBtn = document.getElementById('contact-popup-close');
-            const form = document.getElementById('popup-contact-form');
-
-            if (triggerBtn && popup) {
-                triggerBtn.addEventListener('click', (e) => {
+            // 3. Bind Event for the contact form (injected or existing)
+            const form = document.getElementById('main-contact-form') || document.getElementById('contact-form');
+            if (form) {
+                form.addEventListener('submit', (e) => {
                     e.preventDefault();
-                    popup.classList.add('active');
-                });
-
-                closeBtn.addEventListener('click', () => popup.classList.remove('active'));
-                
-                popup.addEventListener('click', (e) => {
-                    if (e.target === popup) popup.classList.remove('active');
-                });
-
-                if (form) {
-                    form.addEventListener('submit', (e) => {
-                        e.preventDefault();
-                        const btn = form.querySelector('button');
-                        btn.innerText = "Sending...";
-                        
-                        const inputs = form.querySelectorAll('input, textarea');
-                        addDoc(collection(db, "messages"), {
-                            name: inputs[0].value,
-                            email: inputs[1].value,
-                            message: inputs[2].value,
-                            source: 'footer_popup',
-                            timestamp: new Date()
-                        }).then(() => {
-                            form.innerHTML = `
-                                <div style="text-align: center; padding: 2rem;">
-                                    <svg style="width: 50px; height: 50px; color: var(--accent-gold); margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                                    <h3 style="color: var(--accent-gold); margin-bottom: 0.5rem;">Message Sent</h3>
-                                    <p>Our concierge will be in touch shortly.</p>
-                                </div>
-                            `;
-                            setTimeout(() => {
-                                popup.classList.remove('active');
-                            }, 2500);
-                        }).catch(err => {
-                            console.error(err);
-                            btn.innerText = "Error. Try again.";
-                        });
+                    const btn = form.querySelector('button');
+                    const originalText = btn.innerText;
+                    btn.innerText = "Sending...";
+                    btn.disabled = true;
+                    
+                    const inputs = form.querySelectorAll('input, textarea');
+                    addDoc(collection(db, "messages"), {
+                        name: inputs[0].value,
+                        email: inputs[1].value,
+                        message: inputs[2].value,
+                        source: 'injected_contact_section',
+                        timestamp: new Date()
+                    }).then(() => {
+                        window.showToast("Message sent successfully!", "success");
+                        form.reset();
+                        btn.innerText = "Message Sent";
+                        setTimeout(() => {
+                            btn.innerText = originalText;
+                            btn.disabled = false;
+                        }, 3000);
+                    }).catch(err => {
+                        console.error(err);
+                        window.showToast("Error sending message.", "error");
+                        btn.innerText = originalText;
+                        btn.disabled = false;
                     });
-                }
+                });
             }
         }
     };
 
     initSmartFooter();
+
+    // 22. Highlight Active Sidebar Link
+    const initSidebarHighlight = () => {
+        const currentPath = window.location.pathname;
+        const links = document.querySelectorAll('.sidebar-menu a');
+        
+        links.forEach(link => {
+            const href = link.getAttribute('href');
+            if (!href) return;
+            
+            const targetPage = href.split('#')[0].split('?')[0];
+            
+            if (targetPage) {
+                const isMatch = currentPath.endsWith(targetPage) || 
+                                (targetPage === 'index.html' && currentPath.endsWith('/'));
+                
+                if (isMatch && !href.includes('#')) {
+                    link.classList.add('active');
+                }
+            }
+        });
+    };
+    initSidebarHighlight();
+
+    // 23. Highlight Contact Section
+    const initContactHighlight = () => {
+        const highlight = () => {
+            const contactSection = document.getElementById('contact');
+            if (contactSection) {
+                contactSection.scrollIntoView({ behavior: 'smooth' });
+                contactSection.classList.remove('highlight-section');
+                void contactSection.offsetWidth; // Trigger reflow
+                contactSection.classList.add('highlight-section');
+                
+                setTimeout(() => {
+                    contactSection.classList.remove('highlight-section');
+                }, 2000);
+            }
+        };
+
+        if (initialHash === '#contact') {
+            setTimeout(highlight, 1000);
+        }
+
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (link) {
+                const href = link.getAttribute('href');
+                if (href && (href === '#contact' || href.endsWith('#contact'))) {
+                    setTimeout(highlight, 100);
+                }
+            }
+        });
+    };
+    initContactHighlight();
 
     // 16. Quick View Logic
     const initQuickView = () => {
@@ -1208,7 +1855,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
 
                         <button id="qv-add-to-cart" class="qv-add-to-cart-btn">Add to Cart</button>
-                        <a href="product.html" style="text-align: center; display: block; margin-top: 1rem; font-size: 0.85rem; text-decoration: underline; color: var(--text-charcoal);">View Full Details</a>
+                        <a id="qv-learn-more" href="#" style="text-align: center; display: block; margin-top: 1rem; font-size: 0.85rem; text-decoration: underline; color: var(--text-charcoal);">Learn More</a>
                     </div>
                 </div>
             </div>
@@ -1225,13 +1872,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const qvPrice = document.getElementById('qv-price');
         const qvDesc = document.getElementById('qv-desc');
         const qvAddToCart = document.getElementById('qv-add-to-cart');
+        const qvLearnMore = document.getElementById('qv-learn-more');
         const qvSizeBtns = modal.querySelectorAll('.size-btn');
 
         let currentProduct = {};
 
         // Open Modal
-        document.querySelectorAll('.quick-view-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        // Use event delegation to handle both static and dynamically loaded buttons
+        document.body.addEventListener('click', (e) => {
+            if (e.target.classList.contains('quick-view-btn')) {
+                const btn = e.target;
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -1242,20 +1892,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 const desc = btn.dataset.desc;
 
                 currentProduct = { id, title, price, img, desc };
+                document.body.style.overflow = 'hidden';
 
                 qvImage.src = img;
                 qvTitle.textContent = title;
-                qvPrice.textContent = `$${price}`;
+                qvPrice.textContent = `${price} TND`;
                 qvDesc.textContent = desc;
+                
+                if (qvLearnMore) {
+                    qvLearnMore.href = `product.html?id=${id}`;
+                }
                 
                 qvSizeBtns.forEach(b => b.classList.remove('active'));
                 qvSizeBtns[0].classList.add('active');
 
                 modal.classList.add('active');
-            });
+            }
         });
 
-        const closeModal = () => modal.classList.remove('active');
+        const closeModal = () => {
+            document.body.style.overflow = '';
+            modal.classList.remove('active');
+        };
         if(closeBtn) closeBtn.addEventListener('click', closeModal);
         if(modal) modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
@@ -1266,7 +1924,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 qvSizeBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 const newPrice = btn.dataset.price;
-                qvPrice.textContent = `$${newPrice}`;
+                qvPrice.textContent = `${newPrice} TND`;
             });
         });
 
@@ -1286,7 +1944,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         id: newItemId,
                         name: currentProduct.title,
                         size: size,
-                        price: `$${price}`,
+                        price: `${price} TND`,
                         image: currentProduct.img,
                         quantity: 1
                     });
@@ -1300,6 +1958,77 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     initQuickView();
+
+    // 19. Related Products Logic
+    const loadRelatedProducts = async () => {
+        // Check if we are on a product page by looking for the detail container
+        const productDetail = document.querySelector('.product-detail-container');
+        if (!productDetail) return;
+
+        // Create container if it doesn't exist
+        let container = document.getElementById('related-products-container');
+        if (!container) {
+            container = document.createElement('section');
+            container.id = 'related-products-container';
+            container.classList.add('section-padding', 'bg-white');
+            productDetail.after(container);
+        }
+
+        try {
+            // Fetch 4 products from Firestore
+            // Assuming a 'products' collection exists.
+            const q = query(collection(db, "products"), limit(4));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) return;
+
+            let productsHtml = '';
+            querySnapshot.forEach((doc) => {
+                const product = doc.data();
+                productsHtml += `
+                    <div class="product-card reveal">
+                        <a href="product.html?id=${doc.id}">
+                            <div class="product-image-wrapper">
+                                <img src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img">
+                                <button class="quick-view-btn" 
+                                    data-id="${doc.id}" 
+                                    data-title="${product.name}" 
+                                    data-price="${product.price}" 
+                                    data-img="${product.image || 'https://via.placeholder.com/300'}" 
+                                    data-desc="${product.description || ''}">
+                                    Quick View
+                                </button>
+                            </div>
+                            <div class="product-card-info">
+                                <h3 class="product-card-title">${product.name}</h3>
+                                <p class="product-card-price">${product.price} TND</p>
+                            </div>
+                        </a>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = `
+                <div class="container">
+                    <h2 class="section-title reveal active">You May Also Like</h2>
+                    <div class="shop-grid">
+                        ${productsHtml}
+                    </div>
+                </div>
+            `;
+            
+            // Trigger reveal animation for new elements
+            setTimeout(() => {
+                const newReveals = container.querySelectorAll('.reveal');
+                newReveals.forEach(el => el.classList.add('active'));
+            }, 100);
+
+        } catch (error) {
+            console.error("Error loading related products:", error);
+        }
+    };
+
+    loadRelatedProducts();
 
     // 17. Navbar Search Logic
     const searchToggleBtn = document.getElementById('search-toggle-btn');
@@ -1344,6 +2073,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
 });
 
 // 18. Tracking Page Logic
@@ -1354,12 +2084,13 @@ const initTrackingPage = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('orderId');
     const trackingNumber = urlParams.get('trackingNumber');
+    const orderRef = urlParams.get('orderRef');
 
     const orderIdEl = document.getElementById('tracking-order-id');
     const trackingNumberEl = document.getElementById('tracking-number');
 
     if (orderId && trackingNumber && orderIdEl && trackingNumberEl) {
-        orderIdEl.textContent = orderId.slice(0, 8).toUpperCase();
+        orderIdEl.textContent = orderRef ? orderRef : orderId.slice(0, 8).toUpperCase();
         trackingNumberEl.textContent = trackingNumber;
         // In a real app, you would fetch live tracking data here.
         // The timeline is static HTML for this demo.
