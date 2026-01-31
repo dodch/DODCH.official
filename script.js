@@ -573,6 +573,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             osc.start();
             osc.stop(ctx.currentTime + 0.1);
+
+            // Clean up AudioContext to prevent resource leaks (browsers limit active contexts)
+            setTimeout(() => {
+                ctx.close();
+            }, 200);
         });
     }
 
@@ -582,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "Glass Glow Shampoo",
             subtitle: "The Elixir of 10,000 Seeds",
             price: "24.00",
-            image: "IMG_3256.PNG",
+            image: "inventory/IMG_3256.PNG",
             description: "A high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil. Experience the 'Solar-Floral' journey with notes of Tunisian Orange Blossom and Tropical Vanilla.",
             style: "", // CSS filter if needed
             sizes: [
@@ -595,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "Prickly Pear Pure Oil",
             subtitle: "100% Organic Cold-Pressed Elixir",
             price: "85.00",
-            image: "IMG_3256.PNG",
+            image: "inventory/IMG_3256.PNG",
             description: "The ultimate luxury for hair and skin. Sourced from the finest seeds in Tunisia, this dry oil penetrates instantly to repair, nourish, and add a mirror-like shine without any greasy residue.",
             style: "filter: hue-rotate(15deg);",
             sizes: [
@@ -607,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "Silk & Wheat Hair Mask",
             subtitle: "Deep Repair & Glass Shine",
             price: "55.00",
-            image: "IMG_3256.PNG",
+            image: "inventory/IMG_3256.PNG",
             description: "Infused with hydrolyzed silk proteins and wheat amino acids. This mask reconstructs the hair fiber from within while creating a breathable shield on the surface for instant manageability.",
             style: "filter: sepia(0.2);",
             sizes: [
@@ -619,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "The Ritual Set",
             subtitle: "The Complete Mediterranean Experience",
             price: "120.00",
-            image: "IMG_3256.PNG",
+            image: "inventory/IMG_3256.PNG",
             description: "The full collection: Glass Glow Shampoo, Silk & Wheat Mask, and the Pure Oil. Designed to work in harmony for the ultimate hair transformation.",
             style: "filter: contrast(1.1);",
             sizes: [] // No sizes for the set
@@ -705,7 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 11. Product Page & Cart Logic
-    const CART_VERSION = 3; // Increment to force reset and clear stale/buggy data
+    const CART_VERSION = 4; // Increment to force reset and clear stale/buggy data
     let cart = JSON.parse(localStorage.getItem('dodch_cart')) || [];
     const storedVersion = parseInt(localStorage.getItem('dodch_cart_version') || '0');
 
