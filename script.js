@@ -1,17 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBTz-7xkhelFZZUgAX6Qdc_sppiRzLDfhA",
-  authDomain: "dodch-96b15.firebaseapp.com",
-  projectId: "dodch-96b15",
-  storageBucket: "dodch-96b15.appspot.com",
-  messagingSenderId: "253879203711",
-  appId: "1:253879203711:web:879893218eb835e1bc0c4a",
-  measurementId: "G-4WJBPKNT1H"
-};
+
+const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -583,14 +577,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- PRODUCT CATALOG (Single Source of Truth) ---
-    const productCatalog = {
+    const defaultProductCatalog = {
         'glass-glow-shampoo': {
             name: "Glass Glow Shampoo",
             subtitle: "The Elixir of 10,000 Seeds",
-            price: "35.00",
+            price: "24.00",
             image: "IMG_3256.PNG",
             description: "A high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil. Experience the 'Solar-Floral' journey with notes of Tunisian Orange Blossom and Tropical Vanilla.",
-            style: "" // CSS filter if needed
+            style: "", // CSS filter if needed
+            sizes: [
+                { label: '50ml', price: '24.00' },
+                { label: '100ml', price: '44.00' },
+                { label: '250ml', price: '95.00', originalPrice: '105.00' }
+            ]
         },
         'pure-oil': {
             name: "Prickly Pear Pure Oil",
@@ -598,7 +597,11 @@ document.addEventListener('DOMContentLoaded', () => {
             price: "85.00",
             image: "IMG_3256.PNG",
             description: "The ultimate luxury for hair and skin. Sourced from the finest seeds in Tunisia, this dry oil penetrates instantly to repair, nourish, and add a mirror-like shine without any greasy residue.",
-            style: "filter: hue-rotate(15deg);"
+            style: "filter: hue-rotate(15deg);",
+            sizes: [
+                { label: '50ml', price: '85.00' },
+                { label: '100ml', price: '160.00' }
+            ]
         },
         'hair-mask': {
             name: "Silk & Wheat Hair Mask",
@@ -606,7 +609,11 @@ document.addEventListener('DOMContentLoaded', () => {
             price: "55.00",
             image: "IMG_3256.PNG",
             description: "Infused with hydrolyzed silk proteins and wheat amino acids. This mask reconstructs the hair fiber from within while creating a breathable shield on the surface for instant manageability.",
-            style: "filter: sepia(0.2);"
+            style: "filter: sepia(0.2);",
+            sizes: [
+                { label: '200ml', price: '55.00' },
+                { label: '400ml', price: '100.00' }
+            ]
         },
         'ritual-set': {
             name: "The Ritual Set",
@@ -614,7 +621,86 @@ document.addEventListener('DOMContentLoaded', () => {
             price: "120.00",
             image: "IMG_3256.PNG",
             description: "The full collection: Glass Glow Shampoo, Silk & Wheat Mask, and the Pure Oil. Designed to work in harmony for the ultimate hair transformation.",
-            style: "filter: contrast(1.1);"
+            style: "filter: contrast(1.1);",
+            sizes: [] // No sizes for the set
+        }
+    };
+
+    // Mutable catalog that will be updated with Firestore data
+    let productCatalog = { ...defaultProductCatalog };
+
+    // Function to render Shop Page grid dynamically
+    const initShopPage = () => {
+        // Only run on shop page (where product detail container is absent)
+        if (document.querySelector('.product-detail-container')) return;
+        
+        const shopGrid = document.querySelector('.shop-grid');
+        if (!shopGrid) return;
+
+        shopGrid.innerHTML = ''; // Clear static HTML
+
+        Object.entries(productCatalog).forEach(([id, product]) => {
+            // Calculate lowest price from sizes
+            let displayPrice = product.price;
+            let hasDiscount = false;
+
+            if (product.sizes && product.sizes.length > 0) {
+                const prices = product.sizes.map(s => parseFloat(s.price));
+                displayPrice = Math.min(...prices).toFixed(2);
+                hasDiscount = product.sizes.some(s => s.originalPrice && parseFloat(s.originalPrice) > parseFloat(s.price));
+            }
+
+            const cardHTML = `
+                <div class="product-card reveal active">
+                    <a href="product.html?id=${id}">
+                        <div class="product-image-wrapper">
+                            ${hasDiscount ? '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px;">ONLINE OFFER</span>' : ''}
+                            <img src="${product.image}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
+                            <button class="quick-view-btn" 
+                                data-id="${id}" 
+                                data-title="${product.name}" 
+                                data-price="${displayPrice}" 
+                                data-img="${product.image}" 
+                                data-desc="${product.description}">
+                                Quick View
+                            </button>
+                        </div>
+                        <div class="product-card-info">
+                            <h3 class="product-card-title">${product.name}</h3>
+                            <p class="product-card-price">${displayPrice} TND</p>
+                        </div>
+                    </a>
+                </div>
+            `;
+            shopGrid.insertAdjacentHTML('beforeend', cardHTML);
+        });
+    };
+
+    // Function to fetch product overrides (price, stock) from Firestore
+    const loadProductCatalog = async () => {
+        try {
+            const querySnapshot = await getDocs(collection(db, "products"));
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const productId = doc.id;
+                if (productCatalog[productId]) {
+                    if (data.price) productCatalog[productId].price = data.price;
+                    if (data.outOfStock !== undefined) productCatalog[productId].outOfStock = data.outOfStock;
+                    // Merge sizes if available in Firestore to ensure prices are accurate
+                    if (data.sizes && Array.isArray(data.sizes)) productCatalog[productId].sizes = data.sizes;
+                }
+            });
+            // Re-run product page init to reflect changes if we are on a product page
+            initProductPage();
+            // Re-render shop grid if we are on shop page
+            initShopPage();
+            
+            // Refresh Admin Dashboard if active (fixes race condition where admin loads before firestore data)
+            if (typeof window.refreshAdminProducts === 'function') {
+                window.refreshAdminProducts();
+            }
+        } catch (error) {
+            console.error("Error loading product catalog:", error);
         }
     };
 
@@ -966,7 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let localPrice = container.querySelector('.product-price, .price, #product-price');
                     if (localPrice) {
                         const newPrice = clickedBtn.getAttribute('data-price');
-                        localPrice.innerText = `$${newPrice}`;
+                        localPrice.innerText = `${newPrice} TND`;
                     }
                 }
             });
@@ -1079,7 +1165,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (titleEl) titleEl.textContent = product.name;
         if (subtitleEl) subtitleEl.textContent = product.subtitle;
-        if (priceEl) priceEl.textContent = `${product.price} TND`;
+        
+        // Calculate lowest price from sizes if available
+        let displayPrice = product.price;
+        if (product.sizes && product.sizes.length > 0) {
+            const prices = product.sizes.map(s => parseFloat(s.price));
+            displayPrice = Math.min(...prices).toFixed(2);
+        }
+        if (priceEl) priceEl.textContent = `${displayPrice} TND`;
+        
+        // Handle Out of Stock
+        if (product.outOfStock) {
+            if (priceEl) priceEl.textContent = "Out of Stock";
+            if (priceEl) priceEl.style.color = "#ff4d4d";
+        }
+
         if (descEl) descEl.textContent = product.description;
         
         if (imgEl) {
@@ -1090,21 +1190,93 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update Page Title
         document.title = `${product.name} | DODCH`;
 
-        // Update Size Buttons Price Data (Optional: You could make sizes dynamic too)
-        // For now, we scale the base price for demo purposes
-        const basePrice = parseFloat(product.price);
-        const sizeBtns = document.querySelectorAll('.size-btn');
-        sizeBtns.forEach(btn => {
-            const size = btn.dataset.size;
-            let multiplier = 1;
-            if (size === '100ml') multiplier = 1.8; // Example logic
-            if (size === '250ml') multiplier = 4.0;
-            if (size === '500ml') multiplier = 7.5;
+        // Dynamic Size Buttons for Product Page
+        const sizeOptionsContainer = productDetailContainer.querySelector('.size-options');
+        if (sizeOptionsContainer && product.sizes) {
+            sizeOptionsContainer.innerHTML = ''; // Clear existing hardcoded buttons
             
-            const calculatedPrice = (basePrice * multiplier).toFixed(2);
-            btn.dataset.price = calculatedPrice;
-            if (btn.classList.contains('active')) priceEl.textContent = `${calculatedPrice} TND`;
-        });
+            if (product.sizes.length > 0) {
+                // Find index of lowest price
+                const prices = product.sizes.map(s => parseFloat(s.price));
+                const minPrice = Math.min(...prices);
+                const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
+
+                product.sizes.forEach((sizeObj, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'size-btn';
+                    if (index === minIndex) {
+                        btn.classList.add('active');
+                        if (priceEl) {
+                            if (sizeObj.originalPrice) {
+                                priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND <span style="background: #d4af37; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; vertical-align: middle; margin-left: 8px;">ONLINE OFFER</span>`;
+                            } else {
+                                priceEl.textContent = `${sizeObj.price} TND`;
+                            }
+                        }
+                        
+                        // Initial check for default selected size
+                        const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
+                        if (addToCartBtn && !product.outOfStock) {
+                            if (sizeObj.outOfStock) {
+                                addToCartBtn.disabled = true;
+                                addToCartBtn.textContent = "Out of Stock";
+                                addToCartBtn.style.backgroundColor = "#ccc";
+                            } else {
+                                addToCartBtn.disabled = false;
+                                addToCartBtn.textContent = "Add to Cart";
+                                addToCartBtn.style.backgroundColor = "";
+                            }
+                        }
+                    }
+                    btn.dataset.size = sizeObj.label;
+                    btn.dataset.price = sizeObj.price;
+                    btn.textContent = sizeObj.label;
+                    
+                    // Re-attach click listener logic locally or rely on global delegation if set up correctly
+                    // Here we attach locally for safety
+                    btn.addEventListener('click', () => {
+                        sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        if (priceEl) {
+                            if (sizeObj.originalPrice) {
+                                priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND <span style="background: #d4af37; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; vertical-align: middle; margin-left: 8px;">ONLINE OFFER</span>`;
+                            } else {
+                                priceEl.textContent = `${sizeObj.price} TND`;
+                            }
+                        }
+                        
+                        // Update Add to Cart button based on size stock
+                        const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
+                        if (addToCartBtn && !product.outOfStock) {
+                            if (sizeObj.outOfStock) {
+                                addToCartBtn.disabled = true;
+                                addToCartBtn.textContent = "Out of Stock";
+                                addToCartBtn.style.backgroundColor = "#ccc";
+                            } else {
+                                addToCartBtn.disabled = false;
+                                addToCartBtn.textContent = "Add to Cart";
+                                addToCartBtn.style.backgroundColor = "";
+                            }
+                        }
+                    });
+
+                    if (product.outOfStock) {
+                        btn.disabled = true;
+                        btn.style.opacity = "0.5";
+                    } else if (sizeObj.outOfStock) {
+                        // Visual indication for single size OOS
+                        btn.style.textDecoration = "line-through";
+                        btn.style.opacity = "0.6";
+                    }
+                    
+                    sizeOptionsContainer.appendChild(btn);
+                });
+            } else {
+                // Hide size selector if no sizes (e.g. Set)
+                const selector = productDetailContainer.querySelector('.size-selector');
+                if (selector) selector.style.display = 'none';
+            }
+        }
 
         // Add "View Main Page" link for Glass Glow Shampoo
         const productInfo = document.querySelector('.product-info');
@@ -1115,6 +1287,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (addToCartBtn && (!productId || productId === 'glass-glow-shampoo')) {
             const storyBtn = document.createElement('a');
+            
+            if (product.outOfStock) {
+                addToCartBtn.disabled = true;
+                addToCartBtn.innerText = "Out of Stock";
+                addToCartBtn.style.backgroundColor = "#ccc";
+            }
+
             storyBtn.id = 'product-story-link';
             storyBtn.href = 'index.html';
             storyBtn.textContent = 'View Main Page';
@@ -1129,7 +1308,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    initProductPage();
+    // Load catalog then init page
+    loadProductCatalog();
 
     // Sidebar Logic
     const sidebarUserName = document.getElementById('sidebar-user-name');
@@ -1209,8 +1389,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     sidebarUserName.after(myAccountBtn);
+
+                    // Add Admin Dashboard button if user is admin
+                    if (user.uid === ADMIN_UID) {
+                        let adminBtn = document.getElementById('sidebar-admin-btn');
+                        if (!adminBtn) {
+                            adminBtn = myAccountBtn.cloneNode(true);
+                            adminBtn.id = 'sidebar-admin-btn';
+                            adminBtn.href = 'admin.html';
+                            adminBtn.textContent = 'Admin Dashboard';
+                            adminBtn.style.marginTop = '0.5rem';
+                            adminBtn.style.borderColor = 'var(--text-charcoal)';
+                            adminBtn.style.color = 'var(--text-charcoal)';
+                            myAccountBtn.after(adminBtn);
+                        } else {
+                            adminBtn.style.display = 'inline-block';
+                        }
+                    }
                 } else {
                     myAccountBtn.style.display = 'inline-block';
+                    const adminBtn = document.getElementById('sidebar-admin-btn');
+                    if (adminBtn) adminBtn.style.display = 'inline-block';
                 }
 
                 // Sync Cart from Firestore
@@ -1232,6 +1431,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Hide My Account button
                 const myAccountBtn = document.getElementById('sidebar-my-account-btn');
                 if (myAccountBtn) myAccountBtn.style.display = 'none';
+                const adminBtn = document.getElementById('sidebar-admin-btn');
+                if (adminBtn) adminBtn.style.display = 'none';
             }
         }
 
@@ -1589,6 +1790,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (page.includes("tracking.html")) {
             crumbs.push({ name: "My Account", url: "my-account.html" });
             currentName = "Tracking";
+        } else if (page.includes("admin.html")) {
+            currentName = "Admin Dashboard";
         } else if (page.includes("product.html")) {
             crumbs.push({ name: "Shop", url: "shop.html" });
             
@@ -1660,7 +1863,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     
                                     <div class="contact-detail-item">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                                        <span>concierge@dodch.com</span>
+                                        <a href="mailto:contact@dodch.com" style="color: inherit; text-decoration: none; transition: color 0.3s ease;" onmouseover="this.style.color='var(--accent-gold)'" onmouseout="this.style.color='inherit'">contact@dodch.com</a>
                                     </div>
                                     
                                     <div class="social-links">
@@ -1831,6 +2034,532 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     initContactHighlight();
 
+    // 24. Admin Dashboard Logic
+    const initAdminPage = async () => {
+        const adminOrdersList = document.getElementById('admin-orders-list');
+        const adminProductsList = document.getElementById('admin-products-list');
+        
+        if (!adminOrdersList) return; // Not on admin page
+
+        // Verify Admin
+        onAuthStateChanged(auth, (user) => {
+            if (!user || user.uid !== ADMIN_UID) {
+                window.location.href = 'index.html';
+            } else {
+                loadAdminOrders();
+                loadAdminProducts();
+            }
+        });
+
+        // Tab Logic
+        const tabs = document.querySelectorAll('.admin-tab-btn');
+        const panes = document.querySelectorAll('.tab-pane');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                panes.forEach(p => p.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const targetPane = document.getElementById(`tab-${tab.dataset.tab}`);
+                if (targetPane) targetPane.classList.add('active');
+            });
+        });
+
+        // Pagination State
+        const pageSize = 10;
+        let currentPage = 1;
+        let cursors = [null]; // Stores the last document of each page to use as a cursor for the next
+
+        // Filter/Sort Elements
+        const filterStatus = document.getElementById('admin-filter-status');
+        const sortDate = document.getElementById('admin-sort-date');
+
+        const refreshOrders = () => {
+            currentPage = 1;
+            cursors = [null];
+            loadAdminOrders(0);
+        };
+
+        if (filterStatus) filterStatus.addEventListener('change', refreshOrders);
+        if (sortDate) sortDate.addEventListener('change', refreshOrders);
+
+        // Export CSV Logic
+        const exportBtn = document.getElementById('admin-export-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', async () => {
+                const originalText = exportBtn.innerText;
+                exportBtn.innerText = "Exporting...";
+                exportBtn.disabled = true;
+
+                try {
+                    // Fetch ALL matching orders (no limit) for export
+                    let q = collection(db, "orders");
+                    const statusValue = filterStatus ? filterStatus.value : '';
+                    const dateDir = sortDate ? sortDate.value : 'desc';
+
+                    if (statusValue) q = query(q, where("status", "==", statusValue));
+                    q = query(q, orderBy("timestamp", dateDir));
+
+                    const querySnapshot = await getDocs(q);
+                    
+                    // CSV Header
+                    let csvContent = "data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items\n";
+
+                    querySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
+                        const itemsStr = data.items ? data.items.map(i => `${i.quantity}x ${i.name} (${i.size})`).join('; ') : '';
+                        
+                        // Escape commas in data to prevent CSV breakage
+                        const row = [
+                            data.orderReference || doc.id,
+                            date,
+                            `"${data.shipping?.fullName || ''}"`,
+                            data.shipping?.email || '',
+                            data.status || 'Pending',
+                            data.total || 0,
+                            `"${itemsStr}"`
+                        ].join(",");
+                        csvContent += row + "\n";
+                    });
+
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", `orders_export_${new Date().toISOString().slice(0,10)}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    window.showToast("Export complete!", "success");
+                } catch (error) {
+                    console.error("Export failed:", error);
+                    window.showToast("Export failed. Check console for details.", "error");
+                } finally {
+                    exportBtn.innerText = originalText;
+                    exportBtn.disabled = false;
+                }
+            });
+        }
+
+        const loadAdminOrders = async (pageIndex = 0) => {
+            adminOrdersList.innerHTML = '<p>Loading orders...</p>';
+            try {
+                let q = collection(db, "orders");
+                const statusValue = filterStatus ? filterStatus.value : '';
+                const dateDir = sortDate ? sortDate.value : 'desc';
+
+                // Apply Filters & Sorts
+                if (statusValue) {
+                    q = query(q, where("status", "==", statusValue));
+                }
+                
+                // Always sort by timestamp
+                q = query(q, orderBy("timestamp", dateDir));
+
+                const cursor = cursors[pageIndex];
+
+                if (cursor) {
+                    q = query(q, startAfter(cursor));
+                }
+                
+                q = query(q, limit(pageSize));
+
+                const querySnapshot = await getDocs(q);
+                const orders = [];
+                querySnapshot.forEach((doc) => {
+                    orders.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Store cursor for the next page if we have a full page
+                if (querySnapshot.docs.length > 0) {
+                    cursors[pageIndex + 1] = querySnapshot.docs[querySnapshot.docs.length - 1];
+                }
+
+                if (orders.length === 0) {
+                    adminOrdersList.innerHTML = '<p>No orders found.</p>';
+                    if (pageIndex > 0) {
+                        // If we went to a page with no results, just show empty but keep controls? 
+                        // Or handle gracefully. For now, just showing empty is fine.
+                    }
+                    return;
+                }
+
+                const renderAdminOrdersList = (ordersToRender) => {
+                    adminOrdersList.innerHTML = '';
+                    if (ordersToRender.length === 0) {
+                        adminOrdersList.innerHTML = '<p>No matching orders found.</p>';
+                        return;
+                    }
+                    ordersToRender.forEach(order => {
+                    const date = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleString() : 'N/A';
+                    const status = order.status || 'Pending';
+                    
+                    const el = document.createElement('div');
+                    el.className = 'admin-order-card';
+                    el.innerHTML = `
+                        <div class="admin-order-header">
+                            <strong>#${order.orderReference || order.id.slice(0,6)}</strong>
+                            <span>${date}</span>
+                        </div>
+                        <div class="admin-order-details">
+                            <p><strong>Customer:</strong> ${order.shipping?.fullName} (${order.shipping?.email})</p>
+                            <p><strong>Address:</strong> ${order.shipping?.address}, ${order.shipping?.city}</p>
+                            <p><strong>Total:</strong> ${order.total} TND</p>
+                            <div class="admin-order-items">
+                                ${order.items.map(i => `<div>${i.quantity}x ${i.name} (${i.size})</div>`).join('')}
+                            </div>
+                        </div>
+                        <div class="admin-order-actions">
+                            <span class="status-badge status-${status.toLowerCase().replace(/\s/g, '-')}">${status}</span>
+                            <select class="admin-status-select" data-id="${order.id}">
+                                <option value="" disabled selected>Change Status</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="In Delivery">In Delivery</option>
+                                <option value="Delivered">Delivered</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    `;
+                    adminOrdersList.appendChild(el);
+                });
+                };
+
+                renderAdminOrdersList(orders);
+
+                // Search Logic
+                const searchInput = document.getElementById('admin-order-search');
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        const term = e.target.value.toLowerCase();
+                        const filtered = orders.filter(o => 
+                            (o.id && o.id.toLowerCase().includes(term)) ||
+                            (o.orderReference && o.orderReference.toLowerCase().includes(term)) ||
+                            (o.shipping?.fullName && o.shipping.fullName.toLowerCase().includes(term)) ||
+                            (o.shipping?.email && o.shipping.email.toLowerCase().includes(term))
+                        );
+                        renderAdminOrdersList(filtered);
+                    });
+                }
+
+                // Render Pagination Controls
+                const existingControls = document.getElementById('admin-pagination-controls');
+                if (existingControls) existingControls.remove();
+
+                const paginationHTML = `
+                    <div id="admin-pagination-controls" class="admin-pagination">
+                        <button id="prev-page-btn" class="pagination-btn" ${pageIndex === 0 ? 'disabled' : ''}>Previous</button>
+                        <span class="page-info">Page ${pageIndex + 1}</span>
+                        <button id="next-page-btn" class="pagination-btn" ${orders.length < pageSize ? 'disabled' : ''}>Next</button>
+                    </div>
+                `;
+                adminOrdersList.insertAdjacentHTML('afterend', paginationHTML);
+
+                document.getElementById('prev-page-btn').addEventListener('click', () => {
+                    if (pageIndex > 0) {
+                        loadAdminOrders(pageIndex - 1);
+                    }
+                });
+
+                document.getElementById('next-page-btn').addEventListener('click', () => {
+                    // Only allow next if we actually fetched a full page, implying more might exist
+                    if (orders.length === pageSize) {
+                        loadAdminOrders(pageIndex + 1);
+                    }
+                });
+
+                // Bind status change events
+                document.querySelectorAll('.admin-status-select').forEach(select => {
+                    select.addEventListener('change', async (e) => {
+                        const newStatus = e.target.value;
+                        const orderId = e.target.dataset.id;
+                        if (!newStatus) return;
+
+                        if (await window.showConfirm(`Change order status to ${newStatus}?`, "Update Order")) {
+                            try {
+                                await updateDoc(doc(db, "orders", orderId), { status: newStatus });
+                                window.showToast("Order status updated", "success");
+                                
+                                // Auto-open email client if Confirmed
+                                if (newStatus === 'Confirmed') {
+                                    const order = orders.find(o => o.id === orderId);
+                                    if (order && order.shipping?.email) {
+                                        const subject = `Order Confirmation: DODCH #${order.orderReference || order.id}`;
+                                        const itemsList = order.items.map(i => `• ${i.quantity}x ${i.name} (${i.size})`).join('\n');
+                                        const totalDisplay = typeof order.total === 'number' ? order.total.toFixed(2) : order.total;
+                                        
+                                        const body = `Dear ${order.shipping.fullName},
+
+Thank you for choosing DODCH. We are delighted to confirm your order.
+
+------------------------------------------------------
+ORDER SUMMARY
+------------------------------------------------------
+Order Reference: ${order.orderReference || order.id}
+
+ITEMS:
+${itemsList}
+
+------------------------------------------------------
+TOTAL: ${totalDisplay} TND
+------------------------------------------------------
+
+We are preparing your order with care. You will receive another notification once it has been shipped.
+
+Visit us: https://dodch.com
+
+Warm regards,
+The DODCH Team`;
+                                        window.location.href = `mailto:${order.shipping.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                                    }
+                                }
+                            } catch (err) {
+                                console.error(err);
+                                window.showToast("Failed to update status", "error");
+                            }
+                        } else {
+                            e.target.value = ""; // Reset
+                        }
+                    });
+                });
+
+            } catch (error) {
+                console.error("Error loading orders:", error);
+                if (error.code === 'permission-denied') {
+                    adminOrdersList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied. Please update Firestore Rules to allow Admin access.</p>';
+                } else if (error.code === 'failed-precondition') {
+                    adminOrdersList.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: #ff4d4d; border: 1px dashed #ff4d4d; border-radius: 8px;">
+                            <h3 style="margin-bottom: 0.5rem;">Missing Index</h3>
+                            <p style="margin-bottom: 1rem;">Firestore requires a specific index for this Filter + Sort combination.</p>
+                            <ol style="text-align: left; display: inline-block; margin: 0 auto;">
+                                <li>Open your browser console (<strong>F12</strong> or <strong>Right Click > Inspect > Console</strong>).</li>
+                                <li>Look for the error message containing a long link.</li>
+                                <li>Click the link to create the index automatically.</li>
+                            </ol>
+                        </div>`;
+                } else {
+                    adminOrdersList.innerHTML = `<p style="color: #ff4d4d;">Error: ${error.message}</p>`;
+                }
+            }
+        };
+
+        const loadAdminProducts = () => {
+            // Inject Sync Button
+            if (!document.getElementById('admin-sync-btn')) {
+                const syncBtn = document.createElement('button');
+                syncBtn.id = 'admin-sync-btn';
+                syncBtn.textContent = 'Sync Local Catalog to Firestore';
+                syncBtn.style.marginBottom = '20px';
+                syncBtn.style.padding = '10px 20px';
+                syncBtn.style.backgroundColor = '#2ecc71';
+                syncBtn.style.color = 'white';
+                syncBtn.style.border = 'none';
+                syncBtn.style.borderRadius = '5px';
+                syncBtn.style.cursor = 'pointer';
+                
+                syncBtn.addEventListener('click', async () => {
+                    if(await window.showConfirm("Overwrite Firestore products with local catalog data?", "Sync Catalog")) {
+                        try {
+                            const promises = Object.entries(productCatalog).map(([id, data]) => {
+                                return setDoc(doc(db, "products", id), data, { merge: true });
+                            });
+                            await Promise.all(promises);
+                            window.showToast("Catalog synced to Firestore!", "success");
+                        } catch (e) {
+                            console.error(e);
+                            window.showToast("Sync failed: " + e.message, "error");
+                        }
+                    }
+                });
+                
+                if (adminProductsList.parentElement) {
+                    adminProductsList.parentElement.insertBefore(syncBtn, adminProductsList);
+                }
+            }
+
+            adminProductsList.innerHTML = '';
+            Object.entries(productCatalog).forEach(([id, product]) => {
+                const el = document.createElement('div');
+                el.className = 'admin-product-card';
+                
+                // Generate inputs for each size if available, otherwise fallback to single price
+                let priceInputsHTML = '';
+                if (product.sizes && product.sizes.length > 0) {
+                    product.sizes.forEach((size, index) => {
+                        priceInputsHTML += `
+                            <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                                <span style="font-size: 0.9rem; color: #555;">${size.label}</span>
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <input type="number" class="admin-size-price-input" data-index="${index}" value="${parseFloat(size.price)}" placeholder="Price" style="width: 70px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <input type="number" class="admin-size-original-price-input" data-index="${index}" value="${size.originalPrice ? parseFloat(size.originalPrice) : ''}" placeholder="Old Price" style="width: 70px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <label title="Mark this size as Out of Stock" style="font-size: 0.8rem; display: flex; align-items: center; cursor: pointer;"><input type="checkbox" class="admin-size-stock-check" data-index="${index}" ${size.outOfStock ? 'checked' : ''}> OOS</label>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    priceInputsHTML = `<label>Price (TND): <input type="number" class="admin-price-input" value="${parseFloat(product.price)}" style="width: 100px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></label>`;
+                }
+
+                el.innerHTML = `
+                    <div class="admin-product-info">
+                        <img src="${product.image}" alt="${product.name}">
+                        <div>
+                            <h4>${product.name}</h4>
+                            <p>${product.subtitle}</p>
+                        </div>
+                    </div>
+                    <div class="admin-product-controls" style="display: flex; flex-direction: column; gap: 10px; align-items: flex-start;">
+                        <div class="price-inputs-container" style="width: 100%;">
+                            ${priceInputsHTML}
+                        </div>
+                        <label><input type="checkbox" class="admin-stock-check" data-id="${id}" ${product.outOfStock ? 'checked' : ''}> Out of Stock</label>
+                        <button class="admin-save-prod-btn" data-id="${id}" style="width: 100%;">Save Changes</button>
+                    </div>
+                `;
+                adminProductsList.appendChild(el);
+            });
+
+            document.querySelectorAll('.admin-save-prod-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.target.dataset.id;
+                    const card = e.target.closest('.admin-product-card');
+                    const outOfStock = card.querySelector('.admin-stock-check').checked;
+
+                    try {
+                        // Update local catalog
+                        productCatalog[id].outOfStock = outOfStock;
+
+                        // Handle Size Updates
+                        const sizeInputs = card.querySelectorAll('.admin-size-price-input');
+                        if (sizeInputs.length > 0) {
+                            sizeInputs.forEach(input => {
+                                const index = input.dataset.index;
+                                const newPrice = parseFloat(input.value).toFixed(2);
+                                productCatalog[id].sizes[index].price = newPrice;
+                                
+                                // Update original price
+                                const originalPriceInput = card.querySelector(`.admin-size-original-price-input[data-index="${index}"]`);
+                                if (originalPriceInput) {
+                                    const oldPrice = originalPriceInput.value ? parseFloat(originalPriceInput.value).toFixed(2) : null;
+                                    productCatalog[id].sizes[index].originalPrice = oldPrice;
+                                }
+                                
+                                // Update stock status for size
+                                const stockCheck = card.querySelector(`.admin-size-stock-check[data-index="${index}"]`);
+                                if (stockCheck) {
+                                    productCatalog[id].sizes[index].outOfStock = stockCheck.checked;
+                                }
+                            });
+                            
+                            // Recalculate base price (lowest of the sizes)
+                            const prices = productCatalog[id].sizes.map(s => parseFloat(s.price));
+                            productCatalog[id].price = Math.min(...prices).toFixed(2);
+                        } else {
+                            // Handle Single Price Update
+                            const priceInput = card.querySelector('.admin-price-input');
+                            if (priceInput) {
+                                productCatalog[id].price = parseFloat(priceInput.value).toFixed(2);
+                            }
+                        }
+
+                        // Push full object to ensure sizes and other fields are synced
+                        await setDoc(doc(db, "products", id), productCatalog[id], { merge: true });
+                        window.showToast("Product updated", "success");
+                    } catch (err) {
+                        console.error(err);
+                        window.showToast("Failed to update product", "error");
+                    }
+                });
+            });
+        };
+
+        // Expose for live updates from loadProductCatalog
+        window.refreshAdminProducts = loadAdminProducts;
+
+        const loadRevenueChart = async () => {
+            const ctx = document.getElementById('revenueChart');
+            if (!ctx) return;
+
+            try {
+                // Fetch all orders to aggregate revenue (in a real app, you might want a specific aggregation query)
+                // We sort by timestamp to ensure chronological order
+                const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
+                const querySnapshot = await getDocs(q);
+                
+                const revenueByDate = {};
+                let totalRevenue = 0;
+                let totalOrdersCount = 0;
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                
+                // Define statuses that count as revenue
+                const validStatuses = ['Confirmed', 'In Delivery', 'Delivered'];
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    totalOrdersCount++;
+
+                    // Check if order has a valid status for revenue
+                    if (data.timestamp && data.total && data.status && validStatuses.includes(data.status)) {
+                        // Add to all-time total
+                        totalRevenue += data.total;
+
+                        const date = new Date(data.timestamp.seconds * 1000);
+                        // Filter for last 30 days
+                        if (date >= thirtyDaysAgo) {
+                            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + data.total;
+                        }
+                    }
+                });
+
+                // Update Total Revenue Display
+                const totalRevEl = document.getElementById('total-revenue-display');
+                if (totalRevEl) totalRevEl.textContent = `${totalRevenue.toFixed(2)} TND`;
+
+                // Update Total Orders Display
+                const totalOrdersEl = document.getElementById('total-orders-display');
+                if (totalOrdersEl) totalOrdersEl.textContent = totalOrdersCount.toLocaleString();
+
+                const labels = Object.keys(revenueByDate);
+                const data = Object.values(revenueByDate);
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Revenue (TND)',
+                            data: data,
+                            borderColor: '#D4AF37',
+                            backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.05)' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error loading revenue chart:", error);
+            }
+        };
+
+        loadRevenueChart();
+    };
+    initAdminPage();
+
     // 16. Quick View Logic
     const initQuickView = () => {
         // Inject Modal HTML
@@ -1849,8 +2578,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="size-selector" style="margin-bottom: 1.5rem;">
                             <span class="size-label">Size</span>
                             <div class="size-options">
-                                <button class="size-btn active" data-size="250ml" data-price="35.00">250ml</button>
-                                <button class="size-btn" data-size="500ml" data-price="65.00">500ml</button>
+                                <!-- Dynamic Buttons Injected Here -->
                             </div>
                         </div>
 
@@ -1873,7 +2601,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const qvDesc = document.getElementById('qv-desc');
         const qvAddToCart = document.getElementById('qv-add-to-cart');
         const qvLearnMore = document.getElementById('qv-learn-more');
-        const qvSizeBtns = modal.querySelectorAll('.size-btn');
 
         let currentProduct = {};
 
@@ -1886,25 +2613,114 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.stopPropagation();
 
                 const id = btn.dataset.id;
-                const title = btn.dataset.title;
-                const price = btn.dataset.price;
-                const img = btn.dataset.img;
-                const desc = btn.dataset.desc;
+                // Smart Import: Use catalog data if available for consistency
+                const product = productCatalog[id];
+                
+                const title = product ? product.name : btn.dataset.title;
+                const price = product ? product.price : btn.dataset.price;
+                const img = product ? product.image : btn.dataset.img;
+                const desc = product ? product.description : btn.dataset.desc;
 
                 currentProduct = { id, title, price, img, desc };
                 document.body.style.overflow = 'hidden';
 
                 qvImage.src = img;
                 qvTitle.textContent = title;
-                qvPrice.textContent = `${price} TND`;
                 qvDesc.textContent = desc;
                 
                 if (qvLearnMore) {
                     qvLearnMore.href = `product.html?id=${id}`;
                 }
                 
-                qvSizeBtns.forEach(b => b.classList.remove('active'));
-                qvSizeBtns[0].classList.add('active');
+                // Dynamic Size Buttons for Quick View
+                const sizeOptionsContainer = modal.querySelector('.size-options');
+                const sizeSelector = modal.querySelector('.size-selector');
+                sizeOptionsContainer.innerHTML = ''; // Clear previous
+
+                if (product && product.sizes && product.sizes.length > 0) {
+                    sizeSelector.style.display = 'block';
+                    
+                    // Find index of lowest price
+                    const prices = product.sizes.map(s => parseFloat(s.price));
+                    const minPrice = Math.min(...prices);
+                    const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
+
+                    product.sizes.forEach((sizeObj, index) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'size-btn';
+                        if (index === minIndex) {
+                            btn.classList.add('active'); // Default to lowest
+                            // Initial check for default size in Quick View
+                            if (!product.outOfStock) {
+                                if (sizeObj.outOfStock) {
+                                    qvAddToCart.disabled = true;
+                                    qvAddToCart.textContent = "Out of Stock";
+                                    qvAddToCart.style.backgroundColor = "#ccc";
+                                } else {
+                                    qvAddToCart.disabled = false;
+                                    qvAddToCart.textContent = "Add to Cart";
+                                    qvAddToCart.style.backgroundColor = "";
+                                }
+                            }
+                        }
+                        btn.dataset.size = sizeObj.label;
+                        btn.dataset.price = sizeObj.price;
+                        btn.textContent = sizeObj.label;
+                        
+                        btn.addEventListener('click', () => {
+                            sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            if (sizeObj.originalPrice) {
+                                qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
+                            } else {
+                                qvPrice.textContent = `${sizeObj.price} TND`;
+                            }
+                            
+                            // Update Add to Cart based on size
+                            if (!product.outOfStock) {
+                                if (sizeObj.outOfStock) {
+                                    qvAddToCart.disabled = true;
+                                    qvAddToCart.textContent = "Out of Stock";
+                                    qvAddToCart.style.backgroundColor = "#ccc";
+                                } else {
+                                    qvAddToCart.disabled = false;
+                                    qvAddToCart.textContent = "Add to Cart";
+                                    qvAddToCart.style.backgroundColor = "";
+                                }
+                            }
+                        });
+
+                        if (sizeObj.outOfStock && !product.outOfStock) {
+                            btn.style.textDecoration = "line-through";
+                            btn.style.opacity = "0.6";
+                        }
+                        
+                        sizeOptionsContainer.appendChild(btn);
+                    });
+                    // Set initial price to lowest size
+                    const initialSize = product.sizes[minIndex];
+                    if (initialSize.originalPrice) {
+                        qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND`;
+                    } else {
+                        qvPrice.textContent = `${initialSize.price} TND`;
+                    }
+                } else {
+                    sizeSelector.style.display = 'none';
+                    qvPrice.textContent = `${price} TND`;
+                }
+
+                // Handle Out of Stock in Quick View
+                if (product && product.outOfStock) { // Global override
+                    qvAddToCart.disabled = true;
+                    qvAddToCart.textContent = "Out of Stock";
+                    qvAddToCart.style.backgroundColor = "#ccc";
+                    qvAddToCart.style.cursor = "not-allowed";
+                } else {
+                    qvAddToCart.disabled = false;
+                    qvAddToCart.textContent = "Add to Cart";
+                    qvAddToCart.style.backgroundColor = "";
+                    qvAddToCart.style.cursor = "pointer";
+                }
 
                 modal.classList.add('active');
             }
@@ -1917,15 +2733,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(closeBtn) closeBtn.addEventListener('click', closeModal);
         if(modal) modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
-        });
-
-        qvSizeBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                qvSizeBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const newPrice = btn.dataset.price;
-                qvPrice.textContent = `${newPrice} TND`;
-            });
         });
 
         if (qvAddToCart) {
@@ -1984,16 +2791,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let productsHtml = '';
             querySnapshot.forEach((doc) => {
-                const product = doc.data();
+                let product = doc.data();
+                const productId = doc.id;
+
+                // Merge with local catalog to ensure sizes are available for correct price calculation
+                if (productCatalog[productId]) {
+                    product = { ...productCatalog[productId], ...product };
+                }
+                
+                // Calculate lowest price from sizes if available
+                let displayPrice = product.price;
+                let hasDiscount = false;
+                if (product.sizes && product.sizes.length > 0) {
+                    const prices = product.sizes.map(s => parseFloat(s.price));
+                    displayPrice = Math.min(...prices).toFixed(2);
+                    hasDiscount = product.sizes.some(s => s.originalPrice && parseFloat(s.originalPrice) > parseFloat(s.price));
+                }
+
                 productsHtml += `
                     <div class="product-card reveal">
                         <a href="product.html?id=${doc.id}">
                             <div class="product-image-wrapper">
+                                ${hasDiscount ? '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px;">ONLINE OFFER</span>' : ''}
                                 <img src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img">
                                 <button class="quick-view-btn" 
                                     data-id="${doc.id}" 
                                     data-title="${product.name}" 
-                                    data-price="${product.price}" 
+                                    data-price="${displayPrice}" 
                                     data-img="${product.image || 'https://via.placeholder.com/300'}" 
                                     data-desc="${product.description || ''}">
                                     Quick View
@@ -2001,7 +2825,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <div class="product-card-info">
                                 <h3 class="product-card-title">${product.name}</h3>
-                                <p class="product-card-price">${product.price} TND</p>
+                                <p class="product-card-price">${displayPrice} TND</p>
                             </div>
                         </a>
                     </div>

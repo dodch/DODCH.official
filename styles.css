@@ -3289,3 +3289,240 @@ body.has-breadcrumbs .account-container {
 .highlight-section {
     animation: highlight-pulse 2s ease-out forwards;
 }
+
+/* --- Admin Dashboard --- */
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 140px 1.5rem 5rem;
+}
+
+.admin-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.admin-section {
+    background: var(--card-white);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+}
+
+.admin-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 1rem;
+}
+
+.admin-order-card, .admin-product-card {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #fff;
+}
+
+.admin-order-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-charcoal);
+}
+
+.admin-order-details p {
+    font-size: 0.85rem;
+    margin-bottom: 0.2rem;
+}
+
+.admin-order-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.admin-product-info {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.admin-product-info img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.admin-product-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.admin-save-prod-btn {
+    background-color: var(--text-charcoal);
+    color: #fff;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+/* --- Admin Pagination --- */
+.admin-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.pagination-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--text-charcoal);
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: var(--text-charcoal);
+    color: #fff;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #ccc;
+}
+
+.page-info {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* --- Admin Search --- */
+.admin-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.admin-search-input {
+    flex-grow: 1;
+    min-width: 200px;
+}
+
+.admin-search-input, .admin-select {
+    padding: 0.8rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+}
+
+.admin-search-input:focus, .admin-select:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+}
+
+.admin-btn {
+    padding: 0.8rem 1.5rem;
+    background-color: var(--text-charcoal);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.admin-btn:hover {
+    background-color: var(--accent-gold);
+}
+
+/* --- Admin Chart --- */
+.chart-container {
+    position: relative;
+    height: 350px;
+    width: 100%;
+}
+
+/* --- Admin Stats --- */
+.admin-stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.admin-stat-card {
+    background: var(--card-white);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    border-left: 4px solid var(--accent-gold);
+}
+
+.admin-stat-card h3 {
+    font-size: 0.9rem;
+    color: var(--text-charcoal);
+    opacity: 0.7;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.admin-stat-card p {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--accent-gold);
+    font-family: var(--font-sans);
+}
+
+/* --- Admin Tabs --- */
+.admin-tabs {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.admin-tab-btn {
+    background: none;
+    border: none;
+    padding: 1rem 0.5rem;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    cursor: pointer;
+    opacity: 0.6;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.admin-tab-btn.active {
+    opacity: 1;
+    border-bottom-color: var(--accent-gold);
+    color: var(--accent-gold);
+    font-weight: 600;
+}
+
+.tab-pane {
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+
+.tab-pane.active {
+    display: block;
+}
