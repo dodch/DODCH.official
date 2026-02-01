@@ -1,0 +1,20 @@
+{
+  "name": "DODCH",
+  "short_name": "DODCH",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FDFBF7",
+  "theme_color": "#FDFBF7",
+  "icons": [
+    {
+      "src": "IMG_3352.PNG",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "IMG_3352.PNG",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,7 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
+import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 
@@ -10,8 +13,30 @@ const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+
+// Enable App Check debug token for localhost
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
+// Initialize App Check
+const appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider('6LcAk10sAAAAAJLRyVesWS-Ub87u8v_Qzow1xl7l'),
+    isTokenAutoRefreshEnabled: true
+});
+
+// Debug: Log the App Check token to confirm it's working
+getToken(appCheck)
+    .then((tokenResult) => {
+        console.log("✅ App Check Token:", tokenResult.token);
+    })
+    .catch((error) => {
+        console.error("❌ App Check Error:", error);
+    });
+
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -116,6 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const experienceImageContainers = document.querySelectorAll('.experience-image');
     const promiseIcons = document.querySelectorAll('.promise-icon');
     const progressBar = document.getElementById('scroll-progress');
+    const stickyCTA = document.getElementById('sticky-cta');
+    const footer = document.querySelector('footer');
     
     const updateNavbar = () => {
         const scrollY = window.scrollY;
@@ -171,6 +198,18 @@ document.addEventListener('DOMContentLoaded', () => {
             heroOverlay.style.opacity = ratio;
             heroOverlay.style.backdropFilter = `blur(${ratio * 10}px)`;
             heroOverlay.style.webkitBackdropFilter = `blur(${ratio * 10}px)`; // Safari support
+        }
+
+        // Sticky CTA Logic
+        if (stickyCTA && hero) {
+            const footerRect = footer ? footer.getBoundingClientRect() : null;
+            const isFooterVisible = footerRect ? footerRect.top < window.innerHeight : false;
+
+            if (scrollY > hero.offsetHeight && !isFooterVisible) {
+                stickyCTA.classList.add('visible');
+            } else {
+                stickyCTA.classList.remove('visible');
+            }
         }
 
         // Parallax Effect
@@ -587,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "Glass Glow Shampoo",
             subtitle: "The Elixir of 10,000 Seeds",
             price: "24.00",
-            image: "inventory/IMG_3256.PNG",
+            image: "IMG_3357.jpg",
             description: "A high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil. Experience the 'Solar-Floral' journey with notes of Tunisian Orange Blossom and Tropical Vanilla.",
             style: "", // CSS filter if needed
             sizes: [
@@ -600,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "Prickly Pear Pure Oil",
             subtitle: "100% Organic Cold-Pressed Elixir",
             price: "85.00",
-            image: "inventory/IMG_3256.PNG",
+            image: "IMG_3256.PNG",
             description: "The ultimate luxury for hair and skin. Sourced from the finest seeds in Tunisia, this dry oil penetrates instantly to repair, nourish, and add a mirror-like shine without any greasy residue.",
             style: "filter: hue-rotate(15deg);",
             sizes: [
@@ -612,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "Silk & Wheat Hair Mask",
             subtitle: "Deep Repair & Glass Shine",
             price: "55.00",
-            image: "inventory/IMG_3256.PNG",
+            image: "IMG_3256.PNG",
             description: "Infused with hydrolyzed silk proteins and wheat amino acids. This mask reconstructs the hair fiber from within while creating a breathable shield on the surface for instant manageability.",
             style: "filter: sepia(0.2);",
             sizes: [
@@ -624,7 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "The Ritual Set",
             subtitle: "The Complete Mediterranean Experience",
             price: "120.00",
-            image: "inventory/IMG_3256.PNG",
+            image: "IMG_3256.PNG",
             description: "The full collection: Glass Glow Shampoo, Silk & Wheat Mask, and the Pure Oil. Designed to work in harmony for the ultimate hair transformation.",
             style: "filter: contrast(1.1);",
             sizes: [] // No sizes for the set
@@ -643,8 +682,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!shopGrid) return;
 
         shopGrid.innerHTML = ''; // Clear static HTML
+        
+        // Sort by orderIndex
+        const sortedCatalog = Object.entries(productCatalog).sort(([, a], [, b]) => {
+            return (a.orderIndex || 0) - (b.orderIndex || 0);
+        });
 
-        Object.entries(productCatalog).forEach(([id, product]) => {
+        sortedCatalog.forEach(([id, product]) => {
             // Calculate lowest price from sizes
             let displayPrice = product.price;
             let hasDiscount = false;
@@ -666,6 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 data-title="${product.name}" 
                                 data-price="${displayPrice}" 
                                 data-img="${product.image}" 
+                                data-style="${product.style || ''}"
                                 data-desc="${product.description}">
                                 Quick View
                             </button>
@@ -699,6 +744,8 @@ document.addEventListener('DOMContentLoaded', () => {
             initProductPage();
             // Re-render shop grid if we are on shop page
             initShopPage();
+            // Re-render related products
+            loadRelatedProducts();
             
             // Refresh Admin Dashboard if active (fixes race condition where admin loads before firestore data)
             if (typeof window.refreshAdminProducts === 'function') {
@@ -710,7 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 11. Product Page & Cart Logic
-    const CART_VERSION = 4; // Increment to force reset and clear stale/buggy data
+    const CART_VERSION = 6; // Increment to force reset and clear stale/buggy data
     let cart = JSON.parse(localStorage.getItem('dodch_cart')) || [];
     const storedVersion = parseInt(localStorage.getItem('dodch_cart_version') || '0');
 
@@ -1130,6 +1177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     const newItem = {
                         id: newItemId,
+                    productId: clickedBtn.dataset.productId, // Pass ID for server verification
                         name: productName,
                         size: size,
                         price: `${parseFloat(price).toFixed(2)} TND`,
@@ -1162,8 +1210,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const product = productCatalog[productId] || productCatalog['glass-glow-shampoo'];
 
         // Update DOM Elements
-        const titleEl = document.getElementById('product-title');
-        const subtitleEl = document.getElementById('product-subtitle');
+        let titleEl = document.getElementById('product-title');
+        // Fallback: Try finding h1 in product-info if ID is missing
+        if (!titleEl) {
+            const info = document.querySelector('.product-info');
+            if (info) titleEl = info.querySelector('h1');
+        }
+
+        let subtitleEl = document.getElementById('product-subtitle');
+        if (!subtitleEl) {
+            const info = document.querySelector('.product-info');
+            if (info) subtitleEl = info.querySelector('.product-subtitle, h2');
+        }
+
         const priceEl = document.getElementById('product-price');
         const descEl = document.getElementById('product-description-text');
         const imgEl = document.getElementById('main-product-image');
@@ -1190,6 +1249,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (imgEl) {
             imgEl.src = product.image;
             if (product.style) imgEl.style = product.style;
+        }
+
+        // Attach Product ID to Add to Cart button for server verification
+        if (addToCartBtn) {
+            addToCartBtn.dataset.productId = productId || 'glass-glow-shampoo';
         }
 
         // Update Page Title
@@ -1314,6 +1378,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Load catalog then init page
+    // Initialize immediately with default data to prevent content flash/fallback
+    initProductPage();
+    initShopPage();
     loadProductCatalog();
 
     // Sidebar Logic
@@ -1626,7 +1693,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkoutForm = document.querySelector('.checkout-form form');
 
     if (placeOrderBtn && checkoutForm) {
-        placeOrderBtn.addEventListener('click', (e) => {
+        placeOrderBtn.addEventListener('click', async (e) => {
             e.preventDefault();
 
             if (cart.length === 0) {
@@ -1651,11 +1718,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 15000); // 15 seconds
 
                 try {
-                    // Generate a unique reference code
+                    // Generate a unique reference code locally
                     const orderRef = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
 
-                    // Save Order to Firestore
-                    const orderData = {
+                    // Calculate total locally
+                    const total = cart.reduce((sum, item) => {
+                        let price = String(item.price).replace(/[^0-9.]/g, '');
+                        return sum + (parseFloat(price) * item.quantity);
+                    }, 0);
+
+                    const docRef = await addDoc(collection(db, "orders"), {
                         orderReference: orderRef,
                         items: cart,
                         shipping: {
@@ -1665,63 +1737,40 @@ document.addEventListener('DOMContentLoaded', () => {
                             city: document.getElementById('checkout-city').value,
                             postalCode: document.getElementById('checkout-postal-code').value
                         },
-                        total: cart.reduce((sum, item) => {
-                            let price = String(item.price);
-                            // Handle price if it's a string with $ or just a number
-                            if (price) {
-                                price = parseFloat(price.replace(/[^0-9.]/g, ''));
-                            }
-                            return sum + (price * item.quantity);
-                        }, 0),
-                        timestamp: serverTimestamp(), // Use server timestamp for accuracy
-                        status: 'Pending', // Standardized status
+                        total: parseFloat(total.toFixed(2)),
+                        timestamp: serverTimestamp(),
+                        status: 'Pending',
                         userId: currentUser ? currentUser.uid : 'guest'
-                    };
+                    });
 
-                    addDoc(collection(db, "orders"), orderData)
-                        .then((docRef) => {
-                            clearTimeout(operationTimeout); // Success, so clear the timeout
-                            console.log("Order placed successfully with ID: ", docRef.id);
-                            
-                            // This logic now runs ONLY on success
-                            setTimeout(() => {
-                                // Clear Cart
-                                cart = [];
-                                localStorage.setItem('dodch_cart', JSON.stringify(cart));
-                                updateCartUI();
-                                
-                                // Replace Order Summary with Success Message
-                                const orderSummary = document.querySelector('.order-summary');
-                                if (orderSummary) {
-                                    orderSummary.innerHTML = `
-                                        <div style="text-align: center; padding: 2rem 0; animation: fadeIn 0.5s ease;">
-                                            <svg style="width: 60px; height: 60px; color: var(--accent-gold); margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                                            <h2 style="border: none; margin-bottom: 0.5rem;">Order Confirmed</h2>
-                                            <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${orderRef} has been received.</p>
-                                            <a href="index.html" class="cta-button" style="margin-top: 2rem; display: inline-block; width: auto;">Return Home</a>
-                                        </div>
-                                    `;
-                                }
-                                
-                                // Scroll to summary on mobile if needed
-                                if (window.innerWidth < 768) {
-                                    orderSummary.scrollIntoView({ behavior: 'smooth' });
-                                }
-                            }, 1000); // Reduced timeout for faster feedback
-                        })
-                        .catch(err => {
-                            clearTimeout(operationTimeout); // Failure, so clear the timeout
-                            console.error("CRITICAL: Error placing order:", err);
-                            window.showToast("Error placing order. Please try again.", "error");
-                            // Re-enable the button on failure
-                            placeOrderBtn.innerText = "Place Order";
-                            placeOrderBtn.style.opacity = "1";
-                            placeOrderBtn.style.pointerEvents = "auto";
-                        });
+                    clearTimeout(operationTimeout);
+                    console.log("Order placed successfully with ID: ", docRef.id);
+                    
+                    setTimeout(() => {
+                        cart = [];
+                        localStorage.setItem('dodch_cart', JSON.stringify(cart));
+                        updateCartUI();
+                        
+                        const orderSummary = document.querySelector('.order-summary');
+                        if (orderSummary) {
+                            orderSummary.innerHTML = `
+                                <div style="text-align: center; padding: 2rem 0; animation: fadeIn 0.5s ease;">
+                                    <svg style="width: 60px; height: 60px; color: var(--accent-gold); margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <h2 style="border: none; margin-bottom: 0.5rem;">Order Confirmed</h2>
+                                    <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${orderRef} has been received.</p>
+                                    <a href="index.html" class="cta-button" style="margin-top: 2rem; display: inline-block; width: auto;">Return Home</a>
+                                </div>
+                            `;
+                        }
+                        if (window.innerWidth < 768) {
+                            orderSummary.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    }, 1000);
+
                 } catch (err) {
-                    clearTimeout(operationTimeout); // Synchronous error, so clear the timeout
-                    console.error("Synchronous Error preparing order:", err);
-                    window.showToast("Error preparing order.", "error");
+                    clearTimeout(operationTimeout);
+                    console.error("Error placing order:", err);
+                    window.showToast(err.message || "Error placing order.", "error");
                     placeOrderBtn.innerText = "Place Order";
                     placeOrderBtn.style.opacity = "1";
                     placeOrderBtn.style.pointerEvents = "auto";
@@ -1880,6 +1929,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 
                                 <div class="contact-form-container">
                                     <form id="main-contact-form">
+                                        <!-- Honeypot Field (Hidden) -->
+                                        <div style="position: absolute; left: -9999px;">
+                                            <input type="text" name="website" tabindex="-1" autocomplete="off">
+                                        </div>
                                         <div class="form-group">
                                             <input type="text" placeholder="Your Name" required>
                                         </div>
@@ -1951,19 +2004,43 @@ document.addEventListener('DOMContentLoaded', () => {
             if (form) {
                 form.addEventListener('submit', (e) => {
                     e.preventDefault();
+
+                    // Honeypot Check
+                    const honeypot = form.querySelector('input[name="website"]');
+                    if (honeypot && honeypot.value) {
+                        console.warn("Bot detected via honeypot.");
+                        return; // Silently fail
+                    }
+
+                    // Rate Limit Check (Client-side)
+                    const lastSubmit = localStorage.getItem('dodch_last_contact_ts');
+                    if (lastSubmit) {
+                        const timeSince = Date.now() - parseInt(lastSubmit);
+                        // 2 minutes cooldown (120000 ms)
+                        if (timeSince < 120000) { 
+                            const remaining = Math.ceil((120000 - timeSince) / 1000);
+                            window.showToast(`Please wait ${remaining}s before sending another message.`, "error");
+                            return;
+                        }
+                    }
+
                     const btn = form.querySelector('button');
                     const originalText = btn.innerText;
                     btn.innerText = "Sending...";
                     btn.disabled = true;
                     
-                    const inputs = form.querySelectorAll('input, textarea');
+                    // Exclude honeypot from data collection
+                    const inputs = Array.from(form.querySelectorAll('input, textarea'))
+                        .filter(el => el.name !== 'website');
+
                     addDoc(collection(db, "messages"), {
                         name: inputs[0].value,
                         email: inputs[1].value,
                         message: inputs[2].value,
-                        source: 'injected_contact_section',
-                        timestamp: new Date()
+                        timestamp: serverTimestamp(),
+                        source: 'footer_contact'
                     }).then(() => {
+                        localStorage.setItem('dodch_last_contact_ts', Date.now());
                         window.showToast("Message sent successfully!", "success");
                         form.reset();
                         btn.innerText = "Message Sent";
@@ -1973,7 +2050,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }, 3000);
                     }).catch(err => {
                         console.error(err);
-                        window.showToast("Error sending message.", "error");
+                        window.showToast(err.message || "Error sending message.", "error");
                         btn.innerText = originalText;
                         btn.disabled = false;
                     });
@@ -2053,6 +2130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 loadAdminOrders();
                 loadAdminProducts();
+                loadRevenueChart();
             }
         });
 
@@ -2070,6 +2148,216 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (targetPane) targetPane.classList.add('active');
             });
         });
+
+        // Product Modal Logic
+        const addProductModal = document.getElementById('add-product-modal');
+        const addProductBtn = document.getElementById('admin-add-product-btn');
+        const cancelProductEditBtn = document.getElementById('cancel-product-edit');
+        const addProductForm = document.getElementById('add-product-form');
+        const addSizeBtn = document.getElementById('add-size-btn');
+        const sizesContainer = document.getElementById('new-prod-sizes-container');
+        const imageFileInput = document.getElementById('new-prod-image-file');
+        const dropZone = document.getElementById('drop-zone');
+        const imageUrlInput = document.getElementById('new-prod-image-url');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const removeImageBtn = document.getElementById('remove-image-btn');
+
+        if (imageFileInput) {
+            imageFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    imagePreview.src = URL.createObjectURL(file);
+                    imagePreviewContainer.style.display = 'block';
+                    const prompt = dropZone.querySelector('.drop-zone-prompt');
+                    if (prompt) prompt.textContent = file.name;
+                }
+            });
+        }
+
+        if (removeImageBtn) {
+            removeImageBtn.addEventListener('click', () => {
+                if (imageFileInput) imageFileInput.value = '';
+                if (imageUrlInput) imageUrlInput.value = '';
+                if (imagePreview) imagePreview.src = '';
+                if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+                
+                const prompt = dropZone ? dropZone.querySelector('.drop-zone-prompt') : null;
+                if (prompt) prompt.textContent = 'Drop file here or click to upload';
+            });
+        }
+
+        if (dropZone && imageFileInput) {
+            dropZone.addEventListener('click', () => imageFileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            ['dragleave', 'dragend'].forEach(type => {
+                dropZone.addEventListener(type, () => dropZone.classList.remove('dragover'));
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+
+                if (e.dataTransfer.files.length) {
+                    imageFileInput.files = e.dataTransfer.files;
+                    // Trigger change event manually to update preview
+                    imageFileInput.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        const openProductModal = () => {
+            if (addProductModal) {
+                addProductModal.style.display = 'flex';
+                setTimeout(() => addProductModal.classList.add('active'), 10);
+            }
+        };
+
+        const closeProductModal = () => {
+            if (addProductModal) {
+                addProductModal.classList.remove('active');
+                setTimeout(() => {
+                    addProductModal.style.display = 'none';
+                    if (addProductForm) addProductForm.reset();
+                    if (sizesContainer) sizesContainer.innerHTML = '';
+                    const productIdInput = document.getElementById('product-id-input');
+                    if (productIdInput) productIdInput.value = '';
+                    if (imageFileInput) imageFileInput.value = '';
+                    if (imageUrlInput) imageUrlInput.value = '';
+                    if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+                    if (imagePreview) imagePreview.src = '';
+                    const prompt = dropZone ? dropZone.querySelector('.drop-zone-prompt') : null;
+                    if (prompt) prompt.textContent = 'Drop file here or click to upload';
+                }, 300);
+            }
+        };
+
+        if (addProductBtn) addProductBtn.addEventListener('click', () => {
+            const modalTitle = document.getElementById('product-modal-title');
+            if (modalTitle) modalTitle.textContent = 'Add New Product';
+            openProductModal();
+        });
+        if (cancelProductEditBtn) cancelProductEditBtn.addEventListener('click', closeProductModal);
+        if (addProductModal) {
+            addProductModal.addEventListener('click', (e) => {
+                if (e.target === addProductModal) closeProductModal();
+            });
+        }
+
+        const addSizeInputRow = (size = { label: '', price: '', originalPrice: '' }) => {
+            const sizeRow = document.createElement('div');
+            sizeRow.className = 'product-size-row';
+            sizeRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+            sizeRow.innerHTML = `
+                <input type="text" class="size-label-input admin-search-input" placeholder="Size (e.g., 50ml)" value="${size.label}" required style="flex: 2;">
+                <input type="number" step="0.01" class="size-price-input admin-search-input" placeholder="Price" value="${size.price}" required style="flex: 1;">
+                <input type="number" step="0.01" class="size-original-price-input admin-search-input" placeholder="Old Price (Opt)" value="${size.originalPrice || ''}" style="flex: 1;">
+                <button type="button" class="remove-size-btn" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+            `;
+            if (sizesContainer) sizesContainer.appendChild(sizeRow);
+            sizeRow.querySelector('.remove-size-btn').addEventListener('click', () => sizeRow.remove());
+        };
+
+        if (addSizeBtn) addSizeBtn.addEventListener('click', () => addSizeInputRow());
+
+        if (addProductForm) {
+            addProductForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = addProductForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                const spinner = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 18px; height: 18px; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>';
+                submitBtn.innerHTML = `${spinner} Saving...`;
+
+                const idInput = document.getElementById('product-id-input');
+                const isEdit = idInput && idInput.value;
+                const name = document.getElementById('new-prod-name').value.trim();
+                
+                let newId;
+                if (isEdit) {
+                    newId = idInput.value;
+                } else {
+                    newId = name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+                    if (!newId || (productCatalog[newId])) {
+                        window.showToast("Product with this name already exists or name is invalid.", "error");
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Save Product';
+                        return;
+                    }
+                }
+
+                const sizes = Array.from(sizesContainer.querySelectorAll('.product-size-row')).map(row => ({
+                    label: row.querySelector('.size-label-input').value,
+                    price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
+                    originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
+                    outOfStock: false // Default to false, will be preserved below if editing
+                }));
+                
+                // Preserve existing data if editing
+                const existingProduct = isEdit ? productCatalog[newId] : {};
+                if (isEdit && existingProduct.sizes) {
+                    sizes.forEach(newSize => {
+                        const oldSize = existingProduct.sizes.find(s => s.label === newSize.label);
+                        if (oldSize) newSize.outOfStock = oldSize.outOfStock;
+                    });
+                }
+
+                if (sizes.length === 0) { window.showToast("Please add at least one size.", "error"); submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; return; }
+
+                // Calculate order index for new products
+                let orderIndex = isEdit ? (existingProduct.orderIndex || 0) : 0;
+                if (!isEdit) {
+                    const existingIndices = Object.values(productCatalog).map(p => p.orderIndex || 0);
+                    orderIndex = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 0;
+                }
+
+                const newProduct = { 
+                    name, 
+                    subtitle: document.getElementById('new-prod-subtitle').value.trim(), 
+                    description: document.getElementById('new-prod-desc').value.trim(), 
+                    image: "", 
+                    sizes, 
+                    price: Math.min(...sizes.map(s => parseFloat(s.price))).toFixed(2), 
+                    outOfStock: isEdit ? (existingProduct.outOfStock || false) : false, 
+                    style: isEdit ? (existingProduct.style || "") : "",
+                    orderIndex: orderIndex
+                };
+
+                // Handle Image Upload
+                let finalImageUrl = imageUrlInput.value;
+                const file = imageFileInput.files[0];
+                
+                if (file) {
+                    submitBtn.innerHTML = `${spinner} Uploading Image...`;
+                    try {
+                        const storageRef = ref(storage, `products/${newId}_${Date.now()}_${file.name}`);
+                        await uploadBytes(storageRef, file);
+                        finalImageUrl = await getDownloadURL(storageRef);
+                    } catch (uploadError) {
+                        console.error("Image upload failed:", uploadError);
+                        window.showToast("Image upload failed.", "error");
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Save Product';
+                        return;
+                    }
+                }
+
+                if (!finalImageUrl) {
+                    window.showToast("Please select an image.", "error");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Save Product';
+                    return;
+                }
+                newProduct.image = finalImageUrl;
+
+                submitBtn.innerHTML = `${spinner} Saving Product...`;
+                try { await setDoc(doc(db, "products", newId), newProduct); productCatalog[newId] = newProduct; loadAdminProducts(); closeProductModal(); window.showToast(isEdit ? "Product updated successfully!" : "Product added successfully!", "success"); } catch (error) { console.error("Error saving product:", error); window.showToast("Failed to save product.", "error"); } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; }
+            });
+        }
 
         // Pagination State
         const pageSize = 10;
@@ -2355,14 +2643,11 @@ The DODCH Team`;
             if (!document.getElementById('admin-sync-btn')) {
                 const syncBtn = document.createElement('button');
                 syncBtn.id = 'admin-sync-btn';
-                syncBtn.textContent = 'Sync Local Catalog to Firestore';
+                syncBtn.className = 'admin-btn btn-save';
+                syncBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg> Sync Catalog`;
                 syncBtn.style.marginBottom = '20px';
-                syncBtn.style.padding = '10px 20px';
-                syncBtn.style.backgroundColor = '#2ecc71';
-                syncBtn.style.color = 'white';
-                syncBtn.style.border = 'none';
-                syncBtn.style.borderRadius = '5px';
-                syncBtn.style.cursor = 'pointer';
+                syncBtn.style.width = 'auto';
+                syncBtn.style.flex = 'none';
                 
                 syncBtn.addEventListener('click', async () => {
                     if(await window.showConfirm("Overwrite Firestore products with local catalog data?", "Sync Catalog")) {
@@ -2385,7 +2670,13 @@ The DODCH Team`;
             }
 
             adminProductsList.innerHTML = '';
-            Object.entries(productCatalog).forEach(([id, product]) => {
+            
+            // Sort products by orderIndex
+            const sortedEntries = Object.entries(productCatalog).sort(([, a], [, b]) => {
+                return (a.orderIndex || 0) - (b.orderIndex || 0);
+            });
+
+            sortedEntries.forEach(([id, product], index) => {
                 const el = document.createElement('div');
                 el.className = 'admin-product-card';
                 
@@ -2408,29 +2699,84 @@ The DODCH Team`;
                     priceInputsHTML = `<label>Price (TND): <input type="number" class="admin-price-input" value="${parseFloat(product.price)}" style="width: 100px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></label>`;
                 }
 
+                const isFirst = index === 0;
+                const isLast = index === sortedEntries.length - 1;
+
                 el.innerHTML = `
                     <div class="admin-product-info">
                         <img src="${product.image}" alt="${product.name}">
-                        <div>
+                        <div class="admin-product-details">
                             <h4>${product.name}</h4>
                             <p>${product.subtitle}</p>
                         </div>
+                        <div class="admin-move-controls">
+                            <button class="btn-move up admin-move-btn" data-id="${id}" ${isFirst ? 'disabled' : ''}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                            </button>
+                            <button class="btn-move down admin-move-btn" data-id="${id}" ${isLast ? 'disabled' : ''}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                        </div>
                     </div>
-                    <div class="admin-product-controls" style="display: flex; flex-direction: column; gap: 10px; align-items: flex-start;">
-                        <div class="price-inputs-container" style="width: 100%;">
+                    <div class="admin-product-controls">
+                        <div class="price-inputs-container">
                             ${priceInputsHTML}
                         </div>
-                        <label><input type="checkbox" class="admin-stock-check" data-id="${id}" ${product.outOfStock ? 'checked' : ''}> Out of Stock</label>
-                        <button class="admin-save-prod-btn" data-id="${id}" style="width: 100%;">Save Changes</button>
+                        <label class="stock-label"><input type="checkbox" class="admin-stock-check" data-id="${id}" ${product.outOfStock ? 'checked' : ''}> Out of Stock</label>
+                        <div class="admin-actions-row">
+                            <button class="admin-btn btn-edit admin-edit-prod-btn" data-id="${id}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                Edit
+                            </button>
+                            <button class="admin-btn btn-save admin-save-prod-btn" data-id="${id}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                Save
+                            </button>
+                            <button class="admin-btn btn-delete admin-delete-prod-btn" data-id="${id}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 `;
                 adminProductsList.appendChild(el);
             });
 
+            document.querySelectorAll('.admin-edit-prod-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const product = productCatalog[id];
+                    if (!product) return;
+
+                    const idInput = document.getElementById('product-id-input');
+                    if (idInput) idInput.value = id;
+                    
+                    document.getElementById('new-prod-name').value = product.name || '';
+                    document.getElementById('new-prod-subtitle').value = product.subtitle || '';
+                    document.getElementById('new-prod-desc').value = product.description || '';
+                    
+                    if (imageUrlInput) imageUrlInput.value = product.image || '';
+                    if (imagePreview && product.image) {
+                        imagePreview.src = product.image;
+                        imagePreviewContainer.style.display = 'block';
+                    }
+                    
+                    const modalTitle = document.getElementById('product-modal-title');
+                    if (modalTitle) modalTitle.textContent = 'Edit Product';
+
+                    if (sizesContainer) sizesContainer.innerHTML = '';
+                    if (product.sizes && Array.isArray(product.sizes)) {
+                        product.sizes.forEach(size => addSizeInputRow(size));
+                    }
+
+                    openProductModal();
+                });
+            });
+
             document.querySelectorAll('.admin-save-prod-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
-                    const id = e.target.dataset.id;
-                    const card = e.target.closest('.admin-product-card');
+                    const id = e.currentTarget.dataset.id;
+                    const card = e.currentTarget.closest('.admin-product-card');
                     const outOfStock = card.querySelector('.admin-stock-check').checked;
 
                     try {
@@ -2476,6 +2822,59 @@ The DODCH Team`;
                     } catch (err) {
                         console.error(err);
                         window.showToast("Failed to update product", "error");
+                    }
+                });
+            });
+
+            document.querySelectorAll('.admin-delete-prod-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    if (await window.showConfirm("Are you sure you want to delete this product? This action cannot be undone.", "Delete Product")) {
+                        try {
+                            await deleteDoc(doc(db, "products", id));
+                            delete productCatalog[id];
+                            loadAdminProducts();
+                            window.showToast("Product deleted successfully.", "success");
+                        } catch (error) {
+                            console.error("Error deleting product:", error);
+                            window.showToast("Failed to delete product.", "error");
+                        }
+                    }
+                });
+            });
+
+            // Move Up/Down Logic
+            document.querySelectorAll('.admin-move-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const direction = e.currentTarget.classList.contains('up') ? -1 : 1;
+                    const currentIndex = sortedEntries.findIndex(([pid]) => pid === id);
+                    const targetIndex = currentIndex + direction;
+
+                    if (targetIndex >= 0 && targetIndex < sortedEntries.length) {
+                        // Re-index all items to ensure clean sequence
+                        const batchPromises = [];
+
+                        sortedEntries.forEach(([pid, p], idx) => {
+                            let newIndex = idx;
+                            if (idx === currentIndex) newIndex = targetIndex;
+                            if (idx === targetIndex) newIndex = currentIndex;
+                            
+                            if ((p.orderIndex !== newIndex)) {
+                                p.orderIndex = newIndex;
+                                productCatalog[pid].orderIndex = newIndex; // Update local immediately
+                                batchPromises.push(updateDoc(doc(db, "products", pid), { orderIndex: newIndex }));
+                            }
+                        });
+
+                        try {
+                            await Promise.all(batchPromises);
+                            loadAdminProducts(); // Re-render admin list
+                            initShopPage(); // Re-render shop page if visible
+                        } catch (err) {
+                            console.error("Error reordering:", err);
+                            window.showToast("Failed to reorder products.", "error");
+                        }
                     }
                 });
             });
@@ -2561,7 +2960,6 @@ The DODCH Team`;
             }
         };
 
-        loadRevenueChart();
     };
     initAdminPage();
 
@@ -2625,11 +3023,13 @@ The DODCH Team`;
                 const price = product ? product.price : btn.dataset.price;
                 const img = product ? product.image : btn.dataset.img;
                 const desc = product ? product.description : btn.dataset.desc;
+                const style = product ? product.style : btn.dataset.style;
 
                 currentProduct = { id, title, price, img, desc };
                 document.body.style.overflow = 'hidden';
 
                 qvImage.src = img;
+                qvImage.style = style || '';
                 qvTitle.textContent = title;
                 qvDesc.textContent = desc;
                 
@@ -2754,6 +3154,7 @@ The DODCH Team`;
                 } else {
                     cart.push({
                         id: newItemId,
+                        productId: currentProduct.id, // Pass ID for server verification
                         name: currentProduct.title,
                         size: size,
                         price: `${price} TND`,
@@ -2772,8 +3173,8 @@ The DODCH Team`;
     initQuickView();
 
     // 19. Related Products Logic
-    const loadRelatedProducts = async () => {
-        // Check if we are on a product page by looking for the detail container
+    const loadRelatedProducts = () => {
+        // Check if we are on a product page
         const productDetail = document.querySelector('.product-detail-container');
         if (!productDetail) return;
 
@@ -2786,75 +3187,75 @@ The DODCH Team`;
             productDetail.after(container);
         }
 
-        try {
-            // Fetch 4 products from Firestore
-            // Assuming a 'products' collection exists.
-            const q = query(collection(db, "products"), limit(4));
-            const querySnapshot = await getDocs(q);
-            
-            if (querySnapshot.empty) return;
+        // Get current product ID to exclude
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentId = urlParams.get('id');
 
-            let productsHtml = '';
-            querySnapshot.forEach((doc) => {
-                let product = doc.data();
-                const productId = doc.id;
+        // Resolve effective ID (matching initProductPage logic) to ensure correct exclusion
+        if (!currentId || !productCatalog[currentId]) {
+            currentId = 'glass-glow-shampoo';
+        }
 
-                // Merge with local catalog to ensure sizes are available for correct price calculation
-                if (productCatalog[productId]) {
-                    product = { ...productCatalog[productId], ...product };
-                }
-                
-                // Calculate lowest price from sizes if available
-                let displayPrice = product.price;
-                let hasDiscount = false;
-                if (product.sizes && product.sizes.length > 0) {
-                    const prices = product.sizes.map(s => parseFloat(s.price));
-                    displayPrice = Math.min(...prices).toFixed(2);
-                    hasDiscount = product.sizes.some(s => s.originalPrice && parseFloat(s.originalPrice) > parseFloat(s.price));
-                }
+        // Use productCatalog to ensure consistency with Shop page
+        const catalogEntries = Object.entries(productCatalog);
+        
+        // Filter out current product and limit to 4
+        const relatedEntries = catalogEntries
+            .filter(([id]) => id !== currentId)
+            .slice(0, 4);
 
-                productsHtml += `
-                    <div class="product-card reveal">
-                        <a href="product.html?id=${doc.id}">
-                            <div class="product-image-wrapper">
-                                ${hasDiscount ? '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px;">ONLINE OFFER</span>' : ''}
-                                <img src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img">
-                                <button class="quick-view-btn" 
-                                    data-id="${doc.id}" 
-                                    data-title="${product.name}" 
-                                    data-price="${displayPrice}" 
-                                    data-img="${product.image || 'https://via.placeholder.com/300'}" 
-                                    data-desc="${product.description || ''}">
-                                    Quick View
-                                </button>
-                            </div>
-                            <div class="product-card-info">
-                                <h3 class="product-card-title">${product.name}</h3>
-                                <p class="product-card-price">${displayPrice} TND</p>
-                            </div>
-                        </a>
-                    </div>
-                `;
-            });
+        if (relatedEntries.length === 0) return;
 
-            container.innerHTML = `
-                <div class="container">
-                    <h2 class="section-title reveal active">You May Also Like</h2>
-                    <div class="shop-grid">
-                        ${productsHtml}
-                    </div>
+        let productsHtml = '';
+        relatedEntries.forEach(([id, product]) => {
+            // Calculate lowest price from sizes if available
+            let displayPrice = product.price;
+            let hasDiscount = false;
+            if (product.sizes && product.sizes.length > 0) {
+                const prices = product.sizes.map(s => parseFloat(s.price));
+                displayPrice = Math.min(...prices).toFixed(2);
+                hasDiscount = product.sizes.some(s => s.originalPrice && parseFloat(s.originalPrice) > parseFloat(s.price));
+            }
+
+            productsHtml += `
+                <div class="product-card reveal">
+                    <a href="product.html?id=${id}">
+                        <div class="product-image-wrapper">
+                            ${hasDiscount ? '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px;">ONLINE OFFER</span>' : ''}
+                            <img src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
+                            <button class="quick-view-btn" 
+                                data-id="${id}" 
+                                data-title="${product.name}" 
+                                data-price="${displayPrice}" 
+                                data-img="${product.image || 'https://via.placeholder.com/300'}" 
+                                data-style="${product.style || ''}"
+                                data-desc="${product.description || ''}">
+                                Quick View
+                            </button>
+                        </div>
+                        <div class="product-card-info">
+                            <h3 class="product-card-title">${product.name}</h3>
+                            <p class="product-card-price">${displayPrice} TND</p>
+                        </div>
+                    </a>
                 </div>
             `;
-            
-            // Trigger reveal animation for new elements
-            setTimeout(() => {
-                const newReveals = container.querySelectorAll('.reveal');
-                newReveals.forEach(el => el.classList.add('active'));
-            }, 100);
+        });
 
-        } catch (error) {
-            console.error("Error loading related products:", error);
-        }
+        container.innerHTML = `
+            <div class="container">
+                <h2 class="section-title reveal active">You May Also Like</h2>
+                <div class="shop-grid">
+                    ${productsHtml}
+                </div>
+            </div>
+        `;
+        
+        // Trigger reveal animation for new elements
+        setTimeout(() => {
+            const newReveals = container.querySelectorAll('.reveal');
+            newReveals.forEach(el => el.classList.add('active'));
+        }, 100);
     };
 
     loadRelatedProducts();
@@ -2935,3 +3336,123 @@ const initTrackingPage = () => {
 };
 
 initTrackingPage();
+
+// 25. Video Background for Elixir Section
+const initVideoBackground = () => {
+    const candidates = document.querySelectorAll('h1, h2, h3, h4, p, span, .section-title, .subtitle');
+    candidates.forEach(el => {
+        const text = el.textContent.toLowerCase();
+        // Match "elixir" (or typo "elexir") and "seeds" to target "The Elixir of 30,000 Seeds"
+        if ((text.includes('elixir') || text.includes('elexir')) && text.includes('seeds')) {
+            // Prevent running on admin dashboard
+            if (el.closest('.admin-container') || el.closest('.admin-section')) return;
+
+            const section = el.closest('section') || el.closest('.hero') || el.closest('.banner');
+            
+            // Avoid duplicate injection
+            if (section && !section.querySelector('.bg-video-layer') && !section.classList.contains('admin-section')) {
+                // Ensure section can position absolute children
+                if (window.getComputedStyle(section).position === 'static') {
+                    section.style.position = 'relative';
+                }
+                section.style.overflow = 'hidden';
+
+                const video = document.createElement('video');
+                video.src = '6d3b1f62-a267-49f9-a4fd-5d47d471b174.mp4';
+                video.autoplay = false;
+                video.loop = false;
+                video.muted = true;
+                video.playsInline = true;
+                video.className = 'bg-video-layer';
+                
+                Object.assign(video.style, {
+                    position: 'absolute',
+                    top: '-15%',
+                    left: '0',
+                    width: '100%',
+                    height: '130%',
+                    objectFit: 'cover',
+                    zIndex: '0',
+                    opacity: '0',
+                    transition: 'opacity 1.5s ease',
+                    willChange: 'transform'
+                });
+
+                const overlay = document.createElement('div');
+                Object.assign(overlay.style, {
+                    position: 'absolute',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    zIndex: '1',
+                    pointerEvents: 'none'
+                });
+
+                // Ensure existing content sits above the video and overlay
+                Array.from(section.children).forEach(child => {
+                    if (child !== video && child !== overlay) {
+                        child.style.position = 'relative';
+                        child.style.zIndex = '2';
+                    }
+                });
+
+                // Force text color to white for visibility against dark overlay
+                section.style.color = '#FFFFFF';
+                section.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, .section-title, .subtitle').forEach(textEl => {
+                    textEl.style.color = '#FFFFFF';
+                    textEl.style.textShadow = '0 2px 4px rgba(0,0,0,0.9), 0 8px 24px rgba(0,0,0,0.7)';
+                });
+
+                section.insertBefore(overlay, section.firstChild);
+                section.insertBefore(video, section.firstChild);
+
+                // Fade in video when data is loaded
+                video.addEventListener('loadeddata', () => {
+                    video.style.opacity = '1';
+                });
+
+                // Gradually blur video as it plays
+                const animateBlur = () => {
+                    if (!video.paused && !video.ended) {
+                        const progress = video.currentTime / video.duration || 0;
+                        video.style.filter = `blur(${progress * 2.5}px)`; // Max 8px blur
+                        requestAnimationFrame(animateBlur);
+                    }
+                };
+                video.addEventListener('play', () => requestAnimationFrame(animateBlur));
+
+                // Parallax Effect
+                window.addEventListener('scroll', () => {
+                    const rect = section.getBoundingClientRect();
+                    const windowHeight = window.innerHeight;
+                    if (rect.top < windowHeight && rect.bottom > 0) {
+                        const sectionCenter = rect.top + rect.height / 2;
+                        const screenCenter = windowHeight / 2;
+                        const diff = screenCenter - sectionCenter;
+                        video.style.transform = `translateY(${diff * 0.15}px)`;
+                    }
+                });
+
+                // Performance: Play only when in viewport
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            if (!video.ended) {
+                                video.play().catch(e => console.log("Autoplay prevented:", e));
+                            }
+                        } else {
+                            video.pause();
+                        }
+                    });
+                }, { threshold: 0.1 });
+                
+                observer.observe(section);
+            }
+        }
+    });
+};
+
+// Run after a short delay to ensure dynamic content is populated
+setTimeout(initVideoBackground, 800);
