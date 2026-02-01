@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
-import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
@@ -24,15 +23,6 @@ const appCheck = initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider('6LcAk10sAAAAAJLRyVesWS-Ub87u8v_Qzow1xl7l'),
     isTokenAutoRefreshEnabled: true
 });
-
-// Debug: Log the App Check token to confirm it's working
-getToken(appCheck)
-    .then((tokenResult) => {
-        console.log("✅ App Check Token:", tokenResult.token);
-    })
-    .catch((error) => {
-        console.error("❌ App Check Error:", error);
-    });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
