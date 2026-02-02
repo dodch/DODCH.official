@@ -724,6 +724,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = doc.data();
                 const productId = doc.id;
                 
+                // Handle soft-deleted products (hides default products marked as deleted)
+                if (data.deleted) {
+                    delete productCatalog[productId];
+                    return;
+                }
+
                 // Merge Firestore data into catalog (handling both updates and new products)
                 if (productCatalog[productId]) {
                     productCatalog[productId] = { ...productCatalog[productId], ...data };
@@ -2832,7 +2838,13 @@ The DODCH Team`;
                     const id = e.currentTarget.dataset.id;
                     if (await window.showConfirm("Are you sure you want to delete this product? This action cannot be undone.", "Delete Product")) {
                         try {
-                            await deleteDoc(doc(db, "products", id));
+                            // Soft delete for default products (to persist deletion across reloads)
+                            if (defaultProductCatalog[id]) {
+                                await setDoc(doc(db, "products", id), { deleted: true }, { merge: true });
+                            } else {
+                                await deleteDoc(doc(db, "products", id));
+                            }
+
                             delete productCatalog[id];
                             loadAdminProducts();
                             window.showToast("Product deleted successfully.", "success");
