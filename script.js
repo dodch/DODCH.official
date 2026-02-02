@@ -15,7 +15,7 @@ const analytics = getAnalytics(app);
 
 // Enable App Check debug token for localhost
 if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = "d698a82e-c668-4ca4-82fa-8a6ac6a6e0e4";
 }
 
 // Initialize App Check
@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "Glass Glow Shampoo",
             subtitle: "The Elixir of 10,000 Seeds",
             price: "24.00",
-            image: "IMG_3357.jpg",
+            image: "/IMG_3357.jpg",
             description: "A high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil. Experience the 'Solar-Floral' journey with notes of Tunisian Orange Blossom and Tropical Vanilla.",
             style: "", // CSS filter if needed
             sizes: [
@@ -629,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "Prickly Pear Pure Oil",
             subtitle: "100% Organic Cold-Pressed Elixir",
             price: "85.00",
-            image: "IMG_3256.PNG",
+            image: "/IMG_3256.PNG",
             description: "The ultimate luxury for hair and skin. Sourced from the finest seeds in Tunisia, this dry oil penetrates instantly to repair, nourish, and add a mirror-like shine without any greasy residue.",
             style: "filter: hue-rotate(15deg);",
             sizes: [
@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "Silk & Wheat Hair Mask",
             subtitle: "Deep Repair & Glass Shine",
             price: "55.00",
-            image: "IMG_3256.PNG",
+            image: "/IMG_3256.PNG",
             description: "Infused with hydrolyzed silk proteins and wheat amino acids. This mask reconstructs the hair fiber from within while creating a breathable shield on the surface for instant manageability.",
             style: "filter: sepia(0.2);",
             sizes: [
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: "The Ritual Set",
             subtitle: "The Complete Mediterranean Experience",
             price: "120.00",
-            image: "IMG_3256.PNG",
+            image: "/IMG_3256.PNG",
             description: "The full collection: Glass Glow Shampoo, Silk & Wheat Mask, and the Pure Oil. Designed to work in harmony for the ultimate hair transformation.",
             style: "filter: contrast(1.1);",
             sizes: [] // No sizes for the set
@@ -1602,10 +1602,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Attach Cancel Event Listeners
                             document.querySelectorAll('.cancel-order-btn').forEach(btn => {
                                 btn.addEventListener('click', async (e) => {
+                                    const btnElement = e.currentTarget;
                                     const confirmed = await window.showConfirm("Are you sure you want to cancel this order? This action cannot be undone.", "Cancel Order");
                                     if (!confirmed) return;
                                     
-                                    const btnElement = e.currentTarget;
                                     const orderId = btnElement.getAttribute('data-id');
                                     
                                     btnElement.innerText = "Processing...";

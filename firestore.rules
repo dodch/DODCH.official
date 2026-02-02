@@ -17,6 +17,12 @@ service cloud.firestore {
       return num is number && num >= 0;
     }
 
+    // Products: Public Read, Admin Write
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Orders: 
     // - Create: Allow public (enables Guest Checkout)
     // - Read: Admin can read all. Users can read only their own.
