@@ -719,6 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to fetch product overrides (price, stock) from Firestore
     const loadProductCatalog = async () => {
         try {
+            console.log("Loading catalog from Firestore...");
             const querySnapshot = await getDocs(collection(db, "products"));
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
@@ -726,6 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Handle soft-deleted products (hides default products marked as deleted)
                 if (data.deleted) {
+                    console.log("Hiding deleted product:", productId);
                     delete productCatalog[productId];
                     return;
                 }
@@ -2838,11 +2840,15 @@ The DODCH Team`;
                     const id = e.currentTarget.dataset.id;
                     if (await window.showConfirm("Are you sure you want to delete this product? This action cannot be undone.", "Delete Product")) {
                         try {
+                            console.log("Deleting product:", id);
                             // Soft delete for default products (to persist deletion across reloads)
-                            if (defaultProductCatalog[id]) {
+                            // We check hasOwnProperty to be safe
+                            if (defaultProductCatalog.hasOwnProperty(id)) {
                                 await setDoc(doc(db, "products", id), { deleted: true }, { merge: true });
+                                console.log("Soft delete executed (marked as deleted in DB)");
                             } else {
                                 await deleteDoc(doc(db, "products", id));
+                                console.log("Hard delete executed (removed from DB)");
                             }
 
                             delete productCatalog[id];
