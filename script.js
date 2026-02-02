@@ -723,11 +723,12 @@ document.addEventListener('DOMContentLoaded', () => {
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
                 const productId = doc.id;
+                
+                // Merge Firestore data into catalog (handling both updates and new products)
                 if (productCatalog[productId]) {
-                    if (data.price) productCatalog[productId].price = data.price;
-                    if (data.outOfStock !== undefined) productCatalog[productId].outOfStock = data.outOfStock;
-                    // Merge sizes if available in Firestore to ensure prices are accurate
-                    if (data.sizes && Array.isArray(data.sizes)) productCatalog[productId].sizes = data.sizes;
+                    productCatalog[productId] = { ...productCatalog[productId], ...data };
+                } else {
+                    productCatalog[productId] = data;
                 }
             });
             // Re-run product page init to reflect changes if we are on a product page
@@ -1216,6 +1217,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const priceEl = document.getElementById('product-price');
         const descEl = document.getElementById('product-description-text');
         const imgEl = document.getElementById('main-product-image');
+        
+        // Define addToCartBtn early to avoid ReferenceError
+        const productInfo = document.querySelector('.product-info');
+        const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
 
         if (titleEl) titleEl.textContent = product.name;
         if (subtitleEl) subtitleEl.textContent = product.subtitle;
@@ -1255,6 +1260,10 @@ document.addEventListener('DOMContentLoaded', () => {
             sizeOptionsContainer.innerHTML = ''; // Clear existing hardcoded buttons
             
             if (product.sizes.length > 0) {
+                // Ensure selector is visible
+                const selector = productDetailContainer.querySelector('.size-selector');
+                if (selector) selector.style.display = 'block';
+
                 // Find index of lowest price
                 const prices = product.sizes.map(s => parseFloat(s.price));
                 const minPrice = Math.min(...prices);
@@ -1338,9 +1347,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Add "View Main Page" link for Glass Glow Shampoo
-        const productInfo = document.querySelector('.product-info');
-        const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
-        
         const existingStoryBtn = document.getElementById('product-story-link');
         if (existingStoryBtn) existingStoryBtn.remove();
 
@@ -1394,8 +1400,13 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
 
-        // Update Navbar Login Button Text
+        // Re-query elements to ensure we catch them on all pages (fixes Guest Mode bug)
         const loginBtn = document.getElementById('login-btn');
+        const sidebarUserName = document.getElementById('sidebar-user-name');
+        const sidebarLoginBtn = document.getElementById('sidebar-login-btn');
+        const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
+
+        // Update Navbar Login Button Text
         if (loginBtn) {
             if (user) {
                 loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="login-text">Logout</span>`;
