@@ -3217,17 +3217,26 @@ The DODCH Team`;
         }
 
         // Use productCatalog to ensure consistency with Shop page
-        const catalogEntries = Object.entries(productCatalog);
+        const allProductIds = Object.keys(productCatalog);
         
-        // Filter out current product and limit to 4
-        const relatedEntries = catalogEntries
-            .filter(([id]) => id !== currentId)
-            .slice(0, 4);
+        // Filter out current product, shuffle the rest, and take up to 4
+        const relatedIds = allProductIds
+            .filter(id => id !== currentId)
+            .sort(() => 0.5 - Math.random()) // Shuffle the array
+            .slice(0, 4); // Take the first 4 from the shuffled array
 
-        if (relatedEntries.length === 0) return;
+        if (relatedIds.length === 0) {
+            if (container) container.style.display = 'none'; // Hide if no related products
+            return;
+        } else {
+            if (container) container.style.display = 'block';
+        }
 
         let productsHtml = '';
-        relatedEntries.forEach(([id, product]) => {
+        relatedIds.forEach(id => {
+            const product = productCatalog[id];
+            if (!product) return; // Safety check
+
             // Calculate lowest price from sizes if available
             let displayPrice = product.price;
             let hasDiscount = false;
