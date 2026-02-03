@@ -2282,10 +2282,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 const spinner = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 18px; height: 18px; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>';
                 submitBtn.innerHTML = `${spinner} Saving...`;
 
+                // --- Step 1: Handle Image Upload & Get URL ---
+                let finalImageUrl = imageUrlInput.value;
+                const file = imageFileInput.files[0];
+                
+                if (file) {
+                    submitBtn.innerHTML = `${spinner} Uploading Image...`;
+                    try {
+                        const idForPath = document.getElementById('product-id-input').value || document.getElementById('new-prod-name').value.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+                        const storageRef = ref(storage, `products/${idForPath}_${Date.now()}_${file.name}`);
+                        await uploadBytes(storageRef, file);
+                        finalImageUrl = await getDownloadURL(storageRef);
+                    } catch (uploadError) {
+                        console.error("Image upload failed:", uploadError);
+                        window.showToast("Image upload failed. Check browser console for CORS errors.", "error");
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Save Product';
+                        return;
+                    }
+                }
+
+                if (!finalImageUrl) {
+                    window.showToast("Please provide an image for the product.", "error");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Save Product';
+                    return;
+                }
+
                 const idInput = document.getElementById('product-id-input');
                 const isEdit = idInput && idInput.value;
                 const name = document.getElementById('new-prod-name').value.trim();
-                
                 let newId;
                 if (isEdit) {
                     newId = idInput.value;
@@ -2324,45 +2350,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     orderIndex = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 0;
                 }
 
+                // --- Step 2: Construct Product Object with Final Image URL ---
                 const newProduct = { 
                     name, 
                     subtitle: document.getElementById('new-prod-subtitle').value.trim(), 
                     description: document.getElementById('new-prod-desc').value.trim(), 
-                    image: "", 
+                    image: finalImageUrl, 
                     sizes, 
                     price: Math.min(...sizes.map(s => parseFloat(s.price))).toFixed(2), 
                     outOfStock: isEdit ? (existingProduct.outOfStock || false) : false, 
                     style: isEdit ? (existingProduct.style || "") : "",
                     orderIndex: orderIndex
                 };
-
-                // Handle Image Upload
-                let finalImageUrl = imageUrlInput.value;
-                const file = imageFileInput.files[0];
                 
-                if (file) {
-                    submitBtn.innerHTML = `${spinner} Uploading Image...`;
-                    try {
-                        const storageRef = ref(storage, `products/${newId}_${Date.now()}_${file.name}`);
-                        await uploadBytes(storageRef, file);
-                        finalImageUrl = await getDownloadURL(storageRef);
-                    } catch (uploadError) {
-                        console.error("Image upload failed:", uploadError);
-                        window.showToast("Image upload failed.", "error");
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Save Product';
-                        return;
-                    }
-                }
-
-                if (!finalImageUrl) {
-                    window.showToast("Please select an image.", "error");
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Save Product';
-                    return;
-                }
-                newProduct.image = finalImageUrl;
-
+                // --- Step 3: Save to Firestore ---
                 submitBtn.innerHTML = `${spinner} Saving Product...`;
                 try { await setDoc(doc(db, "products", newId), newProduct); productCatalog[newId] = newProduct; loadAdminProducts(); closeProductModal(); window.showToast(isEdit ? "Product updated successfully!" : "Product added successfully!", "success"); } catch (error) { console.error("Error saving product:", error); window.showToast("Failed to save product.", "error"); } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; }
             });
