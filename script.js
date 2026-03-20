@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -29,31 +29,128 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
+// Global Catalog Reference
+let productCatalog = {};
+
 document.addEventListener('DOMContentLoaded', () => {
     const initialHash = window.location.hash;
-    
+
     // --- Custom UI Helpers (Toast & Confirm) ---
-    window.showToast = (message, type = 'info') => {
+    let _lastToastMsg = '';
+    let _lastToastTime = 0;
+    window.showToast = (message, type = 'info', duration = 3500) => {
+        // Deduplication guard: suppress identical messages within 600ms
+        const now = Date.now();
+        if (message === _lastToastMsg && now - _lastToastTime < 600) return;
+        _lastToastMsg = message;
+        _lastToastTime = now;
+
         const toast = document.createElement('div');
         toast.className = `custom-toast ${type}`;
-        
+
         let icon = '';
         if (type === 'success') icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
         else if (type === 'error') icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
         else icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
 
         toast.innerHTML = `${icon} <span>${message}</span>`;
-        document.body.appendChild(toast);
 
-        // Trigger animation
-        setTimeout(() => toast.classList.add('active'), 10);
+        // Get or create the shared toast container
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
 
-        // Remove after 3 seconds
-        setTimeout(() => {
-            toast.classList.remove('active');
-            setTimeout(() => toast.remove(), 400);
-        }, 3000);
+        // FLIP: (F)irst — snapshot positions of existing toasts before DOM change
+        const existingToasts = [...container.querySelectorAll('.custom-toast')];
+        const firstRects = existingToasts.map(t => t.getBoundingClientRect());
+
+        // (L)ast — insert new toast at top (DOM changes, existing toasts jump)
+        container.prepend(toast);
+
+        // (I)nvert — read new positions of existing toasts, apply inverse offset
+        // so they appear to still be where they were visually
+        existingToasts.forEach((t, i) => {
+            const lastRect = t.getBoundingClientRect();
+            const dy = firstRects[i].top - lastRect.top;
+            if (dy !== 0) {
+                // Instantly snap back visually (no transition)
+                t.style.transition = 'none';
+                t.style.transform = `translateX(0) translateY(${dy}px)`;
+            }
+        });
+
+        // (P)lay — on next frame, animate everything to its natural position
+        requestAnimationFrame(() => {
+            existingToasts.forEach(t => {
+                t.style.transition = '';
+                t.style.transform = 'translateX(0) translateY(0)';
+            });
+
+            // Slide new toast in from the right
+            setTimeout(() => toast.classList.add('active'), 10);
+        });
+
+        // Helper: remove a toast with context-aware exit animation + FLIP collapse
+        const removeToast = (t) => {
+            const container = document.getElementById('toast-container');
+            if (!container || !t.parentNode) return;
+
+            const allToasts = [...container.querySelectorAll('.custom-toast')];
+            const isTop = allToasts[0] === t;
+
+            // Snapshot positions of all OTHER toasts before removing
+            const others = allToasts.filter(x => x !== t);
+            const beforeRects = others.map(x => x.getBoundingClientRect());
+
+            if (isTop) {
+                // Slide out to the right
+                t.classList.remove('active');
+                setTimeout(() => {
+                    if (t.parentNode) t.remove();
+                    // FLIP: slide remaining toasts up
+                    const afterRects = others.map(x => x.getBoundingClientRect());
+                    others.forEach((x, i) => {
+                        const dy = beforeRects[i].top - afterRects[i].top;
+                        if (dy !== 0) {
+                            x.style.transition = 'none';
+                            x.style.transform = `translateX(0) translateY(${dy}px)`;
+                            requestAnimationFrame(() => {
+                                x.style.transition = '';
+                                x.style.transform = 'translateX(0) translateY(0)';
+                            });
+                        }
+                    });
+                }, 450);
+            } else {
+                // Blur + fade + scale down for older toasts
+                t.classList.add('toast-exit-blur');
+                setTimeout(() => {
+                    if (t.parentNode) t.remove();
+                    // FLIP: slide remaining toasts up
+                    const afterRects = others.map(x => x.getBoundingClientRect());
+                    others.forEach((x, i) => {
+                        const dy = beforeRects[i].top - afterRects[i].top;
+                        if (dy !== 0) {
+                            x.style.transition = 'none';
+                            x.style.transform = `translateX(0) translateY(${dy}px)`;
+                            requestAnimationFrame(() => {
+                                x.style.transition = '';
+                                x.style.transform = 'translateX(0) translateY(0)';
+                            });
+                        }
+                    });
+                }, 550);
+            }
+        };
+
+        // Schedule removal
+        setTimeout(() => removeToast(toast), duration);
     };
+
+
 
     window.showConfirm = (message, title = "Confirm Action") => {
         return new Promise((resolve) => {
@@ -71,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             document.body.appendChild(overlay);
-            
+
             // Trigger animation
             setTimeout(() => overlay.classList.add('active'), 10);
 
@@ -96,23 +193,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Override native alert for consistency (optional, but good for catching stray alerts)
     // window.alert = (msg) => window.showToast(msg);
 
-    // Preloader Logic
-    window.addEventListener('load', () => {
-        const preloader = document.getElementById('preloader');
-        if (preloader) {
-            preloader.classList.add('fade-out');
-            setTimeout(() => {
-                preloader.style.display = 'none';
-            }, 500);
-        }
-    });
+
 
     // 0. Force Page to Top on Load & Clear Hash
     // This prevents the browser from jumping to #story on reload
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
     }
-    
+
     // Temporarily disable smooth scroll to ensure instant jump to top
     document.documentElement.style.scrollBehavior = 'auto';
     window.scrollTo(0, 0);
@@ -122,10 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         document.documentElement.style.scrollBehavior = 'smooth';
     }, 50);
-    
+
     // 1. Sticky Navbar Effect
     const navbar = document.getElementById('navbar');
-    const hero = document.getElementById('hero');
+    const hero = document.getElementById('hero') || document.querySelector('.foam-hero') || document.getElementById('hero-silk') || document.querySelector('.pro-v-hero');
     const heroOverlay = document.querySelector('.hero-overlay');
     const heroBgParallax = document.querySelector('.hero-bg-parallax');
     const experienceImageContainers = document.querySelectorAll('.experience-image');
@@ -133,10 +221,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBar = document.getElementById('scroll-progress');
     const stickyCTA = document.getElementById('sticky-cta');
     const footer = document.querySelector('footer');
-    
+    const staticCTA = document.querySelector('#purchase .add-to-cart-btn') ||
+        document.querySelector('#purchase-cta .buy-now-btn') ||
+        document.querySelector('.product-info .add-to-cart-btn');
+
     const updateNavbar = () => {
         const scrollY = window.scrollY;
-        if (hero) {
+        const isSerumPage = document.body.classList.contains('serum-page');
+        const serumHero = document.querySelector('.scrollytelling-container');
+
+        if (isSerumPage && serumHero) {
+            // Serum Page: Stay transparent until past the animation container
+            // We expand near the end of the scrollytelling sequence
+            const threshold = serumHero.offsetHeight - 80;
+            if (scrollY > threshold) {
+                navbar.classList.add('scrolled');
+                navbar.classList.remove('text-dark');
+            } else {
+                navbar.classList.remove('scrolled');
+                navbar.classList.remove('text-dark');
+            }
+        } else if (hero) {
             // Home Page: Transparent/White at top, Solid/Dark when scrolled
             if (scrollY > 50) {
                 navbar.classList.add('scrolled');
@@ -156,22 +261,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-    
+
     // 2. Scroll Reveal Animation
-    const revealElements = document.querySelectorAll('.reveal');
-
-    const revealOnScroll = () => {
-        const windowHeight = window.innerHeight;
-        const elementVisible = 20; // Distance from bottom before revealing
-
-        revealElements.forEach((element) => {
-            const elementTop = element.getBoundingClientRect().top;
-
-            if (elementTop < windowHeight - elementVisible) {
-                element.classList.add('active');
+    const revealObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                // Stop observing once revealed to save resources
+                observer.unobserve(entry.target);
             }
         });
-    };
+    }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
 
     window.addEventListener('scroll', () => {
         const scrollY = window.scrollY;
@@ -195,7 +295,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const footerRect = footer ? footer.getBoundingClientRect() : null;
             const isFooterVisible = footerRect ? footerRect.top < window.innerHeight : false;
 
-            if (scrollY > hero.offsetHeight && !isFooterVisible) {
+            let isStaticBtnVisible = false;
+            if (staticCTA) {
+                const btnRect = staticCTA.getBoundingClientRect();
+                // Check if static button is in viewport (or about to be)
+                isStaticBtnVisible = btnRect.top < window.innerHeight && btnRect.bottom > 0;
+            }
+
+            if (scrollY > hero.offsetHeight && !isFooterVisible && !isStaticBtnVisible) {
                 stickyCTA.classList.add('visible');
             } else {
                 stickyCTA.classList.remove('visible');
@@ -212,18 +319,18 @@ document.addEventListener('DOMContentLoaded', () => {
             experienceImageContainers.forEach(container => {
                 const rect = container.getBoundingClientRect();
                 const windowHeight = window.innerHeight;
-    
+
                 // Check if the container is in the viewport
                 if (rect.top < windowHeight && rect.bottom > 0) {
                     // Calculate the center of the element relative to the viewport top
                     const elementCenter = rect.top + rect.height / 2;
-                    
+
                     // Calculate the difference between the screen center and the element center
                     const difference = (windowHeight / 2) - elementCenter;
-                    
+
                     // Define a factor to control the parallax speed. A smaller number is a more subtle effect.
                     const parallaxFactor = 0.1;
-                    
+
                     // Apply the transform to the container, moving it vertically
                     container.style.transform = `translateY(${difference * parallaxFactor}px)`;
                 }
@@ -235,16 +342,16 @@ document.addEventListener('DOMContentLoaded', () => {
             promiseIcons.forEach(icon => {
                 const rect = icon.getBoundingClientRect();
                 const windowHeight = window.innerHeight;
-    
+
                 // Check if the icon is in the viewport
                 if (rect.top < windowHeight && rect.bottom > 0) {
                     // Calculate the center of the element relative to the viewport top
                     const elementCenter = rect.top + rect.height / 2;
                     const difference = (windowHeight / 2) - elementCenter;
-                    
+
                     // A very subtle factor for the icons. Negative moves it against scroll direction.
                     const parallaxFactor = -0.08;
-                    
+
                     // Apply the transform to the icon
                     icon.style.transform = `translateY(${difference * parallaxFactor}px)`;
                 }
@@ -259,18 +366,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Call other scroll-based functions
-        revealOnScroll();
         runCounterAnimation();
     });
-    
+
     // Trigger once on load to show hero content immediately
     updateNavbar();
-    revealOnScroll();
+
+    // Initialize observer on existing elements
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
     // 3. Mobile Sidebar Toggle
     const hamburger = document.querySelector('.hamburger');
     const sidebar = document.getElementById('desktop-sidebar');
-    
+
     // Add class to body if sidebar exists (for desktop layout spacing)
     if (sidebar) {
         document.body.classList.add('has-sidebar');
@@ -293,9 +401,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sidebarOverlay) sidebarOverlay.classList.add('active');
         if (hamburger) hamburger.classList.add('active');
         if (navbar) navbar.classList.add('menu-open');
+
+        // Scroll active item into view
+        setTimeout(() => {
+            const activeLink = sidebar.querySelector('.sidebar-menu a.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 300);
     };
 
-    if(hamburger && sidebar) {
+    if (hamburger && sidebar) {
         hamburger.addEventListener('click', () => {
             if (sidebar.classList.contains('active')) {
                 closeSidebar();
@@ -306,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
         if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
-        
+
         // Close when clicking a link in sidebar
         const links = sidebar.querySelectorAll('a');
         links.forEach(link => link.addEventListener('click', closeSidebar));
@@ -320,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const prevButton = document.querySelector('.slider-nav.prev');
         const nextButton = document.querySelector('.slider-nav.next');
         const paginationContainer = document.querySelector('.slider-pagination');
-        
+
         let currentIndex = 0;
         const totalSlides = slides.length;
         let autoPlayInterval; // To hold the interval ID
@@ -462,7 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tappableElements = document.querySelectorAll('.action-card, .promise-item, .pillar-card, .inci-list span');
 
         tappableElements.forEach(el => {
-            el.addEventListener('click', function(e) {
+            el.addEventListener('click', function (e) {
                 // For tooltips, prevent any strange click behavior
                 if (el.matches('.inci-list span')) {
                     e.preventDefault();
@@ -479,14 +595,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Toggle the class on the clicked element
                 this.classList.toggle('mobile-hover');
-                
+
                 // Stop the event from bubbling up to the document handler
                 e.stopPropagation();
             });
         });
 
         // Add a listener to the document to close any active elements when tapping outside
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             tappableElements.forEach(el => {
                 el.classList.remove('mobile-hover');
             });
@@ -495,32 +611,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 6. Number Counter Animation
     const counters = document.querySelectorAll('.counter');
-    
+
     const runCounterAnimation = () => {
         counters.forEach(counter => {
             const rect = counter.getBoundingClientRect();
             const windowHeight = window.innerHeight;
-            
+
             // Trigger when the element is visible
             if (rect.top < windowHeight - 50 && rect.bottom > 0) {
                 if (counter.classList.contains('counted')) return;
-                
+
                 counter.classList.add('counted');
-                
+
                 const target = +counter.getAttribute('data-target');
                 const duration = 3500; // 3.5 seconds for a gentler effect
                 const startTime = performance.now();
-                
+
                 const step = (currentTime) => {
                     const elapsed = currentTime - startTime;
                     const progress = Math.min(elapsed / duration, 1);
-                    
+
                     // Ease out expo - much softer landing
                     const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-                    
+
                     const current = Math.floor(ease * target);
                     counter.innerText = current.toLocaleString('en-US');
-                    
+
                     if (progress < 1) {
                         requestAnimationFrame(step);
                     } else {
@@ -529,7 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         counter.classList.add('shine');
                     }
                 };
-                
+
                 requestAnimationFrame(step);
             }
         });
@@ -584,22 +700,22 @@ document.addEventListener('DOMContentLoaded', () => {
         heroCTA.addEventListener('click', () => {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
-            
+
             const ctx = new AudioContext();
             const osc = ctx.createOscillator();
             const gainNode = ctx.createGain();
-            
+
             osc.connect(gainNode);
             gainNode.connect(ctx.destination);
-            
+
             // Sound profile: Softer, more tactile "tap"
             osc.type = 'sine';
             osc.frequency.setValueAtTime(600, ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
-            
+
             gainNode.gain.setValueAtTime(0.04, ctx.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-            
+
             osc.start();
             osc.stop(ctx.currentTime + 0.1);
 
@@ -612,108 +728,249 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- PRODUCT CATALOG (Single Source of Truth) ---
     const defaultProductCatalog = {
+
         'glass-glow-shampoo': {
             name: "Glass Glow Shampoo",
+            category: "hair-care",
+            subCategory: "shampoo",
             subtitle: "The Elixir of 10,000 Seeds",
             price: "24.00",
             image: "/IMG_3357.jpg",
             description: "A high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil. Experience the 'Solar-Floral' journey with notes of Tunisian Orange Blossom and Tropical Vanilla.",
             style: "", // CSS filter if needed
+            storyUrl: "glass-glow-shampoo.html",
+            orderIndex: 0,
             sizes: [
                 { label: '50ml', price: '24.00' },
                 { label: '100ml', price: '44.00' },
                 { label: '250ml', price: '95.00', originalPrice: '105.00' }
             ]
         },
-        'pure-oil': {
-            name: "Prickly Pear Pure Oil",
-            subtitle: "100% Organic Cold-Pressed Elixir",
-            price: "85.00",
-            image: "/IMG_3256.PNG",
-            description: "The ultimate luxury for hair and skin. Sourced from the finest seeds in Tunisia, this dry oil penetrates instantly to repair, nourish, and add a mirror-like shine without any greasy residue.",
-            style: "filter: hue-rotate(15deg);",
+        'dodchmellow-pro-v': {
+            name: "DODCHmellow",
+            category: "hair-care",
+            subCategory: "shampoo",
+            subtitle: "The Marshmallow Cloud Shampoo",
+            price: "24.50",
+            image: "IMG_3490.jpg",
+            description: "Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5. Fragrance: Néroli-Sucre.",
+            style: "",
+            storyUrl: "dodchmellow-pro-v.html",
+            orderIndex: 1,
             sizes: [
-                { label: '50ml', price: '85.00' },
-                { label: '100ml', price: '160.00' }
+                { label: '250ml', price: '24.50' }
             ]
         },
-        'hair-mask': {
-            name: "Silk & Wheat Hair Mask",
+        'foaming-cleanser': {
+            name: "DODCH Foaming Cleanser",
+            category: "face-care",
+            subCategory: "cleansers",
+            subtitle: "Luminous Purity",
+            price: "45.00",
+            image: "IMG_3352.PNG",
+            description: "A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",
+            style: "filter: brightness(1.05);",
+            storyUrl: "face-foam.html",
+            orderIndex: 3,
+            sizes: []
+        },
+        'silk-therapy-mask': {
+            name: "DODCH Pro-V Silk Therapy Mask",
+            category: "hair-care",
+            subCategory: ["masks", "conditioners", "leave-in"],
             subtitle: "Deep Repair & Glass Shine",
-            price: "55.00",
-            image: "/IMG_3256.PNG",
-            description: "Infused with hydrolyzed silk proteins and wheat amino acids. This mask reconstructs the hair fiber from within while creating a breathable shield on the surface for instant manageability.",
-            style: "filter: sepia(0.2);",
+            price: "39.00",
+            image: "F188A04D-4AA7-4D98-9EEB-14861B10D468.PNG",
+            description: "Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",
+            style: "",
+            storyUrl: "silk-mask.html",
+            orderIndex: 2,
             sizes: [
-                { label: '200ml', price: '55.00' },
-                { label: '400ml', price: '100.00' }
+                { label: '250ml', price: '39.00' }
             ]
         },
-        'ritual-set': {
-            name: "The Ritual Set",
-            subtitle: "The Complete Mediterranean Experience",
-            price: "120.00",
-            image: "/IMG_3256.PNG",
-            description: "The full collection: Glass Glow Shampoo, Silk & Wheat Mask, and the Pure Oil. Designed to work in harmony for the ultimate hair transformation.",
-            style: "filter: contrast(1.1);",
-            sizes: [] // No sizes for the set
+        'advanced-ha-serum': {
+            name: "Advanced HA Serum",
+            category: "face-care",
+            subCategory: "serums",
+            subtitle: "Radiance & Deep Hydration",
+            price: "89.00",
+            image: "IMG_3407.jpeg",
+            description: "A concentrated Hyaluronic Acid serum that penetrates deep layers for instant plumping and long-lasting hydration.",
+            style: "",
+            storyUrl: "face-serum.html",
+            orderIndex: 4,
+            sizes: [
+                { label: '30ml', price: '89.00' }
+            ]
         }
     };
 
     // Mutable catalog that will be updated with Firestore data
-    let productCatalog = { ...defaultProductCatalog };
+    productCatalog = { ...defaultProductCatalog };
 
     // Function to render Shop Page grid dynamically
-    const initShopPage = () => {
+    let shopTransitionTimeout;
+
+    const initShopPage = (animate = false) => {
         // Only run on shop page (where product detail container is absent)
         if (document.querySelector('.product-detail-container')) return;
-        
-        const shopGrid = document.querySelector('.shop-grid');
-        if (!shopGrid) return;
 
-        shopGrid.innerHTML = ''; // Clear static HTML
-        
-        // Sort by orderIndex
-        const sortedCatalog = Object.entries(productCatalog).sort(([, a], [, b]) => {
-            return (a.orderIndex || 0) - (b.orderIndex || 0);
-        });
+        const shopLayout = document.querySelector('.shop-layout');
+        if (!shopLayout) return;
 
-        sortedCatalog.forEach(([id, product]) => {
-            // Calculate lowest price from sizes
-            let displayPrice = product.price;
-            let hasDiscount = false;
+        const renderContent = () => {
+            // Sort by orderIndex
+            const sortedCatalog = Object.entries(productCatalog).sort(([, a], [, b]) => {
+                const orderDiff = (a.orderIndex || 0) - (b.orderIndex || 0);
+                if (orderDiff !== 0) return orderDiff;
+                return a.name.localeCompare(b.name);
+            });
 
-            if (product.sizes && product.sizes.length > 0) {
-                const prices = product.sizes.map(s => parseFloat(s.price));
-                displayPrice = Math.min(...prices).toFixed(2);
-                hasDiscount = product.sizes.some(s => s.originalPrice && parseFloat(s.originalPrice) > parseFloat(s.price));
+            // Filter Logic based on URL params
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeCat = urlParams.get('cat');
+            const activeSub = urlParams.get('sub');
+
+            // Helper to generate Card HTML
+            const generateCardHTML = (id, product, index = 0) => {
+                const staggerDelay = `${(index % 4) * 0.15}s`;
+                let displayPrice = product.price;
+                let hasDiscount = false;
+                if (product.sizes && product.sizes.length > 0) {
+                    const prices = product.sizes.map(s => parseFloat(s.price));
+                    displayPrice = Math.min(...prices).toFixed(2);
+                    hasDiscount = product.sizes.some(s => s.originalPrice && parseFloat(s.originalPrice) > parseFloat(s.price));
+                }
+                let targetUrl = product.storyUrl || `product.html?id=${id}`;
+                let linkAttributes = `href="${targetUrl}"`;
+
+                if (id === 'glass-glow-shampoo') {
+                    linkAttributes = `href="#" onclick="window.showToast('This product is no longer available.', 'error'); return false;"`;
+                }
+
+                let badgeHTML = '';
+                if (product.outOfStock) {
+                    badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #2D2D2D; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px;">OUT OF STOCK</span>';
+                } else if (hasDiscount) {
+                    badgeHTML = '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px;">ONLINE OFFER</span>';
+                }
+                return `
+                    <div class="product-card reveal" style="--anim-delay: ${staggerDelay}; ${product.outOfStock ? 'opacity: 0.8;' : ''}">
+                        <a ${linkAttributes}>
+                            <div class="product-image-wrapper">
+                                ${badgeHTML}
+                                <img src="${product.image}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
+                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice}" data-img="${product.image}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
+                            </div>
+                            <div class="product-card-info">
+                                <h3 class="product-card-title">${product.name}</h3>
+                                <p class="product-card-price">${displayPrice} TND</p>
+                            </div>
+                        </a>
+                    </div>`;
+            };
+
+            // Clear Layout
+            shopLayout.innerHTML = '';
+
+            // Define Sections Order
+            const allSections = [
+                { id: 'hair-care', title: 'Hair Care' },
+                { id: 'face-care', title: 'Face Care' },
+                { id: 'sets', title: 'Sets & Bundles' }
+            ];
+
+            // Subcategory Display Names
+            const subCatDisplay = {
+                'shampoo': 'Shampoos',
+                'conditioners': 'Conditioners',
+                'masks': 'Masks & Treatments',
+                'leave-in': 'Leave-In Treatments',
+                'cleansers': 'Cleansers',
+                'serums': 'Serums',
+                'sets': 'Sets'
+            };
+
+            // Determine which sections to show
+            let sectionsToShow = allSections;
+            if (activeCat && activeCat !== 'all') {
+                sectionsToShow = allSections.filter(s => s.id === activeCat);
             }
 
-            const cardHTML = `
-                <div class="product-card reveal active">
-                    <a href="product.html?id=${id}">
-                        <div class="product-image-wrapper">
-                            ${hasDiscount ? '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px;">ONLINE OFFER</span>' : ''}
-                            <img src="${product.image}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
-                            <button class="quick-view-btn" 
-                                data-id="${id}" 
-                                data-title="${product.name}" 
-                                data-price="${displayPrice}" 
-                                data-img="${product.image}" 
-                                data-style="${product.style || ''}"
-                                data-desc="${product.description}">
-                                Quick View
-                            </button>
+            const isSpecificSub = activeSub && activeSub !== 'all';
+
+            if (!isSpecificSub) {
+                let hasProducts = false;
+                sectionsToShow.forEach(section => {
+                    // Filter products for this section
+                    const sectionProducts = sortedCatalog.filter(([, p]) => p.category === section.id);
+
+                    if (sectionProducts.length > 0) {
+                        hasProducts = true;
+
+                        // Create a single horizontal grid for all products in the section
+                        const contentHTML = `
+                            <div class="shop-grid horizontal-scroll">
+                                ${sectionProducts.map(([id, p], i) => generateCardHTML(id, p, i)).join('')}
+                            </div>
+                        `;
+
+                        const sectionHTML = `
+                            <div class="shop-category-section" style="padding-top: 60px;">
+                                <h2 class="shop-category-title">${section.title}</h2>
+                                ${contentHTML}
+                            </div>
+                        `;
+                        shopLayout.insertAdjacentHTML('beforeend', sectionHTML);
+                    }
+                });
+
+                if (!hasProducts) {
+                    shopLayout.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>`;
+                }
+            } else {
+                // Render Single Grid
+                const filteredProducts = sortedCatalog.filter(([, p]) => {
+                    const matchesCat = !activeCat || activeCat === 'all' || p.category === activeCat;
+                    const matchesSub = !activeSub || activeSub === 'all' || (Array.isArray(p.subCategory) ? p.subCategory.includes(activeSub) : p.subCategory === activeSub);
+                    return matchesCat && matchesSub;
+                });
+
+                if (filteredProducts.length > 0) {
+                    const gridHTML = `
+                        <div class="shop-category-section" style="padding-top: 60px;">
+                            <h2 class="shop-category-title">${subCatDisplay[activeSub] || (activeSub.charAt(0).toUpperCase() + activeSub.slice(1))}</h2>
+                            <div class="shop-grid">
+                                ${filteredProducts.map(([id, p], i) => generateCardHTML(id, p, i)).join('')}
+                            </div>
                         </div>
-                        <div class="product-card-info">
-                            <h3 class="product-card-title">${product.name}</h3>
-                            <p class="product-card-price">${displayPrice} TND</p>
-                        </div>
-                    </a>
-                </div>
-            `;
-            shopGrid.insertAdjacentHTML('beforeend', cardHTML);
-        });
+                    `;
+                    shopLayout.innerHTML = gridHTML;
+                } else {
+                    shopLayout.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>`;
+                }
+            }
+
+            // After rendering grid dynamically, attach observers to them so they animate on scroll
+            document.querySelectorAll('.shop-layout .product-card.reveal').forEach(el => {
+                if (typeof revealObserver !== 'undefined') {
+                    revealObserver.observe(el);
+                }
+            });
+        };
+
+        if (animate) {
+            shopLayout.classList.add('fade-out');
+            if (shopTransitionTimeout) clearTimeout(shopTransitionTimeout);
+
+            shopTransitionTimeout = setTimeout(() => {
+                renderContent();
+                shopLayout.classList.remove('fade-out');
+            }, 300);
+        } else {
+            renderContent();
+        }
     };
 
     // Function to fetch product overrides (price, stock) from Firestore
@@ -721,31 +978,47 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             console.log("Loading catalog from Firestore...");
             const querySnapshot = await getDocs(collection(db, "products"));
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const productId = doc.id;
-                
-                // Handle soft-deleted products (hides default products marked as deleted)
-                if (data.deleted) {
-                    console.log("Hiding deleted product:", productId);
-                    delete productCatalog[productId];
-                    return;
-                }
 
-                // Merge Firestore data into catalog (handling both updates and new products)
-                if (productCatalog[productId]) {
-                    productCatalog[productId] = { ...productCatalog[productId], ...data };
-                } else {
-                    productCatalog[productId] = data;
-                }
-            });
+            // If DB is not empty, we treat it as the source of truth
+            if (!querySnapshot.empty) {
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const productId = doc.id;
+
+                    // Handle soft-deleted products
+                    if (data.deleted) {
+                        delete productCatalog[productId];
+                        return;
+                    }
+
+                    // Merge Firestore data into catalog
+                    if (productCatalog[productId]) {
+                        // Crucial: We don't want Firestore to overwrite the category/subCategory if we've hardcoded a fix
+                        // Unless the change came from Firestore itself in the future.
+                        // For now, let's preserve the local category/subCategory to fix the user's "glitch"
+                        const preservedCat = productCatalog[productId].category;
+                        const preservedSub = productCatalog[productId].subCategory;
+
+                        productCatalog[productId] = { ...productCatalog[productId], ...data };
+
+                        // Re-apply correct categories if they are part of the "fix"
+                        if (productId === 'dodchmellow-pro-v' || productId === 'silk-therapy-mask') {
+                            productCatalog[productId].category = preservedCat;
+                            productCatalog[productId].subCategory = preservedSub;
+                        }
+                    } else {
+                        productCatalog[productId] = data;
+                    }
+                });
+            }
+
             // Re-run product page init to reflect changes if we are on a product page
             initProductPage();
             // Re-render shop grid if we are on shop page
             initShopPage();
             // Re-render related products
             loadRelatedProducts();
-            
+
             // Refresh Admin Dashboard if active (fixes race condition where admin loads before firestore data)
             if (typeof window.refreshAdminProducts === 'function') {
                 window.refreshAdminProducts();
@@ -785,7 +1058,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Auth Logic
     const loginBtn = document.getElementById('login-btn');
-    
+
     const handleLogin = async () => {
         const googleIcon = `<svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 10px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg>`;
         const confirmed = await window.showConfirm(`${googleIcon} Continue with Google Sign In?`, "Login");
@@ -806,13 +1079,51 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirmed) return;
 
         try {
-            // The onAuthStateChanged observer will handle the UI update without a reload.
             await signOut(auth);
             window.showToast("Successfully logged out.", "success");
         } catch (error) {
             console.error("Logout failed", error);
         }
     };
+
+    // Logic to claim guest orders upon login
+    const claimGuestOrders = async (userId) => {
+        const guestOrders = JSON.parse(localStorage.getItem('dodch_guest_orders') || '[]');
+        if (guestOrders.length === 0) return;
+
+        console.log(`Checking for ${guestOrders.length} guest orders to claim...`);
+        let claimedCount = 0;
+
+        for (const orderId of guestOrders) {
+            try {
+                const orderRef = doc(db, "orders", orderId);
+                const orderSnap = await getDoc(orderRef);
+
+                if (orderSnap.exists()) {
+                    const orderData = orderSnap.data();
+                    // SECURITY: Only claim if it's currently marked as 'guest'
+                    // This prevents guessing IDs of already registered orders.
+                    if (orderData.userId === 'guest') {
+                        await updateDoc(orderRef, {
+                            userId: userId,
+                            hasUnseenUpdate: true // Mark as new for their account
+                        });
+                        claimedCount++;
+                    }
+                }
+            } catch (err) {
+                console.warn(`Could not claim order ${orderId}:`, err);
+            }
+        }
+
+        if (claimedCount > 0) {
+            window.showToast(`Successfully linked ${claimedCount} previous order(s) to your account!`, "success");
+        }
+
+        // Clear the local list regardless of success to avoid repeat attempts
+        localStorage.removeItem('dodch_guest_orders');
+    };
+
 
     if (loginBtn) {
         loginBtn.addEventListener('click', (e) => {
@@ -837,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const btn = loginForm.querySelector('button');
-            
+
             btn.innerText = "Processing...";
             btn.disabled = true;
 
@@ -864,7 +1175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         googleLoginBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 12px; vertical-align: middle;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg> Sign In with Google`;
         googleLoginBtn.addEventListener('click', handleLogin);
     }
-    
+
     if (toggleAuthMode) toggleAuthMode.addEventListener('click', (e) => {
         e.preventDefault();
         isSignUp = !isSignUp;
@@ -873,11 +1184,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.auth-btn').textContent = isSignUp ? "Sign Up" : "Sign In";
         toggleAuthMode.textContent = isSignUp ? "Sign In" : "Sign Up";
         toggleAuthMode.parentElement.innerHTML = isSignUp ? `Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign In</a>` : `Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign Up</a>`;
-        
+
         // Re-attach listener since we replaced innerHTML
         document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
             // Simple reload to toggle back for simplicity in this snippet, or extract logic to function
-            location.reload(); 
+            location.reload();
         });
     });
 
@@ -888,7 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateCheckoutUI = () => {
         if (!checkoutItemsContainer) return;
-        
+
         checkoutItemsContainer.innerHTML = '';
         let subtotal = 0;
 
@@ -943,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Save to storage whenever UI updates
         localStorage.setItem('dodch_cart', JSON.stringify(cart));
         localStorage.setItem('dodch_cart_version', CART_VERSION);
-        
+
         if (currentUser) {
             setDoc(doc(db, "carts", currentUser.uid), { items: cart });
         }
@@ -953,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cartItemsContainer.innerHTML = '';
 
         if (cart.length === 0) {
-            if(cartEmptyMsg) cartItemsContainer.appendChild(cartEmptyMsg);
+            if (cartEmptyMsg) cartItemsContainer.appendChild(cartEmptyMsg);
         } else {
             cart.forEach((item, index) => {
                 const cartItemEl = document.createElement('div');
@@ -1023,6 +1334,56 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCheckoutUI();
     };
 
+    // Expose addToCart globally for custom product pages (like silk-mask.html)
+    window.addToCart = (productId, sizeLabel = null) => {
+        const product = productCatalog[productId];
+        if (!product) {
+            console.error("Product not found in catalog:", productId);
+            window.showToast("Product not found.", "error");
+            return;
+        }
+
+        // Determine size and price
+        let size = sizeLabel;
+        let price = product.price;
+
+        if (product.sizes && product.sizes.length > 0) {
+            // If no size specified, default to the first one
+            if (!size) {
+                size = product.sizes[0].label;
+                price = product.sizes[0].price;
+            } else {
+                const sizeObj = product.sizes.find(s => s.label === size);
+                if (sizeObj) {
+                    price = sizeObj.price;
+                }
+            }
+        } else {
+            size = "Standard";
+        }
+
+        const newItemId = `${product.name}-${size}`;
+        const existingItem = cart.find(item => item.id === newItemId);
+
+        if (existingItem) {
+            existingItem.quantity++;
+        } else {
+            cart.push({
+                id: newItemId,
+                productId: productId,
+                name: product.name,
+                size: size,
+                price: `${parseFloat(price).toFixed(2)} TND`,
+                image: product.image,
+                quantity: 1
+            });
+        }
+
+        updateCartUI();
+        openCart();
+        window.showToast(`Added ${product.name} to cart`, 'success');
+    };
+
     if (cartToggle) cartToggle.addEventListener('click', (e) => {
         e.preventDefault();
         openCart();
@@ -1034,18 +1395,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const findProductContainer = (element) => {
         // 1. Try explicit classes first
         let container = element.closest('.product-card, .product-item, .product-info, .collection-item, .item, .single-product-wrapper');
-        
+
         // 2. If not found, traverse up to find a container with title and image
         if (!container) {
             let parent = element.parentElement;
             // Traverse up to 10 levels to find a wrapper
             for (let i = 0; i < 10; i++) {
                 if (!parent || parent.tagName === 'BODY') break;
-                
+
                 const hasTitle = parent.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5');
                 const hasImg = parent.querySelector('img');
                 const hasPrice = parent.querySelector('.product-price, .price, .money, #product-price');
-                
+
                 // Heuristic: A card shouldn't contain too many add-to-cart buttons (unless it's the wrapper for the whole page)
                 // If we are in a grid, the row might have 3 buttons. The card has 1.
                 const buttonsInParent = parent.querySelectorAll('.add-to-cart-btn');
@@ -1056,17 +1417,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     container = parent;
                     break;
                 }
-                
+
                 // If we are on a single product page, the section/main might contain the button
                 if ((parent.tagName === 'SECTION' || parent.tagName === 'MAIN') && hasTitle && hasPrice) {
-                     container = parent;
-                     break;
+                    container = parent;
+                    break;
                 }
 
                 parent = parent.parentElement;
             }
         }
-        
+
         // 3. Fallback to closest section or body (last resort)
         // IMPORTANT: Do NOT fallback to document.body if there are multiple add-to-cart buttons on the page
         if (!container) {
@@ -1077,7 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // If multiple buttons, fallback to the direct parent to avoid global scope pollution
             return element.parentElement;
         }
-        
+
         return container;
     };
 
@@ -1087,13 +1448,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const clickedBtn = e.currentTarget;
                 // Find the specific product container for this button
                 const container = findProductContainer(clickedBtn);
-                
+
                 // Remove active class from sibling buttons in this container only
                 if (container) {
                     const containerBtns = container.querySelectorAll('.size-btn');
                     containerBtns.forEach(b => b.classList.remove('active'));
                 }
-                
+
                 // Add active to clicked button
                 clickedBtn.classList.add('active');
 
@@ -1119,10 +1480,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Find Product Name
                 // We search strictly within the container to avoid grabbing the first product's title
-                let nameEl = container ? container.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5') : null;
-                
-                const productName = nameEl ? nameEl.textContent.trim() : "Unknown Product";
-                
+                let productName = clickedBtn.dataset.title;
+
+                if (!productName) {
+                    let nameEl = container ? container.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5') : null;
+                    productName = nameEl ? nameEl.textContent.trim() : "Unknown Product";
+                }
+
                 if (productName === "Unknown Product") {
                     console.error("Could not detect product name. Container:", container);
                     window.showToast("Error adding to cart. Please refresh.", "error");
@@ -1134,12 +1498,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Find Active Size Button within the container
                 const sizeBtnsInContainer = container ? container.querySelectorAll('.size-btn') : [];
-                
+
                 if (sizeBtnsInContainer.length > 0) {
                     let activeSizeBtn = Array.from(sizeBtnsInContainer)
                         .filter(b => b.classList.contains('active'))
                         .find(b => !b.closest('.qv-modal-content'));
-                    
+
                     if (!activeSizeBtn) {
                         window.showToast("Please select a size.", "error");
                         return;
@@ -1157,15 +1521,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Find Image
-                let imageSrc = '';
-                // Prioritize image in container
-                const imgEl = container ? container.querySelector('img.product-image, img') : null;
-                if (imgEl) {
-                    imageSrc = imgEl.src;
-                } else {
-                    // Fallback only if we are sure it's a single product page
-                    const mainImg = document.getElementById('main-product-image');
-                    if (mainImg) imageSrc = mainImg.src;
+                let imageSrc = clickedBtn.dataset.img || '';
+
+                if (!imageSrc) {
+                    // Prioritize image in container
+                    const imgEl = container ? container.querySelector('img.product-image, img') : null;
+                    if (imgEl) {
+                        imageSrc = imgEl.src;
+                    } else {
+                        // Fallback only if we are sure it's a single product page
+                        const mainImg = document.getElementById('main-product-image');
+                        if (mainImg) imageSrc = mainImg.src;
+                    }
                 }
 
                 const newItemId = `${productName}-${size}`;
@@ -1176,7 +1543,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     const newItem = {
                         id: newItemId,
-                    productId: clickedBtn.dataset.productId, // Pass ID for server verification
+                        productId: clickedBtn.dataset.productId || clickedBtn.dataset.id, // Pass ID for server verification
                         name: productName,
                         size: size,
                         price: `${parseFloat(price).toFixed(2)} TND`,
@@ -1185,7 +1552,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                     cart.push(newItem);
                 }
-                
+
                 updateCartUI();
                 openCart();
 
@@ -1225,14 +1592,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const priceEl = document.getElementById('product-price');
         const descEl = document.getElementById('product-description-text');
         const imgEl = document.getElementById('main-product-image');
-        
+
         // Define addToCartBtn early to avoid ReferenceError
         const productInfo = document.querySelector('.product-info');
         const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
 
         if (titleEl) titleEl.textContent = product.name;
         if (subtitleEl) subtitleEl.textContent = product.subtitle;
-        
+
         // Calculate lowest price from sizes if available
         let displayPrice = product.price;
         if (product.sizes && product.sizes.length > 0) {
@@ -1240,7 +1607,7 @@ document.addEventListener('DOMContentLoaded', () => {
             displayPrice = Math.min(...prices).toFixed(2);
         }
         if (priceEl) priceEl.textContent = `${displayPrice} TND`;
-        
+
         // Handle Out of Stock
         if (product.outOfStock) {
             if (priceEl) priceEl.textContent = "Out of Stock";
@@ -1248,7 +1615,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (descEl) descEl.textContent = product.description;
-        
+
         if (imgEl) {
             imgEl.src = product.image;
             if (product.style) imgEl.style = product.style;
@@ -1266,7 +1633,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sizeOptionsContainer = productDetailContainer.querySelector('.size-options');
         if (sizeOptionsContainer && product.sizes) {
             sizeOptionsContainer.innerHTML = ''; // Clear existing hardcoded buttons
-            
+
             if (product.sizes.length > 0) {
                 // Ensure selector is visible
                 const selector = productDetailContainer.querySelector('.size-selector');
@@ -1289,7 +1656,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 priceEl.textContent = `${sizeObj.price} TND`;
                             }
                         }
-                        
+
                         // Initial check for default selected size
                         const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
                         if (addToCartBtn && !product.outOfStock) {
@@ -1307,7 +1674,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.dataset.size = sizeObj.label;
                     btn.dataset.price = sizeObj.price;
                     btn.textContent = sizeObj.label;
-                    
+
                     // Re-attach click listener logic locally or rely on global delegation if set up correctly
                     // Here we attach locally for safety
                     btn.addEventListener('click', () => {
@@ -1320,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 priceEl.textContent = `${sizeObj.price} TND`;
                             }
                         }
-                        
+
                         // Update Add to Cart button based on size stock
                         const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
                         if (addToCartBtn && !product.outOfStock) {
@@ -1344,7 +1711,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.style.textDecoration = "line-through";
                         btn.style.opacity = "0.6";
                     }
-                    
+
                     sizeOptionsContainer.appendChild(btn);
                 });
             } else {
@@ -1354,29 +1721,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Add "View Main Page" link for Glass Glow Shampoo
+        // Add "Learn More" link if storyUrl exists
         const existingStoryBtn = document.getElementById('product-story-link');
         if (existingStoryBtn) existingStoryBtn.remove();
 
-        if (addToCartBtn && (!productId || productId === 'glass-glow-shampoo')) {
+        // Ensure OOS logic runs for all products
+        if (product.outOfStock && addToCartBtn) {
+            addToCartBtn.disabled = true;
+            addToCartBtn.innerText = "Out of Stock";
+            addToCartBtn.style.backgroundColor = "#ccc";
+        }
+
+        if (addToCartBtn && product.storyUrl) {
             const storyBtn = document.createElement('a');
-            
-            if (product.outOfStock) {
-                addToCartBtn.disabled = true;
-                addToCartBtn.innerText = "Out of Stock";
-                addToCartBtn.style.backgroundColor = "#ccc";
-            }
 
             storyBtn.id = 'product-story-link';
-            storyBtn.href = 'index.html';
-            storyBtn.textContent = 'View Main Page';
+            storyBtn.href = product.storyUrl;
+            storyBtn.textContent = 'Learn More';
             storyBtn.style.display = 'block';
             storyBtn.style.textAlign = 'center';
             storyBtn.style.marginTop = '1rem';
             storyBtn.style.textDecoration = 'underline';
             storyBtn.style.color = 'var(--text-charcoal)';
             storyBtn.style.fontSize = '0.85rem';
-            
+
             addToCartBtn.after(storyBtn);
         }
     };
@@ -1407,6 +1775,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth State Observer
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
+
+        if (user) {
+            // Claim any guest orders made before logging in
+            claimGuestOrders(user.uid);
+
+            // If the guest-convert-banner is visible on the checkout confirmation page,
+            // swap it to a 'View Your Orders' success card
+            const guestBanner = document.getElementById('guest-convert-banner');
+            if (guestBanner) {
+                guestBanner.style.opacity = '0';
+                guestBanner.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    guestBanner.innerHTML = `
+                        <svg style="width:40px;height:40px;color:#4CAF50;margin-bottom:0.75rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <h4 style="margin-bottom:0.4rem;color:var(--text-charcoal);font-size:1.05rem;">You're all set!</h4>
+                        <p style="font-size:0.85rem;color:#666;margin-bottom:1.1rem;">Your order has been linked to your account.</p>
+                        <a href="my-account.html#orders" class="cta-button cta-button-primary" style="width:auto;padding:0.65rem 1.6rem;font-size:0.9rem;display:inline-block;">View Your Orders</a>
+                    `;
+                    guestBanner.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                    guestBanner.style.opacity = '1';
+                    guestBanner.style.transform = 'scale(1)';
+                }, 350);
+            }
+        }
 
         // Re-query elements to ensure we catch them on all pages (fixes Guest Mode bug)
         const loginBtn = document.getElementById('login-btn');
@@ -1444,7 +1836,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     myAccountBtn.id = 'sidebar-my-account-btn';
                     myAccountBtn.href = 'my-account.html';
                     myAccountBtn.textContent = 'My Account';
-                    
+
                     // Style to match the login button
                     myAccountBtn.style.marginTop = '1rem';
                     myAccountBtn.style.background = 'transparent';
@@ -1479,6 +1871,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             adminBtn.id = 'sidebar-admin-btn';
                             adminBtn.href = 'admin.html';
                             adminBtn.textContent = 'Admin Dashboard';
+                            adminBtn.style.position = 'relative';
                             adminBtn.style.marginTop = '0.5rem';
                             adminBtn.style.borderColor = 'var(--text-charcoal)';
                             adminBtn.style.color = 'var(--text-charcoal)';
@@ -1486,6 +1879,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             adminBtn.style.display = 'inline-block';
                         }
+                        // Start listening for admin notifications
+                        listenForAdminNotifications();
                     }
                 } else {
                     myAccountBtn.style.display = 'inline-block';
@@ -1493,10 +1888,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (adminBtn) adminBtn.style.display = 'inline-block';
                 }
 
+                // Start listening for user notifications if not admin
+                if (user.uid !== ADMIN_UID) {
+                    listenForUserNotifications(user.uid);
+                }
+
                 // Sync Cart from Firestore
                 const cartRef = doc(db, "carts", user.uid);
                 const docSnap = await getDoc(cartRef);
-                
+
                 if (docSnap.exists() && cart.length === 0) {
                     cart = docSnap.data().items || [];
                     updateCartUI();
@@ -1508,7 +1908,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (sidebarLoginBtn) sidebarLoginBtn.style.display = 'block';
                 if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'none';
-                
+
                 // Hide My Account button
                 const myAccountBtn = document.getElementById('sidebar-my-account-btn');
                 if (myAccountBtn) myAccountBtn.style.display = 'none';
@@ -1533,47 +1933,91 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ordersList) {
             if (user) {
                 if (accountUserName) accountUserName.textContent = user.displayName || "Member";
-                ordersList.innerHTML = '<p>Loading your order history...</p>';
+
+                // Show Skeleton
+                const ordersLoader = document.getElementById('orders-loader');
+                if (ordersLoader) ordersLoader.classList.add('active');
+                ordersList.classList.remove('visible');
 
                 try {
+                    // Fetch reviewed product IDs first to show/hide Review button
+                    const reviewsSnap = await getDocs(query(collection(db, "product_reviews"), where("userId", "==", user.uid)));
+                    const reviewedProductIds = new Set();
+                    reviewsSnap.forEach(doc => reviewedProductIds.add(doc.data().productId));
+
                     const q = query(collection(db, "orders"), where("userId", "==", user.uid));
                     const querySnapshot = await getDocs(q);
-                    
-                    const orders = [];
+
+                    let orders = [];
+                    const updatesToClear = [];
+
                     querySnapshot.forEach((doc) => {
-                        orders.push({ id: doc.id, ...doc.data() });
+                        const data = doc.data();
+                        orders.push({ id: doc.id, ...data });
+                        if (data.hasUnseenUpdate) {
+                            updatesToClear.push(updateDoc(doc.ref, { hasUnseenUpdate: false }));
+                        }
                     });
 
-                    const renderOrders = (sortedOrders) => {
-                        ordersList.innerHTML = '';
-                        if (sortedOrders.length === 0) {
+                    // Clear notifications in background
+                    if (updatesToClear.length > 0) {
+                        Promise.all(updatesToClear).then(() => {
+                            document.body.classList.remove('has-notification');
+                        }).catch(console.error);
+                    }
+
+                    let visibleOrdersCount = 10;
+                    let filteredOrders = [];
+
+                    const renderOrders = (toRender, append = false) => {
+                        if (!append) ordersList.innerHTML = '';
+
+                        const chunk = toRender.slice(append ? visibleOrdersCount - 10 : 0, visibleOrdersCount);
+
+                        if (!append && toRender.length === 0) {
                             ordersList.innerHTML = '<p>You haven\'t placed any orders yet.</p>';
+                            document.getElementById('load-more-orders-container').style.display = 'none';
                         } else {
-                            sortedOrders.forEach(order => {
-                                const date = new Date(order.timestamp.seconds * 1000).toLocaleDateString();
+                            chunk.forEach(order => {
+                                const date = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleDateString() : 'Recent';
                                 const total = typeof order.total === 'number' ? order.total.toFixed(2) : order.total;
                                 const status = order.status || 'Pending';
                                 const statusClass = `status-${status.toLowerCase().replace(/\s+/g, '-')}`;
 
                                 let trackButtonHtml = '';
                                 let cancelButtonHtml = '';
+                                let reviewButtonHtml = '';
 
-                                // If the order is shipped, create a track button.
                                 if (status.toLowerCase() === 'shipped') {
-                                    // For this demo, we'll generate a fake tracking number if one isn't in the data.
                                     const trackingNumber = order.trackingNumber || `1Z${order.id.slice(0, 10).toUpperCase()}A0${Math.floor(Math.random() * 90 + 10)}`;
-                                    const orderRefParam = order.orderReference ? `&orderRef=${order.orderReference}` : '';
-                                    trackButtonHtml = `<a href="tracking.html?orderId=${order.id}&trackingNumber=${trackingNumber}${orderRefParam}" class="track-order-btn">Track Order</a>`;
+                                    trackButtonHtml = `<a href="tracking.html?orderId=${order.id}&trackingNumber=${trackingNumber}" class="track-order-btn">Track Order</a>`;
                                 } else if (status.toLowerCase() === 'pending') {
                                     cancelButtonHtml = `<button class="cancel-order-btn" data-id="${order.id}" style="margin-left: 5px; color: #ff4d4d; background: none; border: 1px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer;">Cancel</button>`;
+                                } else if (status.toLowerCase() === 'delivered') {
+                                    // Check if any product in this order hasn't been reviewed
+                                    const hasUnreviewed = order.items.some(item => !reviewedProductIds.has(item.productId || item.id));
+                                    if (hasUnreviewed) {
+                                        reviewButtonHtml = `<button class="review-prompt-btn" style="margin-left: 5px; background: #fdf6ec; color: #e6a23c; border: 1px solid #e6a23c; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600;">Rate Products</button>`;
+                                    }
                                 }
-                                
-                                let itemsHtml = order.items.map(item => `
-                                    <div class="order-item-row">
-                                        <span>${item.quantity}x ${item.name} (${item.size})</span>
-                                        <span>${item.price}</span>
-                                    </div>
-                                `).join('');
+
+                                let itemsHtml = order.items.map(item => {
+                                    const pId = item.productId || item.id;
+                                    const img = productCatalog[pId]?.image || 'placeholder-glow.jpg';
+                                    const itemPrice = String(item.price).includes('TND') ? item.price : `${item.price} TND`;
+                                    return `
+                                        <div class="order-item-row">
+                                            <img src="${img}" class="account-item-mini-img" alt="${item.name}">
+                                            <div style="flex: 1;">
+                                                <div style="font-weight: 500;">${item.name}</div>
+                                                <div style="color: #888; font-size: 0.85rem;">Size: ${item.size} | Qty: ${item.quantity}</div>
+                                            </div>
+                                            <div style="font-weight: 600;">${itemPrice}</div>
+                                        </div>
+                                    `;
+                                }).join('');
+
+                                const orderTotal = String(total).includes('TND') ? total : `${total} TND`;
 
                                 const orderCard = document.createElement('div');
                                 orderCard.classList.add('order-card', 'reveal', 'active');
@@ -1586,105 +2030,142 @@ document.addEventListener('DOMContentLoaded', () => {
                                         ${itemsHtml}
                                     </div>
                                     <div class="order-footer">
-                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                                             <span class="status-badge ${statusClass}">${status}</span>
                                             <button class="reorder-btn" data-id="${order.id}">Reorder</button>
                                             ${trackButtonHtml}
                                             ${cancelButtonHtml}
+                                            ${reviewButtonHtml}
                                         </div>
-                                        <span style="color: var(--accent-gold);">${total} TND</span>
+                                        <span style="color: var(--accent-gold);">${orderTotal}</span>
                                     </div>
                                 `;
                                 ordersList.appendChild(orderCard);
                             });
 
-                            // Attach Reorder Event Listeners
-                            document.querySelectorAll('.reorder-btn').forEach(btn => {
-                                btn.addEventListener('click', (e) => {
-                                    const orderId = e.target.getAttribute('data-id');
-                                    const order = orders.find(o => o.id === orderId);
-                                    if (order && order.items) {
-                                        order.items.forEach(item => {
-                                            const existingItem = cart.find(c => c.id === item.id);
-                                            if (existingItem) {
-                                                existingItem.quantity += item.quantity;
-                                            } else {
-                                                cart.push({ ...item });
-                                            }
-                                        });
-                                        updateCartUI();
-                                        openCart();
-                                    }
-                                });
-                            });
+                            // Pagination Check
+                            if (visibleOrdersCount < toRender.length) {
+                                document.getElementById('load-more-orders-container').style.display = 'flex';
+                            } else {
+                                document.getElementById('load-more-orders-container').style.display = 'none';
+                            }
 
-                            // Attach Cancel Event Listeners
-                            document.querySelectorAll('.cancel-order-btn').forEach(btn => {
-                                btn.addEventListener('click', async (e) => {
-                                    const btnElement = e.currentTarget;
-                                    const confirmed = await window.showConfirm("Are you sure you want to cancel this order? This action cannot be undone.", "Cancel Order");
-                                    if (!confirmed) return;
-                                    
-                                    const orderId = btnElement.getAttribute('data-id');
-                                    
-                                    btnElement.innerText = "Processing...";
-                                    btnElement.disabled = true;
-                                    btnElement.style.opacity = "0.5";
-
-                                    try {
-                                        await updateDoc(doc(db, "orders", orderId), {
-                                            status: "Cancelled"
-                                        });
-                                        
-                                        // Update UI locally
-                                        const orderCard = btnElement.closest('.order-card');
-                                        const statusBadge = orderCard.querySelector('.status-badge');
-                                        if (statusBadge) {
-                                            statusBadge.textContent = "Cancelled";
-                                            statusBadge.className = "status-badge status-cancelled";
-                                        }
-                                        btnElement.remove();
-                                        
-                                    } catch (error) {
-                                        console.error("Error cancelling order:", error);
-                                        window.showToast("Failed to cancel order.", "error");
-                                        btnElement.innerText = "Cancel";
-                                        btnElement.disabled = false;
-                                        btnElement.style.opacity = "1";
-                                    }
-                                });
-                            });
+                            // Re-bind listeners for newly rendered elements
+                            attachOrderActionListeners(orders);
                         }
                     };
 
-                    // Default sort by date
-                    orders.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
-                    renderOrders(orders);
-
-                    const sortBtns = document.querySelectorAll('.filter-sort-btn');
-                    sortBtns.forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            sortBtns.forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
-
-                            const sortBy = btn.dataset.sort;
-                            let sortedOrders = [...orders];
-
-                            if (sortBy === 'status') {
-                                const statusOrder = { 'pending': 1, 'processing': 2, 'shipped': 3, 'delivered': 4, 'cancelled': 5 };
-                                sortedOrders.sort((a, b) => {
-                                    const statusA = (a.status || 'pending').toLowerCase();
-                                    const statusB = (b.status || 'pending').toLowerCase();
-                                    return (statusOrder[statusA] || 99) - (statusOrder[statusB] || 99);
-                                });
-                            } else { // 'date'
-                                sortedOrders.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
-                            }
-                            renderOrders(sortedOrders);
+                    const attachOrderActionListeners = (allOrders) => {
+                        document.querySelectorAll('.reorder-btn').forEach(btn => {
+                            btn.onclick = (e) => {
+                                const orderId = e.target.getAttribute('data-id');
+                                const order = allOrders.find(o => o.id === orderId);
+                                if (order && order.items) {
+                                    order.items.forEach(item => {
+                                        const existingItem = cart.find(c => c.id === item.id);
+                                        if (existingItem) existingItem.quantity += item.quantity;
+                                        else cart.push({ ...item });
+                                    });
+                                    updateCartUI();
+                                    openCart();
+                                }
+                            };
                         });
-                    });
+
+                        document.querySelectorAll('.cancel-order-btn').forEach(btn => {
+                            btn.onclick = async (e) => {
+                                const btnElement = e.currentTarget;
+                                const confirmed = await window.showConfirm("Are you sure you want to cancel this order? This action cannot be undone.", "Cancel Order");
+                                if (!confirmed) return;
+
+                                const orderId = btnElement.getAttribute('data-id');
+                                btnElement.innerText = "Processing...";
+                                btnElement.disabled = true;
+
+                                try {
+                                    await updateDoc(doc(db, "orders", orderId), { status: "Cancelled" });
+                                    const orderCard = btnElement.closest('.order-card');
+                                    const statusBadge = orderCard.querySelector('.status-badge');
+                                    if (statusBadge) {
+                                        statusBadge.textContent = "Cancelled";
+                                        statusBadge.className = "status-badge status-cancelled";
+                                    }
+                                    btnElement.remove();
+                                } catch (error) {
+                                    console.error("Error cancelling order:", error);
+                                    window.showToast("Failed to cancel order.", "error");
+                                    btnElement.innerText = "Cancel";
+                                    btnElement.disabled = false;
+                                }
+                            };
+                        });
+
+                        document.querySelectorAll('.review-prompt-btn').forEach(btn => {
+                            btn.onclick = () => {
+                                // Trigger the global review prompt modal which finds unreviewed items
+                                if (typeof initGlobalReviewPrompt === 'function') {
+                                    initGlobalReviewPrompt(true); // Force open if needed
+                                } else {
+                                    window.showToast("Review system is preparing...", "info");
+                                }
+                            };
+                        });
+
+                    };
+
+                    // Initial Render
+                    setTimeout(() => {
+                        if (ordersLoader) ordersLoader.classList.remove('active');
+                        ordersList.classList.add('visible');
+
+                        orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                        filteredOrders = [...orders];
+                        renderOrders(filteredOrders);
+                    }, 800);
+
+                    // Dual Filter & Sort Logic
+                    const sortDateSelect = document.getElementById('order-sort-date');
+                    const filterStatusSelect = document.getElementById('order-filter-status');
+
+                    const applyFilters = () => {
+                        let filtered = [...orders];
+                        const dateSort = sortDateSelect?.value || 'newest';
+                        const statusFilter = filterStatusSelect?.value || 'all';
+
+                        if (statusFilter !== 'all') {
+                            filtered = filtered.filter(o => (o.status || 'Pending') === statusFilter);
+                        }
+
+                        if (dateSort === 'newest') {
+                            filtered.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                        } else {
+                            filtered.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+                        }
+
+                        visibleOrdersCount = 10;
+                        filteredOrders = filtered;
+                        renderOrders(filteredOrders);
+                    };
+
+                    if (sortDateSelect) sortDateSelect.addEventListener('change', applyFilters);
+                    if (filterStatusSelect) filterStatusSelect.addEventListener('change', applyFilters);
+
+                    // Load More Orders Logic
+                    const loadMoreOrdersBtn = document.getElementById('load-more-orders-btn');
+                    if (loadMoreOrdersBtn) {
+                        loadMoreOrdersBtn.onclick = () => {
+                            loadMoreOrdersBtn.innerText = "Loading...";
+                            setTimeout(() => {
+                                visibleOrdersCount += 10;
+                                renderOrders(filteredOrders, true);
+                                loadMoreOrdersBtn.innerText = "View More Orders";
+                            }, 500);
+                        };
+                    }
                 } catch (error) {
                     console.error("Error fetching orders:", error);
+                    if (ordersLoader) ordersLoader.classList.remove('active');
+                    ordersList.classList.add('visible');
                     ordersList.innerHTML = '<p>Unable to load orders at this time.</p>';
                 }
             } else {
@@ -1754,20 +2235,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     clearTimeout(operationTimeout);
                     console.log("Order placed successfully with ID: ", docRef.id);
-                    
+
+                    // Track guest orders locally to allow claiming later
+                    if (!currentUser) {
+                        const guestOrders = JSON.parse(localStorage.getItem('dodch_guest_orders') || '[]');
+                        guestOrders.push(docRef.id);
+                        localStorage.setItem('dodch_guest_orders', JSON.stringify(guestOrders));
+                    }
+
+
                     setTimeout(() => {
                         cart = [];
                         localStorage.setItem('dodch_cart', JSON.stringify(cart));
                         updateCartUI();
-                        
+
                         const orderSummary = document.querySelector('.order-summary');
                         if (orderSummary) {
+                            let guestMessage = '';
+                            if (!currentUser) {
+                                const googleIconSmall = `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px; background: white; border-radius: 50%; padding: 2px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>`;
+                                guestMessage = `
+                                    <div id="guest-convert-banner" style="margin-top: 1.5rem; padding: 1.5rem; background: #fff; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; transition: all 0.4s ease;">
+                                        <h4 style="margin-bottom: 0.5rem; color: var(--text-charcoal); font-size: 1.1rem;">Track Your Luxury Journey</h4>
+                                        <p style="font-size: 0.85rem; color: #666; margin-bottom: 1.2rem; max-width: 280px; margin-left: auto; margin-right: auto;">Create an account now to claim this order and access exclusive DODCH rewards.</p>
+                                        <button onclick="document.getElementById('login-btn').click()" class="cta-button cta-button-primary" style="width: auto; padding: 0.7rem 1.8rem; font-size: 0.9rem; display: flex; align-items: center; margin: 0 auto;">
+                                            ${googleIconSmall} Sign In with Google
+                                        </button>
+                                    </div>
+                                `;
+                            }
+
                             orderSummary.innerHTML = `
                                 <div style="text-align: center; padding: 2rem 0; animation: fadeIn 0.5s ease;">
                                     <svg style="width: 60px; height: 60px; color: var(--accent-gold); margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                     <h2 style="border: none; margin-bottom: 0.5rem;">Order Confirmed</h2>
                                     <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${orderRef} has been received.</p>
-                                    <a href="index.html" class="cta-button" style="margin-top: 2rem; display: inline-block; width: auto;">Return Home</a>
+                                    ${guestMessage}
+                                    <a href="index.html" class="cta-button cta-button-secondary" style="margin-top: 2rem; display: inline-block; width: auto; font-size: 0.85rem;">Return Home</a>
                                 </div>
                             `;
                         }
@@ -1799,7 +2303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = newsletterForm.querySelector('button');
             const emailInput = newsletterForm.querySelector('input[type="email"]');
             const originalText = btn.innerText;
-            
+
             addDoc(collection(db, "newsletter"), {
                 email: emailInput.value,
                 timestamp: new Date()
@@ -1808,7 +2312,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerText = "Joined";
             btn.style.backgroundColor = "#4CAF50"; // Green for success
             newsletterForm.reset();
-            
+
             setTimeout(() => {
                 btn.innerText = originalText;
                 btn.style.backgroundColor = "";
@@ -1818,11 +2322,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 21. Breadcrumbs Logic
     const initBreadcrumbs = () => {
+        const existing = document.querySelector('.breadcrumb-wrapper');
+        if (existing) existing.remove();
+
         const path = window.location.pathname;
         const page = path.split("/").pop();
-        
-        // Skip for homepage
-        if (page === "" || page === "index.html") return;
+
+        // Skip for homepage only if it's the root without filters
+        if ((page === "" || page === "index.html" || page === "/") && !window.location.search) return;
+
+        // Skip for specific high-end story pages that handle their own navigation
+        if (page.includes("face-foam.html") || page.includes("face-serum.html") || page.includes("silk-mask.html") || page.includes("dodchmellow-pro-v.html")) return;
 
         const main = document.querySelector('main');
         if (!main) return;
@@ -1831,8 +2341,25 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentName = "";
 
         // Determine current page hierarchy
-        if (page.includes("shop.html")) {
-            currentName = "Shop";
+        if (page.includes("index.html") || page === "/" || page === "") {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cat = urlParams.get('cat');
+            const sub = urlParams.get('sub');
+
+            if (cat) {
+                const catNames = { 'hair-care': 'Hair Care', 'face-care': 'Face Care', 'sets': 'Sets & Bundles' };
+                // Correct hierarchy: Home → Shop → Category
+                crumbs.push({ name: "Shop", url: "index.html" });
+                currentName = catNames[cat] || cat;
+
+                if (sub && sub !== 'all') {
+                    crumbs.push({ name: currentName, url: `index.html?cat=${cat}` });
+                    const subNames = { 'shampoo': 'Shampoo', 'conditioners': 'Conditioners', 'leave-in': 'Leave-in', 'masks': 'Masks', 'cleansers': 'Cleansers', 'serums': 'Serums' };
+                    currentName = subNames[sub] || sub;
+                }
+            } else {
+                currentName = "Shop";
+            }
         } else if (page.includes("about.html")) {
             currentName = "About Us";
         } else if (page.includes("careers.html")) {
@@ -1846,7 +2373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (page.includes("faq.html")) {
             currentName = "FAQ";
         } else if (page.includes("checkout.html")) {
-            crumbs.push({ name: "Shop", url: "shop.html" });
+            crumbs.push({ name: "Shop", url: "index.html" });
             currentName = "Checkout";
         } else if (page.includes("my-account.html")) {
             currentName = "My Account";
@@ -1856,8 +2383,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (page.includes("admin.html")) {
             currentName = "Admin Dashboard";
         } else if (page.includes("product.html")) {
-            crumbs.push({ name: "Shop", url: "shop.html" });
-            
+            crumbs.push({ name: "Shop", url: "index.html" });
+
             // Get product name from URL param
             const urlParams = new URLSearchParams(window.location.search);
             const productId = urlParams.get('id');
@@ -1875,18 +2402,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb" itemscope itemtype="https://schema.org/BreadcrumbList">
                     ${crumbs.map((crumb, index) => {
-                        const isLast = index === crumbs.length - 1;
-                        
-                        if (isLast) {
-                            return `
+            const isLast = index === crumbs.length - 1;
+
+            if (isLast) {
+                return `
                             <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
                                 <span itemprop="name" class="breadcrumb-current">${crumb.name}</span>
                                 <meta itemprop="position" content="${index + 1}" />
                             </li>`;
-                        } else {
-                            // Schema.org recommends absolute URLs for "item".
-                            const absoluteUrl = new URL(crumb.url, window.location.href).href;
-                            return `
+            } else {
+                // Schema.org recommends absolute URLs for "item".
+                const absoluteUrl = new URL(crumb.url, window.location.href).href;
+                return `
                             <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
                                 <a itemprop="item" href="${absoluteUrl}">
                                     <span itemprop="name">${crumb.name}</span>
@@ -1894,8 +2421,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <meta itemprop="position" content="${index + 1}" />
                                 <span class="breadcrumb-separator" aria-hidden="true">&gt;</span>
                             </li>`;
-                        }
-                    }).join('')}
+            }
+        }).join('')}
                     </ol>
                 </nav>
             </div>
@@ -1911,7 +2438,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 15. Smart Footer & Contact Section Injection
     const initSmartFooter = () => {
         const footer = document.querySelector('footer');
-        
+
         // Run on all pages if footer exists
         if (footer) {
             // 1. Inject "Get in Touch" Section BEFORE footer (only if not already present)
@@ -1958,7 +2485,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </section>
                 `;
-                
+
                 footer.insertAdjacentHTML('beforebegin', contactSectionHTML);
             }
 
@@ -1994,16 +2521,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="footer-col">
                             <h4>Collections</h4>
                             <ul style="list-style: none;">
-                                <li><a href="shop.html" class="footer-link">Hair Care</a></li>
-                                <li><a href="shop.html" class="footer-link">Scalp Solutions</a></li>
-                                <li><a href="shop.html" class="footer-link">Accessories</a></li>
-                                <li><a href="shop.html" class="footer-link">Discovery Sets</a></li>
+                                <li><a href="index.html" class="footer-link">Hair Care</a></li>
+                                <li><a href="index.html" class="footer-link">Scalp Solutions</a></li>
+                                <li><a href="index.html" class="footer-link">Accessories</a></li>
+                                <li><a href="index.html" class="footer-link">Discovery Sets</a></li>
                             </ul>
                         </div>
                     </div>
 
                     <div class="copyright">
-                        &copy; 2026 DODCH. All Rights Reserved.
+                        &copy; ${new Date().getFullYear()} DODCH. All Rights Reserved.
                     </div>
                 </div>
             `;
@@ -2026,7 +2553,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (lastSubmit) {
                         const timeSince = Date.now() - parseInt(lastSubmit);
                         // 2 minutes cooldown (120000 ms)
-                        if (timeSince < 120000) { 
+                        if (timeSince < 120000) {
                             const remaining = Math.ceil((120000 - timeSince) / 1000);
                             window.showToast(`Please wait ${remaining}s before sending another message.`, "error");
                             return;
@@ -2037,7 +2564,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const originalText = btn.innerText;
                     btn.innerText = "Sending...";
                     btn.disabled = true;
-                    
+
                     // Exclude honeypot from data collection
                     const inputs = Array.from(form.querySelectorAll('input, textarea'))
                         .filter(el => el.name !== 'website');
@@ -2070,28 +2597,222 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initSmartFooter();
 
-    // 22. Highlight Active Sidebar Link
-    const initSidebarHighlight = () => {
+    // --- Sidebar Menu Rendering ---
+    const renderSidebarMenu = () => {
+        const sidebarMenu = document.querySelector('.sidebar-menu');
+        if (!sidebarMenu) return;
+
+        sidebarMenu.innerHTML = ''; // Clear existing static links
+
+        const menuItems = [
+            {
+                label: "Home",
+                id: "home",
+                type: "group",
+                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`,
+                children: [
+                    { label: "All Products", link: "index.html?cat=all", type: "link", className: "sidebar-separator-link" },
+                    {
+                        label: "Hair Care",
+                        id: "hair-care",
+                        type: "group",
+                        children: [
+                            { label: "All Hair Products", link: "index.html?cat=hair-care&sub=all", type: "link" },
+                            { label: "Shampoo", link: "index.html?cat=hair-care&sub=shampoo", type: "link" },
+                            { label: "Conditioners", link: "index.html?cat=hair-care&sub=conditioners", type: "link" },
+                            { label: "Masks", link: "index.html?cat=hair-care&sub=masks", type: "link" },
+                            { label: "Leave-in", link: "index.html?cat=hair-care&sub=leave-in", type: "link" }
+                        ]
+                    },
+                    {
+                        label: "Face Care",
+                        id: "face-care",
+                        type: "group",
+                        children: [
+                            { label: "All Face Products", link: "index.html?cat=face-care&sub=all", type: "link" },
+                            { label: "Cleansers", link: "index.html?cat=face-care&sub=cleansers", type: "link" },
+                            { label: "Serums", link: "index.html?cat=face-care&sub=serums", type: "link" }
+                        ]
+                    },
+                    { label: "Sets & Bundles", link: "index.html?cat=sets", type: "link" }
+                ]
+            },
+            {
+                label: "About Us",
+                link: "about.html",
+                type: "link",
+                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
+            },
+            {
+                label: "Contact",
+                link: "#contact",
+                type: "link",
+                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`
+            }
+        ];
+
+        const createMenuNode = (item) => {
+            if (item.type === "group") {
+                const group = document.createElement('div');
+                group.className = 'sidebar-menu-group';
+                if (item.id) group.dataset.id = item.id;
+
+                const toggle = document.createElement('div');
+                toggle.className = 'sidebar-menu-toggle';
+                toggle.innerHTML = `${item.icon || ''}<span>${item.label}</span><span class="toggle-icon"></span>`;
+
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+
+                    // Close other open groups at the same level (Accordion behavior)
+                    const siblings = Array.from(group.parentElement.children);
+                    siblings.forEach(sibling => {
+                        if (sibling !== group && sibling.classList.contains('sidebar-menu-group')) {
+                            sibling.classList.remove('active');
+                        }
+                    });
+
+                    group.classList.toggle('active');
+                });
+
+                const submenu = document.createElement('div');
+                submenu.className = 'sidebar-submenu';
+
+                item.children.forEach(child => {
+                    submenu.appendChild(createMenuNode(child));
+                });
+
+                group.appendChild(toggle);
+                group.appendChild(submenu);
+                return group;
+            } else {
+                const link = document.createElement('a');
+                link.href = item.link;
+                link.innerHTML = `${item.icon || ''}<span>${item.label}</span>`;
+                if (item.className) {
+                    // Add multiple classes if separated by space
+                    item.className.split(' ').forEach(cls => link.classList.add(cls));
+                }
+
+                // SPA Navigation for Shop
+                if (item.link && item.link.includes('index.html')) {
+                    link.addEventListener('click', (e) => {
+                        // Only intercept if we are currently on index.html
+                        if (window.location.pathname.includes('index.html')) {
+                            e.preventDefault();
+                            window.history.pushState({}, '', item.link);
+                            initShopPage(true);
+                            updateSidebarActiveState();
+                            if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
+                        }
+                    });
+                }
+                return link;
+            }
+        };
+
+        menuItems.forEach(item => {
+            sidebarMenu.appendChild(createMenuNode(item));
+        });
+
+        // Auto-expand sidebar based on current URL
         const currentPath = window.location.pathname;
-        const links = document.querySelectorAll('.sidebar-menu a');
-        
-        links.forEach(link => {
-            const href = link.getAttribute('href');
-            if (!href) return;
-            
-            const targetPage = href.split('#')[0].split('?')[0];
-            
-            if (targetPage) {
-                const isMatch = currentPath.endsWith(targetPage) || 
-                                (targetPage === 'index.html' && currentPath.endsWith('/'));
-                
-                if (isMatch && !href.includes('#')) {
-                    link.classList.add('active');
+        const urlParams = new URLSearchParams(window.location.search);
+        const cat = urlParams.get('cat');
+        const isShopPage = currentPath.endsWith('/') || currentPath.endsWith('index.html');
+
+        if (isShopPage || currentPath.includes('product.html')) {
+            const homeGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="home"]');
+            if (homeGroup) homeGroup.classList.add('active');
+
+            if (cat === 'hair-care') {
+                const hairGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="hair-care"]');
+                if (hairGroup) hairGroup.classList.add('active');
+            } else if (cat === 'face-care') {
+                const faceGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="face-care"]');
+                if (faceGroup) faceGroup.classList.add('active');
+            }
+        }
+    };
+
+    renderSidebarMenu();
+
+    // 22. Highlight Active Sidebar Link
+    const updateSidebarActiveState = () => {
+        const currentUrl = new URL(window.location.href);
+
+        // Treat base homepage as "All Products" for active state
+        const isBaseHomePage = (currentUrl.pathname.endsWith('/') || currentUrl.pathname.endsWith('/index.html')) && currentUrl.search === '';
+        if (isBaseHomePage) {
+            currentUrl.searchParams.set('cat', 'all');
+        }
+
+        // Deactivate all first
+        document.querySelectorAll('.sidebar-menu-group.active').forEach(g => g.classList.remove('active'));
+        document.querySelectorAll('.sidebar-menu a.active').forEach(l => l.classList.remove('active'));
+
+        let bestMatch = null;
+        let maxScore = -1;
+
+        document.querySelectorAll('.sidebar-menu a').forEach(link => {
+            const linkUrl = new URL(link.href, window.location.origin);
+            let score = 0;
+
+            // Rule 1: Must be on the same page (e.g., index.html)
+            if (linkUrl.pathname !== currentUrl.pathname) {
+                return;
+            }
+            score = 1;
+
+            // Rule 2: Compare query parameters
+            const currentParams = currentUrl.searchParams;
+            const linkParams = linkUrl.searchParams;
+
+            if (currentUrl.search === linkUrl.search) {
+                score = 10; // Perfect match is best
+            } else {
+                let paramsMatch = true;
+                let matchCount = 0;
+                // The link's params must be a subset of the current URL's params
+                for (const [key, value] of linkParams.entries()) {
+                    if (currentParams.get(key) !== value) {
+                        paramsMatch = false;
+                        break;
+                    }
+                    matchCount++;
+                }
+
+                if (paramsMatch) {
+                    score += matchCount;
+                } else {
+                    score = 0; // Not a valid candidate
                 }
             }
+
+            if (score > maxScore) {
+                maxScore = score;
+                bestMatch = link;
+            }
         });
+
+        if (bestMatch) {
+            bestMatch.classList.add('active');
+            let parent = bestMatch.closest('.sidebar-menu-group');
+            while (parent) {
+                parent.classList.add('active');
+                parent = parent.parentElement.closest('.sidebar-menu-group');
+            }
+
+            // Scroll active item into view
+            setTimeout(() => {
+                const sidebar = document.getElementById('desktop-sidebar');
+                if (sidebar && (window.innerWidth >= 768 || sidebar.classList.contains('active'))) {
+                    bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 500);
+        }
     };
-    initSidebarHighlight();
+    updateSidebarActiveState();
 
     // 23. Highlight Contact Section
     const initContactHighlight = () => {
@@ -2102,7 +2823,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 contactSection.classList.remove('highlight-section');
                 void contactSection.offsetWidth; // Trigger reflow
                 contactSection.classList.add('highlight-section');
-                
+
                 setTimeout(() => {
                     contactSection.classList.remove('highlight-section');
                 }, 2000);
@@ -2127,9 +2848,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 24. Admin Dashboard Logic
     const initAdminPage = async () => {
+        // Helper: Debounce function for search performance
+        const debounce = (func, wait) => {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        };
+
         const adminOrdersList = document.getElementById('admin-orders-list');
         const adminProductsList = document.getElementById('admin-products-list');
-        
+
         if (!adminOrdersList) return; // Not on admin page
 
         // Verify Admin
@@ -2146,12 +2876,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Tab Logic
         const tabs = document.querySelectorAll('.admin-tab-btn');
         const panes = document.querySelectorAll('.tab-pane');
-        
+
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
                 panes.forEach(p => p.classList.remove('active'));
-                
+
                 tab.classList.add('active');
                 const targetPane = document.getElementById(`tab-${tab.dataset.tab}`);
                 if (targetPane) targetPane.classList.add('active');
@@ -2190,7 +2920,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageUrlInput) imageUrlInput.value = '';
                 if (imagePreview) imagePreview.src = '';
                 if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
-                
+
                 const prompt = dropZone ? dropZone.querySelector('.drop-zone-prompt') : null;
                 if (prompt) prompt.textContent = 'Drop file here or click to upload';
             });
@@ -2285,7 +3015,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // --- Step 1: Handle Image Upload & Get URL ---
                 let finalImageUrl = imageUrlInput.value;
                 const file = imageFileInput.files[0];
-                
+
                 if (file) {
                     submitBtn.innerHTML = `${spinner} Uploading Image...`;
                     try {
@@ -2331,7 +3061,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
                     outOfStock: false // Default to false, will be preserved below if editing
                 }));
-                
+
                 // Preserve existing data if editing
                 const existingProduct = isEdit ? productCatalog[newId] : {};
                 if (isEdit && existingProduct.sizes) {
@@ -2351,18 +3081,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // --- Step 2: Construct Product Object with Final Image URL ---
-                const newProduct = { 
-                    name, 
-                    subtitle: document.getElementById('new-prod-subtitle').value.trim(), 
-                    description: document.getElementById('new-prod-desc').value.trim(), 
-                    image: finalImageUrl, 
-                    sizes, 
-                    price: Math.min(...sizes.map(s => parseFloat(s.price))).toFixed(2), 
-                    outOfStock: isEdit ? (existingProduct.outOfStock || false) : false, 
+                const newProduct = {
+                    name,
+                    subtitle: document.getElementById('new-prod-subtitle').value.trim(),
+                    description: document.getElementById('new-prod-desc').value.trim(),
+                    image: finalImageUrl,
+                    sizes,
+                    price: Math.min(...sizes.map(s => parseFloat(s.price))).toFixed(2),
+                    outOfStock: isEdit ? (existingProduct.outOfStock || false) : false,
                     style: isEdit ? (existingProduct.style || "") : "",
                     orderIndex: orderIndex
                 };
-                
+
                 // --- Step 3: Save to Firestore ---
                 submitBtn.innerHTML = `${spinner} Saving Product...`;
                 try { await setDoc(doc(db, "products", newId), newProduct); productCatalog[newId] = newProduct; loadAdminProducts(); closeProductModal(); window.showToast(isEdit ? "Product updated successfully!" : "Product added successfully!", "success"); } catch (error) { console.error("Error saving product:", error); window.showToast("Failed to save product.", "error"); } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; }
@@ -2405,7 +3135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     q = query(q, orderBy("timestamp", dateDir));
 
                     const querySnapshot = await getDocs(q);
-                    
+
                     // CSV Header
                     let csvContent = "data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items\n";
 
@@ -2413,7 +3143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = doc.data();
                         const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
                         const itemsStr = data.items ? data.items.map(i => `${i.quantity}x ${i.name} (${i.size})`).join('; ') : '';
-                        
+
                         // Escape commas in data to prevent CSV breakage
                         const row = [
                             data.orderReference || doc.id,
@@ -2430,7 +3160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const encodedUri = encodeURI(csvContent);
                     const link = document.createElement("a");
                     link.setAttribute("href", encodedUri);
-                    link.setAttribute("download", `orders_export_${new Date().toISOString().slice(0,10)}.csv`);
+                    link.setAttribute("download", `orders_export_${new Date().toISOString().slice(0, 10)}.csv`);
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -2457,7 +3187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (statusValue) {
                     q = query(q, where("status", "==", statusValue));
                 }
-                
+
                 // Always sort by timestamp
                 q = query(q, orderBy("timestamp", dateDir));
 
@@ -2466,7 +3196,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (cursor) {
                     q = query(q, startAfter(cursor));
                 }
-                
+
                 q = query(q, limit(pageSize));
 
                 const querySnapshot = await getDocs(q);
@@ -2496,14 +3226,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                     ordersToRender.forEach(order => {
-                    const date = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleString() : 'N/A';
-                    const status = order.status || 'Pending';
-                    
-                    const el = document.createElement('div');
-                    el.className = 'admin-order-card';
-                    el.innerHTML = `
+                        const date = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleString() : 'N/A';
+                        const status = order.status || 'Pending';
+
+                        const el = document.createElement('div');
+                        el.className = 'admin-order-card';
+                        el.innerHTML = `
                         <div class="admin-order-header">
-                            <strong>#${order.orderReference || order.id.slice(0,6)}</strong>
+                            <strong>#${order.orderReference || order.id.slice(0, 6)}</strong>
                             <span>${date}</span>
                         </div>
                         <div class="admin-order-details">
@@ -2525,8 +3255,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             </select>
                         </div>
                     `;
-                    adminOrdersList.appendChild(el);
-                });
+                        adminOrdersList.appendChild(el);
+                    });
                 };
 
                 renderAdminOrdersList(orders);
@@ -2534,16 +3264,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Search Logic
                 const searchInput = document.getElementById('admin-order-search');
                 if (searchInput) {
-                    searchInput.addEventListener('input', (e) => {
+                    searchInput.addEventListener('input', debounce((e) => {
                         const term = e.target.value.toLowerCase();
-                        const filtered = orders.filter(o => 
+                        const filtered = orders.filter(o =>
                             (o.id && o.id.toLowerCase().includes(term)) ||
                             (o.orderReference && o.orderReference.toLowerCase().includes(term)) ||
                             (o.shipping?.fullName && o.shipping.fullName.toLowerCase().includes(term)) ||
                             (o.shipping?.email && o.shipping.email.toLowerCase().includes(term))
                         );
                         renderAdminOrdersList(filtered);
-                    });
+                    }, 300));
                 }
 
                 // Render Pagination Controls
@@ -2581,9 +3311,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (await window.showConfirm(`Change order status to ${newStatus}?`, "Update Order")) {
                             try {
-                                await updateDoc(doc(db, "orders", orderId), { status: newStatus });
+                                await updateDoc(doc(db, "orders", orderId), { status: newStatus, hasUnseenUpdate: true });
                                 window.showToast("Order status updated", "success");
-                                
+
                                 // Auto-open email client if Confirmed
                                 if (newStatus === 'Confirmed') {
                                     const order = orders.find(o => o.id === orderId);
@@ -2591,7 +3321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         const subject = `Order Confirmation: DODCH #${order.orderReference || order.id}`;
                                         const itemsList = order.items.map(i => `• ${i.quantity}x ${i.name} (${i.size})`).join('\n');
                                         const totalDisplay = typeof order.total === 'number' ? order.total.toFixed(2) : order.total;
-                                        
+
                                         const body = `Dear ${order.shipping.fullName},
 
 Thank you for choosing DODCH. We are delighted to confirm your order.
@@ -2658,9 +3388,9 @@ The DODCH Team`;
                 syncBtn.style.marginBottom = '20px';
                 syncBtn.style.width = 'auto';
                 syncBtn.style.flex = 'none';
-                
+
                 syncBtn.addEventListener('click', async () => {
-                    if(await window.showConfirm("Overwrite Firestore products with local catalog data?", "Sync Catalog")) {
+                    if (await window.showConfirm("Overwrite Firestore products with local catalog data?", "Sync Catalog")) {
                         try {
                             const promises = Object.entries(productCatalog).map(([id, data]) => {
                                 return setDoc(doc(db, "products", id), data, { merge: true });
@@ -2673,23 +3403,25 @@ The DODCH Team`;
                         }
                     }
                 });
-                
+
                 if (adminProductsList.parentElement) {
                     adminProductsList.parentElement.insertBefore(syncBtn, adminProductsList);
                 }
             }
 
             adminProductsList.innerHTML = '';
-            
+
             // Sort products by orderIndex
             const sortedEntries = Object.entries(productCatalog).sort(([, a], [, b]) => {
-                return (a.orderIndex || 0) - (b.orderIndex || 0);
+                const orderDiff = (a.orderIndex || 0) - (b.orderIndex || 0);
+                if (orderDiff !== 0) return orderDiff;
+                return a.name.localeCompare(b.name);
             });
 
             sortedEntries.forEach(([id, product], index) => {
                 const el = document.createElement('div');
                 el.className = 'admin-product-card';
-                
+
                 // Generate inputs for each size if available, otherwise fallback to single price
                 let priceInputsHTML = '';
                 if (product.sizes && product.sizes.length > 0) {
@@ -2760,17 +3492,17 @@ The DODCH Team`;
 
                     const idInput = document.getElementById('product-id-input');
                     if (idInput) idInput.value = id;
-                    
+
                     document.getElementById('new-prod-name').value = product.name || '';
                     document.getElementById('new-prod-subtitle').value = product.subtitle || '';
                     document.getElementById('new-prod-desc').value = product.description || '';
-                    
+
                     if (imageUrlInput) imageUrlInput.value = product.image || '';
                     if (imagePreview && product.image) {
                         imagePreview.src = product.image;
                         imagePreviewContainer.style.display = 'block';
                     }
-                    
+
                     const modalTitle = document.getElementById('product-modal-title');
                     if (modalTitle) modalTitle.textContent = 'Edit Product';
 
@@ -2800,21 +3532,21 @@ The DODCH Team`;
                                 const index = input.dataset.index;
                                 const newPrice = parseFloat(input.value).toFixed(2);
                                 productCatalog[id].sizes[index].price = newPrice;
-                                
+
                                 // Update original price
                                 const originalPriceInput = card.querySelector(`.admin-size-original-price-input[data-index="${index}"]`);
                                 if (originalPriceInput) {
                                     const oldPrice = originalPriceInput.value ? parseFloat(originalPriceInput.value).toFixed(2) : null;
                                     productCatalog[id].sizes[index].originalPrice = oldPrice;
                                 }
-                                
+
                                 // Update stock status for size
                                 const stockCheck = card.querySelector(`.admin-size-stock-check[data-index="${index}"]`);
                                 if (stockCheck) {
                                     productCatalog[id].sizes[index].outOfStock = stockCheck.checked;
                                 }
                             });
-                            
+
                             // Recalculate base price (lowest of the sizes)
                             const prices = productCatalog[id].sizes.map(s => parseFloat(s.price));
                             productCatalog[id].price = Math.min(...prices).toFixed(2);
@@ -2879,7 +3611,7 @@ The DODCH Team`;
                             let newIndex = idx;
                             if (idx === currentIndex) newIndex = targetIndex;
                             if (idx === targetIndex) newIndex = currentIndex;
-                            
+
                             if ((p.orderIndex !== newIndex)) {
                                 p.orderIndex = newIndex;
                                 productCatalog[pid].orderIndex = newIndex; // Update local immediately
@@ -2912,13 +3644,13 @@ The DODCH Team`;
                 // We sort by timestamp to ensure chronological order
                 const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
                 const querySnapshot = await getDocs(q);
-                
+
                 const revenueByDate = {};
                 let totalRevenue = 0;
                 let totalOrdersCount = 0;
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                
+
                 // Define statuses that count as revenue
                 const validStatuses = ['Confirmed', 'In Delivery', 'Delivered'];
 
@@ -2994,24 +3726,28 @@ The DODCH Team`;
                         <img id="qv-image" src="" alt="Product Image" class="qv-modal-image">
                     </div>
                     <div class="qv-modal-info">
+                        <span class="brand-tag" style="text-transform: uppercase; letter-spacing: 3px; font-size: 0.75rem; color: var(--accent-gold); margin-bottom: 0.5rem; display: block; font-weight: 600;">DODCH</span>
                         <h2 id="qv-title" class="qv-product-title"></h2>
                         <p id="qv-price" class="qv-product-price"></p>
                         <p id="qv-desc" class="qv-product-desc"></p>
                         
-                        <div class="size-selector" style="margin-bottom: 1.5rem;">
-                            <span class="size-label">Size</span>
+                        <div class="size-selector" style="margin-bottom: 2rem;">
+                            <span class="size-label" style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.8rem; display: block; text-transform: uppercase; letter-spacing: 1px;">Select Size</span>
                             <div class="size-options">
                                 <!-- Dynamic Buttons Injected Here -->
                             </div>
                         </div>
 
-                        <button id="qv-add-to-cart" class="qv-add-to-cart-btn">Add to Cart</button>
-                        <a id="qv-learn-more" href="#" style="text-align: center; display: block; margin-top: 1rem; font-size: 0.85rem; text-decoration: underline; color: var(--text-charcoal);">Learn More</a>
+                        <button id="qv-add-to-cart" class="qv-add-to-cart-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                            <span>Add to Cart</span>
+                        </button>
+                        <a id="qv-learn-more" href="#" style="text-align: center; display: block; margin-top: 1.5rem; font-size: 0.85rem; text-decoration: none; color: var(--text-charcoal); letter-spacing: 1px; text-transform: uppercase; font-weight: 500; opacity: 0.6; transition: opacity 0.3s ease;">View Full Details</a>
                     </div>
                 </div>
             </div>
         `;
-        
+
         if (!document.getElementById('qv-modal')) {
             document.body.insertAdjacentHTML('beforeend', qvModalHTML);
         }
@@ -3036,9 +3772,15 @@ The DODCH Team`;
                 e.stopPropagation();
 
                 const id = btn.dataset.id;
+
+                if (id === 'glass-glow-shampoo') {
+                    window.showToast('This product is no longer available.', 'error');
+                    return;
+                }
+
                 // Smart Import: Use catalog data if available for consistency
                 const product = productCatalog[id];
-                
+
                 const title = product ? product.name : btn.dataset.title;
                 const price = product ? product.price : btn.dataset.price;
                 const img = product ? product.image : btn.dataset.img;
@@ -3052,11 +3794,11 @@ The DODCH Team`;
                 qvImage.style = style || '';
                 qvTitle.textContent = title;
                 qvDesc.textContent = desc;
-                
+
                 if (qvLearnMore) {
-                    qvLearnMore.href = `product.html?id=${id}`;
+                    qvLearnMore.href = (product && product.storyUrl) ? product.storyUrl : `product.html?id=${id}`;
                 }
-                
+
                 // Dynamic Size Buttons for Quick View
                 const sizeOptionsContainer = modal.querySelector('.size-options');
                 const sizeSelector = modal.querySelector('.size-selector');
@@ -3064,7 +3806,7 @@ The DODCH Team`;
 
                 if (product && product.sizes && product.sizes.length > 0) {
                     sizeSelector.style.display = 'block';
-                    
+
                     // Find index of lowest price
                     const prices = product.sizes.map(s => parseFloat(s.price));
                     const minPrice = Math.min(...prices);
@@ -3079,11 +3821,11 @@ The DODCH Team`;
                             if (!product.outOfStock) {
                                 if (sizeObj.outOfStock) {
                                     qvAddToCart.disabled = true;
-                                    qvAddToCart.textContent = "Out of Stock";
+                                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
                                     qvAddToCart.style.backgroundColor = "#ccc";
                                 } else {
                                     qvAddToCart.disabled = false;
-                                    qvAddToCart.textContent = "Add to Cart";
+                                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
                                     qvAddToCart.style.backgroundColor = "";
                                 }
                             }
@@ -3091,7 +3833,7 @@ The DODCH Team`;
                         btn.dataset.size = sizeObj.label;
                         btn.dataset.price = sizeObj.price;
                         btn.textContent = sizeObj.label;
-                        
+
                         btn.addEventListener('click', () => {
                             sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
                             btn.classList.add('active');
@@ -3100,16 +3842,15 @@ The DODCH Team`;
                             } else {
                                 qvPrice.textContent = `${sizeObj.price} TND`;
                             }
-                            
-                            // Update Add to Cart based on size
+
                             if (!product.outOfStock) {
                                 if (sizeObj.outOfStock) {
                                     qvAddToCart.disabled = true;
-                                    qvAddToCart.textContent = "Out of Stock";
+                                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
                                     qvAddToCart.style.backgroundColor = "#ccc";
                                 } else {
                                     qvAddToCart.disabled = false;
-                                    qvAddToCart.textContent = "Add to Cart";
+                                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
                                     qvAddToCart.style.backgroundColor = "";
                                 }
                             }
@@ -3119,7 +3860,7 @@ The DODCH Team`;
                             btn.style.textDecoration = "line-through";
                             btn.style.opacity = "0.6";
                         }
-                        
+
                         sizeOptionsContainer.appendChild(btn);
                     });
                     // Set initial price to lowest size
@@ -3137,12 +3878,12 @@ The DODCH Team`;
                 // Handle Out of Stock in Quick View
                 if (product && product.outOfStock) { // Global override
                     qvAddToCart.disabled = true;
-                    qvAddToCart.textContent = "Out of Stock";
+                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
                     qvAddToCart.style.backgroundColor = "#ccc";
                     qvAddToCart.style.cursor = "not-allowed";
                 } else {
                     qvAddToCart.disabled = false;
-                    qvAddToCart.textContent = "Add to Cart";
+                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
                     qvAddToCart.style.backgroundColor = "";
                     qvAddToCart.style.cursor = "pointer";
                 }
@@ -3155,8 +3896,8 @@ The DODCH Team`;
             document.body.style.overflow = '';
             modal.classList.remove('active');
         };
-        if(closeBtn) closeBtn.addEventListener('click', closeModal);
-        if(modal) modal.addEventListener('click', (e) => {
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (modal) modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
         });
 
@@ -3165,7 +3906,7 @@ The DODCH Team`;
                 const activeSizeBtn = modal.querySelector('.size-btn.active');
                 const size = activeSizeBtn.dataset.size;
                 const price = activeSizeBtn.dataset.price;
-                
+
                 const newItemId = `${currentProduct.title}-${size}`;
                 const existingItem = cart.find(item => item.id === newItemId);
 
@@ -3182,7 +3923,7 @@ The DODCH Team`;
                         quantity: 1
                     });
                 }
-                
+
                 updateCartUI();
                 closeModal();
                 openCart();
@@ -3196,7 +3937,12 @@ The DODCH Team`;
     const loadRelatedProducts = () => {
         // Check if we are on a product page
         const productDetail = document.querySelector('.product-detail-container');
-        if (!productDetail) return;
+        const foamHero = document.querySelector('.foam-hero');
+        const homeHero = document.getElementById('hero');
+        const silkHero = document.getElementById('hero-silk');
+        const serumPage = document.querySelector('.serum-page');
+
+        if (!productDetail && !foamHero && !homeHero && !silkHero && !serumPage) return;
 
         // Create container if it doesn't exist
         let container = document.getElementById('related-products-container');
@@ -3204,12 +3950,35 @@ The DODCH Team`;
             container = document.createElement('section');
             container.id = 'related-products-container';
             container.classList.add('section-padding', 'bg-white');
-            productDetail.after(container);
+
+            if (productDetail) {
+                productDetail.after(container);
+            } else if (foamHero || silkHero || serumPage) {
+                const main = document.querySelector('main');
+                if (main) main.appendChild(container);
+            } else if (homeHero) {
+                const contactSection = document.getElementById('contact');
+                const main = document.querySelector('main');
+                if (contactSection && main.contains(contactSection)) {
+                    main.insertBefore(container, contactSection);
+                } else if (main) {
+                    main.appendChild(container);
+                }
+            }
         }
 
         // Get current product ID to exclude
         const urlParams = new URLSearchParams(window.location.search);
         let currentId = urlParams.get('id');
+
+        // Handle Story Page specific IDs
+        if (foamHero) {
+            currentId = 'foaming-cleanser';
+        } else if (silkHero) {
+            currentId = 'silk-therapy-mask';
+        } else if (serumPage) {
+            currentId = 'advanced-ha-serum';
+        }
 
         // Resolve effective ID (matching initProductPage logic) to ensure correct exclusion
         if (!currentId || !productCatalog[currentId]) {
@@ -3218,7 +3987,7 @@ The DODCH Team`;
 
         // Use productCatalog to ensure consistency with Shop page
         const allProductIds = Object.keys(productCatalog);
-        
+
         // Filter out current product, shuffle the rest, and take up to 4
         const relatedIds = allProductIds
             .filter(id => id !== currentId)
@@ -3246,11 +4015,18 @@ The DODCH Team`;
                 hasDiscount = product.sizes.some(s => s.originalPrice && parseFloat(s.originalPrice) > parseFloat(s.price));
             }
 
+            let badgeHTML = '';
+            if (product.outOfStock) {
+                badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #2D2D2D; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px;">OUT OF STOCK</span>';
+            } else if (hasDiscount) {
+                badgeHTML = '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px;">ONLINE OFFER</span>';
+            }
+
             productsHtml += `
-                <div class="product-card reveal">
+                <div class="product-card reveal" ${product.outOfStock ? 'style="opacity: 0.8;"' : ''}>
                     <a href="product.html?id=${id}">
                         <div class="product-image-wrapper">
-                            ${hasDiscount ? '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px;">ONLINE OFFER</span>' : ''}
+                            ${badgeHTML}
                             <img src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
                             <button class="quick-view-btn" 
                                 data-id="${id}" 
@@ -3271,15 +4047,17 @@ The DODCH Team`;
             `;
         });
 
+        const sectionTitle = homeHero ? "Explore Our Collection" : "You May Also Like";
+
         container.innerHTML = `
             <div class="container">
-                <h2 class="section-title reveal active">You May Also Like</h2>
+                <h2 class="section-title reveal active">${sectionTitle}</h2>
                 <div class="shop-grid">
                     ${productsHtml}
                 </div>
             </div>
         `;
-        
+
         // Trigger reveal animation for new elements
         setTimeout(() => {
             const newReveals = container.querySelectorAll('.reveal');
@@ -3297,11 +4075,11 @@ The DODCH Team`;
     if (searchToggleBtn && searchContainer && searchInput) {
         searchToggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            
+
             // If active and has text, you might want to submit here
             if (searchContainer.classList.contains('active') && searchInput.value.trim() !== "") {
                 console.log("Search submitted:", searchInput.value);
-                // window.location.href = `shop.html?search=${searchInput.value}`;
+                // window.location.href = `index.html?search=${searchInput.value}`;
             } else {
                 searchContainer.classList.toggle('active');
                 if (searchContainer.classList.contains('active')) {
@@ -3328,8 +4106,46 @@ The DODCH Team`;
                 console.log("Search submitted:", searchInput.value);
                 searchContainer.classList.remove('active');
                 navbar.classList.remove('search-active');
-                // window.location.href = `shop.html?search=${searchInput.value}`;
+                // window.location.href = `index.html?search=${searchInput.value}`;
             }
+        });
+    }
+
+    // Handle Browser Back/Forward for SPA Shop
+    window.addEventListener('popstate', () => {
+        if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname === '') {
+            initShopPage(true);
+            updateSidebarActiveState();
+            initBreadcrumbs();
+        }
+    });
+
+    // 27. Silk Mask Hair Type Selector
+    const silkTabs = document.querySelectorAll('.hair-type-btn');
+    const silkPanels = document.querySelectorAll('.hair-panel');
+
+    if (silkTabs.length > 0 && silkPanels.length > 0) {
+        silkTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // 1. Handle Tab State
+                silkTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // 2. Get Target Panel
+                const targetType = tab.dataset.type;
+                const targetPanel = document.getElementById(`panel-${targetType}`);
+
+                // 3. Handle Panel Transition
+                silkPanels.forEach(panel => {
+                    panel.classList.remove('active');
+                });
+
+                if (targetPanel) {
+                    // Force reflow for animation restart
+                    void targetPanel.offsetWidth;
+                    targetPanel.classList.add('active');
+                }
+            });
         });
     }
 
@@ -3377,7 +4193,7 @@ const initVideoBackground = () => {
             if (el.closest('.admin-container') || el.closest('.admin-section')) return;
 
             const section = el.closest('section') || el.closest('.hero') || el.closest('.banner');
-            
+
             // Avoid duplicate injection
             if (section && !section.querySelector('.bg-video-layer') && !section.classList.contains('admin-section')) {
                 // Ensure section can position absolute children
@@ -3393,7 +4209,7 @@ const initVideoBackground = () => {
                 video.muted = true;
                 video.playsInline = true;
                 video.className = 'bg-video-layer';
-                
+
                 Object.assign(video.style, {
                     position: 'absolute',
                     top: '-15%',
@@ -3476,7 +4292,7 @@ const initVideoBackground = () => {
                         }
                     });
                 }, { threshold: 0.1 });
-                
+
                 observer.observe(section);
             }
         }
@@ -3485,3 +4301,860 @@ const initVideoBackground = () => {
 
 // Run after a short delay to ensure dynamic content is populated
 setTimeout(initVideoBackground, 800);
+
+// 26. Real-time Notification Listeners
+const listenForAdminNotifications = () => {
+    const adminBtn = document.getElementById('sidebar-admin-btn');
+    if (!adminBtn) return; // Don't run if not on a page with the admin button
+
+    const q = query(collection(db, "orders"), where("status", "in", ["Pending", "Confirmed"]));
+    onSnapshot(q, (snapshot) => {
+        const newOrderCount = snapshot.size;
+
+        let badge = adminBtn.querySelector('.notification-badge');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'notification-badge';
+            adminBtn.appendChild(badge);
+        }
+
+        if (newOrderCount > 0) {
+            badge.textContent = newOrderCount;
+            badge.classList.add('visible');
+        } else {
+            badge.classList.remove('visible');
+        }
+    }, (error) => {
+        console.error("Admin notification listener failed:", error);
+    });
+};
+
+const listenForUserNotifications = (userId) => {
+    const q = query(collection(db, "orders"), where("userId", "==", userId), orderBy("timestamp", "desc"));
+    let isInitialLoad = true;
+
+    onSnapshot(q, (snapshot) => {
+        // Check if ANY order has an unseen update on the server
+        const hasUnseen = snapshot.docs.some(doc => doc.data().hasUnseenUpdate === true);
+
+        if (hasUnseen) {
+            document.body.classList.add('has-notification');
+        } else {
+            document.body.classList.remove('has-notification');
+        }
+
+        // Show toast and trigger review prompts for real-time updates
+        if (!isInitialLoad) {
+            snapshot.docChanges().forEach((change) => {
+                const data = change.doc.data();
+
+                // Only act if it's a newer update (unseen)
+                if (change.type === "modified" && data.hasUnseenUpdate === true) {
+                    const orderRef = data.orderReference || change.doc.id.slice(0, 8).toUpperCase();
+
+                    // 1. Show standard status update toast
+                    window.showToast(`Order #${orderRef}: Status is now ${data.status}.`, 'info');
+
+                    // 2. If it just became 'Delivered', trigger the global review prompt logic
+                    if (data.status === 'Delivered') {
+                        console.log("Real-time delivery detected! Refreshing review prompt...");
+                        initGlobalReviewPrompt();
+                    }
+                }
+            });
+        }
+        isInitialLoad = false;
+    }, (error) => {
+        console.error("User notification listener failed:", error);
+    });
+};
+
+// Reset notifications when user visits My Account
+if (window.location.pathname.includes('my-account.html')) {
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) return;
+        const q = query(collection(db, "orders"), where("userId", "==", user.uid), where("hasUnseenUpdate", "==", true));
+        const snap = await getDocs(q);
+        snap.forEach(async (orderDoc) => {
+            await updateDoc(doc(db, "orders", orderDoc.id), { hasUnseenUpdate: false });
+        });
+        document.body.classList.remove('has-notification');
+
+        // Tab Switching Logic
+        const tabBtns = document.querySelectorAll('.account-tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.getAttribute('data-tab');
+
+                // Update buttons
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Update contents
+                tabContents.forEach(content => {
+                    if (content.id === `${targetTab}-tab-content`) {
+                        content.classList.add('active');
+                    } else {
+                        content.classList.remove('active');
+                    }
+                });
+            });
+        });
+
+        // Load User's Reviews
+        // We wait a tiny bit to ensure catalog is synced if possible, 
+        // though it usually is global now.
+        setTimeout(() => initUserReviewsHistory(user), 500);
+    });
+}
+
+// 21. Product Reviews
+const initProductReviews = () => {
+    const reviewsContainer = document.getElementById('product-reviews-container');
+    if (!reviewsContainer) return; // Not on a product page
+
+    // Determine product ID based on URL
+    const path = window.location.pathname;
+    let productId = null;
+    if (path.includes('glass-glow-shampoo.html')) productId = 'glass-glow-shampoo';
+    else if (path.includes('dodchmellow-pro-v.html')) productId = 'dodchmellow-pro-v';
+    else if (path.includes('face-foam.html')) productId = 'foaming-cleanser';
+    else if (path.includes('silk-mask.html')) productId = 'silk-therapy-mask';
+    else if (path.includes('face-serum.html')) productId = 'advanced-ha-serum';
+
+    // As a fallback, try to find a buy button with data-id
+    if (!productId) {
+        const buyBtn = document.querySelector('.buy-now-btn, .cta-button[data-id]');
+        if (buyBtn) productId = buyBtn.getAttribute('data-id');
+    }
+
+    if (!productId) return;
+
+    const reviewModal = document.getElementById('review-modal');
+    const reviewForm = document.getElementById('product-review-form');
+    const writeReviewBtn = document.getElementById('write-review-toggle-btn');
+    const closeReviewModal = document.getElementById('close-review-modal');
+    const imageInput = document.getElementById('review-images');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+
+    // Handle Scroll to Review Section if triggered from prompt
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('open_review') === 'true') {
+        const reviewsSection = document.getElementById('reviews');
+        if (reviewsSection) {
+            setTimeout(() => {
+                reviewsSection.scrollIntoView({ behavior: 'smooth' });
+            }, 800);
+        }
+    }
+
+    let selectedFiles = [];
+
+    let userState = {
+        loggedIn: false,
+        eligible: false,
+        alreadyReviewed: false,
+        orderId: null, // To satisfy security rules
+        user: null
+    };
+
+    // Handle Image Selection
+    if (imageInput) {
+        imageInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length + selectedFiles.length > 2) {
+                window.showToast("Maximum 2 photos allowed per review.", "warning");
+                return;
+            }
+
+            files.forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                selectedFiles.push(file);
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.style.cssText = 'position: relative; width: 60px; height: 60px;';
+                    previewDiv.innerHTML = `
+                        <img src="${event.target.result}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
+                        <button type="button" class="remove-img" style="position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+                    `;
+
+                    previewDiv.querySelector('.remove-img').addEventListener('click', () => {
+                        selectedFiles = selectedFiles.filter(f => f !== file);
+                        previewDiv.remove();
+                    });
+
+                    imagePreviewContainer.appendChild(previewDiv);
+                };
+                reader.readAsDataURL(file);
+            });
+            // Reset input so same file can be selected again if removed
+            imageInput.value = '';
+        });
+    }
+
+    // Render Reviews
+    const renderReviews = (reviews) => {
+        if (reviews.length === 0) {
+            reviewsContainer.innerHTML = '<p class="text-center" style="color: #666; font-style: italic;">No reviews yet. Be the first to share your experience!</p>';
+            return;
+        }
+
+        reviewsContainer.innerHTML = '';
+        reviews.forEach(review => {
+            const reviewEl = document.createElement('div');
+            reviewEl.style.cssText = 'padding: 1.5rem; border-bottom: 1px solid #eee; margin-bottom: 1rem;';
+
+            // Stars
+            const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#e0e0e0'}; font-size: 1.2rem;">★</span>`).join('');
+
+            // Date
+            const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : 'Just now';
+
+            // Author Name
+            const authorName = review.authorName || 'Verified Buyer';
+
+            // Images
+            let imagesHtml = '';
+            if (review.images && review.images.length > 0) {
+                imagesHtml = `
+                    <div style="display: flex; gap: 0.8rem; margin-top: 1rem; margin-bottom: 0.5rem;">
+                        ${review.images.map(url => `
+                            <img src="${url}" 
+                                 style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.3s ease;" 
+                                 onclick="window.open('${url}', '_blank')"
+                                 onmouseover="this.style.transform='scale(1.05)'"
+                                 onmouseout="this.style.transform='scale(1)'"
+                            >
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            // Delete control for Author or Admin
+            const isAuthor = auth.currentUser && review.userId === auth.currentUser.uid;
+            const isAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_UID;
+
+            let deleteBtnHtml = '';
+            if (isAuthor || isAdmin) {
+                deleteBtnHtml = `<button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')">Delete</button>`;
+            }
+
+            reviewEl.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                    <div style="font-weight: 600;">${authorName} <span style="background: #e6f4ea; color: #1e8e3e; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px;">✓ Verified Buyer</span></div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="color: #888; font-size: 0.85rem;">${date}</div>
+                        ${deleteBtnHtml}
+                    </div>
+                </div>
+                <div style="margin-bottom: 0.8rem;">${starsHtml}</div>
+                <p style="margin: 0; line-height: 1.6;">${review.text}</p>
+                ${imagesHtml}
+            `;
+            reviewsContainer.appendChild(reviewEl);
+        });
+    };
+
+    // Fetch existing reviews
+    const fetchReviews = async () => {
+        try {
+            const q = query(collection(db, "product_reviews"), where("productId", "==", productId));
+            const querySnapshot = await getDocs(q);
+            let reviews = [];
+            querySnapshot.forEach((doc) => {
+                reviews.push({ id: doc.id, ...doc.data() });
+            });
+            // Sort by date descending
+            reviews.sort((a, b) => {
+                const timeA = a.createdAt ? a.createdAt.seconds : 0;
+                const timeB = b.createdAt ? b.createdAt.seconds : 0;
+                return timeB - timeA;
+            });
+            renderReviews(reviews);
+        } catch (error) {
+            console.error("Error fetching reviews:", error);
+            reviewsContainer.innerHTML = '<p class="text-center" style="color: red;">Failed to load reviews.</p>';
+        }
+    };
+
+    fetchReviews();
+
+    // Modal Controls
+    const openModal = () => {
+        if (reviewModal) reviewModal.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Prevent scroll
+    };
+
+    const closeModal = () => {
+        if (reviewModal) reviewModal.classList.remove('active');
+        document.body.style.overflow = ''; // Restore scroll
+        if (reviewForm) reviewForm.reset();
+
+        // Clear images
+        selectedFiles = [];
+        if (imagePreviewContainer) imagePreviewContainer.innerHTML = '';
+        if (imageInput) imageInput.value = '';
+    };
+
+    if (writeReviewBtn) {
+        writeReviewBtn.addEventListener('click', () => {
+            if (!userState.loggedIn) {
+                window.showToast("Please log in to post a review.", "warning");
+                return;
+            }
+            if (userState.alreadyReviewed) {
+                window.showToast("You have already reviewed this product.", "info");
+                return;
+            }
+            if (!userState.eligible) {
+                window.showToast("You must purchase and receive this product before reviewing.", "warning");
+                return;
+            }
+            openModal();
+        });
+    }
+
+    if (closeReviewModal) {
+        closeReviewModal.addEventListener('click', closeModal);
+    }
+
+    // Close on click outside
+    if (reviewModal) {
+        reviewModal.addEventListener('click', (e) => {
+            if (e.target === reviewModal) closeModal();
+        });
+    }
+
+    // Auth State change listener
+    onAuthStateChanged(auth, async (user) => {
+        const params = new URLSearchParams(window.location.search);
+        const shouldOpenReview = params.get('open_review') === 'true';
+
+        if (!user) {
+            userState = { loggedIn: false, eligible: false, user: null };
+            if (writeReviewBtn) {
+                writeReviewBtn.classList.remove('eligible');
+                writeReviewBtn.classList.add('ineligible');
+                writeReviewBtn.removeAttribute('style');
+            }
+            if (shouldOpenReview) {
+                window.showToast("Please log in to share your thoughts.", "info");
+            }
+            return;
+        }
+
+        userState.loggedIn = true;
+        userState.user = user;
+
+        try {
+            // 1. Check if user has already reviewed this product
+            const reviewsRef = collection(db, "product_reviews");
+            const qReviews = query(reviewsRef, where("productId", "==", productId), where("userId", "==", user.uid));
+            const reviewsSnapshot = await getDocs(qReviews);
+
+            if (!reviewsSnapshot.empty) {
+                userState.alreadyReviewed = true;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    writeReviewBtn.innerText = "Reviewed ✅";
+                }
+                if (shouldOpenReview) {
+                    window.showToast("You have already reviewed this product. Thank you!", "info");
+                }
+                return;
+            }
+
+            // 2. Check for a 'Delivered' order
+            const ordersRef = collection(db, "orders");
+            const qOrders = query(ordersRef, where("userId", "==", user.uid));
+            const ordersSnapshot = await getDocs(qOrders);
+
+            let latestDeliveredOrderId = null;
+            let isEligible = false;
+
+            ordersSnapshot.forEach((docSnap) => {
+                const order = docSnap.data();
+                if (order.status === 'Delivered' && order.items && Array.isArray(order.items)) {
+                    if (order.items.some(item => (item.id === productId || item.productId === productId))) {
+                        isEligible = true;
+                        latestDeliveredOrderId = docSnap.id;
+                    }
+                }
+            });
+
+            userState.eligible = isEligible;
+            userState.orderId = latestDeliveredOrderId;
+
+            if (writeReviewBtn) {
+                writeReviewBtn.removeAttribute('style');
+                if (isEligible) {
+                    writeReviewBtn.classList.remove('ineligible');
+                    writeReviewBtn.classList.add('eligible');
+
+                    // AUTO-OPEN MODAL if parameter is present
+                    if (shouldOpenReview) {
+                        setTimeout(() => {
+                            openModal();
+                            window.showToast("Fill in the form to post your review!", "success");
+                        }, 1200);
+                    }
+                } else {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    if (shouldOpenReview) {
+                        window.showToast("Only verified purchasers can leave reviews.", "warning");
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error checking review eligibility:", error);
+        }
+    });
+
+    // Handle Form Submission
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!userState.user) return;
+
+            const submitBtn = document.getElementById('submit-review-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            const rating = parseInt(document.getElementById('review-rating').value);
+            const text = document.getElementById('review-text').value.trim();
+
+            if (!rating || !text) {
+                window.showToast("Please provide both rating and review text.", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+                return;
+            }
+
+            if (text.length > 3000) {
+                window.showToast("Review text is too long (max 3000 characters).", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+                return;
+            }
+
+            if (selectedFiles.length > 2) {
+                window.showToast("Maximum 2 photos allowed.", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+                return;
+            }
+
+            try {
+                // Upload images first if any
+                const imageUrls = [];
+                for (const [index, file] of selectedFiles.entries()) {
+                    const storageRef = ref(storage, `product-reviews/${userState.user.uid}/${Date.now()}_${index}`);
+                    const snapshot = await uploadBytes(storageRef, file);
+                    const url = await getDownloadURL(snapshot.ref);
+                    imageUrls.push(url);
+                }
+
+                const newReview = {
+                    productId: productId,
+                    userId: userState.user.uid,
+                    orderId: userState.orderId, // Crucial for security rules validation
+                    authorName: userState.user.displayName || 'Verified Buyer',
+                    rating: rating,
+                    text: text,
+                    images: imageUrls,
+                    createdAt: serverTimestamp()
+                };
+
+                const reviewDocId = `${userState.user.uid}_${productId}`;
+                await setDoc(doc(db, "product_reviews", reviewDocId), newReview);
+
+                window.showToast("Review submitted successfully!", "success");
+                closeModal();
+
+                // Re-fetch to show new review
+                fetchReviews();
+
+                // Update button state locally
+                userState.alreadyReviewed = true;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    writeReviewBtn.innerText = "Reviewed ✅";
+                }
+            } catch (error) {
+                console.error("Error submitting review:", error);
+                window.showToast("Failed to submit review. You might have already reviewed this product.", "error");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+            }
+        });
+    }
+};
+
+// 22. User Review Deletion & History
+window.handleReviewDelete = async (reviewId) => {
+    const confirmation = prompt("To delete your review, please type 'DELETE' (all caps):");
+    if (confirmation !== 'DELETE') {
+        if (confirmation !== null) window.showToast("Deletion cancelled. Text mismatch.", "info");
+        return;
+    }
+
+    try {
+        await deleteDoc(doc(db, "product_reviews", reviewId));
+        window.showToast("Review deleted successfully.", "success");
+
+        // Refresh appropriate views
+        setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+        console.error("Error deleting review:", error);
+        window.showToast("Failed to delete review.", "error");
+    }
+};
+
+const initUserReviewsHistory = async (user) => {
+    const listContainer = document.getElementById('user-reviews-list');
+    const reviewsLoader = document.getElementById('reviews-loader');
+    const loadMoreContainer = document.getElementById('load-more-reviews-container');
+    const loadMoreBtn = document.getElementById('load-more-reviews-btn');
+    if (!listContainer) return;
+
+    if (reviewsLoader) reviewsLoader.classList.add('active');
+    listContainer.classList.remove('visible');
+    if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+
+    try {
+        const q = query(collection(db, "product_reviews"), where("userId", "==", user.uid));
+        const snap = await getDocs(q);
+        const allReviews = [];
+        snap.forEach(doc => allReviews.push({ id: doc.id, ...doc.data() }));
+
+        // Sort newest first
+        allReviews.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+        let visibleReviewsCount = 10;
+
+        const renderReviewChunk = (append = false) => {
+            if (!append) listContainer.innerHTML = '';
+
+            const chunk = allReviews.slice(append ? visibleReviewsCount - 10 : 0, visibleReviewsCount);
+
+            if (!append && allReviews.length === 0) {
+                listContainer.innerHTML = '<p style="color: #666; font-style: italic;">You haven\'t written any reviews yet.</p>';
+                if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+                return;
+            }
+
+            chunk.forEach((review) => {
+                const reviewEl = document.createElement('div');
+                reviewEl.className = 'review-card-item content-fade visible';
+                reviewEl.style.cssText = 'padding: 1.5rem; border: 1px solid #eee; border-radius: 12px; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.02);';
+
+                // Map product IDs to human names and links
+                let productName = 'Product';
+                let productLink = '#';
+                let productImg = 'placeholder-glow.jpg';
+
+                if (review.productId === 'glass-glow-shampoo') {
+                    productName = 'Glass Glow Shampoo';
+                    productLink = 'glass-glow-shampoo.html';
+                    productImg = productCatalog['glass-glow-shampoo']?.image || 'IMG_3489.jpg';
+                } else if (review.productId === 'dodchmellow-pro-v') {
+                    productName = 'DODCHmellow Pro-V';
+                    productLink = 'dodchmellow-pro-v.html';
+                    productImg = productCatalog['dodchmellow-pro-v']?.image || 'IMG_3490.jpg';
+                } else if (review.productId === 'foaming-cleanser') {
+                    productName = 'Advanced Face Foam';
+                    productLink = 'face-foam.html';
+                    productImg = productCatalog['foaming-cleanser']?.image || 'IMG_3352.PNG';
+                } else if (review.productId === 'silk-therapy-mask') {
+                    productName = 'Silk Therapy Mask';
+                    productLink = 'silk-mask.html';
+                    productImg = productCatalog['silk-therapy-mask']?.image || 'F188A04D-4AA7-4D98-9EEB-14861B10D468.PNG';
+                } else if (productCatalog && productCatalog[review.productId]) {
+                    const prod = productCatalog[review.productId];
+                    productName = prod.name || 'Product';
+                    productImg = prod.image || 'placeholder-glow.jpg';
+                    productLink = prod.storyUrl || `product.html?id=${review.productId}`;
+                } else {
+                    productName = `Product (${review.productId || 'Unknown'})`;
+                }
+
+                const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#e0e0e0'}; font-size: 1.1rem;">★</span>`).join('');
+                const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : 'Recent';
+
+                reviewEl.innerHTML = `
+                <div style="display: flex; gap: 15px; align-items: flex-start; margin-bottom: 1.5rem;">
+                    <img src="${productImg}" class="account-item-mini-img" alt="${productName}">
+                    <div style="flex: 1;">
+                        <a href="${productLink}" style="text-decoration: none; color: var(--text-charcoal); font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 600;">${productName}</a>
+                        <div style="color: #888; font-size: 0.8rem; margin-top: 2px;">Reviewed on ${date}</div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 0.8rem;">${starsHtml}</div>
+                <p style="font-size: 0.95rem; line-height: 1.6; color: #444; margin-bottom: 1.5rem;">${review.text}</p>
+                <div style="display: flex; justify-content: flex-end; border-top: 1px solid #eee; padding-top: 1rem; margin-top: auto;">
+                    <button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')" style="margin-top: 1rem;">Delete My Review</button>
+                </div>
+            `;
+                listContainer.appendChild(reviewEl);
+            });
+
+            if (visibleReviewsCount < allReviews.length) {
+                if (loadMoreContainer) loadMoreContainer.style.display = 'flex';
+            } else {
+                if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+            }
+        };
+
+        setTimeout(() => {
+            if (reviewsLoader) reviewsLoader.classList.remove('active');
+            listContainer.classList.add('visible');
+            renderReviewChunk();
+        }, 800);
+
+        if (loadMoreBtn) {
+            loadMoreBtn.onclick = () => {
+                loadMoreBtn.innerText = "Loading...";
+                setTimeout(() => {
+                    visibleReviewsCount += 10;
+                    renderReviewChunk(true);
+                    loadMoreBtn.innerText = "View More Reviews";
+                }, 500);
+            };
+        }
+    } catch (error) {
+        console.error("Error loading user reviews:", error);
+        if (reviewsLoader) reviewsLoader.classList.remove('active');
+        listContainer.classList.add('visible');
+        listContainer.innerHTML = '<p style="color: red;">Error loading your reviews.</p>';
+    }
+};
+
+
+// Global Review Notification Logic
+const initGlobalReviewPrompt = (forceShow = false) => {
+    // Show on all pages as requested (removed product page suppression)
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) return;
+
+        try {
+            // 1. Get all delivered orders for the user
+            const ordersRef = collection(db, "orders");
+            let orders = [];
+
+            // Query by UID
+            const qOrdersUid = query(ordersRef, where("userId", "==", user.uid));
+            const snapUid = await getDocs(qOrdersUid);
+            snapUid.forEach(doc => orders.push(doc.data()));
+
+            // Also query by email (handles guest orders if user later creates an account)
+            if (user.email) {
+                const qOrdersEmail = query(ordersRef, where("shipping.email", "==", user.email));
+                const snapEmail = await getDocs(qOrdersEmail);
+                snapEmail.forEach(doc => {
+                    const data = doc.data();
+                    // Avoid duplicates if UID and Email both matched
+                    if (!orders.some(o => o.orderReference === data.orderReference)) {
+                        orders.push(data);
+                    }
+                });
+            }
+
+            // Determine the timestamp of the LATEST order to handle dismissal "until next purchase"
+            let latestOrderTime = 0;
+            orders.forEach(order => {
+                // Handle complex Firestore timestamp or plain number
+                const ts = order.timestamp ? (typeof order.timestamp.toMillis === 'function' ? order.timestamp.toMillis() : order.timestamp) : 0;
+                if (ts > latestOrderTime) latestOrderTime = ts;
+            });
+
+            // If the user has explicitly dismissed ALL prompts, we only show it again if they've made a NEW purchase since then
+            const dismissedAt = parseInt(localStorage.getItem('reviewPromptDismissedAt') || '0');
+            if (dismissedAt > latestOrderTime && !forceShow) {
+                console.log("Global review prompt suppressed by user dismissal (no new purchase since).");
+                return;
+            }
+
+            let deliveredProducts = new Set();
+            orders.forEach((order) => {
+                // Robust status check (case-insensitive)
+                const isDelivered = order.status && order.status.toLowerCase() === 'delivered';
+                if (isDelivered && order.items && Array.isArray(order.items)) {
+                    order.items.forEach(item => {
+                        deliveredProducts.add(item.productId || item.id);
+                    });
+                }
+            });
+
+            if (deliveredProducts.size === 0) {
+                console.log("No delivered products found for user.");
+                return;
+            }
+
+            console.log("Delivered products found:", [...deliveredProducts]);
+
+            // 2. Get all reviews by this user
+            const reviewsRef = collection(db, "product_reviews");
+            const qReviews = query(reviewsRef, where("userId", "==", user.uid));
+            const reviewsSnapshot = await getDocs(qReviews);
+
+            let reviewedProducts = new Set();
+            reviewsSnapshot.forEach((docSnap) => {
+                const review = docSnap.data();
+                if (review.productId) {
+                    reviewedProducts.add(review.productId);
+                }
+            });
+
+            console.log("Already reviewed items:", [...reviewedProducts]);
+
+            // 3. Find first product that is delivered but NOT reviewed
+            let productToReview = null;
+            for (let pId of deliveredProducts) {
+                if (!reviewedProducts.has(pId)) {
+                    productToReview = pId;
+                    break;
+                }
+            }
+
+            if (productToReview) {
+                // Map ID to page URL and readable name
+                let pageUrl = '';
+                let productName = 'your recent purchase';
+
+                if (productToReview === 'glass-glow-shampoo') {
+                    pageUrl = 'glass-glow-shampoo.html';
+                    productName = 'Glass Glow Shampoo';
+                } else if (productToReview === 'dodchmellow-pro-v') {
+                    pageUrl = 'dodchmellow-pro-v.html';
+                    productName = 'DODCHmellow Pro-V';
+                } else if (productToReview === 'foaming-cleanser') {
+                    pageUrl = 'face-foam.html';
+                    productName = 'Advanced Face Foam';
+                } else if (productToReview === 'silk-therapy-mask') {
+                    pageUrl = 'silk-mask.html';
+                    productName = 'Silk Therapy Mask';
+                } else if (productToReview === 'advanced-ha-serum') {
+                    pageUrl = 'face-serum.html';
+                    productName = 'Advanced HA Serum';
+                } else {
+                    // Fallback using the mutable catalog if found
+                    const catEntry = productCatalog[productToReview];
+                    if (catEntry && catEntry.storyUrl) {
+                        pageUrl = catEntry.storyUrl;
+                        productName = catEntry.name;
+                    } else {
+                        pageUrl = `product.html?id=${productToReview}`;
+                    }
+                }
+
+                // Show Notification Toast
+                showReviewPromptToast(productName, pageUrl);
+            }
+
+        } catch (error) {
+            console.error("Error checking global review eligibility:", error);
+        }
+    });
+};
+
+const showReviewPromptToast = (productName, pageUrl) => {
+    // Show on all pages & on each refresh as requested (removed session guard)
+    if (document.getElementById('review-prompt-toast')) return;
+
+    const toastHTML = `
+        <div id="review-prompt-toast" class="review-prompt-toast">
+            <div class="rpt-content">
+                <span class="brand-tag">DODCH</span>
+                <p>How was your <strong>${productName}</strong>? We'd love to hear your thoughts!</p>
+                <div class="rpt-actions">
+                    <a href="${pageUrl}?open_review=true" class="rpt-btn">Leave a Review</a>
+                    <button class="rpt-close" id="rpt-close-btn">&times;</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', toastHTML);
+
+    const toast = document.getElementById('review-prompt-toast');
+    const closeBtn = document.getElementById('rpt-close-btn');
+
+    // Smooth entrance
+    setTimeout(() => {
+        if (toast) toast.classList.add('active');
+    }, 1500);
+
+    closeBtn.addEventListener('click', () => {
+        if (toast) toast.classList.remove('active');
+        
+        // Save the EXACT timestamp of dismissal
+        localStorage.setItem('reviewPromptDismissedAt', Date.now().toString());
+
+        // Inform the user with a shorter message and longer duration
+        setTimeout(() => {
+            window.showToast("Review dismissed. You can still leave feedback later from your Account or Product pages.", "info", 6000);
+            // Remove from DOM to keep it clean
+            setTimeout(() => toast && toast.remove(), 1000);
+        }, 800);
+    });
+};
+
+// Account Tab Switching Logic
+const initAccountTabs = () => {
+    const tabBtns = document.querySelectorAll('.account-tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    if (tabBtns.length === 0) return;
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.getAttribute('data-tab');
+
+            // 1. Update Buttons
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // 2. Update Content (with improved cross-fade)
+            tabContents.forEach(content => {
+                if (content.id === `${targetTab}-tab-content`) {
+                    content.style.display = 'block';
+                    // Re-trigger entrance
+                    setTimeout(() => {
+                        content.classList.add('active');
+                    }, 10);
+                } else {
+                    content.classList.remove('active');
+                    // Keep briefly for fade out, then hide
+                    setTimeout(() => {
+                        if (!content.classList.contains('active')) {
+                            content.style.display = 'none';
+                        }
+                    }, 500);
+                }
+            });
+        });
+    });
+};
+
+// Initialize reviews and global prompts when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initProductReviews();
+        initGlobalReviewPrompt();
+        initAccountTabs();
+    });
+} else {
+    initProductReviews();
+    initGlobalReviewPrompt();
+    initAccountTabs();
+}

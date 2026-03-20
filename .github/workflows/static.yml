@@ -16,13 +16,12 @@ permissions:
   id-token: write
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  # Build and deploy job
   deploy:
     environment:
       name: github-pages
@@ -31,13 +30,45 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Next.js
+        run: npm run build
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
+      - name: Prepare Deployment Directory
+        run: |
+          mkdir -p deploy
+          # Move Next.js build output
+          cp -r out/* deploy/
+          # Copy original static files
+          cp *.html deploy/ || true
+          cp *.css deploy/ || true
+          cp *.js deploy/ || true
+          cp *.json deploy/ || true
+          cp *.PNG deploy/ || true
+          cp *.jpg deploy/ || true
+          cp *.mp4 deploy/ || true
+          cp -r images deploy/ || true
+          cp -r assets deploy/ || true
+          # Ensure .nojekyll exists so _next folder isn't ignored by GitHub Pages
+          touch deploy/.nojekyll
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: './deploy'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

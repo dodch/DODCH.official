@@ -1,24 +1,31 @@
 {
-  "name": "functions",
-  "description": "Cloud Functions for Firebase",
-  "scripts": {
-    "serve": "firebase emulators:start --only functions",
-    "shell": "firebase functions:shell",
-    "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
-  },
-  "engines": {
-    "node": "18"
-  },
-  "main": "index.js",
-  "dependencies": {
-    "firebase-admin": "^13.6.0",
-    "firebase-functions": "^7.0.0",
-    "resend": "^3.2.0"
-  },
-  "devDependencies": {
-    "firebase-functions-test": "^3.4.1"
-  },
-  "private": true
+    "name": "dodch-premium",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint"
+    },
+    "dependencies": {
+        "next": "14.1.0",
+        "react": "^18",
+        "react-dom": "^18",
+        "framer-motion": "^11.0.3",
+        "lucide-react": "^0.330.0",
+        "clsx": "^2.1.0",
+        "tailwind-merge": "^2.2.1"
+    },
+    "devDependencies": {
+        "typescript": "^5",
+        "@types/node": "^20",
+        "@types/react": "^18",
+        "@types/react-dom": "^18",
+        "postcss": "^8",
+        "tailwindcss": "^3.4.1",
+        "autoprefixer": "^10.0.1",
+        "eslint": "^8",
+        "eslint-config-next": "14.1.0"
+    }
 }

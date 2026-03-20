@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,22 +11,29 @@
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <!-- Desktop Sidebar -->
     <aside id="desktop-sidebar">
         <button class="sidebar-close-btn">&times;</button>
         <div class="sidebar-header">
             <div class="profile-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" style="width: 30px; height: 30px;">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
             </div>
             <span id="sidebar-user-name">Guest</span>
             <button id="sidebar-login-btn">Login</button>
         </div>
         <nav class="sidebar-menu">
-            <a href="shop.html">Shop</a>
+            <a href="index.html">Shop</a>
             <a href="#contact">Contact</a>
         </nav>
         <div class="sidebar-bottom">
@@ -37,10 +45,7 @@
     <div id="custom-cursor"></div>
     <div id="scroll-progress"></div>
 
-    <!-- Preloader -->
-    <div id="preloader">
-        <div class="preloader-logo">DODCH</div>
-    </div>
+
 
     <!-- Navigation -->
     <nav id="navbar" class="scrolled">
@@ -51,22 +56,36 @@
                 <span style="background-color: var(--text-charcoal);"></span>
             </div>
             <ul class="nav-links">
-                <li><a href="shop.html" style="color: var(--text-charcoal);">Shop</a></li>
+                <li><a href="index.html" style="color: var(--text-charcoal);">Shop</a></li>
                 <li><a href="#contact" style="color: var(--text-charcoal);">Contact</a></li>
-                <li><a href="#" id="login-btn" style="color: var(--text-charcoal);"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="login-text">Login</span>
-                </a></li>
+                <li><a href="#" id="login-btn" style="color: var(--text-charcoal);"><svg class="nav-icon"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg><span class="login-text">Login</span>
+                    </a></li>
                 <li class="nav-search-item">
                     <div class="search-container">
                         <input type="text" id="navbar-search-input" class="search-input" placeholder="Search...">
-                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg></button>
                     </div>
                 </li>
                 <li><a href="#" id="cart-toggle" style="color: var(--text-charcoal);">
-                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                    <span id="cart-count-badge">0</span>
-                </a></li>
+                        <svg class="nav-icon" viewBox="0 0 24 24">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        <span id="cart-count-badge">0</span>
+                    </a></li>
             </ul>
-            <a href="shop.html" class="logo" style="color: var(--text-charcoal);">DODCH</a>
+            <a href="index.html" class="logo" style="color: var(--text-charcoal);">DODCH</a>
         </div>
     </nav>
 
@@ -77,16 +96,76 @@
                 <p>Welcome back, <span id="account-user-name">Guest</span>.</p>
             </div>
 
-            <div class="order-history-section reveal">
-                <h2>Order History</h2>
-                <div class="order-filter-controls">
-                    <span>Sort by:</span>
-                    <button class="filter-sort-btn active" data-sort="date">Date</button>
-                    <button class="filter-sort-btn" data-sort="status">Status</button>
+            <div class="account-tabs">
+                <button class="account-tab-btn active" data-tab="orders">Order History</button>
+                <button class="account-tab-btn" data-tab="reviews">My Reviews</button>
+            </div>
+
+            <div class="account-tabs-content">
+                <div id="orders-tab-content" class="tab-content active">
+                    <div class="order-history-section reveal">
+                        <div class="order-filter-controls">
+                            <div class="sort-wrapper">
+                                <div class="account-select-group">
+                                    <div class="select-container">
+                                        <label for="order-sort-date">Sort by Date</label>
+                                        <select id="order-sort-date" class="account-select">
+                                            <option value="newest">Newest First</option>
+                                            <option value="oldest">Oldest First</option>
+                                        </select>
+                                    </div>
+                                    <div class="select-container">
+                                        <label for="order-filter-status">Order Status</label>
+                                        <select id="order-filter-status" class="account-select">
+                                            <option value="all">All Orders</option>
+                                            <option value="Pending">Pending</option>
+                                            <option value="Confirmed">Confirmed</option>
+                                            <option value="Shipped">Shipped</option>
+                                            <option value="Delivered">Delivered</option>
+                                            <option value="Cancelled">Cancelled</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="orders-loader" class="account-loader">
+                            <div class="skeleton-order"></div>
+                            <div class="skeleton-order"></div>
+                        </div>
+
+                        <div id="orders-list" class="content-fade">
+                            <!-- Orders will be injected here via script.js -->
+                            <p>Please login to view your order history.</p>
+                        </div>
+
+                        <div id="load-more-orders-container"
+                            style="display: none; justify-content: center; margin-top: 2rem;">
+                            <button id="load-more-orders-btn" class="classic-btn" style="padding: 0.8rem 2rem;">View
+                                More
+                                Orders</button>
+                        </div>
+                    </div>
                 </div>
-                <div id="orders-list">
-                    <!-- Orders will be injected here via script.js -->
-                    <p>Please login to view your order history.</p>
+
+                <div id="reviews-tab-content" class="tab-content">
+                    <div class="reviews-history-section reveal">
+                        <div id="reviews-loader" class="account-loader">
+                            <div class="skeleton-review"></div>
+                            <div class="skeleton-review"></div>
+                        </div>
+
+                        <div id="user-reviews-list" class="content-fade">
+                            <!-- User reviews will be injected here via script.js -->
+                            <p style="color: #666; font-style: italic;">No reviews found.</p>
+                        </div>
+
+                        <div id="load-more-reviews-container"
+                            style="display: none; justify-content: center; margin-top: 2rem;">
+                            <button id="load-more-reviews-btn" class="classic-btn" style="padding: 0.8rem 2rem;">View
+                                More Reviews</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -140,4 +219,5 @@
 
     <script type="module" src="script.js"></script>
 </body>
+
 </html>

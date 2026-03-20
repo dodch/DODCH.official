@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /checkout.html
+Disallow: /my-account.html
+Disallow: /tracking.html
+Disallow: /functions/
+
+Sitemap: https://dodch.com/sitemap.xml
