@@ -49,18 +49,21 @@ jobs:
       - name: Prepare Deployment Directory
         run: |
           mkdir -p deploy
-          # Move Next.js build output
-          cp -r out/* deploy/
-          # Copy original static files
-          cp *.html deploy/ || true
-          cp *.css deploy/ || true
-          cp *.js deploy/ || true
-          cp *.json deploy/ || true
-          cp *.PNG deploy/ || true
-          cp *.jpg deploy/ || true
-          cp *.mp4 deploy/ || true
-          cp -r images deploy/ || true
-          cp -r assets deploy/ || true
+          # 1. Deploy Next.js output first
+          if [ -d "out" ]; then cp -r out/* deploy/; fi
+          
+          # 2. Deploy root-level static files (catch all images, icons, and videos)
+          # We use a robust find command to copy all top-level files except hidden ones or package files
+          find . -maxdepth 1 -type f ! -name ".*" ! -name "package*" ! -name "tsconfig.json" ! -name "next.config.mjs" ! -name "postcss.config.js" -exec cp {} deploy/ \;
+          
+          # 3. Deploy important folders
+          if [ -d "images" ]; then cp -r images deploy/; fi
+          if [ -d "assets" ]; then cp -r assets deploy/; fi
+          if [ -d "HairTypes" ]; then cp -r HairTypes deploy/; fi
+          if [ -d "components" ]; then cp -r components deploy/; fi
+          
+          # 4. Ensure .nojekyll exists
+          touch deploy/.nojekyll
           # Ensure .nojekyll exists so _next folder isn't ignored by GitHub Pages
           touch deploy/.nojekyll
 
