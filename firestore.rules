@@ -24,15 +24,12 @@ service cloud.firestore {
     }
 
     // Orders: 
-    // - Create: Allow public (enables Guest Checkout)
+    // - Create: DISABLED DIRECTLY. MUST USE CLOUD FUNCTION 'createOrder'.
+    //   (This prevents client-side price/total tampering)
     // - Read: Admin can read all. Users can read only their own.
     // - Update: Only Admin can update (e.g. change status)
     match /orders/{orderId} {
-      allow create: if true
-        && request.resource.data.status == 'Pending'
-        && isPositiveNumber(request.resource.data.total)
-        && request.resource.data.items is list
-        && request.resource.data.items.size() > 0;
+      allow create: if false; 
         
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       
@@ -40,7 +37,7 @@ service cloud.firestore {
         || (
           request.auth != null 
           && (
-            // Case 1: Claiming a guest order
+            // Case 1: Claiming a guest order (allows connecting a guest ORD to a newly created account)
             (resource.data.userId == 'guest' 
              && request.resource.data.userId == request.auth.uid 
              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userId', 'hasUnseenUpdate']))

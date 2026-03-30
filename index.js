@@ -29,9 +29,9 @@ function getEmailHtml(orderData) {
       </table>
 
       <div style="text-align: right; margin-top: 20px;">
-        <p><strong>Subtotal:</strong> $${orderData.total.toFixed(2)}</p>
-        <p><strong>Shipping:</strong> Free</p>
-        <h3 style="font-family: 'Playfair Display', serif; color: #D4AF37;">Total: $${orderData.total.toFixed(2)}</h3>
+        <p><strong>Subtotal:</strong> ${orderData.subtotal || orderData.total} TND</p>
+        <p><strong>Shipping:</strong> ${orderData.shippingFee > 0 ? orderData.shippingFee + ' TND' : 'Free'}</p>
+        <h3 style="font-family: 'Playfair Display', serif; color: #D4AF37;">Total: ${orderData.total} TND</h3>
       </div>
 
       <div style="text-align: center; margin-top: 30px; font-size: 0.8rem; color: #999;">
@@ -164,17 +164,24 @@ exports.createOrder = functions.https.onCall(async (data, context) => {
     verifiedItems.push({ ...item, price: price.toFixed(2) }); // Store verified price
   }
 
+  const SHIPPING_FEE = 7;
+  const FREE_SHIPPING_THRESHOLD = 100;
+  const shippingFee = calculatedTotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const finalTotal = calculatedTotal + shippingFee;
+
   const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
   const orderData = {
     orderReference,
     items: verifiedItems,
     shipping,
-    total: parseFloat(calculatedTotal.toFixed(2)),
+    subtotal: parseFloat(calculatedTotal.toFixed(2)),
+    shippingFee: shippingFee,
+    total: parseFloat(finalTotal.toFixed(2)),
     timestamp: admin.firestore.FieldValue.serverTimestamp(),
     status: 'Pending',
     userId: context.auth ? context.auth.uid : 'guest'
   };
 
   const docRef = await db.collection('orders').add(orderData);
-  return { orderId: docRef.id, orderReference };
+  return { orderId: docRef.id, orderReference, total: orderData.total };
 });

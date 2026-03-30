@@ -3,6 +3,7 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebas
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -27,6 +28,7 @@ const appCheck = initializeAppCheck(app, {
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const functions = getFunctions(app);
 const provider = new GoogleAuthProvider();
 
 // Global Catalog Reference
@@ -1016,6 +1018,11 @@ document.addEventListener('DOMContentLoaded', () => {
             initProductPage();
             // Re-render shop grid if we are on shop page
             initShopPage();
+            
+            // Re-initialize Search Engine with loaded catalog
+            if (window.dodchSearchEngine) {
+                window.dodchSearchEngine.init(productCatalog);
+            }
             // Re-render related products
             loadRelatedProducts();
 
@@ -1225,8 +1232,35 @@ document.addEventListener('DOMContentLoaded', () => {
             checkoutItemsContainer.appendChild(el);
         });
 
+        const SHIPPING_FEE = 7;
+        const FREE_SHIPPING_THRESHOLD = 100;
+        const isFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
+        const currentShipping = isFreeShipping ? 0 : SHIPPING_FEE;
+        const total = subtotal + currentShipping;
+
         if (checkoutSubtotalEl) checkoutSubtotalEl.innerText = `${subtotal.toFixed(2)} TND`;
-        if (checkoutTotalEl) checkoutTotalEl.innerText = `${subtotal.toFixed(2)} TND`;
+        
+        const shippingEl = document.getElementById('checkout-shipping');
+        if (shippingEl) {
+            shippingEl.innerText = isFreeShipping ? 'Free' : `${SHIPPING_FEE.toFixed(2)} TND`;
+        }
+        
+        if (checkoutTotalEl) checkoutTotalEl.innerText = `${total.toFixed(2)} TND`;
+
+        // Reminder on Checkout Page
+        const summaryTotals = document.querySelector('.summary-totals');
+        if (summaryTotals) {
+            let checkoutPromo = summaryTotals.querySelector('.checkout-promo-msg');
+            if (!checkoutPromo) {
+                checkoutPromo = document.createElement('p');
+                checkoutPromo.className = 'checkout-promo-msg';
+                checkoutPromo.style.cssText = 'font-size: 0.75rem; color: #888; margin-top: 1rem; text-align: left; font-style: italic;';
+                summaryTotals.appendChild(checkoutPromo);
+            }
+            checkoutPromo.innerText = subtotal >= FREE_SHIPPING_THRESHOLD 
+                ? "Your order qualifies for Free Shipping." 
+                : `Free shipping on orders over ${FREE_SHIPPING_THRESHOLD} TND.`;
+        }
 
         // Add listeners for checkout remove buttons
         document.querySelectorAll('.checkout-remove-btn').forEach(btn => {
@@ -1300,7 +1334,49 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isNaN(priceVal)) priceVal = 0;
             return sum + (priceVal * item.quantity);
         }, 0);
+        const FREE_SHIPPING_THRESHOLD = 100;
         if (cartSubtotalEl) cartSubtotalEl.textContent = `${subtotal.toFixed(2)} TND`;
+
+        // Free Shipping Progress in Cart Drawer
+        const cartFooter = document.querySelector('.cart-footer');
+        if (cartFooter) {
+            let shippingMsg = cartFooter.querySelector('.shipping-promo-msg');
+            if (!shippingMsg) {
+                shippingMsg = document.createElement('p');
+                shippingMsg.className = 'shipping-promo-msg';
+                shippingMsg.style.cssText = 'font-size: 0.75rem; text-align: center; margin-bottom: 1rem; color: #666; border-top: 1px solid #f5f5f5; padding-top: 1rem;';
+                cartFooter.prepend(shippingMsg);
+            }
+
+            const isUnlocked = subtotal >= FREE_SHIPPING_THRESHOLD;
+            // Only trigger a transition if the unlocked state actually changed
+            const currentlyUnlocked = shippingMsg.classList.contains('shipping-promo-unlocked');
+
+            if (isUnlocked !== currentlyUnlocked) {
+                shippingMsg.classList.add('exit');
+                setTimeout(() => {
+                    if (isUnlocked) {
+                        const text = "✨ You've unlocked Free Shipping!";
+                        const wrappedText = text.split('').map((char, i) => 
+                            `<span style="animation-delay: ${i * 0.02}s; display: inline-block; white-space: pre;">${char}</span>`
+                        ).join('');
+                        shippingMsg.innerHTML = wrappedText;
+                        shippingMsg.classList.add('shipping-promo-unlocked');
+                    } else {
+                        const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
+                        shippingMsg.innerHTML = `Add <strong>${remaining.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`;
+                        shippingMsg.classList.remove('shipping-promo-unlocked');
+                    }
+                    shippingMsg.classList.remove('exit');
+                }, 400); // Wait for blur-out
+            } else {
+                // If the state hasn't changed but the value has, just update the numbers (don't exit)
+                if (!isUnlocked) {
+                    const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
+                    shippingMsg.innerHTML = `Add <strong>${remaining.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`;
+                }
+            }
+        }
 
         document.querySelectorAll('.cart-item-remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -2208,38 +2284,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 15000); // 15 seconds
 
                 try {
-                    // Generate a unique reference code locally
-                    const orderRef = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
-
-                    // Calculate total locally
-                    const total = cart.reduce((sum, item) => {
-                        let price = String(item.price).replace(/[^0-9.]/g, '');
-                        return sum + (parseFloat(price) * item.quantity);
-                    }, 0);
-
-                    const docRef = await addDoc(collection(db, "orders"), {
-                        orderReference: orderRef,
-                        items: cart,
+                    // Call the secure createOrder Cloud Function
+                    // This verifies prices server-side to prevent tampering
+                    const createOrderFn = httpsCallable(functions, 'createOrder');
+                    
+                    const result = await createOrderFn({
+                        items: cart.map(item => ({
+                            id: item.id,
+                            productId: item.productId || item.id,
+                            name: item.name,
+                            size: item.size,
+                            quantity: item.quantity,
+                            price: item.price // Client provides, server verifies
+                        })),
                         shipping: {
                             email: document.getElementById('checkout-email').value.trim(),
                             fullName: document.getElementById('checkout-name').value,
                             address: document.getElementById('checkout-address').value,
                             city: document.getElementById('checkout-city').value,
                             postalCode: document.getElementById('checkout-postal-code').value
-                        },
-                        total: parseFloat(total.toFixed(2)),
-                        timestamp: serverTimestamp(),
-                        status: 'Pending',
-                        userId: currentUser ? currentUser.uid : 'guest'
+                        }
                     });
 
+                    const { orderId, orderReference } = result.data;
+
                     clearTimeout(operationTimeout);
-                    console.log("Order placed successfully with ID: ", docRef.id);
+                    console.log("Order placed successfully with ID: ", orderId);
 
                     // Track guest orders locally to allow claiming later
                     if (!currentUser) {
                         const guestOrders = JSON.parse(localStorage.getItem('dodch_guest_orders') || '[]');
-                        guestOrders.push(docRef.id);
+                        guestOrders.push(orderId);
                         localStorage.setItem('dodch_guest_orders', JSON.stringify(guestOrders));
                     }
 
@@ -2269,7 +2344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="text-align: center; padding: 2rem 0; animation: fadeIn 0.5s ease;">
                                     <svg style="width: 60px; height: 60px; color: var(--accent-gold); margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                     <h2 style="border: none; margin-bottom: 0.5rem;">Order Confirmed</h2>
-                                    <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${orderRef} has been received.</p>
+                                    <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${orderReference} has been received.</p>
                                     ${guestMessage}
                                     <a href="index.html" class="cta-button cta-button-secondary" style="margin-top: 2rem; display: inline-block; width: auto; font-size: 0.85rem;">Return Home</a>
                                 </div>
@@ -3720,8 +3795,10 @@ The DODCH Team`;
         // Inject Modal HTML
         const qvModalHTML = `
             <div id="qv-modal" class="qv-modal-overlay">
+
                 <div class="qv-modal-content">
-                    <button id="qv-close-btn" class="qv-close-btn">&times;</button>
+                    <button id="qv-close-btn" class="qv-close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+
                     <div class="qv-image-container">
                         <img id="qv-image" src="" alt="Product Image" class="qv-modal-image">
                     </div>
@@ -3730,6 +3807,8 @@ The DODCH Team`;
                         <h2 id="qv-title" class="qv-product-title"></h2>
                         <p id="qv-price" class="qv-product-price"></p>
                         <p id="qv-desc" class="qv-product-desc"></p>
+                        
+                        <a id="qv-learn-more" href="#" class="qv-view-details-btn">View Full Details</a>
                         
                         <div class="size-selector" style="margin-bottom: 2rem;">
                             <span class="size-label" style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.8rem; display: block; text-transform: uppercase; letter-spacing: 1px;">Select Size</span>
@@ -3742,7 +3821,7 @@ The DODCH Team`;
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                             <span>Add to Cart</span>
                         </button>
-                        <a id="qv-learn-more" href="#" style="text-align: center; display: block; margin-top: 1.5rem; font-size: 0.85rem; text-decoration: none; color: var(--text-charcoal); letter-spacing: 1px; text-transform: uppercase; font-weight: 500; opacity: 0.6; transition: opacity 0.3s ease;">View Full Details</a>
+
                     </div>
                 </div>
             </div>
@@ -4071,6 +4150,7 @@ The DODCH Team`;
     const searchToggleBtn = document.getElementById('search-toggle-btn');
     const searchContainer = document.querySelector('.search-container');
     const searchInput = document.getElementById('navbar-search-input');
+    const clearBtn = document.getElementById('search-clear-btn');
 
     if (searchToggleBtn && searchContainer && searchInput) {
         searchToggleBtn.addEventListener('click', (e) => {
@@ -5158,3 +5238,755 @@ if (document.readyState === 'loading') {
     initGlobalReviewPrompt();
     initAccountTabs();
 }
+
+const SEARCH_SYNONYMS = {
+    'shampoo': ['shampoing', 'شامبو', 'wash', 'hair', 'cleaning', 'cleanser', 'nettoyant', 'غسول'],
+    'oil': ['huile', 'زيت', 'care', 'treatment', 'elixir', 'drops', 'gouttes', 'قطرات'],
+    'serum': ['سيروم', 'concentre', 'face', 'booster', 'ampoule', 'essence'],
+    'mask': ['masque', 'قناع', 'care', 'treatment', 'wrap', 'soin'],
+    'pear': ['figue', 'صبار', 'barbarie', 'prickly', 'cactus'],
+    'fig': ['figue', 'صبار', 'barbarie'],
+    'silk': ['soie', 'حرير', 'smooth', 'lisse', 'soft', 'doux'],
+    'glow': ['eclat', 'اللمعان', 'bright', 'shine', 'radiant', 'brillance', 'nuage'],
+    'face': ['visage', 'وجه', 'skin', 'peau', 'بشرة'],
+    'body': ['corps', 'جسم', 'skin'],
+    'hair': ['cheveux', 'شعر', 'scalp', 'cuir chevelu', 'فروة']
+};
+
+const SEARCH_INTENTS = {
+    'needs_hydration': ['dry', 'dehydrated', 'thirsty', 'brittle', 'جاف', 'عطشان', 'sec', 'deshydrate', 'moisture', 'hydratation', 'ترطيب', 'ashy', 'flakey'],
+    'needs_repair': ['damaged', 'breakage', 'split ends', 'weak', 'تالف', 'مكسر', 'abime', 'casse', 'repair', 'reparer', 'اصلاح', 'fragile', 'weakness'],
+    'wants_luxury': ['premium', 'luxury', 'exclusive', 'best', 'فاخر', 'راقي', 'luxe', 'precieux', 'high-end', 'expensive', 'gold', 'or'],
+    'wants_scent': ['smell', 'scent', 'fragrance', 'perfume', 'neroli', 'flower', 'رائحة', 'عطر', 'parfum', 'fleur', 'sweet', 'sucre', 'odeur'],
+    'wants_growth': ['grow', 'loss', 'thinning', 'volume', 'chute', 'pousse', 'تساقط', 'نمو', 'thick', 'density'],
+    'wants_smooth': ['frizz', 'frizzy', 'tangle', 'smooth', 'frisottis', 'lisse', 'tame', 'مجعد', 'ناعم', 'detangle', 'demelant'],
+    'wants_antiaging': ['wrinkle', 'aging', 'youth', 'rides', 'anti-age', 'تجاعيد', 'شيخوخة', 'firm', 'lift', 'fermete']
+};
+
+// Massive SEO metadata simulation acting as a "scraped" knowledge base across site pages
+const SITE_SEO_KNOWLEDGE = {
+    'shampoo': [
+        'sulfate-free', 'sans sulfate', 'خالي من السلفات', 'color-safe', 'daily use', 'usage quotidien', 'استخدام يومي',
+        'cleansing', 'scalp care', 'purifying', 'purifiant', 'تطهير', 'mellow', 'marshmallow', 'guimauve'
+    ],
+    'mask': [
+        'deep conditioning', 'soin profond', 'عناية عميقة', 'protein', 'keratin', 'ceramides', '10 minutes',
+        'overnight', 'nuit', 'leave-in', 'sans rincage', 'بدون غسل', 'revitalize', 'revitalisant'
+    ],
+    'serum': [
+        'hyaluronic', 'vitamin c', 'niacinamide', 'glass skin', 'peau de verre', 'بشرة زجاجية', 'fast-absorbing',
+        'absorbtion rapide', 'سريع الامتصاص', 'lightweight', 'leger', 'خفيف', 'youth booster'
+    ],
+    'oil': [
+        'argan', 'jojoba', 'vitamin e', 'anti-oxidant', 'antioxydant', 'مضاد اكسدة', 'pure', 'cold-pressed',
+        'pressee a froid', 'عصرة باردة', 'multipurpose', 'multi-usages', 'متعدد الاستخدامات', 'nail cuticles', 'cuticules', 'beard', 'barbe'
+    ]
+};
+
+class DODCHSearchEngine {
+    constructor() {
+        this.catalog = {};
+        this.index = [];
+    }
+
+    // Helper to normalize strings (handle Arabic variations and French accents)
+    normalize(str) {
+        if (!str) return '';
+        return str.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove French accents
+            .replace(/[آأإا]/g, 'ا') // Normalize Arabic Alef
+            .replace(/ة/g, 'ه')     // Normalize Arabic Tehmabuta
+            .replace(/ى/g, 'ي')     // Normalize Arabic Alef Maksura
+            .trim();
+    }
+
+    // Initialize with productCatalog
+    init(catalog) {
+        this.catalog = catalog;
+        this.index = Object.entries(catalog).map(([id, item]) => {
+            let tags = (item.tags || []).map(t => this.normalize(t));
+            
+            // Expand searchable text with synonyms
+            const synonyms = [];
+            const allText = (item.name + ' ' + (item.category || '')).toLowerCase();
+            
+            for (const [key, list] of Object.entries(SEARCH_SYNONYMS)) {
+                if (allText.includes(key) || list.some(l => allText.includes(l))) {
+                    synonyms.push(...list, key);
+                }
+            }
+
+            // Inject massive SEO Deep Knowledge based on product type
+            const seoTags = [];
+            for (const [category, knowledgeList] of Object.entries(SITE_SEO_KNOWLEDGE)) {
+                if (allText.includes(category)) {
+                    seoTags.push(...knowledgeList.map(k => this.normalize(k)));
+                }
+            }
+
+            // Inject Intent Labels (e.g. if the product is known for hydration, give it the intent tag)
+            // By default, let's map known products to their best intents so AI finds them easily based on descriptions
+            if(allText.includes('shampoo') || allText.includes('mask')) {
+                tags.push('needs_hydration', 'needs_repair', 'wants_smooth');
+            }
+            if(allText.includes('shampoo')) {
+                tags.push('wants_scent');
+            }
+            if(allText.includes('serum') || allText.includes('oil')) {
+                tags.push('wants_antiaging', 'wants_glow', 'needs_repair');
+            }
+            if(allText.includes('oil')) {
+                tags.push('wants_growth'); // Often used for scalp/beard growth
+            }
+
+            const indexItem = {
+                id: id,
+                name: this.normalize(item.name),
+                category: this.normalize(item.category || ''),
+                description: this.normalize(item.description || ''),
+                tags: [...new Set([...tags, ...synonyms, ...seoTags])],
+                price: item.price,
+                scrapedText: '' // Will be populated asynchronously
+            };
+
+            // Stealthily fetch and scrape the product page HTML in the background
+            if (item.storyUrl && !item.storyUrl.startsWith('http')) {
+                fetch(item.storyUrl)
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        
+                        // Extract text from meaningful SEO blocks (main content, descriptions, ingredients)
+                        const scrapeTargets = doc.querySelectorAll('main p, main h1, main h2, main h3, main li, .inci-list span, .product-story');
+                        let textAccumulator = '';
+                        scrapeTargets.forEach(el => {
+                            textAccumulator += ' ' + el.textContent;
+                        });
+                        
+                        indexItem.scrapedText = this.normalize(textAccumulator);
+                    })
+                    .catch(err => console.warn(`Silent scrape failed for ${item.storyUrl}:`, err));
+            }
+
+            return indexItem;
+        });
+    }
+
+    // Basic Levenshtein distance for fuzzy matching
+    levenshtein(a, b) {
+        const matrix = [];
+        if (a.length === 0) return b.length;
+        if (b.length === 0) return a.length;
+        for (let i = 0; i <= b.length; i++) { matrix[i] = [i]; }
+        for (let j = 0; j <= a.length; j++) { matrix[0][j] = j; }
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) == a.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+                }
+            }
+        }
+        return matrix[b.length][a.length];
+    }
+
+    // Check if a token roughly matches a target string
+    isFuzzyMatch(token, targetString) {
+        if (targetString.includes(token)) return true;
+        
+        // Intelligent fuzzy threshold: longer words allow more typos
+        const threshold = token.length > 6 ? 2 : 1;
+        
+        if (token.length > 3) {
+            const words = targetString.split(/\s+/);
+            for (let word of words) {
+                if (word.length > 3 && this.levenshtein(token, word) <= threshold) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    search(query) {
+        if (!query || query.trim().length === 0) return [];
+        
+        const normalizedQuery = this.normalize(query);
+        const tokens = normalizedQuery.split(/\s+/).filter(t => t.length > 0);
+        if (tokens.length === 0) return [];
+
+        const results = [];
+
+        for (const item of this.index) {
+            let score = 0;
+            let matchesAll = true;
+            let matchedReasons = [];
+
+            for (const token of tokens) {
+                let tokenMatched = false;
+
+                // 1. Exact Name match (Highest Priority)
+                if (item.name.includes(token)) {
+                    score += 15;
+                    tokenMatched = true;
+                    // Don't add a specific reason for name match to keep UI clean, it's obvious to the user.
+                }
+                // 2. Intent matching (Semantic Search)
+                else if (!tokenMatched) { 
+                    for (const [intent, keywords] of Object.entries(SEARCH_INTENTS)) {
+                        if (keywords.includes(token) && item.tags.includes(intent)) {
+                            score += 12; // High priority for semantic needs
+                            tokenMatched = true;
+                            matchedReasons.push(`Solves intent for "${intent.replace(/_/g, ' ')}"`);
+                            break; 
+                        }
+                    }
+                }
+                
+                // 3. Tags/Synonyms match
+                if (!tokenMatched && item.tags.some(t => t.includes(token) || this.isFuzzyMatch(token, t))) {
+                    score += 10;
+                    tokenMatched = true;
+                    matchedReasons.push(`Matches deep semantic tags related to "${token}"`);
+                }
+                // 4. Fuzzy Name match
+                else if (!tokenMatched && this.isFuzzyMatch(token, item.name)) {
+                    score += 8;
+                    tokenMatched = true;
+                }
+                // 5. Category match
+                else if (!tokenMatched && item.category.includes(token)) {
+                    score += 5;
+                    tokenMatched = true;
+                    matchedReasons.push(`Category match`);
+                }
+                // 6. Deep HTML Scrape Match (Lowest Priority but highly comprehensive)
+                else if (!tokenMatched && item.scrapedText && (item.scrapedText.includes(token) || this.isFuzzyMatch(token, item.scrapedText))) {
+                    score += 3;
+                    tokenMatched = true;
+                    matchedReasons.push(`Content explicitly found inside product details`);
+                }
+                // 7. Description match
+                else if (!tokenMatched && this.isFuzzyMatch(token, item.description)) {
+                    score += 2;
+                    tokenMatched = true;
+                }
+
+                if (!tokenMatched) {
+                    matchesAll = false;
+                    break; 
+                }
+            }
+
+            if (matchesAll && score > 0) {
+                // Determine the best reason to show, distinct and concise.
+                const uniqueReasons = [...new Set(matchedReasons)];
+                const topReason = uniqueReasons.length > 0 ? uniqueReasons[0] : "Identified as a strong contextual match";
+                results.push({ item: this.catalog[item.id], id: item.id, score: score, matchedReason: topReason });
+            }
+        }
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 5); 
+    }
+
+    getHistory() {
+        try {
+            return JSON.parse(localStorage.getItem('dodch_search_history') || '[]');
+        } catch(e) { return []; }
+    }
+
+    addToHistory(query) {
+        if (!query || query.length < 2) return;
+        let history = this.getHistory();
+        history = [query, ...history.filter(h => h !== query)].slice(0, 5);
+        localStorage.setItem('dodch_search_history', JSON.stringify(history));
+    }
+}
+
+window.dodchSearchEngine = new DODCHSearchEngine();
+
+
+// Advanced Search Integration
+document.addEventListener("DOMContentLoaded", () => {
+    // We need to wait for productCatalog to load, or re-init when it does
+    // For now we will set up a watcher or just wait a bit, but ideally called after catalog loads
+    setTimeout(() => {
+        if (window.productCatalog && Object.keys(window.productCatalog).length > 0) {
+            window.dodchSearchEngine.init(window.productCatalog);
+            console.log("Search Engine Initialized with", Object.keys(window.productCatalog).length, "products");
+        }
+    }, 1500); // Wait for potential firebase load
+
+    const searchContainers = document.querySelectorAll(".search-container");
+    
+    // Create halo element
+    const halo = document.createElement("div");
+    halo.id = "search-results-halo";
+    document.body.appendChild(halo);
+
+    // Create dropdown element
+    const dropdown = document.createElement("div");
+    dropdown.id = "search-results-dropdown";
+    document.body.appendChild(dropdown);
+
+    let activeInput = null;
+    let selectedIndex = -1;
+    let currentResults = [];
+
+    // Debounce helper
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Safe global handler for trending search clicks to avoid long-string inline HTML issues
+    window.dodchSearchTrendClick = (q) => {
+        const inp = document.getElementById('navbar-search-input');
+        if (inp) {
+            inp.value = q;
+            inp.focus();
+            inp.dispatchEvent(new Event('input'));
+        }
+    };
+
+    const populateWidgets = (container) => {
+        const trends = [
+            { query: 'Shampoo', label: 'Shampoo for Daily Use' },
+            { query: 'Serum', label: 'Hydrating Serums' },
+            { query: 'Mask', label: 'Silk Therapy Mask' }
+        ];
+
+        let listHtml = '';
+        trends.forEach(t => {
+            listHtml += `<div class="search-widget-list-item" onclick="window.dodchSearchTrendClick('${t.query}')" style="padding: 10px 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.03); border-radius: 8px; font-size: 0.9rem; color: #555; cursor: pointer; display: flex; align-items: center; gap: 12px; margin-bottom: 2px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #D4AF37; flex-shrink: 0; opacity: 0.8;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span style="font-weight: 500;">${t.label}</span>
+            </div>`;
+        });
+
+        // Create widget container
+        const trendingWidget = document.createElement("div");
+        trendingWidget.className = "search-widget";
+        trendingWidget.innerHTML = `
+            <div class="search-widget-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                Trending Searches
+            </div>
+            <div class="search-widget-list-container" style="margin-top: 10px; display: flex; flex-direction: column;">
+                ${listHtml}
+            </div>
+        `;
+
+        const journalWidget = document.createElement("div");
+        journalWidget.className = "search-widget";
+        journalWidget.innerHTML = `
+            <div class="search-widget-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                The Journal
+            </div>
+            <div class="search-widget-card" onclick="window.location.href='journal.html'">
+                <img src="IMG_3357.jpg" class="search-widget-img" alt="Journal">
+                <div>
+                    <div style="font-weight:600; font-size: 0.85rem;">Luxury Hair Care</div>
+                    <div style="font-size: 0.75rem; color: #888;">5 Tips for Shine</div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = "";
+        container.appendChild(trendingWidget);
+        container.appendChild(journalWidget);
+    };
+
+    const populateLiveTiles = (container) => {
+        container.innerHTML = `
+            <div class="search-widget-title" style="margin-left: 5px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                DODCH Spotlight
+            </div>
+            <div class="live-tiles-grid">
+                <div class="os-tile os-tile-large">
+                    <span class="os-tile-badge">Live Care</span>
+                    <video class="os-tile-bg" autoplay muted loop playsinline src="foam cleanser.mp4"></video>
+                    <div class="os-tile-content">
+                        <div style="font-size: 0.7rem; opacity: 0.9; font-weight: 500;">How to use</div>
+                        <div style="font-size: 1.1rem; font-weight: 700;">Deep Cleansing Ritual</div>
+                    </div>
+                </div>
+                <div class="os-tile os-tile-wide flipping">
+                    <div class="os-tile-flipper">
+                        <div class="os-tile-front">
+                            <img src="IMG_3258.jpg" class="os-tile-bg" alt="Serum">
+                            <div class="os-tile-content"><div style="font-weight: 700;">Daily Hydration</div></div>
+                        </div>
+                        <div class="os-tile-back">
+                            <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 5px; color: var(--accent-gold);">Pro Tip</div>
+                            <div style="font-size: 0.75rem; line-height: 1.4;">Apply on damp skin for 2x moisture locking.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="os-tile" style="background: var(--accent-gold); color: #fff;">
+                    <div class="os-tile-content" style="background: none; align-items: center; justify-content: center; text-align: center;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-bottom: 8px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                        <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">Gift Guide</div>
+                    </div>
+                </div>
+                <div class="os-tile" style="background: var(--text-charcoal);">
+                    <div class="os-tile-content" style="background: none; align-items: center; justify-content: center;">
+                         <div style="font-family: var(--font-serif); font-size: 1.2rem; font-weight: 700; color: white;">DODCH</div>
+                         <div style="font-size: 0.5rem; letter-spacing: 2px; color: rgba(255,255,255,0.6);">EST. 2026</div>
+                    </div>
+                </div>
+                <div class="os-tile os-tile-wide flipping">
+                    <div class="os-tile-flipper">
+                        <div class="os-tile-front">
+                            <img src="F188A04D-4AA7-4D98-9EEB-14861B10D468.PNG" class="os-tile-bg" alt="Mask">
+                            <div class="os-tile-content"><div style="font-weight: 700;">Silk Therapy</div></div>
+                        </div>
+                        <div class="os-tile-back">
+                            <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 5px; color: var(--accent-gold);">New Formula</div>
+                            <div style="font-size: 0.75rem; line-height: 1.4;">Now with 15% more Prickly Pear oil for extreme softness.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Start flippers
+        setTimeout(() => {
+            const flippingTiles = container.querySelectorAll(".os-tile.flipping");
+            if (flippingTiles.length > 0) {
+                if (window.tileInterval) clearInterval(window.tileInterval);
+                window.tileInterval = setInterval(() => {
+                    const randomTile = flippingTiles[Math.floor(Math.random() * flippingTiles.length)];
+                    randomTile.classList.toggle("flip");
+                }, 3500);
+            }
+        }, 100);
+    };
+
+    const positionDropdown = (inputEl) => {
+        const container = inputEl.closest(".search-container");
+        if (container && dropdown.parentNode !== container) {
+            container.prepend(halo); 
+            container.appendChild(dropdown);
+            
+            // Add close button if missing
+            if (!container.querySelector("#search-close-btn")) {
+                const closeBtn = document.createElement("button");
+                closeBtn.id = "search-close-btn";
+                closeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px; stroke: currentColor;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+                closeBtn.style.position = "absolute";
+                container.appendChild(closeBtn);
+
+                closeBtn.addEventListener("mousedown", (e) => {
+                    e.preventDefault(); // Prevent input from blurring prematurely
+                    inputEl.value = "";
+                    dropdown.classList.remove("active");
+                    halo.classList.remove("active");
+                    const nav = document.getElementById("navbar");
+                    if (nav) nav.classList.remove("search-active");
+                    container.classList.remove("active");
+                    document.body.style.overflow = "auto";
+            document.documentElement.style.overflow = "auto"; // Unlock root scroll as well
+                    inputEl.blur();
+                });
+            }
+        }
+        // Use fluid CSS-based positioning
+        dropdown.style.top = "";
+        if (window.innerWidth > 768) {
+            const rect = container.getBoundingClientRect();
+            // Stable dashboard width: max 1180px, but fits window
+            const dropdownWidth = Math.min(1180, window.innerWidth - 80);
+            dropdown.style.width = dropdownWidth + "px";
+            dropdown.style.position = "fixed"; 
+            
+            // Center the entire dashboard on the screen for stability
+            const globalLeft = (window.innerWidth - dropdownWidth) / 2;
+            
+            dropdown.style.left = globalLeft + "px";
+            dropdown.style.top = (rect.top + rect.height + 15) + "px"; 
+            dropdown.style.transform = "translateY(0)";
+            dropdown.style.right = "auto";
+            dropdown.style.zIndex = "200000"; 
+        } else {
+            dropdown.style.width = "95vw";
+            dropdown.style.position = "fixed";
+            dropdown.style.left = "2.5vw";
+            dropdown.style.top = "70px"; 
+            dropdown.style.right = "auto";
+            dropdown.style.transform = "translateY(10px)";
+            dropdown.style.zIndex = "200000";
+        }
+    };
+
+    // Persistent Dashboard Components
+    const layoutDiv = document.createElement("div");
+    layoutDiv.className = "search-dropdown-layout";
+    
+    const liveTilesDiv = document.createElement("div");
+    liveTilesDiv.className = "search-live-tiles-container";
+    
+    const sideWidgetsDiv = document.createElement("div");
+    sideWidgetsDiv.className = "search-side-widgets";
+    
+    const mainResultsDiv = document.createElement("div");
+    mainResultsDiv.className = "search-main-results";
+
+    // Initialize content once
+    populateWidgets(sideWidgetsDiv);
+    populateLiveTiles(liveTilesDiv);
+
+    // Initial structure setup
+    // Layout and hiding logic dynamically handled via CSS Flexbox/Grid
+    layoutDiv.appendChild(liveTilesDiv);
+    layoutDiv.appendChild(sideWidgetsDiv);
+    layoutDiv.appendChild(mainResultsDiv);
+
+    const renderResults = (results, query) => {
+        currentResults = results;
+        selectedIndex = -1;
+        mainResultsDiv.innerHTML = ""; // Only clear the results pane
+
+        // Toggle class for responsive CSS hiding on mobile
+        if (!query || query.length < 2) {
+            layoutDiv.classList.remove("has-query");
+        } else {
+            layoutDiv.classList.add("has-query");
+        }
+
+        const history = window.dodchSearchEngine.getHistory();
+
+        // Ensure layout is injected into the dropdown
+        if (!dropdown.contains(layoutDiv)) {
+            dropdown.innerHTML = "";
+            dropdown.appendChild(layoutDiv);
+        }
+
+        // --- State 1: Empty / History Dashboard ---
+        if ((!query || query.length < 2) && (history.length > 0 || true)) {
+            const historyHtml = history.length > 0 ? `
+                <div class="search-history-section" style="padding: 10px;">
+                    <div style="font-size: 0.75rem; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Recent Searches
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        ${history.map(h => `
+                            <div class="history-pill" onclick="var inp=document.getElementById('navbar-search-input'); if(inp){ inp.value='${h}'; inp.focus(); inp.dispatchEvent(new Event('input')); }" style="padding: 10px 22px; background: rgba(255,255,255,0.12); backdrop-filter: blur(5px); border-radius: 30px; font-size: 0.95rem; color: #FFFFFF; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: all 0.2s; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                                ${h}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : `<div style="padding: 20px; color: rgba(255,255,255,0.6); font-size: 1rem; font-style: italic; font-weight: 300;">Start typing to find hair or skin products...</div>`;
+            
+            mainResultsDiv.innerHTML = historyHtml;
+            dropdown.classList.add("active");
+            halo.classList.add("active");
+            return;
+        }
+
+        // --- State 2: No Results ---
+        if (results.length === 0 && query.length > 0) {
+            mainResultsDiv.innerHTML = `<div class="search-no-results" style="padding: 20px; color: rgba(255,255,255,0.7);">No products found for "${query}". Try searching for categories like "shampoo" or "mask".</div>`;
+            dropdown.classList.add("active");
+            halo.classList.add("active");
+            return;
+        }
+
+        // --- State 3: Filtering & Suggestions ---
+        results.forEach((res, index) => {
+            const item = res.item;
+            const minPrice = item.sizes && item.sizes.length > 0 
+                ? Math.min(...item.sizes.map(s => parseFloat(s.price))) 
+                : parseFloat(item.price);
+            
+            const priceStr = item.sizes && item.sizes.length > 0 ? `From ${minPrice.toFixed(2)} TND` : `${minPrice.toFixed(2)} TND`;
+            
+            const div = document.createElement("div");
+            div.className = "search-result-item" + (index === 0 ? " highlighted" : "");
+            if(index === 0) selectedIndex = 0; 
+
+            let imgUrl = item.images && item.images.length > 0 ? item.images[0] : (item.image || "");
+            
+            div.innerHTML = `
+                <img src="${imgUrl}" class="search-result-image" alt="${item.name}">
+                <div class="search-result-info">
+                    <div class="search-result-title">${item.name}</div>
+                    <div class="search-result-price" style="margin-top: 4px;">${priceStr}</div>
+                </div>
+            `;
+            
+            const lowerTitle = item.name.toLowerCase();
+            if(lowerTitle.includes(query.toLowerCase())) {
+               const regex = new RegExp(`(${query})`, "gi");
+               div.querySelector(".search-result-title").innerHTML = item.name.replace(regex, "<strong>$1</strong>");
+            }
+
+            div.addEventListener("mousedown", (e) => {
+               e.preventDefault(); 
+               window.dodchSearchEngine.addToHistory(query); 
+               window.location.href = item.storyUrl || `product.html?id=${res.id}`;
+            });
+
+            div.addEventListener("mouseenter", () => {
+                updateSelection(index);
+            });
+
+            mainResultsDiv.appendChild(div);
+        });
+
+        dropdown.classList.add("active");
+        halo.classList.add("active");
+        if (dropdown.classList.contains("active")) {
+           dropdown.style.transform = "translateY(0)";
+        }
+    };
+
+    const updateSelection = (index) => {
+        const items = mainResultsDiv.querySelectorAll(".search-result-item");
+        items.forEach(i => i.classList.remove("highlighted"));
+        if (index >= 0 && index < items.length) {
+            items[index].classList.add("highlighted");
+            selectedIndex = index;
+        }
+    };
+
+    const handleSearch = debounce((e) => {
+        const query = e.target.value.trim();
+        if (query.length < 2) {
+            renderResults([], query);
+            return;
+        }
+
+        // Show AI Thinking ONLY in the results column - keeping widgets visible
+        if (!dropdown.contains(layoutDiv)) {
+            dropdown.innerHTML = "";
+            dropdown.appendChild(layoutDiv);
+        }
+
+        mainResultsDiv.innerHTML = `
+            <div style="padding: 2rem; text-align: center; color: var(--accent-gold);">
+                <div class="ai-thinking-dots" style="display: flex; gap: 8px; justify-content: center; margin-bottom: 1rem;">
+                    <span style="width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 0.6s infinite alternate;"></span>
+                    <span style="width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 0.6s infinite 0.2s alternate;"></span>
+                    <span style="width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 0.6s infinite 0.4s alternate;"></span>
+                </div>
+                <div style="font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; opacity: 0.7;">AI Thinking...</div>
+            </div>
+        `;
+        
+        dropdown.classList.add("active");
+        halo.classList.add("active");
+        
+        setTimeout(() => {
+            if(Object.keys(window.dodchSearchEngine.catalog).length === 0 && window.productCatalog) {
+                 window.dodchSearchEngine.init(window.productCatalog);
+            }
+            const results = window.dodchSearchEngine.search(query);
+            renderResults(results, query);
+        }, 400);
+    }, 250); // 250ms debounce
+
+    searchContainers.forEach(container => {
+        const input = container.querySelector("input");
+        const clearBtn = container.querySelector("#search-clear-btn");
+        if (!input) return;
+
+        if (clearBtn) {
+            clearBtn.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                input.value = "";
+                renderResults([], ""); // Show history immediately
+                input.focus();
+            });
+        }
+
+        input.addEventListener("focus", (e) => {
+            activeInput = e.target;
+            positionDropdown(activeInput);
+            const query = e.target.value.trim();
+            
+            const nav = document.getElementById("navbar");
+            if (nav) nav.classList.add("search-active");
+            container.classList.add("active");
+            halo.classList.add("active");
+            document.body.style.overflow = "hidden";
+            document.documentElement.style.overflow = "hidden";
+
+            // If empty, show dashboard immediately with history/widgets
+            if (query.length === 0) {
+                renderResults([], ""); 
+            } else {
+                handleSearch(e);
+            }
+        });
+
+        // Replace blur event. Instead, handle outside clicks.
+        document.addEventListener("mousedown", (evt) => {
+            if (container.classList.contains("active") && !container.contains(evt.target) && !dropdown.contains(evt.target)) {
+                dropdown.classList.remove("active");
+                halo.classList.remove("active");
+                const nav = document.getElementById("navbar");
+                if (nav) nav.classList.remove("search-active");
+                container.classList.remove("active");
+                document.body.style.overflow = "auto";
+            document.documentElement.style.overflow = "auto"; // Unlock root scroll as well
+            }
+        });
+
+        input.addEventListener("input", (e) => {
+            activeInput = e.target;
+            positionDropdown(activeInput);
+            handleSearch(e);
+        });
+
+        input.addEventListener("keydown", (e) => {
+            if (!dropdown.classList.contains("active")) return;
+
+            const items = dropdown.querySelectorAll(".search-result-item");
+            
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                selectedIndex = (selectedIndex + 1) % items.length;
+                updateSelection(selectedIndex);
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                selectedIndex = selectedIndex - 1;
+                if (selectedIndex < 0) selectedIndex = items.length - 1;
+                updateSelection(selectedIndex);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (selectedIndex >= 0 && currentResults[selectedIndex]) {
+                    const id = currentResults[selectedIndex].id;
+                    const item = currentResults[selectedIndex].item;
+                    window.dodchSearchEngine.addToHistory(input.value.trim()); // Save to history
+                    window.location.href = item.storyUrl || `product.html?id=${id}`;
+                }
+            } else if (e.key === "Escape") {
+                dropdown.classList.remove("active");
+                halo.classList.remove("active");
+                const nav = document.getElementById("navbar");
+                if (nav) nav.classList.remove("search-active");
+                container.classList.remove("active");
+                document.body.style.overflow = "auto";
+            document.documentElement.style.overflow = "auto"; // Unlock root scroll as well
+                input.blur();
+            }
+        });
+    });
+});
+
+
+
