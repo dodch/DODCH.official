@@ -27,7 +27,7 @@ service cloud.firestore {
     // - Create: DISABLED DIRECTLY. MUST USE CLOUD FUNCTION 'createOrder'.
     //   (This prevents client-side price/total tampering)
     // - Read: Admin can read all. Users can read only their own.
-    // - Update: Only Admin can update (e.g. change status)
+    // - Update: Finalized security logic
     match /orders/{orderId} {
       allow create: if false; 
         
@@ -37,47 +37,45 @@ service cloud.firestore {
         || (
           request.auth != null 
           && (
+            // Logic: Users CANNOT change price, items, or delivery status.
+            
             // Case 1: Claiming a guest order (allows connecting a guest ORD to a newly created account)
             (resource.data.userId == 'guest' 
              && request.resource.data.userId == request.auth.uid 
              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userId', 'hasUnseenUpdate']))
             ||
-            // Case 2: Canceling their own project (only allowed if status is currently Pending)
+            // Case 2: Canceling their own (only allowed if status is currently Pending)
             (resource.data.userId == request.auth.uid 
              && resource.data.status == 'Pending'
              && request.resource.data.status == 'Cancelled'
              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
           )
         );
+      allow delete: if isAdmin();
     }
 
     // Carts: Users can only read/write their own cart
     match /carts/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     } 
 
     // Product Reviews: 
-    // - Read: Public
-    // - Create: Logged in users, MUST have a delivered order for that product, max 2 images, 1 review per product
     match /product_reviews/{reviewId} {
       allow read: if true;
       allow create: if request.auth != null 
         && request.resource.data.userId == request.auth.uid
         && isValidString(request.resource.data.text, 1, 3000)
-        // Ensure max 2 images
         && (request.resource.data.images is list ? request.resource.data.images.size() <= 2 : true)
-        // Logic Protection: User must have a delivered order for this product
-        // Note: Cross-collection validation in rules requires 'get' or 'exists'
-        // We ensure the productId matches the reviewed item
         && exists(/databases/$(database)/documents/orders/$(request.resource.data.orderId))
         && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status == 'Delivered'
-        && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.userId == request.auth.uid
-        // Check if the specific product was in that order
-        // This assumes order items are indexed by productId or in a list
-        // Rules can't easily iterate lists to verify content, so we rely on the front-end matching 
-        // the orderId, but we verify the Order belongs to the user and is Delivered.
-        ;
-      allow update, delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+        && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.userId == request.auth.uid;
+      
+      allow update: if isAdmin() 
+        || (request.auth != null 
+          && resource.data.userId == request.auth.uid 
+          && request.resource.data.userId == request.auth.uid 
+          && isValidString(request.resource.data.text, 1, 3000));
+      allow delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
     }
     
     // Public Submissions (Newsletter & Contact Form)
@@ -85,10 +83,23 @@ service cloud.firestore {
       allow create: if true && isValidString(request.resource.data.email, 5, 100);
       allow read, update, delete: if isAdmin();
     }
+    
+    // Notifications: 
+    match /notifications/{notifId} {
+      allow create: if isAdmin();
+      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow update: if request.auth != null 
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isSeen']);
+    }
+
     match /messages/{document=**} {
       allow create: if true 
+        && isValidString(request.resource.data.name, 2, 100)
         && isValidString(request.resource.data.email, 5, 100)
-        && isValidString(request.resource.data.message, 1, 2000);
+        && isValidString(request.resource.data.message, 1, 2000)
+        && request.resource.data.status == 'unread'
+        && request.resource.data.createdAt is timestamp;
       allow read, update, delete: if isAdmin();
     }
   }

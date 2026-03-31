@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
+import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
@@ -21,9 +21,19 @@ if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
 
 // Initialize App Check
 const appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('6LcAk10sAAAAAJLRyVesWS-Ub87u8v_Qzow1xl7l'),
+    provider: new ReCaptchaV3Provider('6Lf90p8sAAAAACNMF--viq1OaJ8dmrrik05kJubx'),
     isTokenAutoRefreshEnabled: true
 });
+
+// Verify App Check Connection & Log Status
+getToken(appCheck)
+    .then((token) => {
+        console.log("🛡️ App Check: Highly Secure Connection Established");
+        console.log("App Check Token Status: Valid & Exchangeable");
+    })
+    .catch((err) => {
+        console.warn("⚠️ App Check: Token Exchange Failed. Verification Required.", err);
+    });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -33,6 +43,20 @@ const provider = new GoogleAuthProvider();
 
 // Global Catalog Reference
 let productCatalog = {};
+
+// Global utility for XSS Prevention
+const escapeHTML = (str) => {
+    if (!str) return "";
+    return String(str).replace(/[&<>'"]/g,
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     const initialHash = window.location.hash;
@@ -1018,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
             initProductPage();
             // Re-render shop grid if we are on shop page
             initShopPage();
-            
+
             // Re-initialize Search Engine with loaded catalog
             if (window.dodchSearchEngine) {
                 window.dodchSearchEngine.init(productCatalog);
@@ -1239,12 +1263,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const total = subtotal + currentShipping;
 
         if (checkoutSubtotalEl) checkoutSubtotalEl.innerText = `${subtotal.toFixed(2)} TND`;
-        
+
         const shippingEl = document.getElementById('checkout-shipping');
         if (shippingEl) {
             shippingEl.innerText = isFreeShipping ? 'Free' : `${SHIPPING_FEE.toFixed(2)} TND`;
         }
-        
+
         if (checkoutTotalEl) checkoutTotalEl.innerText = `${total.toFixed(2)} TND`;
 
         // Reminder on Checkout Page
@@ -1257,8 +1281,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 checkoutPromo.style.cssText = 'font-size: 0.75rem; color: #888; margin-top: 1rem; text-align: left; font-style: italic;';
                 summaryTotals.appendChild(checkoutPromo);
             }
-            checkoutPromo.innerText = subtotal >= FREE_SHIPPING_THRESHOLD 
-                ? "Your order qualifies for Free Shipping." 
+            checkoutPromo.innerText = subtotal >= FREE_SHIPPING_THRESHOLD
+                ? "Your order qualifies for Free Shipping."
                 : `Free shipping on orders over ${FREE_SHIPPING_THRESHOLD} TND.`;
         }
 
@@ -1357,7 +1381,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     if (isUnlocked) {
                         const text = "✨ You've unlocked Free Shipping!";
-                        const wrappedText = text.split('').map((char, i) => 
+                        const wrappedText = text.split('').map((char, i) =>
                             `<span style="animation-delay: ${i * 0.02}s; display: inline-block; white-space: pre;">${char}</span>`
                         ).join('');
                         shippingMsg.innerHTML = wrappedText;
@@ -2287,7 +2311,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Call the secure createOrder Cloud Function
                     // This verifies prices server-side to prevent tampering
                     const createOrderFn = httpsCallable(functions, 'createOrder');
-                    
+
                     const result = await createOrderFn({
                         items: cart.map(item => ({
                             id: item.id,
@@ -2945,6 +2969,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadAdminOrders();
                 loadAdminProducts();
                 loadRevenueChart();
+                loadAdminMessages();
             }
         });
 
@@ -3251,6 +3276,103 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        const loadAdminMessages = async () => {
+            const adminMessagesList = document.getElementById('admin-messages-list');
+            if (!adminMessagesList) return;
+
+            adminMessagesList.innerHTML = '<p>Loading messages...</p>';
+
+            try {
+                const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'));
+                onSnapshot(q, (snapshot) => {
+                    adminMessagesList.innerHTML = '';
+                    if (snapshot.empty) {
+                        adminMessagesList.innerHTML = '<p>No messages found.</p>';
+                        return;
+                    }
+
+                    let unreadCount = 0;
+                    snapshot.forEach(docSnap => {
+                        const msg = docSnap.data();
+                        const msgId = docSnap.id;
+
+                        if (msg.status === 'unread') unreadCount++;
+
+                        const dateStr = msg.createdAt ? new Date(msg.createdAt.toDate()).toLocaleDateString() : 'N/A';
+                        const safeName = escapeHTML(msg.name);
+                        const safeEmail = escapeHTML(msg.email);
+                        const safeMessage = escapeHTML(msg.message);
+
+                        // For the mailto link, encodeURIComponent adds an extra layer of URL safety
+                        const mailtoLink = `mailto:${safeEmail}?subject=Reply from DODCH Cosmetics&body=Dear ${encodeURIComponent(msg.name)},%0D%0A%0D%0AThank you for getting in touch with us at DODCH!%0D%0A%0D%0A`;
+
+                        const el = document.createElement('div');
+                        el.className = 'admin-order-card';
+                        el.style.borderLeft = msg.status === 'unread' ? '4px solid #D4AF37' : '1px solid #eee';
+                        el.style.backgroundColor = msg.status === 'unread' ? '#fffdf7' : '#fff';
+
+                        el.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.1rem; ${msg.status === 'unread' ? 'font-weight: 700;' : 'font-weight: 500;'}">${safeName}</h3>
+                                    <p style="margin: 0; font-size: 0.9rem; color: #666;"><a href="mailto:${safeEmail}" style="color: inherit;">${safeEmail}</a></p>
+                                </div>
+                                <span style="font-size: 0.8rem; color: #999;">${dateStr}</span>
+                            </div>
+                            <p style="margin-bottom: 1.5rem; line-height: 1.5; white-space: pre-wrap; font-size: 0.95rem; color: var(--text-charcoal);">${safeMessage}</p>
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #eee; padding-top: 1rem;">
+                                <a href="${mailtoLink}" class="admin-btn" style="background-color: transparent; border: 1px solid #3498db; color: #3498db; text-decoration: none; padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center;">Reply</a>
+                                ${msg.status === 'unread' ? '<button class="admin-btn mark-read-btn" data-id="' + msgId + '" style="background-color: transparent; border: 1px solid #333; color: #333;">Mark as Read</button>' : ''}
+                                <button class="admin-btn delete-msg-btn" data-id="${msgId}" style="background-color: transparent; border: 1px solid #e74c3c; color: #e74c3c;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </div>
+                        `;
+                        adminMessagesList.appendChild(el);
+                    });
+
+                    const badge = document.getElementById('unread-messages-badge');
+                    if (badge) {
+                        badge.textContent = unreadCount;
+                        badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+                    }
+
+                    document.querySelectorAll('.mark-read-btn').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            try {
+                                const id = e.currentTarget.dataset.id;
+                                await updateDoc(doc(db, 'messages', id), { status: 'read' });
+                            } catch (err) {
+                                console.error(err);
+                                window.showToast("Error updating message", "error");
+                            }
+                        });
+                    });
+
+                    document.querySelectorAll('.delete-msg-btn').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            if (confirm("Are you sure you want to delete this message?")) {
+                                try {
+                                    const id = e.currentTarget.dataset.id;
+                                    await deleteDoc(doc(db, 'messages', id));
+                                    window.showToast("Message deleted", "success");
+                                } catch (err) {
+                                    console.error(err);
+                                    window.showToast("Error deleting message", "error");
+                                }
+                            }
+                        });
+                    });
+
+                }, (error) => {
+                    console.error("Error fetching messages:", error);
+                    adminMessagesList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied or Error loading messages.</p>';
+                });
+            } catch (err) {
+                console.error("Setup error:", err);
+            }
+        };
+
         const loadAdminOrders = async (pageIndex = 0) => {
             adminOrdersList.innerHTML = '<p>Loading orders...</p>';
             try {
@@ -3312,11 +3434,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span>${date}</span>
                         </div>
                         <div class="admin-order-details">
-                            <p><strong>Customer:</strong> ${order.shipping?.fullName} (${order.shipping?.email})</p>
-                            <p><strong>Address:</strong> ${order.shipping?.address}, ${order.shipping?.city}</p>
+                            <p><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)} (${escapeHTML(order.shipping?.email)})</p>
+                            <p><strong>Address:</strong> ${escapeHTML(order.shipping?.address)}, ${escapeHTML(order.shipping?.city)}</p>
                             <p><strong>Total:</strong> ${order.total} TND</p>
                             <div class="admin-order-items">
-                                ${order.items.map(i => `<div>${i.quantity}x ${i.name} (${i.size})</div>`).join('')}
+                                ${order.items.map(i => `<div>${i.quantity}x ${escapeHTML(i.name)} (${escapeHTML(i.size)})</div>`).join('')}
                             </div>
                         </div>
                         <div class="admin-order-actions">
@@ -5176,7 +5298,7 @@ const showReviewPromptToast = (productName, pageUrl) => {
 
     closeBtn.addEventListener('click', () => {
         if (toast) toast.classList.remove('active');
-        
+
         // Save the EXACT timestamp of dismissal
         localStorage.setItem('reviewPromptDismissedAt', Date.now().toString());
 
@@ -5305,11 +5427,11 @@ class DODCHSearchEngine {
         this.catalog = catalog;
         this.index = Object.entries(catalog).map(([id, item]) => {
             let tags = (item.tags || []).map(t => this.normalize(t));
-            
+
             // Expand searchable text with synonyms
             const synonyms = [];
             const allText = (item.name + ' ' + (item.category || '')).toLowerCase();
-            
+
             for (const [key, list] of Object.entries(SEARCH_SYNONYMS)) {
                 if (allText.includes(key) || list.some(l => allText.includes(l))) {
                     synonyms.push(...list, key);
@@ -5326,16 +5448,16 @@ class DODCHSearchEngine {
 
             // Inject Intent Labels (e.g. if the product is known for hydration, give it the intent tag)
             // By default, let's map known products to their best intents so AI finds them easily based on descriptions
-            if(allText.includes('shampoo') || allText.includes('mask')) {
+            if (allText.includes('shampoo') || allText.includes('mask')) {
                 tags.push('needs_hydration', 'needs_repair', 'wants_smooth');
             }
-            if(allText.includes('shampoo')) {
+            if (allText.includes('shampoo')) {
                 tags.push('wants_scent');
             }
-            if(allText.includes('serum') || allText.includes('oil')) {
+            if (allText.includes('serum') || allText.includes('oil')) {
                 tags.push('wants_antiaging', 'wants_glow', 'needs_repair');
             }
-            if(allText.includes('oil')) {
+            if (allText.includes('oil')) {
                 tags.push('wants_growth'); // Often used for scalp/beard growth
             }
 
@@ -5356,14 +5478,14 @@ class DODCHSearchEngine {
                     .then(html => {
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(html, 'text/html');
-                        
+
                         // Extract text from meaningful SEO blocks (main content, descriptions, ingredients)
                         const scrapeTargets = doc.querySelectorAll('main p, main h1, main h2, main h3, main li, .inci-list span, .product-story');
                         let textAccumulator = '';
                         scrapeTargets.forEach(el => {
                             textAccumulator += ' ' + el.textContent;
                         });
-                        
+
                         indexItem.scrapedText = this.normalize(textAccumulator);
                     })
                     .catch(err => console.warn(`Silent scrape failed for ${item.storyUrl}:`, err));
@@ -5395,10 +5517,10 @@ class DODCHSearchEngine {
     // Check if a token roughly matches a target string
     isFuzzyMatch(token, targetString) {
         if (targetString.includes(token)) return true;
-        
+
         // Intelligent fuzzy threshold: longer words allow more typos
         const threshold = token.length > 6 ? 2 : 1;
-        
+
         if (token.length > 3) {
             const words = targetString.split(/\s+/);
             for (let word of words) {
@@ -5412,7 +5534,7 @@ class DODCHSearchEngine {
 
     search(query) {
         if (!query || query.trim().length === 0) return [];
-        
+
         const normalizedQuery = this.normalize(query);
         const tokens = normalizedQuery.split(/\s+/).filter(t => t.length > 0);
         if (tokens.length === 0) return [];
@@ -5434,17 +5556,17 @@ class DODCHSearchEngine {
                     // Don't add a specific reason for name match to keep UI clean, it's obvious to the user.
                 }
                 // 2. Intent matching (Semantic Search)
-                else if (!tokenMatched) { 
+                else if (!tokenMatched) {
                     for (const [intent, keywords] of Object.entries(SEARCH_INTENTS)) {
                         if (keywords.includes(token) && item.tags.includes(intent)) {
                             score += 12; // High priority for semantic needs
                             tokenMatched = true;
                             matchedReasons.push(`Solves intent for "${intent.replace(/_/g, ' ')}"`);
-                            break; 
+                            break;
                         }
                     }
                 }
-                
+
                 // 3. Tags/Synonyms match
                 if (!tokenMatched && item.tags.some(t => t.includes(token) || this.isFuzzyMatch(token, t))) {
                     score += 10;
@@ -5476,7 +5598,7 @@ class DODCHSearchEngine {
 
                 if (!tokenMatched) {
                     matchesAll = false;
-                    break; 
+                    break;
                 }
             }
 
@@ -5488,13 +5610,13 @@ class DODCHSearchEngine {
             }
         }
 
-        return results.sort((a, b) => b.score - a.score).slice(0, 5); 
+        return results.sort((a, b) => b.score - a.score).slice(0, 5);
     }
 
     getHistory() {
         try {
             return JSON.parse(localStorage.getItem('dodch_search_history') || '[]');
-        } catch(e) { return []; }
+        } catch (e) { return []; }
     }
 
     addToHistory(query) {
@@ -5520,7 +5642,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 1500); // Wait for potential firebase load
 
     const searchContainers = document.querySelectorAll(".search-container");
-    
+
     // Create halo element
     const halo = document.createElement("div");
     halo.id = "search-results-halo";
@@ -5660,7 +5782,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
             </div>
         `;
-        
+
         // Start flippers
         setTimeout(() => {
             const flippingTiles = container.querySelectorAll(".os-tile.flipping");
@@ -5677,9 +5799,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const positionDropdown = (inputEl) => {
         const container = inputEl.closest(".search-container");
         if (container && dropdown.parentNode !== container) {
-            container.prepend(halo); 
+            container.prepend(halo);
             container.appendChild(dropdown);
-            
+
             // Add close button if missing
             if (!container.querySelector("#search-close-btn")) {
                 const closeBtn = document.createElement("button");
@@ -5697,7 +5819,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (nav) nav.classList.remove("search-active");
                     container.classList.remove("active");
                     document.body.style.overflow = "auto";
-            document.documentElement.style.overflow = "auto"; // Unlock root scroll as well
+                    document.documentElement.style.overflow = "auto"; // Unlock root scroll as well
                     inputEl.blur();
                 });
             }
@@ -5709,21 +5831,21 @@ document.addEventListener("DOMContentLoaded", () => {
             // Stable dashboard width: max 1180px, but fits window
             const dropdownWidth = Math.min(1180, window.innerWidth - 80);
             dropdown.style.width = dropdownWidth + "px";
-            dropdown.style.position = "fixed"; 
-            
+            dropdown.style.position = "fixed";
+
             // Center the entire dashboard on the screen for stability
             const globalLeft = (window.innerWidth - dropdownWidth) / 2;
-            
+
             dropdown.style.left = globalLeft + "px";
-            dropdown.style.top = (rect.top + rect.height + 15) + "px"; 
+            dropdown.style.top = (rect.top + rect.height + 15) + "px";
             dropdown.style.transform = "translateY(0)";
             dropdown.style.right = "auto";
-            dropdown.style.zIndex = "200000"; 
+            dropdown.style.zIndex = "200000";
         } else {
             dropdown.style.width = "95vw";
             dropdown.style.position = "fixed";
             dropdown.style.left = "2.5vw";
-            dropdown.style.top = "70px"; 
+            dropdown.style.top = "70px";
             dropdown.style.right = "auto";
             dropdown.style.transform = "translateY(10px)";
             dropdown.style.zIndex = "200000";
@@ -5733,13 +5855,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // Persistent Dashboard Components
     const layoutDiv = document.createElement("div");
     layoutDiv.className = "search-dropdown-layout";
-    
+
     const liveTilesDiv = document.createElement("div");
     liveTilesDiv.className = "search-live-tiles-container";
-    
+
     const sideWidgetsDiv = document.createElement("div");
     sideWidgetsDiv.className = "search-side-widgets";
-    
+
     const mainResultsDiv = document.createElement("div");
     mainResultsDiv.className = "search-main-results";
 
@@ -5790,7 +5912,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                 </div>
             ` : `<div style="padding: 20px; color: rgba(255,255,255,0.6); font-size: 1rem; font-style: italic; font-weight: 300;">Start typing to find hair or skin products...</div>`;
-            
+
             mainResultsDiv.innerHTML = historyHtml;
             dropdown.classList.add("active");
             halo.classList.add("active");
@@ -5808,18 +5930,18 @@ document.addEventListener("DOMContentLoaded", () => {
         // --- State 3: Filtering & Suggestions ---
         results.forEach((res, index) => {
             const item = res.item;
-            const minPrice = item.sizes && item.sizes.length > 0 
-                ? Math.min(...item.sizes.map(s => parseFloat(s.price))) 
+            const minPrice = item.sizes && item.sizes.length > 0
+                ? Math.min(...item.sizes.map(s => parseFloat(s.price)))
                 : parseFloat(item.price);
-            
+
             const priceStr = item.sizes && item.sizes.length > 0 ? `From ${minPrice.toFixed(2)} TND` : `${minPrice.toFixed(2)} TND`;
-            
+
             const div = document.createElement("div");
             div.className = "search-result-item" + (index === 0 ? " highlighted" : "");
-            if(index === 0) selectedIndex = 0; 
+            if (index === 0) selectedIndex = 0;
 
             let imgUrl = item.images && item.images.length > 0 ? item.images[0] : (item.image || "");
-            
+
             div.innerHTML = `
                 <img src="${imgUrl}" class="search-result-image" alt="${item.name}">
                 <div class="search-result-info">
@@ -5827,17 +5949,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="search-result-price" style="margin-top: 4px;">${priceStr}</div>
                 </div>
             `;
-            
+
             const lowerTitle = item.name.toLowerCase();
-            if(lowerTitle.includes(query.toLowerCase())) {
-               const regex = new RegExp(`(${query})`, "gi");
-               div.querySelector(".search-result-title").innerHTML = item.name.replace(regex, "<strong>$1</strong>");
+            if (lowerTitle.includes(query.toLowerCase())) {
+                const regex = new RegExp(`(${query})`, "gi");
+                div.querySelector(".search-result-title").innerHTML = item.name.replace(regex, "<strong>$1</strong>");
             }
 
             div.addEventListener("mousedown", (e) => {
-               e.preventDefault(); 
-               window.dodchSearchEngine.addToHistory(query); 
-               window.location.href = item.storyUrl || `product.html?id=${res.id}`;
+                e.preventDefault();
+                window.dodchSearchEngine.addToHistory(query);
+                window.location.href = item.storyUrl || `product.html?id=${res.id}`;
             });
 
             div.addEventListener("mouseenter", () => {
@@ -5850,7 +5972,7 @@ document.addEventListener("DOMContentLoaded", () => {
         dropdown.classList.add("active");
         halo.classList.add("active");
         if (dropdown.classList.contains("active")) {
-           dropdown.style.transform = "translateY(0)";
+            dropdown.style.transform = "translateY(0)";
         }
     };
 
@@ -5886,13 +6008,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div style="font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; opacity: 0.7;">AI Thinking...</div>
             </div>
         `;
-        
+
         dropdown.classList.add("active");
         halo.classList.add("active");
-        
+
         setTimeout(() => {
-            if(Object.keys(window.dodchSearchEngine.catalog).length === 0 && window.productCatalog) {
-                 window.dodchSearchEngine.init(window.productCatalog);
+            if (Object.keys(window.dodchSearchEngine.catalog).length === 0 && window.productCatalog) {
+                window.dodchSearchEngine.init(window.productCatalog);
             }
             const results = window.dodchSearchEngine.search(query);
             renderResults(results, query);
@@ -5917,7 +6039,7 @@ document.addEventListener("DOMContentLoaded", () => {
             activeInput = e.target;
             positionDropdown(activeInput);
             const query = e.target.value.trim();
-            
+
             const nav = document.getElementById("navbar");
             if (nav) nav.classList.add("search-active");
             container.classList.add("active");
@@ -5927,7 +6049,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // If empty, show dashboard immediately with history/widgets
             if (query.length === 0) {
-                renderResults([], ""); 
+                renderResults([], "");
             } else {
                 handleSearch(e);
             }
@@ -5942,7 +6064,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (nav) nav.classList.remove("search-active");
                 container.classList.remove("active");
                 document.body.style.overflow = "auto";
-            document.documentElement.style.overflow = "auto"; // Unlock root scroll as well
+                document.documentElement.style.overflow = "auto"; // Unlock root scroll as well
             }
         });
 
@@ -5956,7 +6078,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!dropdown.classList.contains("active")) return;
 
             const items = dropdown.querySelectorAll(".search-result-item");
-            
+
             if (e.key === "ArrowDown") {
                 e.preventDefault();
                 selectedIndex = (selectedIndex + 1) % items.length;
@@ -5981,11 +6103,70 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (nav) nav.classList.remove("search-active");
                 container.classList.remove("active");
                 document.body.style.overflow = "auto";
-            document.documentElement.style.overflow = "auto"; // Unlock root scroll as well
+                document.documentElement.style.overflow = "auto"; // Unlock root scroll as well
                 input.blur();
             }
         });
     });
+});
+
+// --- Contact Form Submission Handler ---
+document.addEventListener('submit', async (e) => {
+    if (e.target && e.target.id === 'main-contact-form') {
+        e.preventDefault();
+
+        const form = e.target;
+        const submitBtn = form.querySelector('.contact-submit-btn');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Sending...';
+        submitBtn.disabled = true;
+
+        // Honeypot check
+        const honeypot = form.querySelector('input[name="website"]').value;
+        if (honeypot) {
+            // Silently succeed for bots
+            if (window.showToast) window.showToast("Message sent successfully!", "success");
+            form.reset();
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+
+        const nameInput = form.querySelector('input[type="text"]:not([name="website"])');
+        const emailInput = form.querySelector('input[type="email"]');
+        const messageInput = form.querySelector('textarea');
+
+        const name = nameInput ? nameInput.value.trim() : "";
+        const email = emailInput ? emailInput.value.trim() : "";
+        const message = messageInput ? messageInput.value.trim() : "";
+
+        if (!name || !email || !message) {
+            if (window.showToast) window.showToast("Please fill in all fields.", "error");
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+
+        try {
+            // Data structure matches strictly with firestore.rules requirements:
+            await addDoc(collection(db, 'messages'), {
+                name: name,
+                email: email,
+                message: message,
+                status: 'unread', // Explicitly required string 'unread'
+                createdAt: serverTimestamp() // Explicitly required server-side timestamp object
+            });
+
+            if (window.showToast) window.showToast("Message sent successfully!", "success");
+            form.reset();
+        } catch (error) {
+            console.error("Error sending message:", error);
+            if (window.showToast) window.showToast("Error sending message. Please try again later.", "error");
+        } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+    }
 });
 
 
