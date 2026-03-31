@@ -24,12 +24,16 @@ service cloud.firestore {
     }
 
     // Orders: 
-    // - Create: DISABLED DIRECTLY. MUST USE CLOUD FUNCTION 'createOrder'.
-    //   (This prevents client-side price/total tampering)
+    // - Create: Allowed from frontend for Spark plan (no billing account needed).
     // - Read: Admin can read all. Users can read only their own.
     // - Update: Finalized security logic
     match /orders/{orderId} {
-      allow create: if false; 
+      allow create: if request.resource.data.status == 'Pending'
+                   && request.resource.data.total == (request.resource.data.subtotal + request.resource.data.shippingFee)
+                   && (
+                      (request.resource.data.subtotal >= 100 && request.resource.data.shippingFee == 0) ||
+                      (request.resource.data.subtotal < 100 && request.resource.data.shippingFee == 7)
+                   );
         
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       

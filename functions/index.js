@@ -41,7 +41,7 @@ function getEmailHtml(orderData) {
   `;
 }
 
-exports.sendOrderConfirmationEmail = functions.firestore
+exports.sendOrderConfirmationEmail = functions.region("europe-west1").firestore
     .document("orders/{orderId}")
     .onCreate(async (snap, context) => {
       const orderData = snap.data();
@@ -73,7 +73,7 @@ exports.sendOrderConfirmationEmail = functions.firestore
 /**
  * Handles contact form submissions with server-side rate limiting.
  */
-exports.submitContactMessage = functions.https.onCall(async (data, context) => {
+exports.submitContactMessage = functions.region("europe-west1").https.onCall(async (data, context) => {
   // 1. Validate Input
   if (!data.name || !data.email || !data.message) {
     throw new functions.https.HttpsError("invalid-argument", "Missing required fields.");
@@ -118,7 +118,7 @@ exports.submitContactMessage = functions.https.onCall(async (data, context) => {
 /**
  * Creates an order after verifying prices and stock server-side.
  */
-exports.createOrder = functions.https.onCall(async (data, context) => {
+exports.createOrder = functions.region("europe-west1").https.onCall(async (data, context) => {
   const db = admin.firestore();
   const items = data.items;
   const shipping = data.shipping;

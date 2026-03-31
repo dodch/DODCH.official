@@ -43,7 +43,7 @@ getToken(appCheck)
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const functions = getFunctions(app);
+const functions = getFunctions(app, 'europe-west1');
 const provider = new GoogleAuthProvider();
 
 // Global Catalog Reference
@@ -2310,32 +2310,54 @@ document.addEventListener('DOMContentLoaded', () => {
                     placeOrderBtn.innerText = "Place Order";
                     placeOrderBtn.style.opacity = "1";
                     placeOrderBtn.style.pointerEvents = "auto";
-                }, 15000); // 15 seconds
+                                                }, 15000); // 15 seconds
 
                 try {
-                    // Call the secure createOrder Cloud Function
-                    // This verifies prices server-side to prevent tampering
-                    const createOrderFn = httpsCallable(functions, 'createOrder');
-
-                    const result = await createOrderFn({
-                        items: cart.map(item => ({
+                    // Generate Order Reference
+                    const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
+                    
+                    // Recalculate totals for the final order object
+                    let calculatedSubtotal = 0;
+                    const items = cart.map(item => {
+                        let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
+                        if (isNaN(priceVal)) priceVal = 0;
+                        calculatedSubtotal += priceVal * item.quantity;
+                        return {
                             id: item.id,
                             productId: item.productId || item.id,
                             name: item.name,
                             size: item.size,
                             quantity: item.quantity,
-                            price: item.price // Client provides, server verifies
-                        })),
+                            price: priceVal.toFixed(2)
+                        };
+                    });
+
+                    const SHIPPING_FEE = 7;
+                    const FREE_SHIPPING_THRESHOLD = 100;
+                    const shippingFee = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+                    const finalTotal = calculatedSubtotal + shippingFee;
+
+                    const orderData = {
+                        orderReference,
+                        items,
                         shipping: {
                             email: document.getElementById('checkout-email').value.trim(),
                             fullName: document.getElementById('checkout-name').value,
                             address: document.getElementById('checkout-address').value,
                             city: document.getElementById('checkout-city').value,
                             postalCode: document.getElementById('checkout-postal-code').value
-                        }
-                    });
+                        },
+                        subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
+                        shippingFee: shippingFee,
+                        total: parseFloat(finalTotal.toFixed(2)),
+                        timestamp: serverTimestamp(),
+                        status: 'Pending',
+                        userId: currentUser ? currentUser.uid : 'guest'
+                    };
 
-                    const { orderId, orderReference } = result.data;
+                    // Save directly to Firestore
+                    const docRef = await addDoc(collection(db, 'orders'), orderData);
+                    const orderId = docRef.id;
 
                     clearTimeout(operationTimeout);
                     console.log("Order placed successfully with ID: ", orderId);
