@@ -14,10 +14,7 @@ const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
-// Enable App Check debug token for localhost
-if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = "d698a82e-c668-4ca4-82fa-8a6ac6a6e0e4";
-}
+
 
 // Initialize App Check
 const appCheck = initializeAppCheck(app, {
