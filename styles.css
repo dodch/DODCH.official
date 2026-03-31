@@ -1,14 +1,25 @@
-/* --- reCAPTCHA / App Check Badge --- */
+/* --- reCAPTCHA / App Check Badge (hidden — disclosure in footer per Google ToS) --- */
 .grecaptcha-badge {
-    visibility: visible !important;
-    opacity: 1 !important;
-    display: block !important;
-    position: fixed !important;
-    bottom: 14px !important;
-    right: 14px !important;
-    z-index: 99999 !important;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2) !important;
-    border-radius: 4px !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.recaptcha-footer-notice {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 0.75rem;
+    line-height: 1.5;
+}
+
+.recaptcha-footer-notice a {
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.recaptcha-footer-notice a:hover {
+    color: var(--accent-gold);
 }
 
 /* --- Variables & Reset --- */
