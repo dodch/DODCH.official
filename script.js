@@ -16,6 +16,11 @@ const analytics = getAnalytics(app);
 
 
 
+// Enable App Check Debug Mode for Localhost Development
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
 // Initialize App Check
 const appCheck = initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider('6Lf90p8sAAAAACNMF--viq1OaJ8dmrrik05kJubx'),
@@ -25,11 +30,17 @@ const appCheck = initializeAppCheck(app, {
 // Verify App Check Connection & Log Status
 getToken(appCheck)
     .then((token) => {
-        console.log("🛡️ App Check: Highly Secure Connection Established");
-        console.log("App Check Token Status: Valid & Exchangeable");
+        if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+            console.log("🛡️ App Check: Debug Mode Active. Please use the token above in the Firebase Console.");
+        } else {
+            console.log("🛡️ App Check: Highly Secure Connection Established");
+        }
     })
     .catch((err) => {
-        console.warn("⚠️ App Check: Token Exchange Failed. Verification Required.", err);
+        console.error("❌ App Check: Token Exchange Failed.", err);
+        if (err.code === "app-check/fetch-status-error") {
+            console.warn("Hint: Ensure the ReCaptcha key is authorized for this domain (" + location.hostname + ") in the Google Cloud/ReCaptcha console.");
+        }
     });
 
 const auth = getAuth(app);
