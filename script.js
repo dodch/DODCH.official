@@ -2628,6 +2628,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="copyright">
                         &copy; ${new Date().getFullYear()} DODCH. All Rights Reserved.
                     </div>
+                    <div class="recaptcha-legal" style="text-align: center; font-size: 0.75rem; opacity: 0.6; margin-top: 1.5rem; color: #fff;">
+                        This site is protected by reCAPTCHA and the Google
+                        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">Privacy Policy</a> and
+                        <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">Terms of Service</a> apply.
+                    </div>
                 </div>
             `;
 
@@ -6165,6 +6170,3 @@ document.addEventListener('submit', async (e) => {
         }
     }
 });
-
-
-

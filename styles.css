@@ -1,6 +1,6 @@
 /* --- reCAPTCHA / App Check Badge --- */
 .grecaptcha-badge {
-    visibility: visible !important;
+    visibility: hidden !important;
     opacity: 1 !important;
     display: block !important;
     position: fixed !important;
