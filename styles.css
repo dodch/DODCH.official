@@ -1,6 +1,14 @@
 /* --- reCAPTCHA / App Check Badge --- */
 .grecaptcha-badge {
-    visibility: hidden !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: block !important;
+    position: fixed !important;
+    bottom: 14px !important;
+    right: 14px !important;
+    z-index: 99999 !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2) !important;
+    border-radius: 4px !important;
 }
 
 /* --- Variables & Reset --- */
