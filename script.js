@@ -11,6 +11,50 @@ import { firebaseConfig } from "./firebase-config.js";
 const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
 
 // Initialize Firebase
+// --- SECURITY & VALIDATION ENGINE ---
+const SecurityValidator = {
+    // 1. Tunisian Specifics
+    TUNISIA_GOVERNORATES: ["Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa", "Jendouba", "Kairouan", "Kasserine", "Kebili", "Kef", "Mahdia", "Manouba", "Medenine", "Monastir", "Nabeul", "Sfax", "Sidi Bouzid", "Siliana", "Sousse", "Tataouine", "Tozeur", "Tunis", "Zaghouan"],
+    
+    validatePhone: (num) => {
+        const cleaned = num.replace(/[^0-9]/g, '');
+        // Standard Tunisian Mobile/Landline: 8 digits starting with 2,4,5,7,9
+        return /^[24579]\d{7}$/.test(cleaned);
+    },
+
+    // 2. Content Filtering
+    PROFANITY_LIST: [
+        // English
+        "fuck", "shit", "asshole", "bitch", "nigger", "cunt", "dick", "pussy",
+        // French
+        "putain", "merde", "connard", "salope", "encule", "bite", "chatte",
+        // Tunisian (Common offensive roots)
+        "zbi", "z*bi", "nek", "n**k", "mnyek", "zab", "kahba", "asba", "kr*z", "ms*k"
+    ],
+
+    isProfane: (text) => {
+        if (!text) return false;
+        const normalized = text.toLowerCase();
+        return SecurityValidator.PROFANITY_LIST.some(word => 
+            normalized.includes(word) || 
+            normalized.replace(/[*#@!]/g, '').includes(word)
+        );
+    },
+
+    isGibberish: (text) => {
+        if (!text) return false;
+        // Repeated characters (e.g. "aaaaaaa")
+        if (/(.)\1{5,}/.test(text)) return true;
+        // Lack of spaces in a long string (e.g. bot junk)
+        if (text.length > 30 && !text.includes(' ') && !text.includes('\n')) return true;
+        return false;
+    },
+
+    validateEmail: (email) => {
+        return /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email);
+    }
+};
+
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
@@ -2296,6 +2340,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const email = document.getElementById('checkout-email').value.trim();
+            const name = document.getElementById('checkout-name').value.trim();
+            const phone = document.getElementById('checkout-phone').value.trim();
+            const address = document.getElementById('checkout-address').value.trim();
+            const city = document.getElementById('checkout-city').value.trim();
+            const postalCode = document.getElementById('checkout-postal-code').value.trim();
+
+            // --- SMART VALIDATION ---
+            if (!SecurityValidator.validateEmail(email)) {
+                window.showToast("Please provide a real email address.", "error");
+                return;
+            }
+            if (!SecurityValidator.validatePhone(phone)) {
+                window.showToast("Invalid Tunisian phone number. Please enter 8 digits (2,4,5,7,9).", "error");
+                return;
+            }
+            if (!SecurityValidator.TUNISIA_GOVERNORATES.includes(city)) {
+                window.showToast("Please select a valid Tunisian Governorat.", "error");
+                return;
+            }
+            if (SecurityValidator.isProfane(name) || SecurityValidator.isProfane(address)) {
+                window.showToast("Inappropriate language detected.", "error");
+                return;
+            }
+
+            // --- END SMART VALIDATION ---
+
             if (checkoutForm.checkValidity()) {
                 // Simulate processing
                 placeOrderBtn.innerText = "Processing...";
@@ -2428,14 +2499,23 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const btn = newsletterForm.querySelector('button');
             const emailInput = newsletterForm.querySelector('input[type="email"]');
-            const originalText = btn.innerText;
+            const email = emailInput ? emailInput.value.trim() : "";
+
+            if (!SecurityValidator.validateEmail(email)) {
+                window.showToast("Please use a real email address.", "error");
+                return;
+            }
 
             addDoc(collection(db, "newsletter"), {
-                email: emailInput.value,
-                timestamp: new Date()
+                email: email,
+                createdAt: serverTimestamp()
+            }).then(() => {
+                window.showToast("Welcome to the Inner Circle!", "success");
+                newsletterForm.reset();
+            }).catch(err => {
+                console.error(err);
+                window.showToast("Failed to subscribe. Please try again later.", "error");
             });
-
-            btn.innerText = "Joined";
             btn.style.backgroundColor = "#4CAF50"; // Green for success
             newsletterForm.reset();
 
@@ -2665,64 +2745,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             `;
-
-            // 3. Bind Event for the contact form (injected or existing)
-            const form = document.getElementById('main-contact-form') || document.getElementById('contact-form');
-            if (form) {
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-
-                    // Honeypot Check
-                    const honeypot = form.querySelector('input[name="website"]');
-                    if (honeypot && honeypot.value) {
-                        console.warn("Bot detected via honeypot.");
-                        return; // Silently fail
-                    }
-
-                    // Rate Limit Check (Client-side)
-                    const lastSubmit = localStorage.getItem('dodch_last_contact_ts');
-                    if (lastSubmit) {
-                        const timeSince = Date.now() - parseInt(lastSubmit);
-                        // 2 minutes cooldown (120000 ms)
-                        if (timeSince < 120000) {
-                            const remaining = Math.ceil((120000 - timeSince) / 1000);
-                            window.showToast(`Please wait ${remaining}s before sending another message.`, "error");
-                            return;
-                        }
-                    }
-
-                    const btn = form.querySelector('button');
-                    const originalText = btn.innerText;
-                    btn.innerText = "Sending...";
-                    btn.disabled = true;
-
-                    // Exclude honeypot from data collection
-                    const inputs = Array.from(form.querySelectorAll('input, textarea'))
-                        .filter(el => el.name !== 'website');
-
-                    addDoc(collection(db, "messages"), {
-                        name: inputs[0].value,
-                        email: inputs[1].value,
-                        message: inputs[2].value,
-                        timestamp: serverTimestamp(),
-                        source: 'footer_contact'
-                    }).then(() => {
-                        localStorage.setItem('dodch_last_contact_ts', Date.now());
-                        window.showToast("Message sent successfully!", "success");
-                        form.reset();
-                        btn.innerText = "Message Sent";
-                        setTimeout(() => {
-                            btn.innerText = originalText;
-                            btn.disabled = false;
-                        }, 3000);
-                    }).catch(err => {
-                        console.error(err);
-                        window.showToast(err.message || "Error sending message.", "error");
-                        btn.innerText = originalText;
-                        btn.disabled = false;
-                    });
-                });
-            }
         }
     };
 
@@ -4985,6 +5007,20 @@ const initProductReviews = () => {
                 return;
             }
 
+            if (SecurityValidator.isProfane(text)) {
+                window.showToast("Inappropriate language detected.", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+                return;
+            }
+
+            if (SecurityValidator.isGibberish(text)) {
+                window.showToast("Review appears to be bot-generated. Please use real text.", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+                return;
+            }
+
             try {
                 // Upload images first if any
                 const imageUrls = [];
@@ -6142,59 +6178,122 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// --- Contact Form Submission Handler ---
+// --- Consolidated Contact Form Submission Handler ---
 document.addEventListener('submit', async (e) => {
-    if (e.target && e.target.id === 'main-contact-form') {
-        e.preventDefault();
+    const form = e.target;
+    if (!form || (!form.id?.includes('contact') && !form.classList.contains('contact-form'))) return;
 
-        const form = e.target;
-        const submitBtn = form.querySelector('.contact-submit-btn');
-        const originalText = submitBtn.textContent;
+    // 1. Cooldown Check (2 minutes)
+    const lastSubmit = localStorage.getItem('dodch_last_contact_ts');
+    const now = Date.now();
+    if (lastSubmit && (now - parseInt(lastSubmit)) < 120000) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const waitSec = Math.ceil((120000 - (now - parseInt(lastSubmit))) / 1000);
+        if (window.showToast) window.showToast(`Please wait ${waitSec}s before sending another message.`, "error");
+        return;
+    }
+
+    // 2. Honeypot check (Silent discard)
+    const honeypot = form.querySelector('input[name="website"]');
+    if (honeypot && honeypot.value) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (window.showToast) window.showToast("Message sent successfully!", "success");
+        form.reset();
+        return;
+    }
+
+    // 3. Process Real Submission
+    e.preventDefault();
+    const submitBtn = form.querySelector('button[type="submit"], .cta-button, .contact-submit-btn');
+    const originalText = submitBtn ? submitBtn.textContent : 'Send';
+    
+    if (submitBtn) {
         submitBtn.textContent = 'Sending...';
         submitBtn.disabled = true;
+    }
 
-        // Honeypot check
-        const honeypot = form.querySelector('input[name="website"]').value;
-        if (honeypot) {
-            // Silently succeed for bots
-            if (window.showToast) window.showToast("Message sent successfully!", "success");
-            form.reset();
+    const nameInput = form.querySelector('input[type="text"]:not([name="website"])');
+    const emailInput = form.querySelector('input[type="email"]');
+    const messageInput = form.querySelector('textarea');
+
+    const name = nameInput ? nameInput.value.trim() : "";
+    const email = emailInput ? emailInput.value.trim() : "";
+    const message = messageInput ? messageInput.value.trim() : "";
+
+    // --- SMART VALIDATION ---
+    if (!name || !email || !message) {
+        if (window.showToast) window.showToast("Please fill in all fields.", "error");
+        if (submitBtn) {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
-            return;
         }
+        return;
+    }
 
-        const nameInput = form.querySelector('input[type="text"]:not([name="website"])');
-        const emailInput = form.querySelector('input[type="email"]');
-        const messageInput = form.querySelector('textarea');
-
-        const name = nameInput ? nameInput.value.trim() : "";
-        const email = emailInput ? emailInput.value.trim() : "";
-        const message = messageInput ? messageInput.value.trim() : "";
-
-        if (!name || !email || !message) {
-            if (window.showToast) window.showToast("Please fill in all fields.", "error");
+    if (!SecurityValidator.validateEmail(email)) {
+        if (window.showToast) window.showToast("Please enter a valid email address.", "error");
+        if (submitBtn) {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
-            return;
         }
+        return;
+    }
 
-        try {
-            // Data structure matches strictly with firestore.rules requirements:
-            await addDoc(collection(db, 'messages'), {
-                name: name,
-                email: email,
-                message: message,
-                status: 'unread', // Explicitly required string 'unread'
-                createdAt: serverTimestamp() // Explicitly required server-side timestamp object
-            });
+    if (SecurityValidator.isProfane(name) || SecurityValidator.isProfane(message)) {
+        if (window.showToast) window.showToast("Inappropriate language detected.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
 
-            if (window.showToast) window.showToast("Message sent successfully!", "success");
-            form.reset();
-        } catch (error) {
-            console.error("Error sending message:", error);
+    if (SecurityValidator.isGibberish(message)) {
+        if (window.showToast) window.showToast("Message appears to be bot-generated. Please use real text.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
+    // --- END SMART VALIDATION ---
+
+    try {
+        // --- Rock-Solid Signature ID Calculation ---
+        // We normalize the content aggressively (removing extra spaces and non-alphanumeric)
+        // to prevent spammers from bypassing the check by just adding a space.
+        const normalizedContent = `${name}${email}${message}`
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '');
+        
+        const signatureId = btoa(unescape(encodeURIComponent(normalizedContent)))
+            .replace(/[/+=]/g, '_')
+            .slice(0, 100);
+
+        await setDoc(doc(db, "messages", signatureId), {
+            name: name,
+            email: email,
+            message: message,
+            status: 'unread',
+            createdAt: serverTimestamp()
+        });
+
+        localStorage.setItem('dodch_last_contact_ts', Date.now());
+        if (window.showToast) window.showToast("Message sent successfully!", "success");
+        form.reset();
+    } catch (error) {
+        console.error("Error sending message:", error);
+        
+        // Custom handling for duplicates (Permission Denied for 'update' in our rules)
+        if (error.code === 'permission-denied') {
+            if (window.showToast) window.showToast("Duplicate message detected. Please wait or change your wording.", "error");
+        } else if (error.code !== 'already-exists') {
             if (window.showToast) window.showToast("Error sending message. Please try again later.", "error");
-        } finally {
+        }
+    } finally {
+        if (submitBtn) {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
         }

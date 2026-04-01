@@ -74,7 +74,15 @@ exports.sendOrderConfirmationEmail = functions.region("europe-west1").firestore
  * Handles contact form submissions with server-side rate limiting.
  */
 exports.submitContactMessage = functions.region("europe-west1").https.onCall(async (data, context) => {
-  // 1. Validate Input
+  // 1. Enforce App Check (Security Hardening)
+  if (!context.app) {
+    throw new functions.https.HttpsError(
+        "failed-precondition",
+        "The function must be called from an App Check verified app."
+    );
+  }
+
+  // 2. Validate Input
   if (!data.name || !data.email || !data.message) {
     throw new functions.https.HttpsError("invalid-argument", "Missing required fields.");
   }
@@ -82,35 +90,63 @@ exports.submitContactMessage = functions.region("europe-west1").https.onCall(asy
     throw new functions.https.HttpsError("invalid-argument", "Message is too long.");
   }
 
-  // 2. Rate Limiting (IP-based)
-  // context.rawRequest provides access to the raw HTTP request in v1 functions
+  // 3. Rate Limiting (IP-based)
   const clientIp = context.rawRequest ? (context.rawRequest.headers["x-forwarded-for"] || context.rawRequest.connection.remoteAddress) : "unknown_ip";
-  const sanitizedIp = String(clientIp).replace(/[^a-zA-Z0-9]/g, "_"); // Sanitize for Doc ID
+  const sanitizedIp = String(clientIp).replace(/[^a-zA-Z0-9]/g, "_");
 
   const db = admin.firestore();
   const rateLimitRef = db.collection("rateLimits").doc(sanitizedIp);
   const docSnap = await rateLimitRef.get();
   const now = Date.now();
-  const COOLDOWN = 120000; // 2 minutes in milliseconds
+  const COOLDOWN = 120000; // 2 minutes
+
+  // Compute a simple hash of the message content to prevent exact duplicates
+  const currentMessageContent = `${data.name}|${data.email}|${data.message}`.toLowerCase().trim();
 
   if (docSnap.exists) {
-    const lastTimestamp = docSnap.data().timestamp;
+    const rateData = docSnap.data();
+    const lastTimestamp = rateData.timestamp;
+    const lastContent = rateData.lastContent;
+    const violationCount = rateData.violationCount || 0;
+
+    // Rule 1: Stealth Mode (Shadow Ban)
+    // If the user has violated rules more than 3 times, they enter the "Black Hole"
+    if (violationCount >= 3) {
+      functions.logger.warn(`Stealth Mode active for IP: ${sanitizedIp}. Dropping request silently.`);
+      // Add a small fake delay to simulate real processing time
+      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 600));
+      return { success: true, status: 'stealth' };
+    }
+
+    // Rule 2: Time-based Rate Limit
     if (now - lastTimestamp < COOLDOWN) {
+      await rateLimitRef.update({ violationCount: admin.firestore.FieldValue.increment(1) });
       throw new functions.https.HttpsError("resource-exhausted", "Too many requests. Please wait a few minutes.");
+    }
+
+    // Rule 3: Content-based Deduplication
+    if (lastContent === currentMessageContent) {
+      await rateLimitRef.update({ violationCount: admin.firestore.FieldValue.increment(1) });
+      throw new functions.https.HttpsError("already-exists", "Duplicate message detected. Please don't spam identical content.");
     }
   }
 
-  // 3. Save Message
+  // 4. Save Message (Schema Updated for Admin Console)
   await db.collection("messages").add({
     name: data.name,
     email: data.email,
     message: data.message,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    status: "unread",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
     ip: clientIp // Audit log
   });
 
-  // 4. Update Rate Limit
-  await rateLimitRef.set({ timestamp: now });
+  // 5. Update Rate Limit & Content Reference (Reset violations on successful real message)
+  await rateLimitRef.set({ 
+    timestamp: now,
+    lastContent: currentMessageContent,
+    violationCount: 0 
+  });
 
   return { success: true };
 });

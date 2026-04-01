@@ -97,14 +97,22 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isSeen']);
     }
 
-    match /messages/{document=**} {
+    // --- ROCK-SOLID MESSAGES (Signature ID Deduplication) ---
+    match /messages/{messageId} {
+      // Rule: Allows 'create' only if the document name (Signature ID) does NOT already exist.
       allow create: if true 
         && isValidString(request.resource.data.name, 2, 100)
         && isValidString(request.resource.data.email, 5, 100)
         && isValidString(request.resource.data.message, 1, 2000)
         && request.resource.data.status == 'unread'
         && request.resource.data.createdAt is timestamp;
-      allow read, update, delete: if isAdmin();
+      
+      // Rule: STRICTLY block 'update' for everyone.
+      // This is what prevents duplicate Signature IDs from ever being overwritten or resent.
+      allow update: if false;
+
+      // Only the Admin can read or delete messages from the database.
+      allow read, delete: if isAdmin();
     }
   }
 }
