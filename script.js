@@ -5,7 +5,19 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChang
 import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { getMessaging, getToken as getMessagingToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 import { firebaseConfig } from "./firebase-config.js";
+import { WebHaptics } from 'https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/+esm';
+
+const haptics = new WebHaptics({ debug: true });
+window.triggerHaptic = (type = 'light') => {
+    if (type === 'quickview') {
+        // Custom double-pulse for premium Quick View feel
+        haptics.trigger([30, 50, 30]);
+    } else {
+        haptics.trigger(type);
+    }
+};
 
 
 const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
@@ -90,6 +102,17 @@ const storage = getStorage(app);
 const functions = getFunctions(app, 'europe-west1');
 const provider = new GoogleAuthProvider();
 
+let messaging = null;
+isSupported().then(supported => {
+    if (supported) {
+        try {
+            messaging = getMessaging(app);
+        } catch (e) {
+            console.log("Messaging initialization skipped:", e);
+        }
+    }
+}).catch(console.error);
+
 // Global Catalog Reference
 let productCatalog = {};
 
@@ -129,6 +152,9 @@ document.addEventListener('DOMContentLoaded', () => {
         else icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
 
         toast.innerHTML = `${icon} <span>${message}</span>`;
+        if (type === 'success') window.triggerHaptic('success');
+        else if (type === 'error') window.triggerHaptic('error');
+        else window.triggerHaptic('light');
 
         // Get or create the shared toast container
         let container = document.getElementById('toast-container');
@@ -232,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.style.overflow = 'hidden'; // Lock scroll
             const overlay = document.createElement('div');
             overlay.className = 'confirm-overlay';
+            window.triggerHaptic('medium');
             overlay.innerHTML = `
                 <div class="confirm-box">
                     <h3 class="confirm-title">${title}</h3>
@@ -488,6 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (hamburger && sidebar) {
         hamburger.addEventListener('click', () => {
+            window.triggerHaptic('light');
             if (sidebar.classList.contains('active')) {
                 closeSidebar();
             } else {
@@ -1207,6 +1235,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginBtn) {
         loginBtn.addEventListener('click', (e) => {
+            window.triggerHaptic('light');
             e.preventDefault();
             if (currentUser) {
                 handleLogout();
@@ -1338,6 +1367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add listeners for checkout remove buttons
         document.querySelectorAll('.checkout-remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                window.triggerHaptic('medium');
                 const index = parseInt(e.target.dataset.index);
                 cart.splice(index, 1);
                 updateCartUI();
@@ -1346,12 +1376,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const openCart = () => {
+        window.triggerHaptic('light');
         document.body.style.overflow = 'hidden'; // Lock scroll
         cartDrawer.classList.add('active');
         cartOverlay.classList.add('active');
     };
 
     const closeCart = () => {
+        window.triggerHaptic('light');
         document.body.style.overflow = ''; // Restore scroll
         cartDrawer.classList.remove('active');
         cartOverlay.classList.remove('active');
@@ -1453,6 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.cart-item-remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                window.triggerHaptic('medium');
                 const itemIndex = parseInt(e.target.getAttribute('data-index'));
                 cart.splice(itemIndex, 1);
                 updateCartUI();
@@ -1461,6 +1494,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.qty-btn.plus').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                window.triggerHaptic('light');
                 const index = parseInt(e.target.dataset.index);
                 cart[index].quantity++;
                 updateCartUI();
@@ -1469,6 +1503,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.qty-btn.minus').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                window.triggerHaptic('light');
                 const index = parseInt(e.target.dataset.index);
                 if (cart[index].quantity > 1) {
                     cart[index].quantity--;
@@ -1485,6 +1520,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Expose addToCart globally for custom product pages (like silk-mask.html)
     window.addToCart = (productId, sizeLabel = null) => {
+        window.triggerHaptic('medium');
         const product = productCatalog[productId];
         if (!product) {
             console.error("Product not found in catalog:", productId);
@@ -1594,6 +1630,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sizeBtns.length > 0) {
         sizeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
+                window.triggerHaptic('light');
                 const clickedBtn = e.currentTarget;
                 // Find the specific product container for this button
                 const container = findProductContainer(clickedBtn);
@@ -2496,6 +2533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newsletterForm = document.getElementById('newsletter-form');
     if (newsletterForm) {
         newsletterForm.addEventListener('submit', (e) => {
+            window.triggerHaptic('medium');
             e.preventDefault();
             const btn = newsletterForm.querySelector('button');
             const emailInput = newsletterForm.querySelector('input[type="email"]');
@@ -4022,6 +4060,7 @@ The DODCH Team`;
         // Use event delegation to handle both static and dynamically loaded buttons
         document.body.addEventListener('click', (e) => {
             if (e.target.classList.contains('quick-view-btn')) {
+                window.triggerHaptic('quickview');
                 const btn = e.target;
                 e.preventDefault();
                 e.stopPropagation();
@@ -4090,6 +4129,7 @@ The DODCH Team`;
                         btn.textContent = sizeObj.label;
 
                         btn.addEventListener('click', () => {
+                            window.triggerHaptic('light');
                             sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
                             btn.classList.add('active');
                             if (sizeObj.originalPrice) {
@@ -4148,6 +4188,7 @@ The DODCH Team`;
         });
 
         const closeModal = () => {
+            window.triggerHaptic('light');
             document.body.style.overflow = '';
             modal.classList.remove('active');
         };
@@ -4158,6 +4199,7 @@ The DODCH Team`;
 
         if (qvAddToCart) {
             qvAddToCart.addEventListener('click', () => {
+                window.triggerHaptic('medium');
                 const activeSizeBtn = modal.querySelector('.size-btn.active');
                 const size = activeSizeBtn.dataset.size;
                 const price = activeSizeBtn.dataset.price;
@@ -4326,43 +4368,45 @@ The DODCH Team`;
     const searchToggleBtn = document.getElementById('search-toggle-btn');
     const searchContainer = document.querySelector('.search-container');
     const searchInput = document.getElementById('navbar-search-input');
-    const clearBtn = document.getElementById('search-clear-btn');
 
     if (searchToggleBtn && searchContainer && searchInput) {
-        searchToggleBtn.addEventListener('click', (e) => {
-            e.preventDefault();
+        let searchJustOpened = false;
 
-            // If active and has text, you might want to submit here
-            if (searchContainer.classList.contains('active') && searchInput.value.trim() !== "") {
-                console.log("Search submitted:", searchInput.value);
-                // window.location.href = `index.html?search=${searchInput.value}`;
-            } else {
-                searchContainer.classList.toggle('active');
-                if (searchContainer.classList.contains('active')) {
-                    searchInput.focus();
-                    navbar.classList.add('search-active');
-                } else {
-                    navbar.classList.remove('search-active');
-                }
+        searchToggleBtn.addEventListener('click', (e) => {
+            window.triggerHaptic('light');
+            e.preventDefault();
+            e.stopPropagation(); // Prevent the doc click listener from firing on this same event
+
+            if (!searchContainer.classList.contains('active')) {
+                searchJustOpened = true;
+                searchContainer.classList.add('active');
+                navbar.classList.add('search-active');
+                searchInput.focus();
+                setTimeout(() => { searchJustOpened = false; }, 300);
             }
         });
 
-        // Close when clicking outside
+        // Close when clicking outside — but only if not just opened
         document.addEventListener('click', (e) => {
-            if (!searchContainer.contains(e.target) && !searchToggleBtn.contains(e.target) && searchContainer.classList.contains('active')) {
-                if (searchInput.value === "") {
-                    searchContainer.classList.remove('active');
-                    navbar.classList.remove('search-active');
-                }
+            if (searchJustOpened) return;
+            const dropdown = document.getElementById('search-dropdown');
+            const dropdownActive = dropdown && dropdown.classList.contains('active');
+            // Don't close if the advanced search dropdown is open — it handles its own closing
+            if (dropdownActive) return;
+            if (
+                !searchContainer.contains(e.target) &&
+                !searchToggleBtn.contains(e.target) &&
+                searchContainer.classList.contains('active')
+            ) {
+                searchContainer.classList.remove('active');
+                navbar.classList.remove('search-active');
             }
         });
 
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                console.log("Search submitted:", searchInput.value);
                 searchContainer.classList.remove('active');
                 navbar.classList.remove('search-active');
-                // window.location.href = `index.html?search=${searchInput.value}`;
             }
         });
     }
@@ -6104,6 +6148,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         input.addEventListener("focus", (e) => {
+            window.triggerHaptic('light');
             activeInput = e.target;
             positionDropdown(activeInput);
             const query = e.target.value.trim();
@@ -6299,3 +6344,93 @@ document.addEventListener('submit', async (e) => {
         }
     }
 });
+
+// --- Web Push Notifications ---
+async function initPushNotifications() {
+    if (window.location.protocol === 'file:') {
+        console.warn("Web Push is disabled on local file:// protocol.");
+        // We do not show toast by default to avoid annoying buyers, but for development we know why it fails.
+        return;
+    }
+
+    if (!('Notification' in window)) {
+        console.warn("Notifications not supported in this browser/context.");
+        return;
+    }
+    
+    if (!('serviceWorker' in navigator)) {
+        console.warn("Service Workers not supported in this browser/context.");
+        return;
+    }
+
+    // Give getMessaging time to init
+    setTimeout(async () => {
+        if (!messaging) return; 
+
+        try {
+            await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            
+            onMessage(messaging, (payload) => {
+                console.log("Foreground Message: ", payload);
+                const title = payload.notification?.title || payload.data?.title || 'Notification';
+                const body = payload.notification?.body || payload.data?.body || '';
+                if (window.showToast) {
+                    window.showToast(`🔔 ${title} - ${body}`, 'info', 6000);
+                }
+            });
+
+            if (Notification.permission === 'default') {
+                // Create a sleek floating bell icon
+                const bell = document.createElement('div');
+                bell.innerHTML = '🔔+';
+                bell.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #D4AF37; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; transition: transform 0.2s;';
+                bell.title = "Enable Notifications";
+                
+                bell.addEventListener('mouseenter', () => bell.style.transform = 'scale(1.1)');
+                bell.addEventListener('mouseleave', () => bell.style.transform = 'scale(1)');
+                
+                bell.addEventListener('click', async () => {
+                    // Try natively requesting first inside the strict click handler
+                    const pref = await Notification.requestPermission();
+                    if (pref === 'granted') {
+                        try {
+                            const token = await getMessagingToken(messaging, { 
+                                vapidKey: 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM' 
+                            });
+                            if (token) {
+                                await setDoc(doc(db, "subscribers", token), {
+                                    token: token,
+                                    subscribedAt: serverTimestamp(),
+                                    userAgent: navigator.userAgent
+                                }, { merge: true });
+                                if(window.showToast) window.showToast("Notifications enabled!", "success");
+                                bell.remove();
+                            }
+                        } catch(err) {
+                            console.error('Push token error:', err);
+                            if(window.showToast) window.showToast("Error getting token. Ensure VAPID key is set.", "error");
+                        }
+                    } else {
+                        if(window.showToast) window.showToast("Notifications were declined.", "info");
+                        bell.remove();
+                    }
+                });
+                
+                document.body.appendChild(bell);
+            } else if (Notification.permission === 'granted') {
+                 getMessagingToken(messaging, { vapidKey: 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM' }).then(token => {
+                      if(token) setDoc(doc(db, "subscribers", token), { token, lastSeen: serverTimestamp()}, { merge: true });
+                 }).catch(e => console.log('Token refresh error ignored.'));
+            }
+        } catch(err) {
+            console.error("SW logic failed: ", err);
+        }
+    }, 500); // Small delay to let isSupported resolve
+}
+
+// Run immediately instead of waiting for load
+if (document.readyState === 'complete') {
+    initPushNotifications();
+} else {
+    window.addEventListener('load', initPushNotifications);
+}

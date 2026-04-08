@@ -93,6 +93,7 @@
                 <button class="admin-tab-btn active" data-tab="orders">Orders</button>
                 <button class="admin-tab-btn" data-tab="inventory">Inventory</button>
                 <button class="admin-tab-btn" data-tab="messages">Messages <span id="unread-messages-badge" class="badge" style="display:none; background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; margin-left: 5px; vertical-align: top;">0</span></button>
+                <button class="admin-tab-btn" data-tab="push">Push Notifications</button>
             </div>
 
             <div class="admin-content-wrapper">
@@ -125,6 +126,41 @@
                 <section id="tab-messages" class="tab-pane admin-section">
                     <h2>Customer Messages</h2>
                     <div id="admin-messages-list" class="admin-list" style="display: flex; flex-direction: column; gap: 1rem;">Loading messages...</div>
+                </section>
+
+                <section id="tab-push" class="tab-pane admin-section">
+                    <h2>Send Push Notification</h2>
+                    <p style="margin-bottom: 2rem; color: #666;">Broadcast a message to all subscribed customers.</p>
+                    
+                    <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid #eaeaea; margin-bottom: 2rem;">
+                        <h3 style="margin-bottom: 1rem; font-family: var(--font-heading); color: var(--text-charcoal);">1. Setup Credentials (Secure)</h3>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Paste your Firebase Service Account JSON here to securely authorize sending. This is only stored locally on this device.</p>
+                        <textarea id="push-credentials-input" class="admin-search-input" rows="4" placeholder='{"type": "service_account", "project_id": "dodch-96b15", ...}' style="font-family: monospace; font-size: 0.8rem;"></textarea>
+                        <button id="save-push-creds-btn" class="admin-btn" style="margin-top: 10px; background-color: #2c3e50; border-color: #2c3e50;">Save Credentials to Browser</button>
+                        <span id="push-creds-status" style="margin-left: 10px; font-size: 0.9rem; font-weight: 500;"></span>
+                    </div>
+
+                    <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid #eaeaea;">
+                        <h3 style="margin-bottom: 1rem; font-family: var(--font-heading); color: var(--text-charcoal);">2. Compose Message</h3>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Title</label>
+                            <input type="text" id="push-title" class="admin-search-input" placeholder="e.g., Back in Stock: Face Serum!">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Message Body</label>
+                            <textarea id="push-body" class="admin-search-input" rows="3" placeholder="Get 20% off today only using code LUMI20..."></textarea>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Target URL (Optional)</label>
+                            <input type="text" id="push-url" class="admin-search-input" placeholder="e.g., /face-serum.html">
+                            <span style="font-size: 0.8rem; color: #888;">Where should users be taken when they click the notification? (Default: Homepage)</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Image URL (Optional)</label>
+                            <input type="text" id="push-image" class="admin-search-input" placeholder="https://your-site.com/IMG_3399.jpg">
+                        </div>
+                        <button id="send-push-btn" class="admin-btn" style="background-color: #2ecc71; border-color: #2ecc71; font-size: 1.1rem; padding: 12px 24px; width: 100%;">🚀 Blast Notification</button>
+                    </div>
                 </section>
             </div>
         </div>
@@ -179,6 +215,8 @@
     <footer></footer>
     <div id="cart-overlay"></div>
     <div id="cart-drawer"><div class="cart-header"><h3>Your Cart</h3><button id="close-cart-btn" class="close-btn">&times;</button></div><div class="cart-body" id="cart-items-container"></div><div class="cart-footer"><div class="subtotal-row"><strong>Subtotal</strong><span id="cart-subtotal">$0.00</span></div><a href="checkout.html" class="cta-button checkout-btn">Proceed to Checkout</a></div></div>
+    <!-- Admin Push Script handles jose locally -->
     <script type="module" src="script.js?v=5"></script>
+    <script type="module" src="admin-push.js"></script>
 </body>
 </html>

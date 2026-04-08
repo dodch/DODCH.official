@@ -97,6 +97,12 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isSeen']);
     }
 
+    // Push Notification Subscribers
+    match /subscribers/{token} {
+      allow read: if isAdmin();
+      allow write: if true;
+    }
+
     // --- ROCK-SOLID MESSAGES (Signature ID Deduplication) ---
     match /messages/{messageId} {
       // Rule: Allows 'create' only if the document name (Signature ID) does NOT already exist.

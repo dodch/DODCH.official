@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         typeButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const targetType = btn.getAttribute('data-type');
+                if (window.triggerHaptic) window.triggerHaptic('light');
 
                 // Update active button
                 typeButtons.forEach(b => b.classList.remove('active'));
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const buyButtons = document.querySelectorAll('.buy-now-btn');
     buyButtons.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (window.triggerHaptic) window.triggerHaptic('medium');
             const productId = btn.getAttribute('data-id');
             // Dispatch a custom event that script.js can listen to, or call a global function if available
             // In script.js, the 'Add to cart' logic is often bound to .cta-button or specific classes.
@@ -56,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroBtn = document.querySelector('.hero-mask .cta-button');
     if (heroBtn) {
         heroBtn.addEventListener('click', (e) => {
+            if (window.triggerHaptic) window.triggerHaptic('light');
             const targetId = heroBtn.getAttribute('href');
             if (targetId && targetId.startsWith('#')) {
                 e.preventDefault();
@@ -82,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const arrowRight = document.createElement('div');
         arrowRight.className = 'scroll-hint-arrow right';
         arrowRight.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
-        
+
         // Create Left Arrow
         const arrowLeft = document.createElement('div');
         arrowLeft.className = 'scroll-hint-arrow left';
@@ -95,10 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Click Handlers
         arrowRight.addEventListener('click', () => {
+            if (window.triggerHaptic) window.triggerHaptic('light');
             tabsContainer.scrollBy({ left: 150, behavior: 'smooth' });
         });
 
         arrowLeft.addEventListener('click', () => {
+            if (window.triggerHaptic) window.triggerHaptic('light');
             tabsContainer.scrollBy({ left: -150, behavior: 'smooth' });
         });
 
@@ -128,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         tabsContainer.addEventListener('scroll', updateArrows);
-        
+
         // Initial check
         setTimeout(updateArrows, 100);
         window.addEventListener('resize', updateArrows);
