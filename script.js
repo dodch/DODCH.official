@@ -103,15 +103,6 @@ const functions = getFunctions(app, 'europe-west1');
 const provider = new GoogleAuthProvider();
 
 let messaging = null;
-isSupported().then(supported => {
-    if (supported) {
-        try {
-            messaging = getMessaging(app);
-        } catch (e) {
-            console.log("Messaging initialization skipped:", e);
-        }
-    }
-}).catch(console.error);
 
 // Global Catalog Reference
 let productCatalog = {};
@@ -6347,90 +6338,58 @@ document.addEventListener('submit', async (e) => {
 
 // --- Web Push Notifications ---
 async function initPushNotifications() {
-    if (window.location.protocol === 'file:') {
-        console.warn("Web Push is disabled on local file:// protocol.");
-        // We do not show toast by default to avoid annoying buyers, but for development we know why it fails.
-        return;
-    }
+    if (window.location.protocol === 'file:') return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
 
-    if (!('Notification' in window)) {
-        console.warn("Notifications not supported in this browser/context.");
-        return;
-    }
-    
-    if (!('serviceWorker' in navigator)) {
-        console.warn("Service Workers not supported in this browser/context.");
-        return;
-    }
+    try {
+        const supported = await isSupported();
+        if (!supported) return;
 
-    // Give getMessaging time to init
-    setTimeout(async () => {
-        if (!messaging) return; 
+        if (!messaging) messaging = getMessaging(app);
 
-        try {
-            await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            
-            onMessage(messaging, (payload) => {
-                console.log("Foreground Message: ", payload);
-                const title = payload.notification?.title || payload.data?.title || 'Notification';
-                const body = payload.notification?.body || payload.data?.body || '';
-                if (window.showToast) {
-                    window.showToast(`🔔 ${title} - ${body}`, 'info', 6000);
-                }
-            });
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
 
-            if (Notification.permission === 'default') {
-                // Create a sleek floating bell icon
-                const bell = document.createElement('div');
-                bell.innerHTML = '🔔+';
-                bell.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #D4AF37; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; transition: transform 0.2s;';
-                bell.title = "Enable Notifications";
-                
-                bell.addEventListener('mouseenter', () => bell.style.transform = 'scale(1.1)');
-                bell.addEventListener('mouseleave', () => bell.style.transform = 'scale(1)');
-                
-                bell.addEventListener('click', async () => {
-                    // Try natively requesting first inside the strict click handler
-                    const pref = await Notification.requestPermission();
-                    if (pref === 'granted') {
-                        try {
-                            const token = await getMessagingToken(messaging, { 
-                                vapidKey: 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM' 
-                            });
-                            if (token) {
-                                await setDoc(doc(db, "subscribers", token), {
-                                    token: token,
-                                    subscribedAt: serverTimestamp(),
-                                    userAgent: navigator.userAgent
-                                }, { merge: true });
-                                if(window.showToast) window.showToast("Notifications enabled!", "success");
-                                bell.remove();
-                            }
-                        } catch(err) {
-                            console.error('Push token error:', err);
-                            if(window.showToast) window.showToast("Error getting token. Ensure VAPID key is set.", "error");
+        // Handle foreground messages as a toast
+        onMessage(messaging, (payload) => {
+            const title = payload.notification?.title || payload.data?.title || 'DODCH';
+            const body  = payload.notification?.body  || payload.data?.body  || '';
+            if (window.showToast) window.showToast(`🔔 ${title} — ${body}`, 'info', 6000);
+        });
+
+        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
+
+        if (Notification.permission === 'default') {
+            // Directly request browser permission after a short delay
+            setTimeout(async () => {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    try {
+                        const token = await getMessagingToken(messaging, { vapidKey: VAPID });
+                        if (token) {
+                            await setDoc(doc(db, 'subscribers', token), {
+                                token,
+                                subscribedAt: serverTimestamp(),
+                                userAgent: navigator.userAgent
+                            }, { merge: true });
                         }
-                    } else {
-                        if(window.showToast) window.showToast("Notifications were declined.", "info");
-                        bell.remove();
+                    } catch (err) {
+                        console.error('FCM token error:', err);
                     }
-                });
-                
-                document.body.appendChild(bell);
-            } else if (Notification.permission === 'granted') {
-                 getMessagingToken(messaging, { vapidKey: 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM' }).then(token => {
-                      if(token) setDoc(doc(db, "subscribers", token), { token, lastSeen: serverTimestamp()}, { merge: true });
-                 }).catch(e => console.log('Token refresh error ignored.'));
-            }
-        } catch(err) {
-            console.error("SW logic failed: ", err);
+                }
+            }, 3000);
+
+        } else if (Notification.permission === 'granted') {
+            // Already subscribed — silently refresh token
+            getMessagingToken(messaging, { vapidKey: VAPID })
+                .then(token => {
+                    if (token) setDoc(doc(db, 'subscribers', token), { token, lastSeen: serverTimestamp() }, { merge: true });
+                })
+                .catch(() => {});
         }
-    }, 500); // Small delay to let isSupported resolve
+
+    } catch (err) {
+        console.error('Push init failed:', err);
+    }
 }
 
-// Run immediately instead of waiting for load
-if (document.readyState === 'complete') {
-    initPushNotifications();
-} else {
-    window.addEventListener('load', initPushNotifications);
-}
+window.addEventListener('load', initPushNotifications);
