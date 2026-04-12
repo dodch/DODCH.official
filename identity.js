@@ -62,7 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (sectionId === 'sec-intro') {
-            logoContainer.style.transform = 'translate3d(0,0,0) scale(0.6)';
+            // Intro state: Logo centered but slightly higher to leave room for subtitle
+            logoContainer.style.transform = 'translate3d(0, -5vh, 0) scale(0.55)';
+            logoContainer.style.opacity = '1';
             letters.forEach(l => {
                 l.style.opacity = '1';
                 l.style.filter = 'none';
@@ -74,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } 
         else {
             logoContainer.style.opacity = '1';
-            logoContainer.style.transform = 'translate3d(0,0,0) scale(1.2)';
+            logoContainer.style.transform = 'translate3d(0, 0, 0) scale(1.1)';
             
             // Highlight and animate the active letter
             const currentLetter = document.querySelector(`.letter[data-letter="${activeId}"]`);
@@ -84,16 +86,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentLetter.classList.add('focus');
 
                 if (activeId === 'D') {
-                    currentLetter.style.transform = 'translate3d(-25vw, 0, 100px) rotateY(-20deg) scale(2)';
+                    currentLetter.style.transform = 'translate3d(-25vw, 0, 50px) rotateY(-15deg) scale(1.8)';
                 } else if (activeId === 'O') {
-                    currentLetter.style.transform = 'translate3d(0, 0, -200px) scale(8)';
-                    currentLetter.style.opacity = '0.15';
+                    currentLetter.style.transform = 'translate3d(0, 0, -300px) scale(8)';
+                    currentLetter.style.opacity = '0.12';
                 } else if (activeId === 'D2') {
-                    currentLetter.style.transform = 'translate3d(0, 0, 150px) rotateY(180deg) scale(2.5)';
+                    currentLetter.style.transform = 'translate3d(0, 0, 100px) rotateY(180deg) scale(2)';
                 } else if (activeId === 'C') {
-                    currentLetter.style.transform = 'translate3d(15vw, 0, 50px) scale(2.5) rotateX(15deg)';
+                    currentLetter.style.transform = 'translate3d(15vw, 0, 50px) scale(2) rotateX(10deg)';
                 } else if (activeId === 'H') {
-                    currentLetter.style.transform = 'translate3d(0, -30vh, 200px) scale(4)';
+                    currentLetter.style.transform = 'translate3d(0, -35vh, 100px) scale(3.5)';
                 }
             }
         }
