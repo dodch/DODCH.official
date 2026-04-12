@@ -18,6 +18,37 @@ class DynamicSEO {
         }
     }
 
+    
+    hijackImageAlts() {
+        const productMapping = {
+            'shampoo': 'Luxury Sulfate-Free Glass Glow Shampoo Tunisia - Best for Shine and Repair',
+            'mellow': 'DODCHmellow Cloud Shampoo - Ultra Soft Lather for Sensitive Scalp',
+            'mask': 'Silk Therapy Hair Mask Tunisia - Professional Damage Repair After After Result',
+            'serum': 'Advanced HA Face Serum Tunisia - Immediate Plumping and Hydration Result',
+            'cleanser': 'Gentle Foaming Face Cleanser Tunisia - Pore Refining and Luminous Skin'
+        };
+
+        const images = document.querySelectorAll('img');
+        images.forEach(img => {
+            const src = img.src.toLowerCase();
+            const alt = img.alt.toLowerCase();
+            
+            // If alt is empty or too short, or generic, replace it with high-intent keywords
+            if (alt.length < 5 || alt.includes('image') || alt.includes('placeholder')) {
+                for (const [key, value] of Object.entries(productMapping)) {
+                    if (src.includes(key) || document.title.toLowerCase().includes(key)) {
+                        img.alt = value;
+                        break;
+                    }
+                }
+                // Fallback for all other DODCH images
+                if (img.alt.length < 5) {
+                    img.alt = 'DODCH Official Luxury Cosmetic Brand Tunisia - Professional Results';
+                }
+            }
+        });
+    }
+
     runSEO() {
         this.injectBaseMeta();
         this.injectGlobalSchema();
@@ -25,6 +56,7 @@ class DynamicSEO {
         this.setupReviewObserver();
         this.injectFAQs();
         this.injectBreadcrumbs();
+        this.hijackImageAlts();
     }
 
     injectBaseMeta() {
@@ -48,7 +80,7 @@ class DynamicSEO {
         this.setMeta('name', 'description', enrichedDescription);
 
         // Keywords for multi-lingual reach
-        this.setMeta('name', 'keywords', 'Cosmetics Tunisia, Luxury Skincare, Hair Treatments, Professional Shampoos, Soins du visage, Masques capillaires, Cosmétiques Tunisie, عناية بالشعر, منتجات تجميل تونس, سيروم للوجه, شامبو طبيعي, أفضل شامبو في تونس, soin cheveux tunisie, boutique cosmétique luxe');
+        this.setMeta('name', 'keywords', 'best shampoo for frizzy hair Tunisia, treatment for damaged hair, sulfate free shampoo results, hair growth serum Tunisia, organic face cleanser, anti-aging hyaluronic acid serum, clear skin routine Tunisia, luxe hair care review, professional shampoo alternative, أفضل شامبو لتساقط الشعر, علاج تقصف الشعر تونسي, روتين البشرة الدهنية');
 
         // Try to find the main image for og:image
         let ogImageNode = document.querySelector('meta[property="og:image"]');
