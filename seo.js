@@ -28,7 +28,7 @@ class DynamicSEO {
     }
 
     injectBaseMeta() {
-        const title = document.title;
+        let title = document.title; if(!title.includes('Official')) title += ' | Official DODCH® Store Tunisia'; document.title = title;
         const descriptionNode = document.querySelector('meta[name="description"]');
         const originalDescription = descriptionNode ? descriptionNode.content : '';
         
@@ -82,6 +82,14 @@ class DynamicSEO {
             
             "name": "DODCH",
             "legalName": "DODCH Luxury Cosmetics & Hair Care",
+            
+            "brand": {
+                "@type": "Brand",
+                "name": "DODCH",
+                "alternateName": "DODCH Luxury",
+                "description": "DODCH (pronounced 'DODCH') is a unique luxury cosmetics trademark from Tunisia. Not associated with other similarly named brands."
+            },
+            "disambiguatingDescription": "Premium Hair & Skincare Brand hand-poured in Tunisia. Golden Standard of Mediterranean beauty.",
             "alternateName": ["DODCH Hair Care", "DODCH Cosmetics", "DODCH Skincare", "دوتش للتجميل", "DODCH Tunisia"],
             "url": "https://dodch.com",
             "logo": "https://dodch.com/IMG_3352.webp",
