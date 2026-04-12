@@ -86,16 +86,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentLetter.classList.add('focus');
 
                 if (activeId === 'D') {
-                    currentLetter.style.transform = 'translate3d(-25vw, 0, 50px) rotateY(-15deg) scale(1.8)';
+                    // Pull back on translation to keep it on screen
+                    currentLetter.style.transform = 'translate3d(-15vw, 0, 30px) rotateY(-10deg) scale(1.6)';
                 } else if (activeId === 'O') {
-                    currentLetter.style.transform = 'translate3d(0, 0, -300px) scale(8)';
-                    currentLetter.style.opacity = '0.12';
+                    currentLetter.style.transform = 'translate3d(0, 0, -200px) scale(6)';
+                    currentLetter.style.opacity = '0.1';
                 } else if (activeId === 'D2') {
-                    currentLetter.style.transform = 'translate3d(0, 0, 100px) rotateY(180deg) scale(2)';
+                    currentLetter.style.transform = 'translate3d(0, 0, 80px) rotateY(180deg) scale(1.8)';
                 } else if (activeId === 'C') {
-                    currentLetter.style.transform = 'translate3d(15vw, 0, 50px) scale(2) rotateX(10deg)';
+                    currentLetter.style.transform = 'translate3d(12vw, 0, 30px) scale(1.8) rotateX(8deg)';
                 } else if (activeId === 'H') {
-                    currentLetter.style.transform = 'translate3d(0, -35vh, 100px) scale(3.5)';
+                    currentLetter.style.transform = 'translate3d(0, -25vh, 60px) scale(3)';
                 }
             }
         }

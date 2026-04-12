@@ -92,13 +92,22 @@ body.hovering .cursor-circle span { opacity: 1; }
 }
 .logo-big {
     font-family: var(--font-serif);
-    font-size: 20vw;
+    font-size: 16vw;
     display: flex;
-    gap: 2vw;
+    gap: 3vw;
     transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
     transform-style: preserve-3d;
 }
-.letter { display: inline-block; transition: all 1s ease; will-change: transform, opacity; }
+.letter { 
+    display: inline-block; 
+    transition: all 1s ease; 
+    will-change: transform, opacity;
+    color: rgba(255, 255, 255, 0.6); /* Default muted state */
+}
+
+.letter.focus {
+    color: rgba(255, 255, 255, 0.85); /* Not stark white, more balanced */
+}
 
 /* Sections */
 .identity-section {
