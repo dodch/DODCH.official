@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced HA Face Serum | DODCH Skincare Tunisia</title>
-    <link rel="icon" href="IMG_3352.PNG?v=3" type="image/png" media="(prefers-color-scheme: light)">
-    <link rel="icon" href="IMG_3355.PNG?v=3" type="image/png" media="(prefers-color-scheme: dark)">
+    <link rel="icon" href="IMG_3352.webp?v=3" type="image/webp" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="IMG_3355.webp?v=3" type="image/webp" media="(prefers-color-scheme: dark)">
     <meta name="description"
         content="Discover the Advanced HA Serum by DODCH. A concentrated Hyaluronic Acid face serum for deep hydration, plumping, and radiance. The ultimate facial remedy for glowing skin.">
     <meta name="keywords"
@@ -19,7 +19,7 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "Advanced HA Serum",
-      "image": "https://dodch.com/IMG_3407.jpeg",
+      "image": "https://dodch.com/IMG_3407.webp",
       "description": "A concentrated Hyaluronic Acid serum that penetrates deep layers for instant plumping and long-lasting hydration.",
       "brand": {
         "@type": "Brand",
@@ -36,7 +36,7 @@
     }
     </script>
 
-    <link rel="apple-touch-icon" href="IMG_3352.PNG?v=3">
+    <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
     <link rel="manifest" href="manifest.json">
 
     <!-- Google Fonts: Playfair Display & Montserrat -->
@@ -51,6 +51,7 @@
     <link rel="stylesheet" href="face-serum.css">
     <!-- Dynamic SEO Injection -->
     <script type="module" src="seo.js"></script>
+    <meta name="view-transition" content="same-origin">
 </head>
 
 <body class="serum-page">
@@ -247,8 +248,9 @@
     <a href="product.html" id="sticky-cta" class="sticky-cta-btn">Claim Your Bottle</a>
 
     <!-- We load the main script.js?v=5 for cart/navbar logic, and face-serum.js for page specific logic -->
-    <script type="module" src="script.js?v=5"></script>
+    <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script><script type="module" src="script.js?v=5"></script>
     <script type="module" src="face-serum.js"></script>
 </body>
 
 </html>
+

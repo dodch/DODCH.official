@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Details | DODCH Cosmetics & Hair Care</title>
-    <link rel="icon" href="IMG_3352.PNG?v=3" type="image/png" media="(prefers-color-scheme: light)">
-    <link rel="icon" href="IMG_3355.PNG?v=3" type="image/png" media="(prefers-color-scheme: dark)">
-    <link rel="apple-touch-icon" href="IMG_3352.PNG?v=3">
+    <link rel="icon" href="IMG_3352.webp?v=3" type="image/webp" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="IMG_3355.webp?v=3" type="image/webp" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="styles.css">
     <!-- Dynamic SEO Injection -->
     <script type="module" src="seo.js"></script>
+    <meta name="view-transition" content="same-origin">
 </head>
 
 <body>
@@ -109,7 +110,7 @@
                         <span id="cart-count-badge">0</span>
                     </a></li>
             </ul>
-            <a href="index.html" class="logo" style="color: var(--text-charcoal);">DODCH</a>
+            <a href="index.html" class="logo">DODCH</a>
         </div>
     </nav>
 
@@ -118,7 +119,7 @@
         <div class="product-detail-container">
             <!-- Left: Gallery -->
             <div class="product-gallery reveal">
-                <img id="main-product-image" src="inventory/IMG_3357.jpg" alt="Glass Glow Shampoo Bottle">
+                <img id="main-product-image" src="inventory/IMG_3357.webp" alt="Glass Glow Shampoo Bottle">
             </div>
 
             <!-- Right: Info -->
@@ -193,7 +194,8 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=5"></script>
+    <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script><script type="module" src="script.js?v=5"></script>
 </body>
 
 </html>
+

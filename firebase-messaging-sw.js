@@ -14,21 +14,13 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Handle background messages
+// onBackgroundMessage is required for notificationclick to work correctly.
+// We do NOT manually call showNotification() here because the webpush.notification
+// field in our FCM payload already causes the browser to display the notification.
+// Calling showNotification() here too was causing the double-notification bug.
 messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Received background message ', payload);
-
-    const notificationTitle = payload.notification?.title || payload.data?.title || 'New from DODCH';
-    const notificationOptions = {
-        body: payload.notification?.body || payload.data?.body || 'You have a new message.',
-        icon: '/IMG_3352.PNG', // Standard logo
-        image: payload.notification?.image || payload.data?.image || null,
-        data: {
-            url: payload.data?.url || '/' // Default to homepage if no URL is provided
-        }
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    // Intentionally left empty — display is handled by webpush.notification in the payload.
+    console.log('[SW] Background message received:', payload);
 });
 
 // Handle clicking the notification to open the URL

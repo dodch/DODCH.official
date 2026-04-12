@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Account | DODCH</title>
-    <link rel="icon" href="IMG_3352.PNG?v=3" type="image/png" media="(prefers-color-scheme: light)">
-    <link rel="icon" href="IMG_3355.PNG?v=3" type="image/png" media="(prefers-color-scheme: dark)">
-    <link rel="apple-touch-icon" href="IMG_3352.PNG?v=3">
+    <link rel="icon" href="IMG_3352.webp?v=3" type="image/webp" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="IMG_3355.webp?v=3" type="image/webp" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +15,7 @@
         href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <meta name="view-transition" content="same-origin">
 </head>
 
 <body>
@@ -85,7 +86,7 @@
                         <span id="cart-count-badge">0</span>
                     </a></li>
             </ul>
-            <a href="index.html" class="logo" style="color: var(--text-charcoal);">DODCH</a>
+            <a href="index.html" class="logo">DODCH</a>
         </div>
     </nav>
 
@@ -99,6 +100,7 @@
             <div class="account-tabs">
                 <button class="account-tab-btn active" data-tab="orders">Order History</button>
                 <button class="account-tab-btn" data-tab="reviews">My Reviews</button>
+                <button class="account-tab-btn" data-tab="shipping">My Shipping Info</button>
             </div>
 
             <div class="account-tabs-content">
@@ -167,6 +169,68 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="shipping-tab-content" class="tab-content">
+                    <div class="shipping-info-section reveal" style="max-width: 600px; margin: 0 auto;">
+                        <h3 style="margin-bottom: 1.5rem; font-family: var(--font-serif); font-size: 1.5rem;">Delivery Details</h3>
+                        <p style="margin-bottom: 1.5rem; color: #666;">Save your delivery information for a faster, seamless checkout experience.</p>
+                        
+                        <form id="profile-shipping-form">
+                            <div class="form-group" style="margin-bottom: 1.2rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email Address</label>
+                                <input type="email" id="profile-shipping-email" style="width: 100%; padding: 0.8rem; border: 1px solid #e0e0e0; border-radius: 6px;" placeholder="nom@exemple.tn" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 1.2rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Full Name</label>
+                                <input type="text" id="profile-shipping-name" style="width: 100%; padding: 0.8rem; border: 1px solid #e0e0e0; border-radius: 6px;" placeholder="Nom Complet" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 1.2rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Phone Number (Tunisia)</label>
+                                <input type="tel" id="profile-shipping-phone" style="width: 100%; padding: 0.8rem; border: 1px solid #e0e0e0; border-radius: 6px;" placeholder="8 digits (e.g. 21654321)" required pattern="[24579][0-9]{7}">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 1.2rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Address</label>
+                                <input type="text" id="profile-shipping-address" style="width: 100%; padding: 0.8rem; border: 1px solid #e0e0e0; border-radius: 6px;" placeholder="Rue, Appartement, Bureau..." required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 1.2rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Governorate (Gouvernorat)</label>
+                                <select id="profile-shipping-city" required style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid #e0e0e0; background: #fff; font-family: inherit;">
+                                    <option value="" disabled selected>Select your region</option>
+                                    <option value="Ariana">Ariana</option>
+                                    <option value="Béja">Béja</option>
+                                    <option value="Ben Arous">Ben Arous</option>
+                                    <option value="Bizerte">Bizerte</option>
+                                    <option value="Gabès">Gabès</option>
+                                    <option value="Gafsa">Gafsa</option>
+                                    <option value="Jendouba">Jendouba</option>
+                                    <option value="Kairouan">Kairouan</option>
+                                    <option value="Kasserine">Kasserine</option>
+                                    <option value="Kebili">Kébili</option>
+                                    <option value="Kef">Le Kef</option>
+                                    <option value="Mahdia">Mahdia</option>
+                                    <option value="Manouba">Manouba</option>
+                                    <option value="Medenine">Médenine</option>
+                                    <option value="Monastir">Monastir</option>
+                                    <option value="Nabeul">Nabeul</option>
+                                    <option value="Sfax">Sfax</option>
+                                    <option value="Sidi Bouzid">Sidi Bouzid</option>
+                                    <option value="Siliana">Siliana</option>
+                                    <option value="Sousse">Sousse</option>
+                                    <option value="Tataouine">Tataouine</option>
+                                    <option value="Tozeur">Tozeur</option>
+                                    <option value="Tunis">Tunis</option>
+                                    <option value="Zaghouan">Zaghouan</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 2rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Postal Code</label>
+                                <input type="text" id="profile-shipping-postal" style="width: 100%; padding: 0.8rem; border: 1px solid #e0e0e0; border-radius: 6px;" placeholder="Code Postal (e.g. 1000)" required>
+                            </div>
+                            
+                            <button type="submit" class="cta-button" style="width: 100%; text-align: center;">Save Delivery Info</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -217,7 +281,8 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=5"></script>
+    <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script><script type="module" src="script.js?v=5"></script>
 </body>
 
 </html>
+

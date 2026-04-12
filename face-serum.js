@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Load all images ---
     for (let i = 0; i < totalFrames; i++) {
         const img = new Image();
-        img.src = `images/serum-frames/frame_${i.toString().padStart(3, '0')}.jpg`;
+        img.src = `images/serum-frames/frame_${i.toString().padStart(3, '0')}.webp`;
 
         img.onload = () => {
             imagesLoaded++;

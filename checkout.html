@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkout | DODCH</title>
-    <link rel="icon" href="IMG_3352.PNG?v=3" type="image/png" media="(prefers-color-scheme: light)">
-    <link rel="icon" href="IMG_3355.PNG?v=3" type="image/png" media="(prefers-color-scheme: dark)">
-    <link rel="apple-touch-icon" href="IMG_3352.PNG?v=3">
+    <link rel="icon" href="IMG_3352.webp?v=3" type="image/webp" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="IMG_3355.webp?v=3" type="image/webp" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +15,7 @@
         href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <meta name="view-transition" content="same-origin">
 </head>
 
 <body>
@@ -85,7 +86,7 @@
                         <span id="cart-count-badge">0</span>
                     </a></li>
             </ul>
-            <a href="index.html" class="logo" style="color: var(--text-charcoal);">DODCH</a>
+            <a href="index.html" class="logo">DODCH</a>
         </div>
     </nav>
 
@@ -146,6 +147,11 @@
                         <label>Postal Code</label>
                         <input type="text" id="checkout-postal-code" placeholder="Code Postal (e.g. 1000)" required>
                     </div>
+                    
+                    <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+                        <input type="checkbox" id="save-shipping-info" style="width: auto;">
+                        <label for="save-shipping-info" style="margin-bottom: 0;">Save delivery info to my profile</label>
+                    </div>
                 </form>
             </div>
 
@@ -171,7 +177,15 @@
                     </div>
                 </div>
 
-                <button class="place-order-btn">Place Order</button>
+                <button class="place-order-btn" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <svg class="truck-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                        <rect x="1" y="3" width="15" height="13"></rect>
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                    </svg>
+                    Place Order
+                </button>
             </div>
         </div>
     </main>
@@ -215,7 +229,8 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=5"></script>
+    <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script><script type="module" src="script.js?v=5"></script>
 </body>
 
 </html>
+

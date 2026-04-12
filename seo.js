@@ -54,7 +54,7 @@ class DynamicSEO {
         let ogImageNode = document.querySelector('meta[property="og:image"]');
         if (!ogImageNode) {
             let img = document.querySelector('.overview-image img, .hero-content img, .img-frame-img, .product-hero-img');
-            let imgUrl = img && img.src ? img.src : `${this.baseUrl}/IMG_3352.PNG`;
+            let imgUrl = img && img.src ? img.src : `${this.baseUrl}/IMG_3352.webp`;
             this.setMeta('property', 'og:image', imgUrl);
             this.setMeta('name', 'twitter:image', imgUrl);
         }
@@ -83,8 +83,8 @@ class DynamicSEO {
             "legalName": "DODCH Luxury Cosmetics & Hair Care",
             "alternateName": ["DODCH Hair Care", "DODCH Cosmetics", "DODCH Skincare", "دوتش للتجميل"],
             "url": "https://dodch.com",
-            "logo": "https://dodch.com/IMG_3352.PNG",
-            "image": "https://dodch.com/IMG_3352.PNG",
+            "logo": "https://dodch.com/IMG_3352.webp",
+            "image": "https://dodch.com/IMG_3352.webp",
             "description": "DODCH is a luxury hair care and cosmetics brand based in Tunisia. Specialized professional treatments: Glass Glow Shampoo, Silk Therapy Mask, and Advanced HA Face Serums. Cosmétiques de luxe Tunisie. منتجات تجميل تونسية فاخرة.",
             "knowsAbout": [
                 "Luxury Hair Care", "Skin Care Treatments", "Sulfate-free Shampoos", "Professional Cosmetics Tunisia",
@@ -169,7 +169,7 @@ class DynamicSEO {
                     "@context": "https://schema.org",
                     "@type": "Product",
                     "name": titleEl.textContent.trim(),
-                    "image": imgEl ? imgEl.src : "https://dodch.com/IMG_3352.PNG",
+                    "image": imgEl ? imgEl.src : "https://dodch.com/IMG_3352.webp",
                     "description": descEl ? descEl.content : document.title,
                     "offers": {
                         "@type": "Offer",
@@ -206,7 +206,7 @@ class DynamicSEO {
             productData.brand = {
                 "@type": "Brand",
                 "name": "DODCH",
-                "logo": "https://dodch.com/IMG_3352.PNG"
+                "logo": "https://dodch.com/IMG_3352.webp"
             };
 
             this.currentProductData = productData;

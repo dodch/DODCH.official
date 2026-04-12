@@ -1,5 +1,5 @@
 import { getApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import * as jose from "https://cdn.jsdelivr.net/npm/jose@5.2.3/dist/browser/index.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -116,16 +116,27 @@ function initAdminPush(db) {
                 const messagePayload = {
                     message: {
                         token: token,
-                        notification: {
+                        // webpush section controls what Chrome/browsers show
+                        webpush: {
+                            notification: {
+                                title: title,
+                                body: body,
+                                icon: '/IMG_3352.webp',
+                                ...(image && { image })
+                            },
+                            fcmOptions: {
+                                link: url || '/'
+                            }
+                        },
+                        // data payload so the service worker can also read it
+                        data: {
                             title: title,
                             body: body,
-                        },
-                        data: {
-                            url: url || "/",
+                            url: url || '/',
+                            ...(image && { image })
                         }
                     }
                 };
-                if(image) messagePayload.message.notification.image = image;
 
                 const pushRes = await fetch(`https://fcm.googleapis.com/v1/projects/${creds.project_id}/messages:send`, {
                     method: 'POST',
@@ -158,3 +169,96 @@ function initAdminPush(db) {
     });
 
 }
+
+// Export this to the global scope so script.js can call it during order updates
+window.sendTargetedPushNotification = async function(db, targetUserId, title, body, url) {
+    const credsStr = localStorage.getItem('dodchUrlFCMCreds');
+    if (!credsStr) {
+        console.warn('Cannot send automated push: Missing FCM credentials in localStorage.');
+        if (window.showToast) window.showToast("Push Not Sent: Admin missing FCM Credentials.", "info");
+        return false;
+    }
+
+    try {
+        const creds = JSON.parse(credsStr);
+        
+        // 1. Generate JWT
+        const privateKey = await jose.importPKCS8(creds.private_key, "RS256");
+        const jwt = await new jose.SignJWT({
+            iss: creds.client_email,
+            scope: "https://www.googleapis.com/auth/firebase.messaging",
+            aud: "https://oauth2.googleapis.com/token"
+        })
+        .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+        .setIssuedAt()
+        .setExpirationTime("1h")
+        .sign(privateKey);
+
+        // 2. Exchange JWT for Google OAuth Access Token
+        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                assertion: jwt
+            })
+        });
+
+        if (!tokenRes.ok) throw new Error("Failed to get Google Access Token.");
+        const tokenData = await tokenRes.json();
+        const accessToken = tokenData.access_token;
+
+        // 3. Find tokens for this specific user
+        const q = query(collection(db, "subscribers"), where("userId", "==", targetUserId));
+        const subSnapshot = await getDocs(q);
+        
+        const tokens = [];
+        subSnapshot.forEach(doc => tokens.push(doc.data().token));
+
+        if (tokens.length === 0) {
+            console.log(`No subscriber tokens found for user ${targetUserId}`);
+            if (window.showToast) window.showToast(`Push Not Sent: User has not allowed notifications.`, "info");
+            return false;
+        }
+
+        // 4. Send FCM Message to each token
+        for (const token of tokens) {
+            const messagePayload = {
+                message: {
+                    token: token,
+                    webpush: {
+                        notification: {
+                            title: title,
+                            body: body,
+                            icon: '/IMG_3352.webp'
+                        },
+                        fcmOptions: {
+                            link: url || '/'
+                        }
+                    },
+                    data: {
+                        title: title,
+                        body: body,
+                        url: url || '/'
+                    }
+                }
+            };
+
+            await fetch(`https://fcm.googleapis.com/v1/projects/${creds.project_id}/messages:send`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(messagePayload)
+            });
+        }
+        
+        console.log(`Successfully sent targeted push notification to user ${targetUserId}`);
+        return true;
+        
+    } catch(err) {
+        console.error("Targeted push sending error:", err);
+        return false;
+    }
+};

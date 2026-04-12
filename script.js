@@ -1,3 +1,17 @@
+
+// Universal Image WebP Fallback Fix
+window.addEventListener('error', function(e) {
+    if (e.target && e.target.tagName === 'IMG') {
+        const src = e.target.getAttribute('src') || '';
+        if (src.match(/\.(png|jpg|jpeg)(\?.*)?$/i)) {
+            if (!e.target.dataset.webpRetried) {
+                e.target.dataset.webpRetried = 'true';
+                e.target.src = src.replace(/\.(png|jpg|jpeg)(\?.*)?$/i, '.webp$2');
+            }
+        }
+    }
+}, true);
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
 import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
@@ -11,37 +25,18 @@ import { WebHaptics } from 'https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/+esm'
 
 const haptics = new WebHaptics({ debug: true });
 window.triggerHaptic = (type = 'light') => {
-    if (type === 'quickview') {
-        // Custom double-pulse for premium Quick View feel
-        haptics.trigger([30, 50, 30]);
+    if (type === 'quickview') {        haptics.trigger([30, 50, 30]);
     } else {
         haptics.trigger(type);
     }
 };
 
-
-const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
-
-// Initialize Firebase
-// --- SECURITY & VALIDATION ENGINE ---
-const SecurityValidator = {
-    // 1. Tunisian Specifics
-    TUNISIA_GOVERNORATES: ["Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa", "Jendouba", "Kairouan", "Kasserine", "Kebili", "Kef", "Mahdia", "Manouba", "Medenine", "Monastir", "Nabeul", "Sfax", "Sidi Bouzid", "Siliana", "Sousse", "Tataouine", "Tozeur", "Tunis", "Zaghouan"],
+const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';// --- SECURITY & VALIDATION ENGINE ---
+const SecurityValidator = {    TUNISIA_GOVERNORATES: ["Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa", "Jendouba", "Kairouan", "Kasserine", "Kebili", "Kef", "Mahdia", "Manouba", "Medenine", "Monastir", "Nabeul", "Sfax", "Sidi Bouzid", "Siliana", "Sousse", "Tataouine", "Tozeur", "Tunis", "Zaghouan"],
     
     validatePhone: (num) => {
-        const cleaned = num.replace(/[^0-9]/g, '');
-        // Standard Tunisian Mobile/Landline: 8 digits starting with 2,4,5,7,9
-        return /^[24579]\d{7}$/.test(cleaned);
-    },
-
-    // 2. Content Filtering
-    PROFANITY_LIST: [
-        // English
-        "fuck", "shit", "asshole", "bitch", "nigger", "cunt", "dick", "pussy",
-        // French
-        "putain", "merde", "connard", "salope", "encule", "bite", "chatte",
-        // Tunisian (Common offensive roots)
-        "zbi", "z*bi", "nek", "n**k", "mnyek", "zab", "kahba", "asba", "kr*z", "ms*k"
+        const cleaned = num.replace(/[^0-9]/g, '');        return /^[24579]\d{7}$/.test(cleaned);
+    },    PROFANITY_LIST: [        "fuck", "shit", "asshole", "bitch", "nigger", "cunt", "dick", "pussy",        "putain", "merde", "connard", "salope", "encule", "bite", "chatte",        "zbi", "z*bi", "nek", "n**k", "mnyek", "zab", "kahba", "asba", "kr*z", "ms*k"
     ],
 
     isProfane: (text) => {
@@ -54,11 +49,7 @@ const SecurityValidator = {
     },
 
     isGibberish: (text) => {
-        if (!text) return false;
-        // Repeated characters (e.g. "aaaaaaa")
-        if (/(.)\1{5,}/.test(text)) return true;
-        // Lack of spaces in a long string (e.g. bot junk)
-        if (text.length > 30 && !text.includes(' ') && !text.includes('\n')) return true;
+        if (!text) return false;        if (/(.)\1{5,}/.test(text)) return true;        if (text.length > 30 && !text.includes(' ') && !text.includes('\n')) return true;
         return false;
     },
 
@@ -68,12 +59,7 @@ const SecurityValidator = {
 };
 
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
-
-
-// Initialize App Check with Enterprise and Localhost Debugging
-if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+const analytics = getAnalytics(app);if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
     console.info("🛡️ App Check: Localhost detected. Enabling Debug Mode...");
     self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
 }
@@ -81,10 +67,7 @@ if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
 const appCheck = initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider('6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy'),
     isTokenAutoRefreshEnabled: true
-});
-
-// Verify App Check Connection & Log Status
-getToken(appCheck)
+});getToken(appCheck)
     .then((token) => {
         console.log("🛡️ App Check: Connection Established successfully.");
         if (self.FIREBASE_APPCHECK_DEBUG_TOKEN) {
@@ -102,13 +85,7 @@ const storage = getStorage(app);
 const functions = getFunctions(app, 'europe-west1');
 const provider = new GoogleAuthProvider();
 
-let messaging = null;
-
-// Global Catalog Reference
-let productCatalog = {};
-
-// Global utility for XSS Prevention
-const escapeHTML = (str) => {
+let messaging = null;let productCatalog = {};const escapeHTML = (str) => {
     if (!str) return "";
     return String(str).replace(/[&<>'"]/g,
         tag => ({
@@ -127,9 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Custom UI Helpers (Toast & Confirm) ---
     let _lastToastMsg = '';
     let _lastToastTime = 0;
-    window.showToast = (message, type = 'info', duration = 3500) => {
-        // Deduplication guard: suppress identical messages within 600ms
-        const now = Date.now();
+    window.showToast = (message, type = 'info', duration = 3500) => {        const now = Date.now();
         if (message === _lastToastMsg && now - _lastToastTime < 600) return;
         _lastToastMsg = message;
         _lastToastTime = now;
@@ -145,31 +120,21 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.innerHTML = `${icon} <span>${message}</span>`;
         if (type === 'success') window.triggerHaptic('success');
         else if (type === 'error') window.triggerHaptic('error');
-        else window.triggerHaptic('light');
-
-        // Get or create the shared toast container
-        let container = document.getElementById('toast-container');
+        else window.triggerHaptic('light');        let container = document.getElementById('toast-container');
         if (!container) {
             container = document.createElement('div');
             container.id = 'toast-container';
             document.body.appendChild(container);
-        }
-
-        // FLIP: (F)irst — snapshot positions of existing toasts before DOM change
-        const existingToasts = [...container.querySelectorAll('.custom-toast')];
+        }        const existingToasts = [...container.querySelectorAll('.custom-toast')];
         const firstRects = existingToasts.map(t => t.getBoundingClientRect());
 
         // (L)ast — insert new toast at top (DOM changes, existing toasts jump)
         container.prepend(toast);
 
-        // (I)nvert — read new positions of existing toasts, apply inverse offset
-        // so they appear to still be where they were visually
-        existingToasts.forEach((t, i) => {
+        // (I)nvert — read new positions of existing toasts, apply inverse offset        existingToasts.forEach((t, i) => {
             const lastRect = t.getBoundingClientRect();
             const dy = firstRects[i].top - lastRect.top;
-            if (dy !== 0) {
-                // Instantly snap back visually (no transition)
-                t.style.transition = 'none';
+            if (dy !== 0) {                t.style.transition = 'none';
                 t.style.transform = `translateX(0) translateY(${dy}px)`;
             }
         });
@@ -179,31 +144,18 @@ document.addEventListener('DOMContentLoaded', () => {
             existingToasts.forEach(t => {
                 t.style.transition = '';
                 t.style.transform = 'translateX(0) translateY(0)';
-            });
-
-            // Slide new toast in from the right
-            setTimeout(() => toast.classList.add('active'), 10);
-        });
-
-        // Helper: remove a toast with context-aware exit animation + FLIP collapse
-        const removeToast = (t) => {
+            });            setTimeout(() => toast.classList.add('active'), 10);
+        });        const removeToast = (t) => {
             const container = document.getElementById('toast-container');
             if (!container || !t.parentNode) return;
 
             const allToasts = [...container.querySelectorAll('.custom-toast')];
-            const isTop = allToasts[0] === t;
-
-            // Snapshot positions of all OTHER toasts before removing
-            const others = allToasts.filter(x => x !== t);
+            const isTop = allToasts[0] === t;            const others = allToasts.filter(x => x !== t);
             const beforeRects = others.map(x => x.getBoundingClientRect());
 
-            if (isTop) {
-                // Slide out to the right
-                t.classList.remove('active');
+            if (isTop) {                t.classList.remove('active');
                 setTimeout(() => {
-                    if (t.parentNode) t.remove();
-                    // FLIP: slide remaining toasts up
-                    const afterRects = others.map(x => x.getBoundingClientRect());
+                    if (t.parentNode) t.remove();                    const afterRects = others.map(x => x.getBoundingClientRect());
                     others.forEach((x, i) => {
                         const dy = beforeRects[i].top - afterRects[i].top;
                         if (dy !== 0) {
@@ -216,13 +168,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 }, 450);
-            } else {
-                // Blur + fade + scale down for older toasts
-                t.classList.add('toast-exit-blur');
+            } else {                t.classList.add('toast-exit-blur');
                 setTimeout(() => {
-                    if (t.parentNode) t.remove();
-                    // FLIP: slide remaining toasts up
-                    const afterRects = others.map(x => x.getBoundingClientRect());
+                    if (t.parentNode) t.remove();                    const afterRects = others.map(x => x.getBoundingClientRect());
                     others.forEach((x, i) => {
                         const dy = beforeRects[i].top - afterRects[i].top;
                         if (dy !== 0) {
@@ -236,13 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }, 550);
             }
-        };
-
-        // Schedule removal
-        setTimeout(() => removeToast(toast), duration);
+        };        setTimeout(() => removeToast(toast), duration);
     };
-
-
 
     window.showConfirm = (message, title = "Confirm Action") => {
         return new Promise((resolve) => {
@@ -260,16 +203,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             `;
-            document.body.appendChild(overlay);
-
-            // Trigger animation
-            setTimeout(() => overlay.classList.add('active'), 10);
+            document.body.appendChild(overlay);            setTimeout(() => overlay.classList.add('active'), 10);
 
             const close = (result) => {
                 overlay.classList.remove('active');
-                setTimeout(() => overlay.remove(), 300);
-                // Only restore scroll if no other modals are active
-                if (!document.querySelector('#cart-drawer.active, #desktop-sidebar.active, #qv-modal.active, #contact-popup.active')) {
+                setTimeout(() => overlay.remove(), 300);                if (!document.querySelector('#cart-drawer.active, #desktop-sidebar.active, #qv-modal.active, #contact-popup.active')) {
                     document.body.style.overflow = '';
                 }
                 resolve(result);
@@ -281,31 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (e.target === overlay) close(false);
             });
         });
-    };
-
-    // Override native alert for consistency (optional, but good for catching stray alerts)
-    // window.alert = (msg) => window.showToast(msg);
-
-
-
-    // 0. Force Page to Top on Load & Clear Hash
-    // This prevents the browser from jumping to #story on reload
-    if ('scrollRestoration' in history) {
+    };    if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
-    }
-
-    // Temporarily disable smooth scroll to ensure instant jump to top
-    document.documentElement.style.scrollBehavior = 'auto';
+    }    document.documentElement.style.scrollBehavior = 'auto';
     window.scrollTo(0, 0);
     if (window.location.hash) {
         history.replaceState(null, null, window.location.pathname);
     }
     setTimeout(() => {
         document.documentElement.style.scrollBehavior = 'smooth';
-    }, 50);
-
-    // 1. Sticky Navbar Effect
-    const navbar = document.getElementById('navbar');
+    }, 50);    const navbar = document.getElementById('navbar');
     const hero = document.getElementById('hero') || document.querySelector('.foam-hero') || document.getElementById('hero-silk') || document.querySelector('.pro-v-hero');
     const heroOverlay = document.querySelector('.hero-overlay');
     const heroBgParallax = document.querySelector('.hero-bg-parallax');
@@ -323,10 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSerumPage = document.body.classList.contains('serum-page');
         const serumHero = document.querySelector('.scrollytelling-container');
 
-        if (isSerumPage && serumHero) {
-            // Serum Page: Stay transparent until past the animation container
-            // We expand near the end of the scrollytelling sequence
-            const threshold = serumHero.offsetHeight - 80;
+        if (isSerumPage && serumHero) {            const threshold = serumHero.offsetHeight - 80;
             if (scrollY > threshold) {
                 navbar.classList.add('scrolled');
                 navbar.classList.remove('text-dark');
@@ -334,18 +254,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 navbar.classList.remove('scrolled');
                 navbar.classList.remove('text-dark');
             }
-        } else if (hero) {
-            // Home Page: Transparent/White at top, Solid/Dark when scrolled
-            if (scrollY > 50) {
+        } else if (hero) {            if (scrollY > 50) {
                 navbar.classList.add('scrolled');
                 navbar.classList.remove('text-dark');
             } else {
                 navbar.classList.remove('scrolled');
                 navbar.classList.remove('text-dark');
             }
-        } else {
-            // Other Pages: Transparent/Dark at top, Solid/Dark when scrolled
-            if (scrollY > 50) {
+        } else {            if (scrollY > 50) {
                 navbar.classList.add('scrolled');
                 navbar.classList.remove('text-dark');
             } else {
@@ -353,127 +269,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 navbar.classList.add('text-dark');
             }
         }
-    };
-
-    // 2. Scroll Reveal Animation
-    const revealObserver = new IntersectionObserver((entries, observer) => {
+    };    const revealObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                entry.target.classList.add('active');
-                // Stop observing once revealed to save resources
-                observer.unobserve(entry.target);
+                entry.target.classList.add('active');                observer.unobserve(entry.target);
             }
         });
     }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
 
+    let mainScrollTicking = false;
     window.addEventListener('scroll', () => {
-        const scrollY = window.scrollY;
+        if (!mainScrollTicking) {
+            window.requestAnimationFrame(() => {
+                const scrollY = window.scrollY;
 
-        updateNavbar();
+                updateNavbar();                if (hero && heroOverlay) {
+                    const heroHeight = hero.offsetHeight;                    let ratio = scrollY / (heroHeight * 0.8);
+                    if (ratio > 1) ratio = 1;
 
-        // Hero Fade to Black & Blur Logic
-        if (hero && heroOverlay) {
-            const heroHeight = hero.offsetHeight;
-            // Calculate ratio: 0 at top, 1 when scrolled 80% down the hero
-            let ratio = scrollY / (heroHeight * 0.8);
-            if (ratio > 1) ratio = 1;
+                    heroOverlay.style.opacity = ratio;
+                    heroOverlay.style.backdropFilter = `blur(${ratio * 10}px)`;
+                    heroOverlay.style.webkitBackdropFilter = `blur(${ratio * 10}px)`; // Safari support
+                }                if (stickyCTA && hero) {
+                    const footerRect = footer ? footer.getBoundingClientRect() : null;
+                    const isFooterVisible = footerRect ? footerRect.top < window.innerHeight : false;
 
-            heroOverlay.style.opacity = ratio;
-            heroOverlay.style.backdropFilter = `blur(${ratio * 10}px)`;
-            heroOverlay.style.webkitBackdropFilter = `blur(${ratio * 10}px)`; // Safari support
-        }
+                    let isStaticBtnVisible = false;
+                    if (staticCTA) {
+                        const btnRect = staticCTA.getBoundingClientRect();                        isStaticBtnVisible = btnRect.top < window.innerHeight && btnRect.bottom > 0;
+                    }
 
-        // Sticky CTA Logic
-        if (stickyCTA && hero) {
-            const footerRect = footer ? footer.getBoundingClientRect() : null;
-            const isFooterVisible = footerRect ? footerRect.top < window.innerHeight : false;
-
-            let isStaticBtnVisible = false;
-            if (staticCTA) {
-                const btnRect = staticCTA.getBoundingClientRect();
-                // Check if static button is in viewport (or about to be)
-                isStaticBtnVisible = btnRect.top < window.innerHeight && btnRect.bottom > 0;
-            }
-
-            if (scrollY > hero.offsetHeight && !isFooterVisible && !isStaticBtnVisible) {
-                stickyCTA.classList.add('visible');
-            } else {
-                stickyCTA.classList.remove('visible');
-            }
-        }
-
-        // Parallax Effect
-        if (heroBgParallax && scrollY < hero.offsetHeight) {
-            heroBgParallax.style.transform = `translateY(${scrollY * 0.4}px)`;
-        }
-
-        // Experience Section Image Parallax
-        if (experienceImageContainers.length > 0) {
-            experienceImageContainers.forEach(container => {
-                const rect = container.getBoundingClientRect();
-                const windowHeight = window.innerHeight;
-
-                // Check if the container is in the viewport
-                if (rect.top < windowHeight && rect.bottom > 0) {
-                    // Calculate the center of the element relative to the viewport top
-                    const elementCenter = rect.top + rect.height / 2;
-
-                    // Calculate the difference between the screen center and the element center
-                    const difference = (windowHeight / 2) - elementCenter;
-
-                    // Define a factor to control the parallax speed. A smaller number is a more subtle effect.
-                    const parallaxFactor = 0.1;
-
-                    // Apply the transform to the container, moving it vertically
-                    container.style.transform = `translateY(${difference * parallaxFactor}px)`;
-                }
+                    if (scrollY > hero.offsetHeight && !isFooterVisible && !isStaticBtnVisible) {
+                        stickyCTA.classList.add('visible');
+                    } else {
+                        stickyCTA.classList.remove('visible');
+                    }
+                }                if (heroBgParallax && scrollY < hero.offsetHeight) {
+                    heroBgParallax.style.transform = `translateY(${scrollY * 0.4}px)`;
+                }                if (experienceImageContainers.length > 0) {
+                    experienceImageContainers.forEach(container => {
+                        const rect = container.getBoundingClientRect();
+                        const windowHeight = window.innerHeight;                        if (rect.top < windowHeight && rect.bottom > 0) {                            const elementCenter = rect.top + rect.height / 2;                            const difference = (windowHeight / 2) - elementCenter;                            const parallaxFactor = 0.1;                            container.style.transform = `translateY(${difference * parallaxFactor}px)`;
+                        }
+                    });
+                }                if (promiseIcons.length > 0) {
+                    promiseIcons.forEach(icon => {
+                        const rect = icon.getBoundingClientRect();
+                        const windowHeight = window.innerHeight;                        if (rect.top < windowHeight && rect.bottom > 0) {                            const elementCenter = rect.top + rect.height / 2;
+                            const difference = (windowHeight / 2) - elementCenter;                            const parallaxFactor = -0.08;                            icon.style.transform = `translateY(${difference * parallaxFactor}px)`;
+                        }
+                    });
+                }                if (progressBar) {
+                    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                    const scrollPercent = (scrollY / docHeight) * 100;
+                    progressBar.style.width = `${scrollPercent}%`;
+                }                runCounterAnimation();
+                
+                mainScrollTicking = false;
             });
+            mainScrollTicking = true;
         }
-
-        // Clean Promise Icons Parallax
-        if (promiseIcons.length > 0) {
-            promiseIcons.forEach(icon => {
-                const rect = icon.getBoundingClientRect();
-                const windowHeight = window.innerHeight;
-
-                // Check if the icon is in the viewport
-                if (rect.top < windowHeight && rect.bottom > 0) {
-                    // Calculate the center of the element relative to the viewport top
-                    const elementCenter = rect.top + rect.height / 2;
-                    const difference = (windowHeight / 2) - elementCenter;
-
-                    // A very subtle factor for the icons. Negative moves it against scroll direction.
-                    const parallaxFactor = -0.08;
-
-                    // Apply the transform to the icon
-                    icon.style.transform = `translateY(${difference * parallaxFactor}px)`;
-                }
-            });
-        }
-
-        // Scroll Progress Bar Logic
-        if (progressBar) {
-            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-            const scrollPercent = (scrollY / docHeight) * 100;
-            progressBar.style.width = `${scrollPercent}%`;
-        }
-
-        // Call other scroll-based functions
-        runCounterAnimation();
-    });
-
-    // Trigger once on load to show hero content immediately
-    updateNavbar();
-
-    // Initialize observer on existing elements
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
-    // 3. Mobile Sidebar Toggle
-    const hamburger = document.querySelector('.hamburger');
-    const sidebar = document.getElementById('desktop-sidebar');
-
-    // Add class to body if sidebar exists (for desktop layout spacing)
-    if (sidebar) {
+    }, { passive: true });    updateNavbar();    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));    const hamburger = document.querySelector('.hamburger');
+    const sidebar = document.getElementById('desktop-sidebar');    if (sidebar) {
         document.body.classList.add('has-sidebar');
     }
 
@@ -493,10 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sidebar) sidebar.classList.add('active');
         if (sidebarOverlay) sidebarOverlay.classList.add('active');
         if (hamburger) hamburger.classList.add('active');
-        if (navbar) navbar.classList.add('menu-open');
-
-        // Scroll active item into view
-        setTimeout(() => {
+        if (navbar) navbar.classList.add('menu-open');        setTimeout(() => {
             const activeLink = sidebar.querySelector('.sidebar-menu a.active');
             if (activeLink) {
                 activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -515,15 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
-        if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
-
-        // Close when clicking a link in sidebar
-        const links = sidebar.querySelectorAll('a');
+        if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);        const links = sidebar.querySelectorAll('a');
         links.forEach(link => link.addEventListener('click', closeSidebar));
-    }
-
-    // 4. Testimonial Slider
-    const sliderContainer = document.querySelector('.testimonial-slider-container');
+    }    const sliderContainer = document.querySelector('.testimonial-slider-container');
     if (sliderContainer) {
         const sliderWrapper = document.querySelector('.testimonial-slider-wrapper');
         const slides = document.querySelectorAll('.testimonial-slide');
@@ -553,23 +401,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function updatePagination() {
-            paginationDots.forEach((dot, index) => {
-                // Remove 'active' from all dots to reset their animation state
-                dot.classList.remove('active');
+            paginationDots.forEach((dot, index) => {                dot.classList.remove('active');
             });
 
             const activeDot = paginationDots[currentIndex];
-            if (activeDot) {
-                // Forcing a reflow is a trick to ensure the CSS animation restarts
-                void activeDot.offsetWidth;
+            if (activeDot) {                void activeDot.offsetWidth;
                 activeDot.classList.add('active');
             }
         }
 
         function updateSliderPosition() {
-            sliderWrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
-            // Update active class on slides for text fade effect
-            slides.forEach((slide, index) => {
+            sliderWrapper.style.transform = `translateX(-${currentIndex * 100}%)`;            slides.forEach((slide, index) => {
                 slide.classList.toggle('active', index === currentIndex);
             });
             if (paginationContainer) updatePagination();
@@ -600,20 +442,14 @@ document.addEventListener('DOMContentLoaded', () => {
         prevButton.addEventListener('click', () => {
             goToPrevSlide();
             startAutoPlay();
-        });
-
-        // Pause on hover, resume on leave
-        sliderContainer.addEventListener('mouseenter', () => {
+        });        sliderContainer.addEventListener('mouseenter', () => {
             isHovering = true;
             clearInterval(autoPlayInterval);
         });
         sliderContainer.addEventListener('mouseleave', () => {
             isHovering = false;
             startAutoPlay();
-        });
-
-        // Swipe Gestures for Mobile
-        let touchStartX = 0;
+        });        let touchStartX = 0;
         let touchStartY = 0;
         let touchEndX = 0;
         const swipeThreshold = 50; // Min distance for a swipe
@@ -631,21 +467,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const touchCurrentX = e.changedTouches[0].screenX;
             const touchCurrentY = e.changedTouches[0].screenY;
             const deltaX = Math.abs(touchCurrentX - touchStartX);
-            const deltaY = Math.abs(touchCurrentY - touchStartY);
-
-            // Only if horizontal movement is dominant, we consider it a swipe
-            // and pause the autoplay. A small tolerance prevents firing on tiny movements.
-            if (deltaX > deltaY && deltaX > 10) {
+            const deltaY = Math.abs(touchCurrentY - touchStartY);            if (deltaX > deltaY && deltaX > 10) {
                 isSwipeGesture = true;
                 clearInterval(autoPlayInterval); // It's a swipe, so pause autoplay
             }
         }, { passive: true });
 
-        sliderContainer.addEventListener('touchend', e => {
-            // If it wasn't a swipe (e.g., a simple tap or vertical scroll), do nothing.
-            if (!isSwipeGesture) {
-                // The autoplay was never paused.
-                return;
+        sliderContainer.addEventListener('touchend', e => {            if (!isSwipeGesture) {                return;
             }
 
             touchEndX = e.changedTouches[0].screenX;
@@ -653,66 +481,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (Math.abs(swipeDistance) > swipeThreshold) {
                 if (swipeDistance > 0) { goToPrevSlide(); } else { goToNextSlide(); }
-            }
-            // Whether a slide changed or not, the gesture is over.
-            isHovering = false;
+            }            isHovering = false;
             startAutoPlay(); // Restart autoplay after swipe gesture ends
-        });
-
-        // Initialize
-        createPaginationDots();
+        });        createPaginationDots();
         updateSliderPosition(); // To set initial slide and active dot
         startAutoPlay();
-    }
-
-    // 5. Mobile Tap-to-Hover Fallback
-    const isTouchDevice = () => ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    }    const isTouchDevice = () => ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
     if (isTouchDevice()) {
         const tappableElements = document.querySelectorAll('.action-card, .promise-item, .pillar-card, .inci-list span');
 
         tappableElements.forEach(el => {
-            el.addEventListener('click', function (e) {
-                // For tooltips, prevent any strange click behavior
-                if (el.matches('.inci-list span')) {
+            el.addEventListener('click', function (e) {                if (el.matches('.inci-list span')) {
                     e.preventDefault();
                 }
 
-                const isAlreadyActive = this.classList.contains('mobile-hover');
-
-                // Remove active class from all other tappable elements
-                tappableElements.forEach(otherEl => {
+                const isAlreadyActive = this.classList.contains('mobile-hover');                tappableElements.forEach(otherEl => {
                     if (otherEl !== this) {
                         otherEl.classList.remove('mobile-hover');
                     }
-                });
-
-                // Toggle the class on the clicked element
-                this.classList.toggle('mobile-hover');
-
-                // Stop the event from bubbling up to the document handler
-                e.stopPropagation();
+                });                this.classList.toggle('mobile-hover');                e.stopPropagation();
             });
-        });
-
-        // Add a listener to the document to close any active elements when tapping outside
-        document.addEventListener('click', function (e) {
+        });        document.addEventListener('click', function (e) {
             tappableElements.forEach(el => {
                 el.classList.remove('mobile-hover');
             });
         });
-    }
-
-    // 6. Number Counter Animation
-    const counters = document.querySelectorAll('.counter');
+    }    const counters = document.querySelectorAll('.counter');
 
     const runCounterAnimation = () => {
         counters.forEach(counter => {
             const rect = counter.getBoundingClientRect();
-            const windowHeight = window.innerHeight;
-
-            // Trigger when the element is visible
-            if (rect.top < windowHeight - 50 && rect.bottom > 0) {
+            const windowHeight = window.innerHeight;            if (rect.top < windowHeight - 50 && rect.bottom > 0) {
                 if (counter.classList.contains('counted')) return;
 
                 counter.classList.add('counted');
@@ -723,10 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const step = (currentTime) => {
                     const elapsed = currentTime - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-
-                    // Ease out expo - much softer landing
-                    const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+                    const progress = Math.min(elapsed / duration, 1);                    const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
 
                     const current = Math.floor(ease * target);
                     counter.innerText = current.toLocaleString('en-US');
@@ -734,9 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (progress < 1) {
                         requestAnimationFrame(step);
                     } else {
-                        counter.innerText = target.toLocaleString('en-US');
-                        // Add shine class to trigger animation after counting
-                        counter.classList.add('shine');
+                        counter.innerText = target.toLocaleString('en-US');                        counter.classList.add('shine');
                     }
                 };
 
@@ -745,19 +540,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    runCounterAnimation(); // Initial check on load
-
-    // 7. Dynamic Title (Tab Switch)
-    let docTitle = document.title;
+    runCounterAnimation(); // Initial check on load    let docTitle = document.title;
     window.addEventListener('blur', () => {
         document.title = "Come back to radiance... ✨";
     });
     window.addEventListener('focus', () => {
         document.title = docTitle;
-    });
-
-    // 9. Magnetic Button Effect
-    const heroCTA = document.querySelector('#hero .cta-button');
+    });    const heroCTA = document.querySelector('#hero .cta-button');
     const heroSection = document.getElementById('hero');
 
     if (heroCTA && heroSection && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
@@ -774,9 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-            if (distance < distanceThreshold) {
-                // Move the button towards the cursor
-                const moveX = deltaX * magnetism;
+            if (distance < distanceThreshold) {                const moveX = deltaX * magnetism;
                 const moveY = deltaY * magnetism;
                 heroCTA.style.transform = `translate(${moveX}px, ${moveY}px)`;
             } else {
@@ -787,10 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
         heroSection.addEventListener('mouseleave', () => {
             heroCTA.style.transform = 'translate(0, 0)';
         });
-    }
-
-    // 10. Button Click Sound (Subtle Glass Tap)
-    if (heroCTA) {
+    }    if (heroCTA) {
         heroCTA.addEventListener('click', () => {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
@@ -800,10 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const gainNode = ctx.createGain();
 
             osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-
-            // Sound profile: Softer, more tactile "tap"
-            osc.type = 'sine';
+            gainNode.connect(ctx.destination);            osc.type = 'sine';
             osc.frequency.setValueAtTime(600, ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
 
@@ -811,10 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
 
             osc.start();
-            osc.stop(ctx.currentTime + 0.1);
-
-            // Clean up AudioContext to prevent resource leaks (browsers limit active contexts)
-            setTimeout(() => {
+            osc.stop(ctx.currentTime + 0.1);            setTimeout(() => {
                 ctx.close();
             }, 200);
         });
@@ -829,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: "shampoo",
             subtitle: "The Elixir of 10,000 Seeds",
             price: "24.00",
-            image: "/IMG_3357.jpg",
+            image: "IMG_3357.webp",
             description: "A high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil. Experience the 'Solar-Floral' journey with notes of Tunisian Orange Blossom and Tropical Vanilla.",
             style: "", // CSS filter if needed
             storyUrl: "glass-glow-shampoo.html",
@@ -846,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: "shampoo",
             subtitle: "The Marshmallow Cloud Shampoo",
             price: "24.50",
-            image: "IMG_3490.jpg",
+            image: "IMG_3490.webp",
             description: "Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5. Fragrance: Néroli-Sucre.",
             style: "",
             storyUrl: "dodchmellow-pro-v.html",
@@ -861,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: "cleansers",
             subtitle: "Luminous Purity",
             price: "45.00",
-            image: "IMG_3352.PNG",
+            image: "IMG_3352.webp",
             description: "A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",
             style: "filter: brightness(1.05);",
             storyUrl: "face-foam.html",
@@ -874,7 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: ["masks", "conditioners", "leave-in"],
             subtitle: "Deep Repair & Glass Shine",
             price: "39.00",
-            image: "F188A04D-4AA7-4D98-9EEB-14861B10D468.PNG",
+            image: "F188A04D-4AA7-4D98-9EEB-14861B10D468.webp",
             description: "Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",
             style: "",
             storyUrl: "silk-mask.html",
@@ -889,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: "serums",
             subtitle: "Radiance & Deep Hydration",
             price: "89.00",
-            image: "IMG_3407.jpeg",
+            image: "IMG_3407.webp",
             description: "A concentrated Hyaluronic Acid serum that penetrates deep layers for instant plumping and long-lasting hydration.",
             style: "",
             storyUrl: "face-serum.html",
@@ -898,36 +676,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 { label: '30ml', price: '89.00' }
             ]
         }
-    };
+    };    productCatalog = { ...defaultProductCatalog };    let shopTransitionTimeout;
 
-    // Mutable catalog that will be updated with Firestore data
-    productCatalog = { ...defaultProductCatalog };
-
-    // Function to render Shop Page grid dynamically
-    let shopTransitionTimeout;
-
-    const initShopPage = (animate = false) => {
-        // Only run on shop page (where product detail container is absent)
-        if (document.querySelector('.product-detail-container')) return;
+    const initShopPage = (animate = false) => {        if (document.querySelector('.product-detail-container')) return;
 
         const shopLayout = document.querySelector('.shop-layout');
         if (!shopLayout) return;
 
-        const renderContent = () => {
-            // Sort by orderIndex
-            const sortedCatalog = Object.entries(productCatalog).sort(([, a], [, b]) => {
+        const renderContent = () => {            const sortedCatalog = Object.entries(productCatalog).sort(([, a], [, b]) => {
                 const orderDiff = (a.orderIndex || 0) - (b.orderIndex || 0);
                 if (orderDiff !== 0) return orderDiff;
                 return a.name.localeCompare(b.name);
-            });
-
-            // Filter Logic based on URL params
-            const urlParams = new URLSearchParams(window.location.search);
+            });            const urlParams = new URLSearchParams(window.location.search);
             const activeCat = urlParams.get('cat');
-            const activeSub = urlParams.get('sub');
-
-            // Helper to generate Card HTML
-            const generateCardHTML = (id, product, index = 0) => {
+            const activeSub = urlParams.get('sub');            const generateCardHTML = (id, product, index = 0) => {
                 const staggerDelay = `${(index % 4) * 0.15}s`;
                 let displayPrice = product.price;
                 let hasDiscount = false;
@@ -954,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <a ${linkAttributes}>
                             <div class="product-image-wrapper">
                                 ${badgeHTML}
-                                <img src="${product.image}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
+                                <img loading="lazy" src="${product.image}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
                                 <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice}" data-img="${product.image}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
                             </div>
                             <div class="product-card-info">
@@ -963,20 +725,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </a>
                     </div>`;
-            };
-
-            // Clear Layout
-            shopLayout.innerHTML = '';
-
-            // Define Sections Order
-            const allSections = [
+            };            shopLayout.innerHTML = '';            const allSections = [
                 { id: 'hair-care', title: 'Hair Care' },
                 { id: 'face-care', title: 'Face Care' },
                 { id: 'sets', title: 'Sets & Bundles' }
-            ];
-
-            // Subcategory Display Names
-            const subCatDisplay = {
+            ];            const subCatDisplay = {
                 'shampoo': 'Shampoos',
                 'conditioners': 'Conditioners',
                 'masks': 'Masks & Treatments',
@@ -984,10 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'cleansers': 'Cleansers',
                 'serums': 'Serums',
                 'sets': 'Sets'
-            };
-
-            // Determine which sections to show
-            let sectionsToShow = allSections;
+            };            let sectionsToShow = allSections;
             if (activeCat && activeCat !== 'all') {
                 sectionsToShow = allSections.filter(s => s.id === activeCat);
             }
@@ -996,15 +746,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!isSpecificSub) {
                 let hasProducts = false;
-                sectionsToShow.forEach(section => {
-                    // Filter products for this section
-                    const sectionProducts = sortedCatalog.filter(([, p]) => p.category === section.id);
+                sectionsToShow.forEach(section => {                    const sectionProducts = sortedCatalog.filter(([, p]) => p.category === section.id);
 
                     if (sectionProducts.length > 0) {
-                        hasProducts = true;
-
-                        // Create a single horizontal grid for all products in the section
-                        const contentHTML = `
+                        hasProducts = true;                        const contentHTML = `
                             <div class="shop-grid horizontal-scroll">
                                 ${sectionProducts.map(([id, p], i) => generateCardHTML(id, p, i)).join('')}
                             </div>
@@ -1023,9 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!hasProducts) {
                     shopLayout.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>`;
                 }
-            } else {
-                // Render Single Grid
-                const filteredProducts = sortedCatalog.filter(([, p]) => {
+            } else {                const filteredProducts = sortedCatalog.filter(([, p]) => {
                     const matchesCat = !activeCat || activeCat === 'all' || p.category === activeCat;
                     const matchesSub = !activeSub || activeSub === 'all' || (Array.isArray(p.subCategory) ? p.subCategory.includes(activeSub) : p.subCategory === activeSub);
                     return matchesCat && matchesSub;
@@ -1044,10 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     shopLayout.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>`;
                 }
-            }
-
-            // After rendering grid dynamically, attach observers to them so they animate on scroll
-            document.querySelectorAll('.shop-layout .product-card.reveal').forEach(el => {
+            }            document.querySelectorAll('.shop-layout .product-card.reveal').forEach(el => {
                 if (typeof revealObserver !== 'undefined') {
                     revealObserver.observe(el);
                 }
@@ -1065,38 +805,22 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             renderContent();
         }
-    };
-
-    // Function to fetch product overrides (price, stock) from Firestore
-    const loadProductCatalog = async () => {
+    };    const loadProductCatalog = async () => {
         try {
             console.log("Loading catalog from Firestore...");
-            const querySnapshot = await getDocs(collection(db, "products"));
-
-            // If DB is not empty, we treat it as the source of truth
-            if (!querySnapshot.empty) {
+            const querySnapshot = await getDocs(collection(db, "products"));            if (!querySnapshot.empty) {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    const productId = doc.id;
-
-                    // Handle soft-deleted products
-                    if (data.deleted) {
+                    if (data.image && typeof data.image === 'string') {
+                        data.image = data.image.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+                    }
+                    const productId = doc.id;                    if (data.deleted) {
                         delete productCatalog[productId];
                         return;
-                    }
-
-                    // Merge Firestore data into catalog
-                    if (productCatalog[productId]) {
-                        // Crucial: We don't want Firestore to overwrite the category/subCategory if we've hardcoded a fix
-                        // Unless the change came from Firestore itself in the future.
-                        // For now, let's preserve the local category/subCategory to fix the user's "glitch"
-                        const preservedCat = productCatalog[productId].category;
+                    }                    if (productCatalog[productId]) {                        const preservedCat = productCatalog[productId].category;
                         const preservedSub = productCatalog[productId].subCategory;
 
-                        productCatalog[productId] = { ...productCatalog[productId], ...data };
-
-                        // Re-apply correct categories if they are part of the "fix"
-                        if (productId === 'dodchmellow-pro-v' || productId === 'silk-therapy-mask') {
+                        productCatalog[productId] = { ...productCatalog[productId], ...data };                        if (productId === 'dodchmellow-pro-v' || productId === 'silk-therapy-mask') {
                             productCatalog[productId].category = preservedCat;
                             productCatalog[productId].subCategory = preservedSub;
                         }
@@ -1104,36 +828,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         productCatalog[productId] = data;
                     }
                 });
-            }
-
-            // Re-run product page init to reflect changes if we are on a product page
-            initProductPage();
-            // Re-render shop grid if we are on shop page
-            initShopPage();
-
-            // Re-initialize Search Engine with loaded catalog
-            if (window.dodchSearchEngine) {
+            }            initProductPage();            initShopPage();            if (window.dodchSearchEngine) {
                 window.dodchSearchEngine.init(productCatalog);
-            }
-            // Re-render related products
-            loadRelatedProducts();
-
-            // Refresh Admin Dashboard if active (fixes race condition where admin loads before firestore data)
-            if (typeof window.refreshAdminProducts === 'function') {
+            }            loadRelatedProducts();            if (typeof window.refreshAdminProducts === 'function') {
                 window.refreshAdminProducts();
             }
         } catch (error) {
             console.error("Error loading product catalog:", error);
         }
-    };
-
-    // 11. Product Page & Cart Logic
-    const CART_VERSION = 6; // Increment to force reset and clear stale/buggy data
+    };    const CART_VERSION = 6; // Increment to force reset and clear stale/buggy data
     let cart = JSON.parse(localStorage.getItem('dodch_cart')) || [];
-    const storedVersion = parseInt(localStorage.getItem('dodch_cart_version') || '0');
-
-    // Force clear cart if version is old to remove any "Gloss Shampoo" bugs or stale data
-    if (storedVersion < CART_VERSION) {
+    const storedVersion = parseInt(localStorage.getItem('dodch_cart_version') || '0');    if (storedVersion < CART_VERSION) {
         console.warn("Cart version mismatch. Clearing old data to ensure accuracy.");
         cart = [];
         localStorage.setItem('dodch_cart', JSON.stringify(cart));
@@ -1153,19 +858,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const sizeBtns = document.querySelectorAll('.size-btn');
     const priceDisplay = document.getElementById('product-price');
-    const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
-
-    // Auth Logic
-    const loginBtn = document.getElementById('login-btn');
+    const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');    const loginBtn = document.getElementById('login-btn');
 
     const handleLogin = async () => {
         const googleIcon = `<svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 10px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg>`;
         const confirmed = await window.showConfirm(`${googleIcon} Continue with Google Sign In?`, "Login");
         if (!confirmed) return;
 
-        try {
-            // The onAuthStateChanged observer will handle the UI update without a reload.
-            await signInWithPopup(auth, provider);
+        try {            await signInWithPopup(auth, provider);
             window.showToast("Successfully logged in!", "success");
         } catch (error) {
             console.error("Login failed", error);
@@ -1183,10 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Logout failed", error);
         }
-    };
-
-    // Logic to claim guest orders upon login
-    const claimGuestOrders = async (userId) => {
+    };    const claimGuestOrders = async (userId) => {
         const guestOrders = JSON.parse(localStorage.getItem('dodch_guest_orders') || '[]');
         if (guestOrders.length === 0) return;
 
@@ -1199,10 +896,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const orderSnap = await getDoc(orderRef);
 
                 if (orderSnap.exists()) {
-                    const orderData = orderSnap.data();
-                    // SECURITY: Only claim if it's currently marked as 'guest'
-                    // This prevents guessing IDs of already registered orders.
-                    if (orderData.userId === 'guest') {
+                    const orderData = orderSnap.data();                    if (orderData.userId === 'guest') {
                         await updateDoc(orderRef, {
                             userId: userId,
                             hasUnseenUpdate: true // Mark as new for their account
@@ -1217,12 +911,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (claimedCount > 0) {
             window.showToast(`Successfully linked ${claimedCount} previous order(s) to your account!`, "success");
-        }
-
-        // Clear the local list regardless of success to avoid repeat attempts
-        localStorage.removeItem('dodch_guest_orders');
+        }        localStorage.removeItem('dodch_guest_orders');
     };
-
 
     if (loginBtn) {
         loginBtn.addEventListener('click', (e) => {
@@ -1259,9 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     await signInWithEmailAndPassword(auth, email, password);
                     window.showToast("Welcome back!", "success");
-                }
-                // Redirect to shop or account after delay
-                setTimeout(() => window.location.href = 'my-account.html', 1500);
+                }                setTimeout(() => window.location.href = 'my-account.html', 1500);
             } catch (error) {
                 console.error(error);
                 window.showToast(error.message, "error");
@@ -1283,17 +971,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.auth-header p').textContent = isSignUp ? "Join the inner circle." : "Sign in to access your account.";
         document.querySelector('.auth-btn').textContent = isSignUp ? "Sign Up" : "Sign In";
         toggleAuthMode.textContent = isSignUp ? "Sign In" : "Sign Up";
-        toggleAuthMode.parentElement.innerHTML = isSignUp ? `Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign In</a>` : `Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign Up</a>`;
-
-        // Re-attach listener since we replaced innerHTML
-        document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
-            // Simple reload to toggle back for simplicity in this snippet, or extract logic to function
-            location.reload();
+        toggleAuthMode.parentElement.innerHTML = isSignUp ? `Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign In</a>` : `Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign Up</a>`;        document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {            location.reload();
         });
-    });
-
-    // Checkout Page Logic
-    const checkoutItemsContainer = document.getElementById('checkout-items-container');
+    });    const checkoutItemsContainer = document.getElementById('checkout-items-container');
     const checkoutSubtotalEl = document.getElementById('checkout-subtotal');
     const checkoutTotalEl = document.getElementById('checkout-total');
 
@@ -1338,10 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
             shippingEl.innerText = isFreeShipping ? 'Free' : `${SHIPPING_FEE.toFixed(2)} TND`;
         }
 
-        if (checkoutTotalEl) checkoutTotalEl.innerText = `${total.toFixed(2)} TND`;
-
-        // Reminder on Checkout Page
-        const summaryTotals = document.querySelector('.summary-totals');
+        if (checkoutTotalEl) checkoutTotalEl.innerText = `${total.toFixed(2)} TND`;        const summaryTotals = document.querySelector('.summary-totals');
         if (summaryTotals) {
             let checkoutPromo = summaryTotals.querySelector('.checkout-promo-msg');
             if (!checkoutPromo) {
@@ -1353,10 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
             checkoutPromo.innerText = subtotal >= FREE_SHIPPING_THRESHOLD
                 ? "Your order qualifies for Free Shipping."
                 : `Free shipping on orders over ${FREE_SHIPPING_THRESHOLD} TND.`;
-        }
-
-        // Add listeners for checkout remove buttons
-        document.querySelectorAll('.checkout-remove-btn').forEach(btn => {
+        }        document.querySelectorAll('.checkout-remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 window.triggerHaptic('medium');
                 const index = parseInt(e.target.dataset.index);
@@ -1380,9 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cartOverlay.classList.remove('active');
     };
 
-    const updateCartUI = () => {
-        // Save to storage whenever UI updates
-        localStorage.setItem('dodch_cart', JSON.stringify(cart));
+    const updateCartUI = () => {        localStorage.setItem('dodch_cart', JSON.stringify(cart));
         localStorage.setItem('dodch_cart_version', CART_VERSION);
 
         if (currentUser) {
@@ -1400,7 +1072,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cartItemEl = document.createElement('div');
                 cartItemEl.classList.add('cart-item');
                 cartItemEl.innerHTML = `
-                    <img src="${item.image}" alt="${item.name}" class="cart-item-img">
+                    <img loading="lazy" src="${item.image}" alt="${item.name}" class="cart-item-img">
                     <div class="cart-item-info">
                         <h4 class="cart-item-title">${item.name}</h4>
                         <p class="cart-item-details">Size: ${item.size}</p>
@@ -1431,10 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return sum + (priceVal * item.quantity);
         }, 0);
         const FREE_SHIPPING_THRESHOLD = 100;
-        if (cartSubtotalEl) cartSubtotalEl.textContent = `${subtotal.toFixed(2)} TND`;
-
-        // Free Shipping Progress in Cart Drawer
-        const cartFooter = document.querySelector('.cart-footer');
+        if (cartSubtotalEl) cartSubtotalEl.textContent = `${subtotal.toFixed(2)} TND`;        const cartFooter = document.querySelector('.cart-footer');
         if (cartFooter) {
             let shippingMsg = cartFooter.querySelector('.shipping-promo-msg');
             if (!shippingMsg) {
@@ -1444,9 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cartFooter.prepend(shippingMsg);
             }
 
-            const isUnlocked = subtotal >= FREE_SHIPPING_THRESHOLD;
-            // Only trigger a transition if the unlocked state actually changed
-            const currentlyUnlocked = shippingMsg.classList.contains('shipping-promo-unlocked');
+            const isUnlocked = subtotal >= FREE_SHIPPING_THRESHOLD;            const currentlyUnlocked = shippingMsg.classList.contains('shipping-promo-unlocked');
 
             if (isUnlocked !== currentlyUnlocked) {
                 shippingMsg.classList.add('exit');
@@ -1465,9 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     shippingMsg.classList.remove('exit');
                 }, 400); // Wait for blur-out
-            } else {
-                // If the state hasn't changed but the value has, just update the numbers (don't exit)
-                if (!isUnlocked) {
+            } else {                if (!isUnlocked) {
                     const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
                     shippingMsg.innerHTML = `Add <strong>${remaining.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`;
                 }
@@ -1503,29 +1168,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 updateCartUI();
             });
-        });
-
-        // Also update checkout UI if we are on that page
-        updateCheckoutUI();
-    };
-
-    // Expose addToCart globally for custom product pages (like silk-mask.html)
-    window.addToCart = (productId, sizeLabel = null) => {
+        });        updateCheckoutUI();
+    };    window.addToCart = (productId, sizeLabel = null) => {
         window.triggerHaptic('medium');
         const product = productCatalog[productId];
         if (!product) {
             console.error("Product not found in catalog:", productId);
             window.showToast("Product not found.", "error");
             return;
-        }
-
-        // Determine size and price
-        let size = sizeLabel;
+        }        let size = sizeLabel;
         let price = product.price;
 
-        if (product.sizes && product.sizes.length > 0) {
-            // If no size specified, default to the first one
-            if (!size) {
+        if (product.sizes && product.sizes.length > 0) {            if (!size) {
                 size = product.sizes[0].label;
                 price = product.sizes[0].price;
             } else {
@@ -1565,54 +1219,27 @@ document.addEventListener('DOMContentLoaded', () => {
         openCart();
     });
     if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
-    if (cartOverlay) cartOverlay.addEventListener('click', closeCart);
-
-    // Helper to find the correct product container
-    const findProductContainer = (element) => {
-        // 1. Try explicit classes first
-        let container = element.closest('.product-card, .product-item, .product-info, .collection-item, .item, .single-product-wrapper');
-
-        // 2. If not found, traverse up to find a container with title and image
-        if (!container) {
-            let parent = element.parentElement;
-            // Traverse up to 10 levels to find a wrapper
-            for (let i = 0; i < 10; i++) {
+    if (cartOverlay) cartOverlay.addEventListener('click', closeCart);    const findProductContainer = (element) => {        let container = element.closest('.product-card, .product-item, .product-info, .collection-item, .item, .single-product-wrapper');        if (!container) {
+            let parent = element.parentElement;            for (let i = 0; i < 10; i++) {
                 if (!parent || parent.tagName === 'BODY') break;
 
                 const hasTitle = parent.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5');
                 const hasImg = parent.querySelector('img');
-                const hasPrice = parent.querySelector('.product-price, .price, .money, #product-price');
-
-                // Heuristic: A card shouldn't contain too many add-to-cart buttons (unless it's the wrapper for the whole page)
-                // If we are in a grid, the row might have 3 buttons. The card has 1.
-                const buttonsInParent = parent.querySelectorAll('.add-to-cart-btn');
-
-                // If it has a title and (image or price) and isn't a massive container (like the whole grid)
-                // We check if the parent is a 'section' or 'main' only if it seems to be a single product page
-                if (hasTitle && (hasImg || hasPrice) && buttonsInParent.length === 1) {
+                const hasPrice = parent.querySelector('.product-price, .price, .money, #product-price');                const buttonsInParent = parent.querySelectorAll('.add-to-cart-btn');                if (hasTitle && (hasImg || hasPrice) && buttonsInParent.length === 1) {
                     container = parent;
                     break;
-                }
-
-                // If we are on a single product page, the section/main might contain the button
-                if ((parent.tagName === 'SECTION' || parent.tagName === 'MAIN') && hasTitle && hasPrice) {
+                }                if ((parent.tagName === 'SECTION' || parent.tagName === 'MAIN') && hasTitle && hasPrice) {
                     container = parent;
                     break;
                 }
 
                 parent = parent.parentElement;
             }
-        }
-
-        // 3. Fallback to closest section or body (last resort)
-        // IMPORTANT: Do NOT fallback to document.body if there are multiple add-to-cart buttons on the page
-        if (!container) {
+        }        if (!container) {
             const allButtons = document.querySelectorAll('.add-to-cart-btn');
             if (allButtons.length === 1) {
                 return document.body;
-            }
-            // If multiple buttons, fallback to the direct parent to avoid global scope pollution
-            return element.parentElement;
+            }            return element.parentElement;
         }
 
         return container;
@@ -1622,22 +1249,10 @@ document.addEventListener('DOMContentLoaded', () => {
         sizeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 window.triggerHaptic('light');
-                const clickedBtn = e.currentTarget;
-                // Find the specific product container for this button
-                const container = findProductContainer(clickedBtn);
-
-                // Remove active class from sibling buttons in this container only
-                if (container) {
+                const clickedBtn = e.currentTarget;                const container = findProductContainer(clickedBtn);                if (container) {
                     const containerBtns = container.querySelectorAll('.size-btn');
                     containerBtns.forEach(b => b.classList.remove('active'));
-                }
-
-                // Add active to clicked button
-                clickedBtn.classList.add('active');
-
-                // Update Price within this container
-                // Try to find a price element with class first, then ID as fallback
-                if (container) {
+                }                clickedBtn.classList.add('active');                if (container) {
                     let localPrice = container.querySelector('.product-price, .price, #product-price');
                     if (localPrice) {
                         const newPrice = clickedBtn.getAttribute('data-price');
@@ -1651,13 +1266,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addToCartBtns.length > 0) {
         addToCartBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const clickedBtn = e.currentTarget;
-                // Attempt to find a container for the product (card, section, or wrapper)
-                const container = findProductContainer(clickedBtn);
-
-                // Find Product Name
-                // We search strictly within the container to avoid grabbing the first product's title
-                let productName = clickedBtn.dataset.title;
+                const clickedBtn = e.currentTarget;                const container = findProductContainer(clickedBtn);                let productName = clickedBtn.dataset.title;
 
                 if (!productName) {
                     let nameEl = container ? container.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5') : null;
@@ -1671,10 +1280,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 let size = "Standard";
-                let price = "0.00";
-
-                // Find Active Size Button within the container
-                const sizeBtnsInContainer = container ? container.querySelectorAll('.size-btn') : [];
+                let price = "0.00";                const sizeBtnsInContainer = container ? container.querySelectorAll('.size-btn') : [];
 
                 if (sizeBtnsInContainer.length > 0) {
                     let activeSizeBtn = Array.from(sizeBtnsInContainer)
@@ -1687,27 +1293,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     size = activeSizeBtn.dataset.size;
                     price = activeSizeBtn.dataset.price;
-                } else {
-                    // Fallback for products without size buttons
-                    const priceEl = container ? container.querySelector('.product-price, .price, #product-price') : null;
+                } else {                    const priceEl = container ? container.querySelector('.product-price, .price, #product-price') : null;
                     if (priceEl) {
                         price = priceEl.textContent.replace(/[^0-9.]/g, '');
                     } else if (clickedBtn.dataset.price) {
                         price = clickedBtn.dataset.price;
                     }
-                }
+                }                let imageSrc = clickedBtn.dataset.img || '';
 
-                // Find Image
-                let imageSrc = clickedBtn.dataset.img || '';
-
-                if (!imageSrc) {
-                    // Prioritize image in container
-                    const imgEl = container ? container.querySelector('img.product-image, img') : null;
+                if (!imageSrc) {                    const imgEl = container ? container.querySelector('img.product-image, img') : null;
                     if (imgEl) {
                         imageSrc = imgEl.src;
-                    } else {
-                        // Fallback only if we are sure it's a single product page
-                        const mainImg = document.getElementById('main-product-image');
+                    } else {                        const mainImg = document.getElementById('main-product-image');
                         if (mainImg) imageSrc = mainImg.src;
                     }
                 }
@@ -1743,19 +1340,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DYNAMIC PRODUCT PAGE LOGIC ---
     const initProductPage = () => {
         const productDetailContainer = document.querySelector('.product-detail-container');
-        if (!productDetailContainer) return; // Not on product page
-
-        // Get Product ID from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = urlParams.get('id');
-
-        // Default to shampoo if no ID provided (or handle 404)
-        const product = productCatalog[productId] || productCatalog['glass-glow-shampoo'];
-
-        // Update DOM Elements
-        let titleEl = document.getElementById('product-title');
-        // Fallback: Try finding h1 in product-info if ID is missing
-        if (!titleEl) {
+        if (!productDetailContainer) return; // Not on product page        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');        const product = productCatalog[productId] || productCatalog['glass-glow-shampoo'];        let titleEl = document.getElementById('product-title');        if (!titleEl) {
             const info = document.querySelector('.product-info');
             if (info) titleEl = info.querySelector('h1');
         }
@@ -1768,25 +1354,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const priceEl = document.getElementById('product-price');
         const descEl = document.getElementById('product-description-text');
-        const imgEl = document.getElementById('main-product-image');
-
-        // Define addToCartBtn early to avoid ReferenceError
-        const productInfo = document.querySelector('.product-info');
+        const imgEl = document.getElementById('main-product-image');        const productInfo = document.querySelector('.product-info');
         const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
 
         if (titleEl) titleEl.textContent = product.name;
-        if (subtitleEl) subtitleEl.textContent = product.subtitle;
-
-        // Calculate lowest price from sizes if available
-        let displayPrice = product.price;
+        if (subtitleEl) subtitleEl.textContent = product.subtitle;        let displayPrice = product.price;
         if (product.sizes && product.sizes.length > 0) {
             const prices = product.sizes.map(s => parseFloat(s.price));
             displayPrice = Math.min(...prices).toFixed(2);
         }
-        if (priceEl) priceEl.textContent = `${displayPrice} TND`;
-
-        // Handle Out of Stock
-        if (product.outOfStock) {
+        if (priceEl) priceEl.textContent = `${displayPrice} TND`;        if (product.outOfStock) {
             if (priceEl) priceEl.textContent = "Out of Stock";
             if (priceEl) priceEl.style.color = "#ff4d4d";
         }
@@ -1796,28 +1373,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (imgEl) {
             imgEl.src = product.image;
             if (product.style) imgEl.style = product.style;
-        }
-
-        // Attach Product ID to Add to Cart button for server verification
-        if (addToCartBtn) {
+        }        if (addToCartBtn) {
             addToCartBtn.dataset.productId = productId || 'glass-glow-shampoo';
-        }
-
-        // Update Page Title
-        document.title = `${product.name} | DODCH`;
-
-        // Dynamic Size Buttons for Product Page
-        const sizeOptionsContainer = productDetailContainer.querySelector('.size-options');
+        }        document.title = `${product.name} | DODCH`;        const sizeOptionsContainer = productDetailContainer.querySelector('.size-options');
         if (sizeOptionsContainer && product.sizes) {
             sizeOptionsContainer.innerHTML = ''; // Clear existing hardcoded buttons
 
-            if (product.sizes.length > 0) {
-                // Ensure selector is visible
-                const selector = productDetailContainer.querySelector('.size-selector');
-                if (selector) selector.style.display = 'block';
-
-                // Find index of lowest price
-                const prices = product.sizes.map(s => parseFloat(s.price));
+            if (product.sizes.length > 0) {                const selector = productDetailContainer.querySelector('.size-selector');
+                if (selector) selector.style.display = 'block';                const prices = product.sizes.map(s => parseFloat(s.price));
                 const minPrice = Math.min(...prices);
                 const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
 
@@ -1832,10 +1395,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else {
                                 priceEl.textContent = `${sizeObj.price} TND`;
                             }
-                        }
-
-                        // Initial check for default selected size
-                        const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
+                        }                        const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
                         if (addToCartBtn && !product.outOfStock) {
                             if (sizeObj.outOfStock) {
                                 addToCartBtn.disabled = true;
@@ -1850,11 +1410,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     btn.dataset.size = sizeObj.label;
                     btn.dataset.price = sizeObj.price;
-                    btn.textContent = sizeObj.label;
-
-                    // Re-attach click listener logic locally or rely on global delegation if set up correctly
-                    // Here we attach locally for safety
-                    btn.addEventListener('click', () => {
+                    btn.textContent = sizeObj.label;                    btn.addEventListener('click', () => {
                         sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
                         if (priceEl) {
@@ -1863,10 +1419,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else {
                                 priceEl.textContent = `${sizeObj.price} TND`;
                             }
-                        }
-
-                        // Update Add to Cart button based on size stock
-                        const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
+                        }                        const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
                         if (addToCartBtn && !product.outOfStock) {
                             if (sizeObj.outOfStock) {
                                 addToCartBtn.disabled = true;
@@ -1883,27 +1436,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (product.outOfStock) {
                         btn.disabled = true;
                         btn.style.opacity = "0.5";
-                    } else if (sizeObj.outOfStock) {
-                        // Visual indication for single size OOS
-                        btn.style.textDecoration = "line-through";
+                    } else if (sizeObj.outOfStock) {                        btn.style.textDecoration = "line-through";
                         btn.style.opacity = "0.6";
                     }
 
                     sizeOptionsContainer.appendChild(btn);
                 });
-            } else {
-                // Hide size selector if no sizes (e.g. Set)
-                const selector = productDetailContainer.querySelector('.size-selector');
+            } else {                const selector = productDetailContainer.querySelector('.size-selector');
                 if (selector) selector.style.display = 'none';
             }
-        }
-
-        // Add "Learn More" link if storyUrl exists
-        const existingStoryBtn = document.getElementById('product-story-link');
-        if (existingStoryBtn) existingStoryBtn.remove();
-
-        // Ensure OOS logic runs for all products
-        if (product.outOfStock && addToCartBtn) {
+        }        const existingStoryBtn = document.getElementById('product-story-link');
+        if (existingStoryBtn) existingStoryBtn.remove();        if (product.outOfStock && addToCartBtn) {
             addToCartBtn.disabled = true;
             addToCartBtn.innerText = "Out of Stock";
             addToCartBtn.style.backgroundColor = "#ccc";
@@ -1924,16 +1467,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             addToCartBtn.after(storyBtn);
         }
-    };
-
-    // Load catalog then init page
-    // Initialize immediately with default data to prevent content flash/fallback
-    initProductPage();
+    };    initProductPage();
     initShopPage();
-    loadProductCatalog();
-
-    // Sidebar Logic
-    const sidebarUserName = document.getElementById('sidebar-user-name');
+    loadProductCatalog();    const sidebarUserName = document.getElementById('sidebar-user-name');
     const sidebarLoginBtn = document.getElementById('sidebar-login-btn');
     const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
 
@@ -1947,19 +1483,10 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarLogoutBtn.addEventListener('click', () => {
             handleLogout();
         });
-    }
-
-    // Auth State Observer
-    onAuthStateChanged(auth, async (user) => {
+    }    onAuthStateChanged(auth, async (user) => {
         currentUser = user;
 
-        if (user) {
-            // Claim any guest orders made before logging in
-            claimGuestOrders(user.uid);
-
-            // If the guest-convert-banner is visible on the checkout confirmation page,
-            // swap it to a 'View Your Orders' success card
-            const guestBanner = document.getElementById('guest-convert-banner');
+        if (user) {            claimGuestOrders(user.uid);            const guestBanner = document.getElementById('guest-convert-banner');
             if (guestBanner) {
                 guestBanner.style.opacity = '0';
                 guestBanner.style.transform = 'scale(0.95)';
@@ -1975,25 +1502,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     guestBanner.style.transform = 'scale(1)';
                 }, 350);
             }
-        }
-
-        // Re-query elements to ensure we catch them on all pages (fixes Guest Mode bug)
-        const loginBtn = document.getElementById('login-btn');
+        }        if (typeof syncPushTokenToUser === 'function') {
+            syncPushTokenToUser();
+        }        const loginBtn = document.getElementById('login-btn');
         const sidebarUserName = document.getElementById('sidebar-user-name');
         const sidebarLoginBtn = document.getElementById('sidebar-login-btn');
-        const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
-
-        // Update Navbar Login Button Text
-        if (loginBtn) {
+        const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');        if (loginBtn) {
             if (user) {
                 loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="login-text">Logout</span>`;
             } else {
                 loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg><span class="login-text">Login</span>`;
             }
-        }
-
-        // Update Sidebar UI
-        if (sidebarUserName) {
+        }        if (sidebarUserName) {
             const profileIcon = document.querySelector('.profile-icon');
             if (user) {
                 sidebarUserName.textContent = user.displayName || user.email || "Member";
@@ -2004,18 +1524,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (sidebarLoginBtn) sidebarLoginBtn.style.display = 'none';
-                if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'block';
-
-                // Add My Account button under username
-                let myAccountBtn = document.getElementById('sidebar-my-account-btn');
+                if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'block';                let myAccountBtn = document.getElementById('sidebar-my-account-btn');
                 if (!myAccountBtn) {
                     myAccountBtn = document.createElement('a');
                     myAccountBtn.id = 'sidebar-my-account-btn';
                     myAccountBtn.href = 'my-account.html';
-                    myAccountBtn.textContent = 'My Account';
-
-                    // Style to match the login button
-                    myAccountBtn.style.marginTop = '1rem';
+                    myAccountBtn.textContent = 'My Account';                    myAccountBtn.style.marginTop = '1rem';
                     myAccountBtn.style.background = 'transparent';
                     myAccountBtn.style.border = '1px solid var(--accent-gold)';
                     myAccountBtn.style.color = 'var(--accent-gold)';
@@ -2038,10 +1552,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         myAccountBtn.style.color = 'var(--accent-gold)';
                     });
 
-                    sidebarUserName.after(myAccountBtn);
-
-                    // Add Admin Dashboard button if user is admin
-                    if (user.uid === ADMIN_UID) {
+                    sidebarUserName.after(myAccountBtn);                    if (user.uid === ADMIN_UID) {
                         let adminBtn = document.getElementById('sidebar-admin-btn');
                         if (!adminBtn) {
                             adminBtn = myAccountBtn.cloneNode(true);
@@ -2055,23 +1566,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             myAccountBtn.after(adminBtn);
                         } else {
                             adminBtn.style.display = 'inline-block';
-                        }
-                        // Start listening for admin notifications
-                        listenForAdminNotifications();
+                        }                        listenForAdminNotifications();
                     }
                 } else {
                     myAccountBtn.style.display = 'inline-block';
                     const adminBtn = document.getElementById('sidebar-admin-btn');
                     if (adminBtn) adminBtn.style.display = 'inline-block';
-                }
-
-                // Start listening for user notifications if not admin
-                if (user.uid !== ADMIN_UID) {
+                }                if (user.uid !== ADMIN_UID) {
                     listenForUserNotifications(user.uid);
-                }
-
-                // Sync Cart from Firestore
-                const cartRef = doc(db, "carts", user.uid);
+                }                const cartRef = doc(db, "carts", user.uid);
                 const docSnap = await getDoc(cartRef);
 
                 if (docSnap.exists() && cart.length === 0) {
@@ -2084,41 +1587,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     profileIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
                 }
                 if (sidebarLoginBtn) sidebarLoginBtn.style.display = 'block';
-                if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'none';
-
-                // Hide My Account button
-                const myAccountBtn = document.getElementById('sidebar-my-account-btn');
+                if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'none';                const myAccountBtn = document.getElementById('sidebar-my-account-btn');
                 if (myAccountBtn) myAccountBtn.style.display = 'none';
                 const adminBtn = document.getElementById('sidebar-admin-btn');
                 if (adminBtn) adminBtn.style.display = 'none';
             }
-        }
-
-        // Auto-populate checkout form if user is logged in
-        const checkoutEmailInput = document.getElementById('checkout-email');
+        }        const checkoutEmailInput = document.getElementById('checkout-email');
         const checkoutNameInput = document.getElementById('checkout-name');
 
         if (user && checkoutEmailInput && checkoutNameInput) {
             checkoutEmailInput.value = user.email || '';
             checkoutNameInput.value = user.displayName || '';
-        }
-
-        // My Account Page: Fetch Orders
-        const ordersList = document.getElementById('orders-list');
+        }        const ordersList = document.getElementById('orders-list');
         const accountUserName = document.getElementById('account-user-name');
 
         if (ordersList) {
             if (user) {
-                if (accountUserName) accountUserName.textContent = user.displayName || "Member";
-
-                // Show Skeleton
-                const ordersLoader = document.getElementById('orders-loader');
+                if (accountUserName) accountUserName.textContent = user.displayName || "Member";                const ordersLoader = document.getElementById('orders-loader');
                 if (ordersLoader) ordersLoader.classList.add('active');
                 ordersList.classList.remove('visible');
 
-                try {
-                    // Fetch reviewed product IDs first to show/hide Review button
-                    const reviewsSnap = await getDocs(query(collection(db, "product_reviews"), where("userId", "==", user.uid)));
+                try {                    const reviewsSnap = await getDocs(query(collection(db, "product_reviews"), where("userId", "==", user.uid)));
                     const reviewedProductIds = new Set();
                     reviewsSnap.forEach(doc => reviewedProductIds.add(doc.data().productId));
 
@@ -2134,10 +1623,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data.hasUnseenUpdate) {
                             updatesToClear.push(updateDoc(doc.ref, { hasUnseenUpdate: false }));
                         }
-                    });
-
-                    // Clear notifications in background
-                    if (updatesToClear.length > 0) {
+                    });                    if (updatesToClear.length > 0) {
                         Promise.all(updatesToClear).then(() => {
                             document.body.classList.remove('has-notification');
                         }).catch(console.error);
@@ -2170,9 +1656,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     trackButtonHtml = `<a href="tracking.html?orderId=${order.id}&trackingNumber=${trackingNumber}" class="track-order-btn">Track Order</a>`;
                                 } else if (status.toLowerCase() === 'pending') {
                                     cancelButtonHtml = `<button class="cancel-order-btn" data-id="${order.id}" style="margin-left: 5px; color: #ff4d4d; background: none; border: 1px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer;">Cancel</button>`;
-                                } else if (status.toLowerCase() === 'delivered') {
-                                    // Check if any product in this order hasn't been reviewed
-                                    const hasUnreviewed = order.items.some(item => !reviewedProductIds.has(item.productId || item.id));
+                                } else if (status.toLowerCase() === 'delivered') {                                    const hasUnreviewed = order.items.some(item => !reviewedProductIds.has(item.productId || item.id));
                                     if (hasUnreviewed) {
                                         reviewButtonHtml = `<button class="review-prompt-btn" style="margin-left: 5px; background: #fdf6ec; color: #e6a23c; border: 1px solid #e6a23c; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600;">Rate Products</button>`;
                                     }
@@ -2180,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                 let itemsHtml = order.items.map(item => {
                                     const pId = item.productId || item.id;
-                                    const img = productCatalog[pId]?.image || 'placeholder-glow.jpg';
+                                    const img = productCatalog[pId]?.image || 'placeholder-glow.webp';
                                     const itemPrice = String(item.price).includes('TND') ? item.price : `${item.price} TND`;
                                     return `
                                         <div class="order-item-row">
@@ -2218,17 +1702,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 `;
                                 ordersList.appendChild(orderCard);
-                            });
-
-                            // Pagination Check
-                            if (visibleOrdersCount < toRender.length) {
+                            });                            if (visibleOrdersCount < toRender.length) {
                                 document.getElementById('load-more-orders-container').style.display = 'flex';
                             } else {
                                 document.getElementById('load-more-orders-container').style.display = 'none';
-                            }
-
-                            // Re-bind listeners for newly rendered elements
-                            attachOrderActionListeners(orders);
+                            }                            attachOrderActionListeners(orders);
                         }
                     };
 
@@ -2278,9 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
 
                         document.querySelectorAll('.review-prompt-btn').forEach(btn => {
-                            btn.onclick = () => {
-                                // Trigger the global review prompt modal which finds unreviewed items
-                                if (typeof initGlobalReviewPrompt === 'function') {
+                            btn.onclick = () => {                                if (typeof initGlobalReviewPrompt === 'function') {
                                     initGlobalReviewPrompt(true); // Force open if needed
                                 } else {
                                     window.showToast("Review system is preparing...", "info");
@@ -2288,20 +1764,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             };
                         });
 
-                    };
-
-                    // Initial Render
-                    setTimeout(() => {
+                    };                    setTimeout(() => {
                         if (ordersLoader) ordersLoader.classList.remove('active');
                         ordersList.classList.add('visible');
 
                         orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
                         filteredOrders = [...orders];
                         renderOrders(filteredOrders);
-                    }, 800);
-
-                    // Dual Filter & Sort Logic
-                    const sortDateSelect = document.getElementById('order-sort-date');
+                    }, 800);                    const sortDateSelect = document.getElementById('order-sort-date');
                     const filterStatusSelect = document.getElementById('order-filter-status');
 
                     const applyFilters = () => {
@@ -2325,10 +1795,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
 
                     if (sortDateSelect) sortDateSelect.addEventListener('change', applyFilters);
-                    if (filterStatusSelect) filterStatusSelect.addEventListener('change', applyFilters);
-
-                    // Load More Orders Logic
-                    const loadMoreOrdersBtn = document.getElementById('load-more-orders-btn');
+                    if (filterStatusSelect) filterStatusSelect.addEventListener('change', applyFilters);                    const loadMoreOrdersBtn = document.getElementById('load-more-orders-btn');
                     if (loadMoreOrdersBtn) {
                         loadMoreOrdersBtn.onclick = () => {
                             loadMoreOrdersBtn.innerText = "Loading...";
@@ -2353,10 +1820,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     updateCartUI(); // Initial call to set empty state
-    updateCheckoutUI(); // Initial call for checkout page
-
-    // 12. Checkout Form Validation & Submission
-    const placeOrderBtn = document.querySelector('.place-order-btn');
+    updateCheckoutUI(); // Initial call for checkout page    const placeOrderBtn = document.querySelector('.place-order-btn');
     const checkoutForm = document.querySelector('.checkout-form form');
 
     if (placeOrderBtn && checkoutForm) {
@@ -2395,28 +1859,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- END SMART VALIDATION ---
 
-            if (checkoutForm.checkValidity()) {
-                // Simulate processing
-                placeOrderBtn.innerText = "Processing...";
+            if (checkoutForm.checkValidity()) {                placeOrderBtn.innerText = "Processing...";
                 placeOrderBtn.style.opacity = "0.7";
-                placeOrderBtn.style.pointerEvents = "none";
-
-                // Set a timeout for the entire operation to prevent infinite loading
-                const operationTimeout = setTimeout(() => {
+                placeOrderBtn.style.pointerEvents = "none";                const operationTimeout = setTimeout(() => {
                     console.error("TIMEOUT: Firebase did not respond within 15 seconds.");
-                    window.showToast("Server not responding. Please try again.", "error");
-                    // Re-enable the button on failure
-                    placeOrderBtn.innerText = "Place Order";
+                    window.showToast("Server not responding. Please try again.", "error");                    placeOrderBtn.innerText = "Place Order";
                     placeOrderBtn.style.opacity = "1";
                     placeOrderBtn.style.pointerEvents = "auto";
                                                 }, 15000); // 15 seconds
 
-                try {
-                    // Generate Order Reference
-                    const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
-                    
-                    // Recalculate totals for the final order object
-                    let calculatedSubtotal = 0;
+                try {                    const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();                    let calculatedSubtotal = 0;
                     const items = cart.map(item => {
                         let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
                         if (isNaN(priceVal)) priceVal = 0;
@@ -2452,22 +1904,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         timestamp: serverTimestamp(),
                         status: 'Pending',
                         userId: currentUser ? currentUser.uid : 'guest'
-                    };
-
-                    // Save directly to Firestore
-                    const docRef = await addDoc(collection(db, 'orders'), orderData);
+                    };                    const docRef = await addDoc(collection(db, 'orders'), orderData);
                     const orderId = docRef.id;
 
                     clearTimeout(operationTimeout);
-                    console.log("Order placed successfully with ID: ", orderId);
-
-                    // Track guest orders locally to allow claiming later
-                    if (!currentUser) {
+                    console.log("Order placed successfully with ID: ", orderId);                    if (currentUser && typeof window.saveShippingFromCheckout === 'function') {
+                        await window.saveShippingFromCheckout(currentUser.uid);
+                    }                    if (!currentUser) {
                         const guestOrders = JSON.parse(localStorage.getItem('dodch_guest_orders') || '[]');
                         guestOrders.push(orderId);
                         localStorage.setItem('dodch_guest_orders', JSON.stringify(guestOrders));
                     }
-
 
                     setTimeout(() => {
                         cart = [];
@@ -2513,15 +1960,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     placeOrderBtn.style.opacity = "1";
                     placeOrderBtn.style.pointerEvents = "auto";
                 }
-            } else {
-                // Trigger browser's built-in validation UI
-                checkoutForm.reportValidity();
+            } else {                checkoutForm.reportValidity();
             }
         });
-    }
-
-    // 14. Newsletter Form Logic
-    const newsletterForm = document.getElementById('newsletter-form');
+    }    const newsletterForm = document.getElementById('newsletter-form');
     if (newsletterForm) {
         newsletterForm.addEventListener('submit', (e) => {
             window.triggerHaptic('medium');
@@ -2553,38 +1995,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.style.backgroundColor = "";
             }, 3000);
         });
-    }
-
-    // 21. Breadcrumbs Logic
-    const initBreadcrumbs = () => {
+    }    const initBreadcrumbs = () => {
         const existing = document.querySelector('.breadcrumb-wrapper');
         if (existing) existing.remove();
 
         const path = window.location.pathname;
-        const page = path.split("/").pop();
-
-        // Skip for homepage only if it's the root without filters
-        if ((page === "" || page === "index.html" || page === "/") && !window.location.search) return;
-
-        // Skip for specific high-end story pages that handle their own navigation
-        if (page.includes("face-foam.html") || page.includes("face-serum.html") || page.includes("silk-mask.html") || page.includes("dodchmellow-pro-v.html")) return;
+        const page = path.split("/").pop();        if ((page === "" || page === "index.html" || page === "/") && !window.location.search) return;        if (page.includes("face-foam.html") || page.includes("face-serum.html") || page.includes("silk-mask.html") || page.includes("dodchmellow-pro-v.html")) return;
 
         const main = document.querySelector('main');
         if (!main) return;
 
         let crumbs = [{ name: "Home", url: "index.html" }];
-        let currentName = "";
-
-        // Determine current page hierarchy
-        if (page.includes("index.html") || page === "/" || page === "") {
+        let currentName = "";        if (page.includes("index.html") || page === "/" || page === "") {
             const urlParams = new URLSearchParams(window.location.search);
             const cat = urlParams.get('cat');
             const sub = urlParams.get('sub');
 
             if (cat) {
-                const catNames = { 'hair-care': 'Hair Care', 'face-care': 'Face Care', 'sets': 'Sets & Bundles' };
-                // Correct hierarchy: Home → Shop → Category
-                crumbs.push({ name: "Shop", url: "index.html" });
+                const catNames = { 'hair-care': 'Hair Care', 'face-care': 'Face Care', 'sets': 'Sets & Bundles' };                crumbs.push({ name: "Shop", url: "index.html" });
                 currentName = catNames[cat] || cat;
 
                 if (sub && sub !== 'all') {
@@ -2618,10 +2046,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (page.includes("admin.html")) {
             currentName = "Admin Dashboard";
         } else if (page.includes("product.html")) {
-            crumbs.push({ name: "Shop", url: "index.html" });
-
-            // Get product name from URL param
-            const urlParams = new URLSearchParams(window.location.search);
+            crumbs.push({ name: "Shop", url: "index.html" });            const urlParams = new URLSearchParams(window.location.search);
             const productId = urlParams.get('id');
             const product = productCatalog[productId] || productCatalog['glass-glow-shampoo'];
             currentName = product ? product.name : "Product";
@@ -2629,10 +2054,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (currentName) {
             crumbs.push({ name: currentName, url: null });
-        }
-
-        // Build HTML
-        const breadcrumbHTML = `
+        }        const breadcrumbHTML = `
             <div class="breadcrumb-wrapper">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb" itemscope itemtype="https://schema.org/BreadcrumbList">
@@ -2645,9 +2067,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span itemprop="name" class="breadcrumb-current">${crumb.name}</span>
                                 <meta itemprop="position" content="${index + 1}" />
                             </li>`;
-            } else {
-                // Schema.org recommends absolute URLs for "item".
-                const absoluteUrl = new URL(crumb.url, window.location.href).href;
+            } else {                const absoluteUrl = new URL(crumb.url, window.location.href).href;
                 return `
                             <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
                                 <a itemprop="item" href="${absoluteUrl}">
@@ -2661,23 +2081,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     </ol>
                 </nav>
             </div>
-        `;
-
-        // Inject at the top of main
-        main.insertAdjacentHTML('afterbegin', breadcrumbHTML);
+        `;        main.insertAdjacentHTML('afterbegin', breadcrumbHTML);
         document.body.classList.add('has-breadcrumbs');
     };
 
-    initBreadcrumbs();
-
-    // 15. Smart Footer & Contact Section Injection
-    const initSmartFooter = () => {
-        const footer = document.querySelector('footer');
-
-        // Run on all pages if footer exists
-        if (footer) {
-            // 1. Inject "Get in Touch" Section BEFORE footer (only if not already present)
-            if (!document.getElementById('contact')) {
+    initBreadcrumbs();    const initSmartFooter = () => {
+        const footer = document.querySelector('footer');        if (footer) {            if (!document.getElementById('contact')) {
                 const contactSectionHTML = `
                     <section id="contact" class="section-padding bg-white">
                         <div class="container">
@@ -2722,10 +2131,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
 
                 footer.insertAdjacentHTML('beforebegin', contactSectionHTML);
-            }
-
-            // Replace footer content
-            footer.innerHTML = `
+            }            footer.innerHTML = `
                 <div class="container">
                     <div class="footer-content">
                         <div class="footer-col brand-col">
@@ -2844,10 +2250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 toggle.innerHTML = `${item.icon || ''}<span>${item.label}</span><span class="toggle-icon"></span>`;
 
                 toggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-
-                    // Close other open groups at the same level (Accordion behavior)
-                    const siblings = Array.from(group.parentElement.children);
+                    e.stopPropagation();                    const siblings = Array.from(group.parentElement.children);
                     siblings.forEach(sibling => {
                         if (sibling !== group && sibling.classList.contains('sidebar-menu-group')) {
                             sibling.classList.remove('active');
@@ -2871,16 +2274,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const link = document.createElement('a');
                 link.href = item.link;
                 link.innerHTML = `${item.icon || ''}<span>${item.label}</span>`;
-                if (item.className) {
-                    // Add multiple classes if separated by space
-                    item.className.split(' ').forEach(cls => link.classList.add(cls));
-                }
-
-                // SPA Navigation for Shop
-                if (item.link && item.link.includes('index.html')) {
-                    link.addEventListener('click', (e) => {
-                        // Only intercept if we are currently on index.html
-                        if (window.location.pathname.includes('index.html')) {
+                if (item.className) {                    item.className.split(' ').forEach(cls => link.classList.add(cls));
+                }                if (item.link && item.link.includes('index.html')) {
+                    link.addEventListener('click', (e) => {                        if (window.location.pathname.includes('index.html')) {
                             e.preventDefault();
                             window.history.pushState({}, '', item.link);
                             initShopPage(true);
@@ -2895,10 +2291,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         menuItems.forEach(item => {
             sidebarMenu.appendChild(createMenuNode(item));
-        });
-
-        // Auto-expand sidebar based on current URL
-        const currentPath = window.location.pathname;
+        });        const currentPath = window.location.pathname;
         const urlParams = new URLSearchParams(window.location.search);
         const cat = urlParams.get('cat');
         const isShopPage = currentPath.endsWith('/') || currentPath.endsWith('index.html');
@@ -2917,20 +2310,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    renderSidebarMenu();
-
-    // 22. Highlight Active Sidebar Link
-    const updateSidebarActiveState = () => {
-        const currentUrl = new URL(window.location.href);
-
-        // Treat base homepage as "All Products" for active state
-        const isBaseHomePage = (currentUrl.pathname.endsWith('/') || currentUrl.pathname.endsWith('/index.html')) && currentUrl.search === '';
+    renderSidebarMenu();    const updateSidebarActiveState = () => {
+        const currentUrl = new URL(window.location.href);        const isBaseHomePage = (currentUrl.pathname.endsWith('/') || currentUrl.pathname.endsWith('/index.html')) && currentUrl.search === '';
         if (isBaseHomePage) {
             currentUrl.searchParams.set('cat', 'all');
-        }
-
-        // Deactivate all first
-        document.querySelectorAll('.sidebar-menu-group.active').forEach(g => g.classList.remove('active'));
+        }        document.querySelectorAll('.sidebar-menu-group.active').forEach(g => g.classList.remove('active'));
         document.querySelectorAll('.sidebar-menu a.active').forEach(l => l.classList.remove('active'));
 
         let bestMatch = null;
@@ -2938,25 +2322,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.sidebar-menu a').forEach(link => {
             const linkUrl = new URL(link.href, window.location.origin);
-            let score = 0;
-
-            // Rule 1: Must be on the same page (e.g., index.html)
-            if (linkUrl.pathname !== currentUrl.pathname) {
+            let score = 0;            if (linkUrl.pathname !== currentUrl.pathname) {
                 return;
             }
-            score = 1;
-
-            // Rule 2: Compare query parameters
-            const currentParams = currentUrl.searchParams;
+            score = 1;            const currentParams = currentUrl.searchParams;
             const linkParams = linkUrl.searchParams;
 
             if (currentUrl.search === linkUrl.search) {
                 score = 10; // Perfect match is best
             } else {
                 let paramsMatch = true;
-                let matchCount = 0;
-                // The link's params must be a subset of the current URL's params
-                for (const [key, value] of linkParams.entries()) {
+                let matchCount = 0;                for (const [key, value] of linkParams.entries()) {
                     if (currentParams.get(key) !== value) {
                         paramsMatch = false;
                         break;
@@ -2983,10 +2359,7 @@ document.addEventListener('DOMContentLoaded', () => {
             while (parent) {
                 parent.classList.add('active');
                 parent = parent.parentElement.closest('.sidebar-menu-group');
-            }
-
-            // Scroll active item into view
-            setTimeout(() => {
+            }            setTimeout(() => {
                 const sidebar = document.getElementById('desktop-sidebar');
                 if (sidebar && (window.innerWidth >= 768 || sidebar.classList.contains('active'))) {
                     bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2994,10 +2367,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 500);
         }
     };
-    updateSidebarActiveState();
-
-    // 23. Highlight Contact Section
-    const initContactHighlight = () => {
+    updateSidebarActiveState();    const initContactHighlight = () => {
         const highlight = () => {
             const contactSection = document.getElementById('contact');
             if (contactSection) {
@@ -3026,12 +2396,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
-    initContactHighlight();
-
-    // 24. Admin Dashboard Logic
-    const initAdminPage = async () => {
-        // Helper: Debounce function for search performance
-        const debounce = (func, wait) => {
+    initContactHighlight();    const initAdminPage = async () => {        const debounce = (func, wait) => {
             let timeout;
             return function (...args) {
                 clearTimeout(timeout);
@@ -3042,10 +2407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const adminOrdersList = document.getElementById('admin-orders-list');
         const adminProductsList = document.getElementById('admin-products-list');
 
-        if (!adminOrdersList) return; // Not on admin page
-
-        // Verify Admin
-        onAuthStateChanged(auth, (user) => {
+        if (!adminOrdersList) return; // Not on admin page        onAuthStateChanged(auth, (user) => {
             if (!user || user.uid !== ADMIN_UID) {
                 window.location.href = 'index.html';
             } else {
@@ -3054,10 +2416,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadRevenueChart();
                 loadAdminMessages();
             }
-        });
-
-        // Tab Logic
-        const tabs = document.querySelectorAll('.admin-tab-btn');
+        });        const tabs = document.querySelectorAll('.admin-tab-btn');
         const panes = document.querySelectorAll('.tab-pane');
 
         tabs.forEach(tab => {
@@ -3069,10 +2428,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const targetPane = document.getElementById(`tab-${tab.dataset.tab}`);
                 if (targetPane) targetPane.classList.add('active');
             });
-        });
-
-        // Product Modal Logic
-        const addProductModal = document.getElementById('add-product-modal');
+        });        const addProductModal = document.getElementById('add-product-modal');
         const addProductBtn = document.getElementById('admin-add-product-btn');
         const cancelProductEditBtn = document.getElementById('cancel-product-edit');
         const addProductForm = document.getElementById('add-product-form');
@@ -3126,9 +2482,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 dropZone.classList.remove('dragover');
 
                 if (e.dataTransfer.files.length) {
-                    imageFileInput.files = e.dataTransfer.files;
-                    // Trigger change event manually to update preview
-                    imageFileInput.dispatchEvent(new Event('change'));
+                    imageFileInput.files = e.dataTransfer.files;                    imageFileInput.dispatchEvent(new Event('change'));
                 }
             });
         }
@@ -3243,10 +2597,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
                     originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
                     outOfStock: false // Default to false, will be preserved below if editing
-                }));
-
-                // Preserve existing data if editing
-                const existingProduct = isEdit ? productCatalog[newId] : {};
+                }));                const existingProduct = isEdit ? productCatalog[newId] : {};
                 if (isEdit && existingProduct.sizes) {
                     sizes.forEach(newSize => {
                         const oldSize = existingProduct.sizes.find(s => s.label === newSize.label);
@@ -3254,10 +2605,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                if (sizes.length === 0) { window.showToast("Please add at least one size.", "error"); submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; return; }
-
-                // Calculate order index for new products
-                let orderIndex = isEdit ? (existingProduct.orderIndex || 0) : 0;
+                if (sizes.length === 0) { window.showToast("Please add at least one size.", "error"); submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; return; }                let orderIndex = isEdit ? (existingProduct.orderIndex || 0) : 0;
                 if (!isEdit) {
                     const existingIndices = Object.values(productCatalog).map(p => p.orderIndex || 0);
                     orderIndex = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 0;
@@ -3280,15 +2628,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.innerHTML = `${spinner} Saving Product...`;
                 try { await setDoc(doc(db, "products", newId), newProduct); productCatalog[newId] = newProduct; loadAdminProducts(); closeProductModal(); window.showToast(isEdit ? "Product updated successfully!" : "Product added successfully!", "success"); } catch (error) { console.error("Error saving product:", error); window.showToast("Failed to save product.", "error"); } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; }
             });
-        }
-
-        // Pagination State
-        const pageSize = 10;
+        }        const pageSize = 10;
         let currentPage = 1;
-        let cursors = [null]; // Stores the last document of each page to use as a cursor for the next
-
-        // Filter/Sort Elements
-        const filterStatus = document.getElementById('admin-filter-status');
+        let cursors = [null]; // Stores the last document of each page to use as a cursor for the next        const filterStatus = document.getElementById('admin-filter-status');
         const sortDate = document.getElementById('admin-sort-date');
 
         const refreshOrders = () => {
@@ -3298,37 +2640,26 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (filterStatus) filterStatus.addEventListener('change', refreshOrders);
-        if (sortDate) sortDate.addEventListener('change', refreshOrders);
-
-        // Export CSV Logic
-        const exportBtn = document.getElementById('admin-export-btn');
+        if (sortDate) sortDate.addEventListener('change', refreshOrders);        const exportBtn = document.getElementById('admin-export-btn');
         if (exportBtn) {
             exportBtn.addEventListener('click', async () => {
                 const originalText = exportBtn.innerText;
                 exportBtn.innerText = "Exporting...";
                 exportBtn.disabled = true;
 
-                try {
-                    // Fetch ALL matching orders (no limit) for export
-                    let q = collection(db, "orders");
+                try {                    let q = collection(db, "orders");
                     const statusValue = filterStatus ? filterStatus.value : '';
                     const dateDir = sortDate ? sortDate.value : 'desc';
 
                     if (statusValue) q = query(q, where("status", "==", statusValue));
                     q = query(q, orderBy("timestamp", dateDir));
 
-                    const querySnapshot = await getDocs(q);
-
-                    // CSV Header
-                    let csvContent = "data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items\n";
+                    const querySnapshot = await getDocs(q);                    let csvContent = "data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items\n";
 
                     querySnapshot.forEach(doc => {
                         const data = doc.data();
                         const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
-                        const itemsStr = data.items ? data.items.map(i => `${i.quantity}x ${i.name} (${i.size})`).join('; ') : '';
-
-                        // Escape commas in data to prevent CSV breakage
-                        const row = [
+                        const itemsStr = data.items ? data.items.map(i => `${i.quantity}x ${i.name} (${i.size})`).join('; ') : '';                        const row = [
                             data.orderReference || doc.id,
                             date,
                             `"${data.shipping?.fullName || ''}"`,
@@ -3384,10 +2715,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const dateStr = msg.createdAt ? new Date(msg.createdAt.toDate()).toLocaleDateString() : 'N/A';
                         const safeName = escapeHTML(msg.name);
                         const safeEmail = escapeHTML(msg.email);
-                        const safeMessage = escapeHTML(msg.message);
-
-                        // For the mailto link, encodeURIComponent adds an extra layer of URL safety
-                        const mailtoLink = `mailto:${safeEmail}?subject=Reply from DODCH Cosmetics&body=Dear ${encodeURIComponent(msg.name)},%0D%0A%0D%0AThank you for getting in touch with us at DODCH!%0D%0A%0D%0A`;
+                        const safeMessage = escapeHTML(msg.message);                        const mailtoLink = `mailto:${safeEmail}?subject=Reply from DODCH Cosmetics&body=Dear ${encodeURIComponent(msg.name)},%0D%0A%0D%0AThank you for getting in touch with us at DODCH!%0D%0A%0D%0A`;
 
                         const el = document.createElement('div');
                         el.className = 'admin-order-card';
@@ -3461,15 +2789,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 let q = collection(db, "orders");
                 const statusValue = filterStatus ? filterStatus.value : '';
-                const dateDir = sortDate ? sortDate.value : 'desc';
-
-                // Apply Filters & Sorts
-                if (statusValue) {
+                const dateDir = sortDate ? sortDate.value : 'desc';                if (statusValue) {
                     q = query(q, where("status", "==", statusValue));
-                }
-
-                // Always sort by timestamp
-                q = query(q, orderBy("timestamp", dateDir));
+                }                q = query(q, orderBy("timestamp", dateDir));
 
                 const cursor = cursors[pageIndex];
 
@@ -3483,19 +2805,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const orders = [];
                 querySnapshot.forEach((doc) => {
                     orders.push({ id: doc.id, ...doc.data() });
-                });
-
-                // Store cursor for the next page if we have a full page
-                if (querySnapshot.docs.length > 0) {
+                });                if (querySnapshot.docs.length > 0) {
                     cursors[pageIndex + 1] = querySnapshot.docs[querySnapshot.docs.length - 1];
                 }
 
                 if (orders.length === 0) {
                     adminOrdersList.innerHTML = '<p>No orders found.</p>';
-                    if (pageIndex > 0) {
-                        // If we went to a page with no results, just show empty but keep controls? 
-                        // Or handle gracefully. For now, just showing empty is fine.
-                    }
+                    if (pageIndex > 0) {                    }
                     return;
                 }
 
@@ -3539,10 +2855,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 };
 
-                renderAdminOrdersList(orders);
-
-                // Search Logic
-                const searchInput = document.getElementById('admin-order-search');
+                renderAdminOrdersList(orders);                const searchInput = document.getElementById('admin-order-search');
                 if (searchInput) {
                     searchInput.addEventListener('input', debounce((e) => {
                         const term = e.target.value.toLowerCase();
@@ -3554,10 +2867,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         );
                         renderAdminOrdersList(filtered);
                     }, 300));
-                }
-
-                // Render Pagination Controls
-                const existingControls = document.getElementById('admin-pagination-controls');
+                }                const existingControls = document.getElementById('admin-pagination-controls');
                 if (existingControls) existingControls.remove();
 
                 const paginationHTML = `
@@ -3575,15 +2885,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
-                document.getElementById('next-page-btn').addEventListener('click', () => {
-                    // Only allow next if we actually fetched a full page, implying more might exist
-                    if (orders.length === pageSize) {
+                document.getElementById('next-page-btn').addEventListener('click', () => {                    if (orders.length === pageSize) {
                         loadAdminOrders(pageIndex + 1);
                     }
-                });
-
-                // Bind status change events
-                document.querySelectorAll('.admin-status-select').forEach(select => {
+                });                document.querySelectorAll('.admin-status-select').forEach(select => {
                     select.addEventListener('change', async (e) => {
                         const newStatus = e.target.value;
                         const orderId = e.target.dataset.id;
@@ -3593,10 +2898,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             try {
                                 await updateDoc(doc(db, "orders", orderId), { status: newStatus, hasUnseenUpdate: true });
                                 window.showToast("Order status updated", "success");
+                                
+                                const order = orders.find(o => o.id === orderId);
 
-                                // Auto-open email client if Confirmed
-                                if (newStatus === 'Confirmed') {
-                                    const order = orders.find(o => o.id === orderId);
+                                // --- Automated Target Push Notification ---
+                                if (order && order.userId && order.userId !== 'guest' && typeof window.sendTargetedPushNotification === 'function') {
+                                    let pushTitle = `Order Update`;
+                                    let pushBody = `Your order #${order.orderReference || order.id.slice(-6)} is now ${newStatus}.`;
+                                    
+                                    if (newStatus === 'Confirmed') {
+                                        pushTitle = `Order Confirmed! 🎉`;
+                                        pushBody = `We're preparing your order #${order.orderReference || order.id.slice(-6)} with care.`;
+                                    } else if (newStatus === 'In Delivery') {
+                                        pushTitle = `Order Out for Delivery 🚚`;
+                                        pushBody = `Your order #${order.orderReference || order.id.slice(-6)} is on its way to you!`;
+                                    } else if (newStatus === 'Delivered') {
+                                        pushTitle = `Order Delivered! 📦`;
+                                        pushBody = `We hope you enjoy your DODCH products.`;
+                                    }
+                                    
+                                    window.sendTargetedPushNotification(db, order.userId, pushTitle, pushBody, '/my-account.html#orders');
+                                } else if (order && order.userId === 'guest') {
+                                    window.showToast("Push Not Sent: Guest order (not linked to a user account).", "info");
+                                }                                if (newStatus === 'Confirmed') {
                                     if (order && order.shipping?.email) {
                                         const subject = `Order Confirmation: DODCH #${order.orderReference || order.id}`;
                                         const itemsList = order.items.map(i => `• ${i.quantity}x ${i.name} (${i.size})`).join('\n');
@@ -3658,9 +2982,7 @@ The DODCH Team`;
             }
         };
 
-        const loadAdminProducts = () => {
-            // Inject Sync Button
-            if (!document.getElementById('admin-sync-btn')) {
+        const loadAdminProducts = () => {            if (!document.getElementById('admin-sync-btn')) {
                 const syncBtn = document.createElement('button');
                 syncBtn.id = 'admin-sync-btn';
                 syncBtn.className = 'admin-btn btn-save';
@@ -3689,10 +3011,7 @@ The DODCH Team`;
                 }
             }
 
-            adminProductsList.innerHTML = '';
-
-            // Sort products by orderIndex
-            const sortedEntries = Object.entries(productCatalog).sort(([, a], [, b]) => {
+            adminProductsList.innerHTML = '';            const sortedEntries = Object.entries(productCatalog).sort(([, a], [, b]) => {
                 const orderDiff = (a.orderIndex || 0) - (b.orderIndex || 0);
                 if (orderDiff !== 0) return orderDiff;
                 return a.name.localeCompare(b.name);
@@ -3700,10 +3019,7 @@ The DODCH Team`;
 
             sortedEntries.forEach(([id, product], index) => {
                 const el = document.createElement('div');
-                el.className = 'admin-product-card';
-
-                // Generate inputs for each size if available, otherwise fallback to single price
-                let priceInputsHTML = '';
+                el.className = 'admin-product-card';                let priceInputsHTML = '';
                 if (product.sizes && product.sizes.length > 0) {
                     product.sizes.forEach((size, index) => {
                         priceInputsHTML += `
@@ -3801,45 +3117,26 @@ The DODCH Team`;
                     const card = e.currentTarget.closest('.admin-product-card');
                     const outOfStock = card.querySelector('.admin-stock-check').checked;
 
-                    try {
-                        // Update local catalog
-                        productCatalog[id].outOfStock = outOfStock;
-
-                        // Handle Size Updates
-                        const sizeInputs = card.querySelectorAll('.admin-size-price-input');
+                    try {                        productCatalog[id].outOfStock = outOfStock;                        const sizeInputs = card.querySelectorAll('.admin-size-price-input');
                         if (sizeInputs.length > 0) {
                             sizeInputs.forEach(input => {
                                 const index = input.dataset.index;
                                 const newPrice = parseFloat(input.value).toFixed(2);
-                                productCatalog[id].sizes[index].price = newPrice;
-
-                                // Update original price
-                                const originalPriceInput = card.querySelector(`.admin-size-original-price-input[data-index="${index}"]`);
+                                productCatalog[id].sizes[index].price = newPrice;                                const originalPriceInput = card.querySelector(`.admin-size-original-price-input[data-index="${index}"]`);
                                 if (originalPriceInput) {
                                     const oldPrice = originalPriceInput.value ? parseFloat(originalPriceInput.value).toFixed(2) : null;
                                     productCatalog[id].sizes[index].originalPrice = oldPrice;
-                                }
-
-                                // Update stock status for size
-                                const stockCheck = card.querySelector(`.admin-size-stock-check[data-index="${index}"]`);
+                                }                                const stockCheck = card.querySelector(`.admin-size-stock-check[data-index="${index}"]`);
                                 if (stockCheck) {
                                     productCatalog[id].sizes[index].outOfStock = stockCheck.checked;
                                 }
-                            });
-
-                            // Recalculate base price (lowest of the sizes)
-                            const prices = productCatalog[id].sizes.map(s => parseFloat(s.price));
+                            });                            const prices = productCatalog[id].sizes.map(s => parseFloat(s.price));
                             productCatalog[id].price = Math.min(...prices).toFixed(2);
-                        } else {
-                            // Handle Single Price Update
-                            const priceInput = card.querySelector('.admin-price-input');
+                        } else {                            const priceInput = card.querySelector('.admin-price-input');
                             if (priceInput) {
                                 productCatalog[id].price = parseFloat(priceInput.value).toFixed(2);
                             }
-                        }
-
-                        // Push full object to ensure sizes and other fields are synced
-                        await setDoc(doc(db, "products", id), productCatalog[id], { merge: true });
+                        }                        await setDoc(doc(db, "products", id), productCatalog[id], { merge: true });
                         window.showToast("Product updated", "success");
                     } catch (err) {
                         console.error(err);
@@ -3853,10 +3150,7 @@ The DODCH Team`;
                     const id = e.currentTarget.dataset.id;
                     if (await window.showConfirm("Are you sure you want to delete this product? This action cannot be undone.", "Delete Product")) {
                         try {
-                            console.log("Deleting product:", id);
-                            // Soft delete for default products (to persist deletion across reloads)
-                            // We check hasOwnProperty to be safe
-                            if (defaultProductCatalog.hasOwnProperty(id)) {
+                            console.log("Deleting product:", id);                            if (defaultProductCatalog.hasOwnProperty(id)) {
                                 await setDoc(doc(db, "products", id), { deleted: true }, { merge: true });
                                 console.log("Soft delete executed (marked as deleted in DB)");
                             } else {
@@ -3873,19 +3167,14 @@ The DODCH Team`;
                         }
                     }
                 });
-            });
-
-            // Move Up/Down Logic
-            document.querySelectorAll('.admin-move-btn').forEach(btn => {
+            });            document.querySelectorAll('.admin-move-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const id = e.currentTarget.dataset.id;
                     const direction = e.currentTarget.classList.contains('up') ? -1 : 1;
                     const currentIndex = sortedEntries.findIndex(([pid]) => pid === id);
                     const targetIndex = currentIndex + direction;
 
-                    if (targetIndex >= 0 && targetIndex < sortedEntries.length) {
-                        // Re-index all items to ensure clean sequence
-                        const batchPromises = [];
+                    if (targetIndex >= 0 && targetIndex < sortedEntries.length) {                        const batchPromises = [];
 
                         sortedEntries.forEach(([pid, p], idx) => {
                             let newIndex = idx;
@@ -3910,54 +3199,32 @@ The DODCH Team`;
                     }
                 });
             });
-        };
-
-        // Expose for live updates from loadProductCatalog
-        window.refreshAdminProducts = loadAdminProducts;
+        };        window.refreshAdminProducts = loadAdminProducts;
 
         const loadRevenueChart = async () => {
             const ctx = document.getElementById('revenueChart');
             if (!ctx) return;
 
-            try {
-                // Fetch all orders to aggregate revenue (in a real app, you might want a specific aggregation query)
-                // We sort by timestamp to ensure chronological order
-                const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
+            try {                const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
                 const querySnapshot = await getDocs(q);
 
                 const revenueByDate = {};
                 let totalRevenue = 0;
                 let totalOrdersCount = 0;
                 const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-                // Define statuses that count as revenue
-                const validStatuses = ['Confirmed', 'In Delivery', 'Delivered'];
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);                const validStatuses = ['Confirmed', 'In Delivery', 'Delivered'];
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    totalOrdersCount++;
+                    totalOrdersCount++;                    if (data.timestamp && data.total && data.status && validStatuses.includes(data.status)) {                        totalRevenue += data.total;
 
-                    // Check if order has a valid status for revenue
-                    if (data.timestamp && data.total && data.status && validStatuses.includes(data.status)) {
-                        // Add to all-time total
-                        totalRevenue += data.total;
-
-                        const date = new Date(data.timestamp.seconds * 1000);
-                        // Filter for last 30 days
-                        if (date >= thirtyDaysAgo) {
+                        const date = new Date(data.timestamp.seconds * 1000);                        if (date >= thirtyDaysAgo) {
                             const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                             revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + data.total;
                         }
                     }
-                });
-
-                // Update Total Revenue Display
-                const totalRevEl = document.getElementById('total-revenue-display');
-                if (totalRevEl) totalRevEl.textContent = `${totalRevenue.toFixed(2)} TND`;
-
-                // Update Total Orders Display
-                const totalOrdersEl = document.getElementById('total-orders-display');
+                });                const totalRevEl = document.getElementById('total-revenue-display');
+                if (totalRevEl) totalRevEl.textContent = `${totalRevenue.toFixed(2)} TND`;                const totalOrdersEl = document.getElementById('total-orders-display');
                 if (totalOrdersEl) totalOrdersEl.textContent = totalOrdersCount.toLocaleString();
 
                 const labels = Object.keys(revenueByDate);
@@ -3993,12 +3260,7 @@ The DODCH Team`;
         };
 
     };
-    initAdminPage();
-
-    // 16. Quick View Logic
-    const initQuickView = () => {
-        // Inject Modal HTML
-        const qvModalHTML = `
+    initAdminPage();    const initQuickView = () => {        const qvModalHTML = `
             <div id="qv-modal" class="qv-modal-overlay">
 
                 <div class="qv-modal-content">
@@ -4045,11 +3307,7 @@ The DODCH Team`;
         const qvAddToCart = document.getElementById('qv-add-to-cart');
         const qvLearnMore = document.getElementById('qv-learn-more');
 
-        let currentProduct = {};
-
-        // Open Modal
-        // Use event delegation to handle both static and dynamically loaded buttons
-        document.body.addEventListener('click', (e) => {
+        let currentProduct = {};        document.body.addEventListener('click', (e) => {
             if (e.target.classList.contains('quick-view-btn')) {
                 window.triggerHaptic('quickview');
                 const btn = e.target;
@@ -4061,10 +3319,7 @@ The DODCH Team`;
                 if (id === 'glass-glow-shampoo') {
                     window.showToast('This product is no longer available.', 'error');
                     return;
-                }
-
-                // Smart Import: Use catalog data if available for consistency
-                const product = productCatalog[id];
+                }                const product = productCatalog[id];
 
                 const title = product ? product.name : btn.dataset.title;
                 const price = product ? product.price : btn.dataset.price;
@@ -4082,18 +3337,12 @@ The DODCH Team`;
 
                 if (qvLearnMore) {
                     qvLearnMore.href = (product && product.storyUrl) ? product.storyUrl : `product.html?id=${id}`;
-                }
-
-                // Dynamic Size Buttons for Quick View
-                const sizeOptionsContainer = modal.querySelector('.size-options');
+                }                const sizeOptionsContainer = modal.querySelector('.size-options');
                 const sizeSelector = modal.querySelector('.size-selector');
                 sizeOptionsContainer.innerHTML = ''; // Clear previous
 
                 if (product && product.sizes && product.sizes.length > 0) {
-                    sizeSelector.style.display = 'block';
-
-                    // Find index of lowest price
-                    const prices = product.sizes.map(s => parseFloat(s.price));
+                    sizeSelector.style.display = 'block';                    const prices = product.sizes.map(s => parseFloat(s.price));
                     const minPrice = Math.min(...prices);
                     const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
 
@@ -4101,9 +3350,7 @@ The DODCH Team`;
                         const btn = document.createElement('button');
                         btn.className = 'size-btn';
                         if (index === minIndex) {
-                            btn.classList.add('active'); // Default to lowest
-                            // Initial check for default size in Quick View
-                            if (!product.outOfStock) {
+                            btn.classList.add('active'); // Default to lowest                            if (!product.outOfStock) {
                                 if (sizeObj.outOfStock) {
                                     qvAddToCart.disabled = true;
                                     qvAddToCart.querySelector('span').textContent = "Out of Stock";
@@ -4148,9 +3395,7 @@ The DODCH Team`;
                         }
 
                         sizeOptionsContainer.appendChild(btn);
-                    });
-                    // Set initial price to lowest size
-                    const initialSize = product.sizes[minIndex];
+                    });                    const initialSize = product.sizes[minIndex];
                     if (initialSize.originalPrice) {
                         qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND`;
                     } else {
@@ -4159,10 +3404,7 @@ The DODCH Team`;
                 } else {
                     sizeSelector.style.display = 'none';
                     qvPrice.textContent = `${price} TND`;
-                }
-
-                // Handle Out of Stock in Quick View
-                if (product && product.outOfStock) { // Global override
+                }                if (product && product.outOfStock) { // Global override
                     qvAddToCart.disabled = true;
                     qvAddToCart.querySelector('span').textContent = "Out of Stock";
                     qvAddToCart.style.backgroundColor = "#ccc";
@@ -4219,21 +3461,13 @@ The DODCH Team`;
         }
     };
 
-    initQuickView();
-
-    // 19. Related Products Logic
-    const loadRelatedProducts = () => {
-        // Check if we are on a product page
-        const productDetail = document.querySelector('.product-detail-container');
+    initQuickView();    const loadRelatedProducts = () => {        const productDetail = document.querySelector('.product-detail-container');
         const foamHero = document.querySelector('.foam-hero');
         const homeHero = document.getElementById('hero');
         const silkHero = document.getElementById('hero-silk');
         const serumPage = document.querySelector('.serum-page');
 
-        if (!productDetail && !foamHero && !homeHero && !silkHero && !serumPage) return;
-
-        // Create container if it doesn't exist
-        let container = document.getElementById('related-products-container');
+        if (!productDetail && !foamHero && !homeHero && !silkHero && !serumPage) return;        let container = document.getElementById('related-products-container');
         if (!container) {
             container = document.createElement('section');
             container.id = 'related-products-container';
@@ -4253,31 +3487,16 @@ The DODCH Team`;
                     main.appendChild(container);
                 }
             }
-        }
-
-        // Get current product ID to exclude
-        const urlParams = new URLSearchParams(window.location.search);
-        let currentId = urlParams.get('id');
-
-        // Handle Story Page specific IDs
-        if (foamHero) {
+        }        const urlParams = new URLSearchParams(window.location.search);
+        let currentId = urlParams.get('id');        if (foamHero) {
             currentId = 'foaming-cleanser';
         } else if (silkHero) {
             currentId = 'silk-therapy-mask';
         } else if (serumPage) {
             currentId = 'advanced-ha-serum';
-        }
-
-        // Resolve effective ID (matching initProductPage logic) to ensure correct exclusion
-        if (!currentId || !productCatalog[currentId]) {
+        }        if (!currentId || !productCatalog[currentId]) {
             currentId = 'glass-glow-shampoo';
-        }
-
-        // Use productCatalog to ensure consistency with Shop page
-        const allProductIds = Object.keys(productCatalog);
-
-        // Filter out current product, shuffle the rest, and take up to 4
-        const relatedIds = allProductIds
+        }        const allProductIds = Object.keys(productCatalog);        const relatedIds = allProductIds
             .filter(id => id !== currentId)
             .sort(() => 0.5 - Math.random()) // Shuffle the array
             .slice(0, 4); // Take the first 4 from the shuffled array
@@ -4292,10 +3511,7 @@ The DODCH Team`;
         let productsHtml = '';
         relatedIds.forEach(id => {
             const product = productCatalog[id];
-            if (!product) return; // Safety check
-
-            // Calculate lowest price from sizes if available
-            let displayPrice = product.price;
+            if (!product) return; // Safety check            let displayPrice = product.price;
             let hasDiscount = false;
             if (product.sizes && product.sizes.length > 0) {
                 const prices = product.sizes.map(s => parseFloat(s.price));
@@ -4315,7 +3531,7 @@ The DODCH Team`;
                     <a href="product.html?id=${id}">
                         <div class="product-image-wrapper">
                             ${badgeHTML}
-                            <img src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
+                            <img loading="lazy" src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
                             <button class="quick-view-btn" 
                                 data-id="${id}" 
                                 data-title="${product.name}" 
@@ -4344,19 +3560,13 @@ The DODCH Team`;
                     ${productsHtml}
                 </div>
             </div>
-        `;
-
-        // Trigger reveal animation for new elements
-        setTimeout(() => {
+        `;        setTimeout(() => {
             const newReveals = container.querySelectorAll('.reveal');
             newReveals.forEach(el => el.classList.add('active'));
         }, 100);
     };
 
-    loadRelatedProducts();
-
-    // 17. Navbar Search Logic
-    const searchToggleBtn = document.getElementById('search-toggle-btn');
+    loadRelatedProducts();    const searchToggleBtn = document.getElementById('search-toggle-btn');
     const searchContainer = document.querySelector('.search-container');
     const searchInput = document.getElementById('navbar-search-input');
 
@@ -4375,15 +3585,10 @@ The DODCH Team`;
                 searchInput.focus();
                 setTimeout(() => { searchJustOpened = false; }, 300);
             }
-        });
-
-        // Close when clicking outside — but only if not just opened
-        document.addEventListener('click', (e) => {
+        });        document.addEventListener('click', (e) => {
             if (searchJustOpened) return;
             const dropdown = document.getElementById('search-dropdown');
-            const dropdownActive = dropdown && dropdown.classList.contains('active');
-            // Don't close if the advanced search dropdown is open — it handles its own closing
-            if (dropdownActive) return;
+            const dropdownActive = dropdown && dropdown.classList.contains('active');            if (dropdownActive) return;
             if (
                 !searchContainer.contains(e.target) &&
                 !searchToggleBtn.contains(e.target) &&
@@ -4400,50 +3605,31 @@ The DODCH Team`;
                 navbar.classList.remove('search-active');
             }
         });
-    }
-
-    // Handle Browser Back/Forward for SPA Shop
-    window.addEventListener('popstate', () => {
+    }    window.addEventListener('popstate', () => {
         if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname === '') {
             initShopPage(true);
             updateSidebarActiveState();
             initBreadcrumbs();
         }
-    });
-
-    // 27. Silk Mask Hair Type Selector
-    const silkTabs = document.querySelectorAll('.hair-type-btn');
+    });    const silkTabs = document.querySelectorAll('.hair-type-btn');
     const silkPanels = document.querySelectorAll('.hair-panel');
 
     if (silkTabs.length > 0 && silkPanels.length > 0) {
         silkTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                // 1. Handle Tab State
-                silkTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-
-                // 2. Get Target Panel
-                const targetType = tab.dataset.type;
-                const targetPanel = document.getElementById(`panel-${targetType}`);
-
-                // 3. Handle Panel Transition
-                silkPanels.forEach(panel => {
+            tab.addEventListener('click', () => {                silkTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');                const targetType = tab.dataset.type;
+                const targetPanel = document.getElementById(`panel-${targetType}`);                silkPanels.forEach(panel => {
                     panel.classList.remove('active');
                 });
 
-                if (targetPanel) {
-                    // Force reflow for animation restart
-                    void targetPanel.offsetWidth;
+                if (targetPanel) {                    void targetPanel.offsetWidth;
                     targetPanel.classList.add('active');
                 }
             });
         });
     }
 
-});
-
-// 18. Tracking Page Logic
-const initTrackingPage = () => {
+});const initTrackingPage = () => {
     const trackingInfoContainer = document.getElementById('tracking-info');
     if (!trackingInfoContainer) return;
 
@@ -4457,10 +3643,7 @@ const initTrackingPage = () => {
 
     if (orderId && trackingNumber && orderIdEl && trackingNumberEl) {
         orderIdEl.textContent = orderRef ? orderRef : orderId.slice(0, 8).toUpperCase();
-        trackingNumberEl.textContent = trackingNumber;
-        // In a real app, you would fetch live tracking data here.
-        // The timeline is static HTML for this demo.
-    } else {
+        trackingNumberEl.textContent = trackingNumber;    } else {
         trackingInfoContainer.innerHTML = `
             <div class="account-header">
                 <h1>Tracking Not Found</h1>
@@ -4471,24 +3654,12 @@ const initTrackingPage = () => {
     }
 };
 
-initTrackingPage();
-
-// 25. Video Background for Elixir Section
-const initVideoBackground = () => {
+initTrackingPage();const initVideoBackground = () => {
     const candidates = document.querySelectorAll('h1, h2, h3, h4, p, span, .section-title, .subtitle');
     candidates.forEach(el => {
-        const text = el.textContent.toLowerCase();
-        // Match "elixir" (or typo "elexir") and "seeds" to target "The Elixir of 30,000 Seeds"
-        if ((text.includes('elixir') || text.includes('elexir')) && text.includes('seeds')) {
-            // Prevent running on admin dashboard
-            if (el.closest('.admin-container') || el.closest('.admin-section')) return;
+        const text = el.textContent.toLowerCase();        if ((text.includes('elixir') || text.includes('elexir')) && text.includes('seeds')) {            if (el.closest('.admin-container') || el.closest('.admin-section')) return;
 
-            const section = el.closest('section') || el.closest('.hero') || el.closest('.banner');
-
-            // Avoid duplicate injection
-            if (section && !section.querySelector('.bg-video-layer') && !section.classList.contains('admin-section')) {
-                // Ensure section can position absolute children
-                if (window.getComputedStyle(section).position === 'static') {
+            const section = el.closest('section') || el.closest('.hero') || el.closest('.banner');            if (section && !section.querySelector('.bg-video-layer') && !section.classList.contains('admin-section')) {                if (window.getComputedStyle(section).position === 'static') {
                     section.style.position = 'relative';
                 }
                 section.style.overflow = 'hidden';
@@ -4524,55 +3695,44 @@ const initVideoBackground = () => {
                     backgroundColor: 'rgba(0, 0, 0, 0.6)',
                     zIndex: '1',
                     pointerEvents: 'none'
-                });
-
-                // Ensure existing content sits above the video and overlay
-                Array.from(section.children).forEach(child => {
+                });                Array.from(section.children).forEach(child => {
                     if (child !== video && child !== overlay) {
                         child.style.position = 'relative';
                         child.style.zIndex = '2';
                     }
-                });
-
-                // Force text color to white for visibility against dark overlay
-                section.style.color = '#FFFFFF';
+                });                section.style.color = '#FFFFFF';
                 section.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, .section-title, .subtitle').forEach(textEl => {
                     textEl.style.color = '#FFFFFF';
                     textEl.style.textShadow = '0 2px 4px rgba(0,0,0,0.9), 0 8px 24px rgba(0,0,0,0.7)';
                 });
 
                 section.insertBefore(overlay, section.firstChild);
-                section.insertBefore(video, section.firstChild);
-
-                // Fade in video when data is loaded
-                video.addEventListener('loadeddata', () => {
+                section.insertBefore(video, section.firstChild);                video.addEventListener('loadeddata', () => {
                     video.style.opacity = '1';
-                });
-
-                // Gradually blur video as it plays
-                const animateBlur = () => {
+                });                const animateBlur = () => {
                     if (!video.paused && !video.ended) {
                         const progress = video.currentTime / video.duration || 0;
                         video.style.filter = `blur(${progress * 2.5}px)`; // Max 8px blur
                         requestAnimationFrame(animateBlur);
                     }
                 };
-                video.addEventListener('play', () => requestAnimationFrame(animateBlur));
-
-                // Parallax Effect
+                video.addEventListener('play', () => requestAnimationFrame(animateBlur));                let videoScrollTicking = false;
                 window.addEventListener('scroll', () => {
-                    const rect = section.getBoundingClientRect();
-                    const windowHeight = window.innerHeight;
-                    if (rect.top < windowHeight && rect.bottom > 0) {
-                        const sectionCenter = rect.top + rect.height / 2;
-                        const screenCenter = windowHeight / 2;
-                        const diff = screenCenter - sectionCenter;
-                        video.style.transform = `translateY(${diff * 0.15}px)`;
+                    if (!videoScrollTicking) {
+                        window.requestAnimationFrame(() => {
+                            const rect = section.getBoundingClientRect();
+                            const windowHeight = window.innerHeight;
+                            if (rect.top < windowHeight && rect.bottom > 0) {
+                                const sectionCenter = rect.top + rect.height / 2;
+                                const screenCenter = windowHeight / 2;
+                                const diff = screenCenter - sectionCenter;
+                                video.style.transform = `translateY(${diff * 0.15}px)`;
+                            }
+                            videoScrollTicking = false;
+                        });
+                        videoScrollTicking = true;
                     }
-                });
-
-                // Performance: Play only when in viewport
-                const observer = new IntersectionObserver((entries) => {
+                }, { passive: true });                const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
                             if (!video.ended) {
@@ -4588,13 +3748,7 @@ const initVideoBackground = () => {
             }
         }
     });
-};
-
-// Run after a short delay to ensure dynamic content is populated
-setTimeout(initVideoBackground, 800);
-
-// 26. Real-time Notification Listeners
-const listenForAdminNotifications = () => {
+};setTimeout(initVideoBackground, 800);const listenForAdminNotifications = () => {
     const adminBtn = document.getElementById('sidebar-admin-btn');
     if (!adminBtn) return; // Don't run if not on a page with the admin button
 
@@ -4624,30 +3778,16 @@ const listenForUserNotifications = (userId) => {
     const q = query(collection(db, "orders"), where("userId", "==", userId), orderBy("timestamp", "desc"));
     let isInitialLoad = true;
 
-    onSnapshot(q, (snapshot) => {
-        // Check if ANY order has an unseen update on the server
-        const hasUnseen = snapshot.docs.some(doc => doc.data().hasUnseenUpdate === true);
+    onSnapshot(q, (snapshot) => {        const hasUnseen = snapshot.docs.some(doc => doc.data().hasUnseenUpdate === true);
 
         if (hasUnseen) {
             document.body.classList.add('has-notification');
         } else {
             document.body.classList.remove('has-notification');
-        }
-
-        // Show toast and trigger review prompts for real-time updates
-        if (!isInitialLoad) {
+        }        if (!isInitialLoad) {
             snapshot.docChanges().forEach((change) => {
-                const data = change.doc.data();
-
-                // Only act if it's a newer update (unseen)
-                if (change.type === "modified" && data.hasUnseenUpdate === true) {
-                    const orderRef = data.orderReference || change.doc.id.slice(0, 8).toUpperCase();
-
-                    // 1. Show standard status update toast
-                    window.showToast(`Order #${orderRef}: Status is now ${data.status}.`, 'info');
-
-                    // 2. If it just became 'Delivered', trigger the global review prompt logic
-                    if (data.status === 'Delivered') {
+                const data = change.doc.data();                if (change.type === "modified" && data.hasUnseenUpdate === true) {
+                    const orderRef = data.orderReference || change.doc.id.slice(0, 8).toUpperCase();                    window.showToast(`Order #${orderRef}: Status is now ${data.status}.`, 'info');                    if (data.status === 'Delivered') {
                         console.log("Real-time delivery detected! Refreshing review prompt...");
                         initGlobalReviewPrompt();
                     }
@@ -4658,65 +3798,15 @@ const listenForUserNotifications = (userId) => {
     }, (error) => {
         console.error("User notification listener failed:", error);
     });
-};
-
-// Reset notifications when user visits My Account
-if (window.location.pathname.includes('my-account.html')) {
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) return;
-        const q = query(collection(db, "orders"), where("userId", "==", user.uid), where("hasUnseenUpdate", "==", true));
-        const snap = await getDocs(q);
-        snap.forEach(async (orderDoc) => {
-            await updateDoc(doc(db, "orders", orderDoc.id), { hasUnseenUpdate: false });
-        });
-        document.body.classList.remove('has-notification');
-
-        // Tab Switching Logic
-        const tabBtns = document.querySelectorAll('.account-tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetTab = btn.getAttribute('data-tab');
-
-                // Update buttons
-                tabBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                // Update contents
-                tabContents.forEach(content => {
-                    if (content.id === `${targetTab}-tab-content`) {
-                        content.classList.add('active');
-                    } else {
-                        content.classList.remove('active');
-                    }
-                });
-            });
-        });
-
-        // Load User's Reviews
-        // We wait a tiny bit to ensure catalog is synced if possible, 
-        // though it usually is global now.
-        setTimeout(() => initUserReviewsHistory(user), 500);
-    });
-}
-
-// 21. Product Reviews
-const initProductReviews = () => {
+};if (window.location.pathname.includes('my-account.html')) {}const initProductReviews = () => {
     const reviewsContainer = document.getElementById('product-reviews-container');
-    if (!reviewsContainer) return; // Not on a product page
-
-    // Determine product ID based on URL
-    const path = window.location.pathname;
+    if (!reviewsContainer) return; // Not on a product page    const path = window.location.pathname;
     let productId = null;
     if (path.includes('glass-glow-shampoo.html')) productId = 'glass-glow-shampoo';
     else if (path.includes('dodchmellow-pro-v.html')) productId = 'dodchmellow-pro-v';
     else if (path.includes('face-foam.html')) productId = 'foaming-cleanser';
     else if (path.includes('silk-mask.html')) productId = 'silk-therapy-mask';
-    else if (path.includes('face-serum.html')) productId = 'advanced-ha-serum';
-
-    // As a fallback, try to find a buy button with data-id
-    if (!productId) {
+    else if (path.includes('face-serum.html')) productId = 'advanced-ha-serum';    if (!productId) {
         const buyBtn = document.querySelector('.buy-now-btn, .cta-button[data-id]');
         if (buyBtn) productId = buyBtn.getAttribute('data-id');
     }
@@ -4728,10 +3818,7 @@ const initProductReviews = () => {
     const writeReviewBtn = document.getElementById('write-review-toggle-btn');
     const closeReviewModal = document.getElementById('close-review-modal');
     const imageInput = document.getElementById('review-images');
-    const imagePreviewContainer = document.getElementById('image-preview-container');
-
-    // Handle Scroll to Review Section if triggered from prompt
-    const urlParams = new URLSearchParams(window.location.search);
+    const imagePreviewContainer = document.getElementById('image-preview-container');    const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('open_review') === 'true') {
         const reviewsSection = document.getElementById('reviews');
         if (reviewsSection) {
@@ -4749,10 +3836,7 @@ const initProductReviews = () => {
         alreadyReviewed: false,
         orderId: null, // To satisfy security rules
         user: null
-    };
-
-    // Handle Image Selection
-    if (imageInput) {
+    };    if (imageInput) {
         imageInput.addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
             if (files.length + selectedFiles.length > 2) {
@@ -4762,10 +3846,7 @@ const initProductReviews = () => {
 
             files.forEach(file => {
                 if (!file.type.startsWith('image/')) return;
-                selectedFiles.push(file);
-
-                // Show preview
-                const reader = new FileReader();
+                selectedFiles.push(file);                const reader = new FileReader();
                 reader.onload = (event) => {
                     const previewDiv = document.createElement('div');
                     previewDiv.style.cssText = 'position: relative; width: 60px; height: 60px;';
@@ -4782,14 +3863,9 @@ const initProductReviews = () => {
                     imagePreviewContainer.appendChild(previewDiv);
                 };
                 reader.readAsDataURL(file);
-            });
-            // Reset input so same file can be selected again if removed
-            imageInput.value = '';
+            });            imageInput.value = '';
         });
-    }
-
-    // Render Reviews
-    const renderReviews = (reviews) => {
+    }    const renderReviews = (reviews) => {
         if (reviews.length === 0) {
             reviewsContainer.innerHTML = '<p class="text-center" style="color: #666; font-style: italic;">No reviews yet. Be the first to share your experience!</p>';
             return;
@@ -4798,19 +3874,7 @@ const initProductReviews = () => {
         reviewsContainer.innerHTML = '';
         reviews.forEach(review => {
             const reviewEl = document.createElement('div');
-            reviewEl.style.cssText = 'padding: 1.5rem; border-bottom: 1px solid #eee; margin-bottom: 1rem;';
-
-            // Stars
-            const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#e0e0e0'}; font-size: 1.2rem;">★</span>`).join('');
-
-            // Date
-            const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : 'Just now';
-
-            // Author Name
-            const authorName = review.authorName || 'Verified Buyer';
-
-            // Images
-            let imagesHtml = '';
+            reviewEl.style.cssText = 'padding: 1.5rem; border-bottom: 1px solid #eee; margin-bottom: 1rem;';            const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#e0e0e0'}; font-size: 1.2rem;">★</span>`).join('');            const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : 'Just now';            const authorName = review.authorName || 'Verified Buyer';            let imagesHtml = '';
             if (review.images && review.images.length > 0) {
                 imagesHtml = `
                     <div style="display: flex; gap: 0.8rem; margin-top: 1rem; margin-bottom: 0.5rem;">
@@ -4824,10 +3888,7 @@ const initProductReviews = () => {
                         `).join('')}
                     </div>
                 `;
-            }
-
-            // Delete control for Author or Admin
-            const isAuthor = auth.currentUser && review.userId === auth.currentUser.uid;
+            }            const isAuthor = auth.currentUser && review.userId === auth.currentUser.uid;
             const isAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_UID;
 
             let deleteBtnHtml = '';
@@ -4849,19 +3910,14 @@ const initProductReviews = () => {
             `;
             reviewsContainer.appendChild(reviewEl);
         });
-    };
-
-    // Fetch existing reviews
-    const fetchReviews = async () => {
+    };    const fetchReviews = async () => {
         try {
             const q = query(collection(db, "product_reviews"), where("productId", "==", productId));
             const querySnapshot = await getDocs(q);
             let reviews = [];
             querySnapshot.forEach((doc) => {
                 reviews.push({ id: doc.id, ...doc.data() });
-            });
-            // Sort by date descending
-            reviews.sort((a, b) => {
+            });            reviews.sort((a, b) => {
                 const timeA = a.createdAt ? a.createdAt.seconds : 0;
                 const timeB = b.createdAt ? b.createdAt.seconds : 0;
                 return timeB - timeA;
@@ -4873,10 +3929,7 @@ const initProductReviews = () => {
         }
     };
 
-    fetchReviews();
-
-    // Modal Controls
-    const openModal = () => {
+    fetchReviews();    const openModal = () => {
         if (reviewModal) reviewModal.classList.add('active');
         document.body.style.overflow = 'hidden'; // Prevent scroll
     };
@@ -4884,10 +3937,7 @@ const initProductReviews = () => {
     const closeModal = () => {
         if (reviewModal) reviewModal.classList.remove('active');
         document.body.style.overflow = ''; // Restore scroll
-        if (reviewForm) reviewForm.reset();
-
-        // Clear images
-        selectedFiles = [];
+        if (reviewForm) reviewForm.reset();        selectedFiles = [];
         if (imagePreviewContainer) imagePreviewContainer.innerHTML = '';
         if (imageInput) imageInput.value = '';
     };
@@ -4912,17 +3962,11 @@ const initProductReviews = () => {
 
     if (closeReviewModal) {
         closeReviewModal.addEventListener('click', closeModal);
-    }
-
-    // Close on click outside
-    if (reviewModal) {
+    }    if (reviewModal) {
         reviewModal.addEventListener('click', (e) => {
             if (e.target === reviewModal) closeModal();
         });
-    }
-
-    // Auth State change listener
-    onAuthStateChanged(auth, async (user) => {
+    }    onAuthStateChanged(auth, async (user) => {
         const params = new URLSearchParams(window.location.search);
         const shouldOpenReview = params.get('open_review') === 'true';
 
@@ -4942,9 +3986,7 @@ const initProductReviews = () => {
         userState.loggedIn = true;
         userState.user = user;
 
-        try {
-            // 1. Check if user has already reviewed this product
-            const reviewsRef = collection(db, "product_reviews");
+        try {            const reviewsRef = collection(db, "product_reviews");
             const qReviews = query(reviewsRef, where("productId", "==", productId), where("userId", "==", user.uid));
             const reviewsSnapshot = await getDocs(qReviews);
 
@@ -4959,10 +4001,7 @@ const initProductReviews = () => {
                     window.showToast("You have already reviewed this product. Thank you!", "info");
                 }
                 return;
-            }
-
-            // 2. Check for a 'Delivered' order
-            const ordersRef = collection(db, "orders");
+            }            const ordersRef = collection(db, "orders");
             const qOrders = query(ordersRef, where("userId", "==", user.uid));
             const ordersSnapshot = await getDocs(qOrders);
 
@@ -4986,10 +4025,7 @@ const initProductReviews = () => {
                 writeReviewBtn.removeAttribute('style');
                 if (isEligible) {
                     writeReviewBtn.classList.remove('ineligible');
-                    writeReviewBtn.classList.add('eligible');
-
-                    // AUTO-OPEN MODAL if parameter is present
-                    if (shouldOpenReview) {
+                    writeReviewBtn.classList.add('eligible');                    if (shouldOpenReview) {
                         setTimeout(() => {
                             openModal();
                             window.showToast("Fill in the form to post your review!", "success");
@@ -5006,10 +4042,7 @@ const initProductReviews = () => {
         } catch (error) {
             console.error("Error checking review eligibility:", error);
         }
-    });
-
-    // Handle Form Submission
-    if (reviewForm) {
+    });    if (reviewForm) {
         reviewForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!userState.user) return;
@@ -5056,9 +4089,7 @@ const initProductReviews = () => {
                 return;
             }
 
-            try {
-                // Upload images first if any
-                const imageUrls = [];
+            try {                const imageUrls = [];
                 for (const [index, file] of selectedFiles.entries()) {
                     const storageRef = ref(storage, `product-reviews/${userState.user.uid}/${Date.now()}_${index}`);
                     const snapshot = await uploadBytes(storageRef, file);
@@ -5081,13 +4112,7 @@ const initProductReviews = () => {
                 await setDoc(doc(db, "product_reviews", reviewDocId), newReview);
 
                 window.showToast("Review submitted successfully!", "success");
-                closeModal();
-
-                // Re-fetch to show new review
-                fetchReviews();
-
-                // Update button state locally
-                userState.alreadyReviewed = true;
+                closeModal();                fetchReviews();                userState.alreadyReviewed = true;
                 if (writeReviewBtn) {
                     writeReviewBtn.classList.remove('eligible');
                     writeReviewBtn.classList.add('ineligible');
@@ -5102,10 +4127,7 @@ const initProductReviews = () => {
             }
         });
     }
-};
-
-// 22. User Review Deletion & History
-window.handleReviewDelete = async (reviewId) => {
+};window.handleReviewDelete = async (reviewId) => {
     const confirmation = prompt("To delete your review, please type 'DELETE' (all caps):");
     if (confirmation !== 'DELETE') {
         if (confirmation !== null) window.showToast("Deletion cancelled. Text mismatch.", "info");
@@ -5114,10 +4136,7 @@ window.handleReviewDelete = async (reviewId) => {
 
     try {
         await deleteDoc(doc(db, "product_reviews", reviewId));
-        window.showToast("Review deleted successfully.", "success");
-
-        // Refresh appropriate views
-        setTimeout(() => window.location.reload(), 1500);
+        window.showToast("Review deleted successfully.", "success");        setTimeout(() => window.location.reload(), 1500);
     } catch (error) {
         console.error("Error deleting review:", error);
         window.showToast("Failed to delete review.", "error");
@@ -5139,10 +4158,7 @@ const initUserReviewsHistory = async (user) => {
         const q = query(collection(db, "product_reviews"), where("userId", "==", user.uid));
         const snap = await getDocs(q);
         const allReviews = [];
-        snap.forEach(doc => allReviews.push({ id: doc.id, ...doc.data() }));
-
-        // Sort newest first
-        allReviews.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        snap.forEach(doc => allReviews.push({ id: doc.id, ...doc.data() }));        allReviews.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
         let visibleReviewsCount = 10;
 
@@ -5160,33 +4176,30 @@ const initUserReviewsHistory = async (user) => {
             chunk.forEach((review) => {
                 const reviewEl = document.createElement('div');
                 reviewEl.className = 'review-card-item content-fade visible';
-                reviewEl.style.cssText = 'padding: 1.5rem; border: 1px solid #eee; border-radius: 12px; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.02);';
-
-                // Map product IDs to human names and links
-                let productName = 'Product';
+                reviewEl.style.cssText = 'padding: 1.5rem; border: 1px solid #eee; border-radius: 12px; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.02);';                let productName = 'Product';
                 let productLink = '#';
-                let productImg = 'placeholder-glow.jpg';
+                let productImg = 'placeholder-glow.webp';
 
                 if (review.productId === 'glass-glow-shampoo') {
                     productName = 'Glass Glow Shampoo';
                     productLink = 'glass-glow-shampoo.html';
-                    productImg = productCatalog['glass-glow-shampoo']?.image || 'IMG_3489.jpg';
+                    productImg = productCatalog['glass-glow-shampoo']?.image || 'IMG_3489.webp';
                 } else if (review.productId === 'dodchmellow-pro-v') {
                     productName = 'DODCHmellow Pro-V';
                     productLink = 'dodchmellow-pro-v.html';
-                    productImg = productCatalog['dodchmellow-pro-v']?.image || 'IMG_3490.jpg';
+                    productImg = productCatalog['dodchmellow-pro-v']?.image || 'IMG_3490.webp';
                 } else if (review.productId === 'foaming-cleanser') {
                     productName = 'Advanced Face Foam';
                     productLink = 'face-foam.html';
-                    productImg = productCatalog['foaming-cleanser']?.image || 'IMG_3352.PNG';
+                    productImg = productCatalog['foaming-cleanser']?.image || 'IMG_3352.webp';
                 } else if (review.productId === 'silk-therapy-mask') {
                     productName = 'Silk Therapy Mask';
                     productLink = 'silk-mask.html';
-                    productImg = productCatalog['silk-therapy-mask']?.image || 'F188A04D-4AA7-4D98-9EEB-14861B10D468.PNG';
+                    productImg = productCatalog['silk-therapy-mask']?.image || 'F188A04D-4AA7-4D98-9EEB-14861B10D468.webp';
                 } else if (productCatalog && productCatalog[review.productId]) {
                     const prod = productCatalog[review.productId];
                     productName = prod.name || 'Product';
-                    productImg = prod.image || 'placeholder-glow.jpg';
+                    productImg = prod.image || 'placeholder-glow.webp';
                     productLink = prod.storyUrl || `product.html?id=${review.productId}`;
                 } else {
                     productName = `Product (${review.productId || 'Unknown'})`;
@@ -5241,58 +4254,32 @@ const initUserReviewsHistory = async (user) => {
         listContainer.classList.add('visible');
         listContainer.innerHTML = '<p style="color: red;">Error loading your reviews.</p>';
     }
-};
-
-
-// Global Review Notification Logic
-const initGlobalReviewPrompt = (forceShow = false) => {
-    // Show on all pages as requested (removed product page suppression)
-
+};const initGlobalReviewPrompt = (forceShow = false) => {
     onAuthStateChanged(auth, async (user) => {
         if (!user) return;
 
-        try {
-            // 1. Get all delivered orders for the user
-            const ordersRef = collection(db, "orders");
-            let orders = [];
-
-            // Query by UID
-            const qOrdersUid = query(ordersRef, where("userId", "==", user.uid));
+        try {            const ordersRef = collection(db, "orders");
+            let orders = [];            const qOrdersUid = query(ordersRef, where("userId", "==", user.uid));
             const snapUid = await getDocs(qOrdersUid);
-            snapUid.forEach(doc => orders.push(doc.data()));
-
-            // Also query by email (handles guest orders if user later creates an account)
-            if (user.email) {
+            snapUid.forEach(doc => orders.push(doc.data()));            if (user.email) {
                 const qOrdersEmail = query(ordersRef, where("shipping.email", "==", user.email));
                 const snapEmail = await getDocs(qOrdersEmail);
                 snapEmail.forEach(doc => {
-                    const data = doc.data();
-                    // Avoid duplicates if UID and Email both matched
-                    if (!orders.some(o => o.orderReference === data.orderReference)) {
+                    const data = doc.data();                    if (!orders.some(o => o.orderReference === data.orderReference)) {
                         orders.push(data);
                     }
                 });
-            }
-
-            // Determine the timestamp of the LATEST order to handle dismissal "until next purchase"
-            let latestOrderTime = 0;
-            orders.forEach(order => {
-                // Handle complex Firestore timestamp or plain number
-                const ts = order.timestamp ? (typeof order.timestamp.toMillis === 'function' ? order.timestamp.toMillis() : order.timestamp) : 0;
+            }            let latestOrderTime = 0;
+            orders.forEach(order => {                const ts = order.timestamp ? (typeof order.timestamp.toMillis === 'function' ? order.timestamp.toMillis() : order.timestamp) : 0;
                 if (ts > latestOrderTime) latestOrderTime = ts;
-            });
-
-            // If the user has explicitly dismissed ALL prompts, we only show it again if they've made a NEW purchase since then
-            const dismissedAt = parseInt(localStorage.getItem('reviewPromptDismissedAt') || '0');
+            });            const dismissedAt = parseInt(localStorage.getItem('reviewPromptDismissedAt') || '0');
             if (dismissedAt > latestOrderTime && !forceShow) {
                 console.log("Global review prompt suppressed by user dismissal (no new purchase since).");
                 return;
             }
 
             let deliveredProducts = new Set();
-            orders.forEach((order) => {
-                // Robust status check (case-insensitive)
-                const isDelivered = order.status && order.status.toLowerCase() === 'delivered';
+            orders.forEach((order) => {                const isDelivered = order.status && order.status.toLowerCase() === 'delivered';
                 if (isDelivered && order.items && Array.isArray(order.items)) {
                     order.items.forEach(item => {
                         deliveredProducts.add(item.productId || item.id);
@@ -5305,10 +4292,7 @@ const initGlobalReviewPrompt = (forceShow = false) => {
                 return;
             }
 
-            console.log("Delivered products found:", [...deliveredProducts]);
-
-            // 2. Get all reviews by this user
-            const reviewsRef = collection(db, "product_reviews");
+            console.log("Delivered products found:", [...deliveredProducts]);            const reviewsRef = collection(db, "product_reviews");
             const qReviews = query(reviewsRef, where("userId", "==", user.uid));
             const reviewsSnapshot = await getDocs(qReviews);
 
@@ -5320,10 +4304,7 @@ const initGlobalReviewPrompt = (forceShow = false) => {
                 }
             });
 
-            console.log("Already reviewed items:", [...reviewedProducts]);
-
-            // 3. Find first product that is delivered but NOT reviewed
-            let productToReview = null;
+            console.log("Already reviewed items:", [...reviewedProducts]);            let productToReview = null;
             for (let pId of deliveredProducts) {
                 if (!reviewedProducts.has(pId)) {
                     productToReview = pId;
@@ -5331,9 +4312,7 @@ const initGlobalReviewPrompt = (forceShow = false) => {
                 }
             }
 
-            if (productToReview) {
-                // Map ID to page URL and readable name
-                let pageUrl = '';
+            if (productToReview) {                let pageUrl = '';
                 let productName = 'your recent purchase';
 
                 if (productToReview === 'glass-glow-shampoo') {
@@ -5351,19 +4330,14 @@ const initGlobalReviewPrompt = (forceShow = false) => {
                 } else if (productToReview === 'advanced-ha-serum') {
                     pageUrl = 'face-serum.html';
                     productName = 'Advanced HA Serum';
-                } else {
-                    // Fallback using the mutable catalog if found
-                    const catEntry = productCatalog[productToReview];
+                } else {                    const catEntry = productCatalog[productToReview];
                     if (catEntry && catEntry.storyUrl) {
                         pageUrl = catEntry.storyUrl;
                         productName = catEntry.name;
                     } else {
                         pageUrl = `product.html?id=${productToReview}`;
                     }
-                }
-
-                // Show Notification Toast
-                showReviewPromptToast(productName, pageUrl);
+                }                showReviewPromptToast(productName, pageUrl);
             }
 
         } catch (error) {
@@ -5372,9 +4346,7 @@ const initGlobalReviewPrompt = (forceShow = false) => {
     });
 };
 
-const showReviewPromptToast = (productName, pageUrl) => {
-    // Show on all pages & on each refresh as requested (removed session guard)
-    if (document.getElementById('review-prompt-toast')) return;
+const showReviewPromptToast = (productName, pageUrl) => {    if (document.getElementById('review-prompt-toast')) return;
 
     const toastHTML = `
         <div id="review-prompt-toast" class="review-prompt-toast">
@@ -5392,30 +4364,16 @@ const showReviewPromptToast = (productName, pageUrl) => {
     document.body.insertAdjacentHTML('beforeend', toastHTML);
 
     const toast = document.getElementById('review-prompt-toast');
-    const closeBtn = document.getElementById('rpt-close-btn');
-
-    // Smooth entrance
-    setTimeout(() => {
+    const closeBtn = document.getElementById('rpt-close-btn');    setTimeout(() => {
         if (toast) toast.classList.add('active');
     }, 1500);
 
     closeBtn.addEventListener('click', () => {
-        if (toast) toast.classList.remove('active');
-
-        // Save the EXACT timestamp of dismissal
-        localStorage.setItem('reviewPromptDismissedAt', Date.now().toString());
-
-        // Inform the user with a shorter message and longer duration
-        setTimeout(() => {
-            window.showToast("Review dismissed. You can still leave feedback later from your Account or Product pages.", "info", 6000);
-            // Remove from DOM to keep it clean
-            setTimeout(() => toast && toast.remove(), 1000);
+        if (toast) toast.classList.remove('active');        localStorage.setItem('reviewPromptDismissedAt', Date.now().toString());        setTimeout(() => {
+            window.showToast("Review dismissed. You can still leave feedback later from your Account or Product pages.", "info", 6000);            setTimeout(() => toast && toast.remove(), 1000);
         }, 800);
     });
-};
-
-// Account Tab Switching Logic
-const initAccountTabs = () => {
+};const initAccountTabs = () => {
     const tabBtns = document.querySelectorAll('.account-tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -5423,24 +4381,14 @@ const initAccountTabs = () => {
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            const targetTab = btn.getAttribute('data-tab');
-
-            // 1. Update Buttons
-            tabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            // 2. Update Content (with improved cross-fade)
-            tabContents.forEach(content => {
+            const targetTab = btn.getAttribute('data-tab');            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');            tabContents.forEach(content => {
                 if (content.id === `${targetTab}-tab-content`) {
-                    content.style.display = 'block';
-                    // Re-trigger entrance
-                    setTimeout(() => {
+                    content.style.display = 'block';                    setTimeout(() => {
                         content.classList.add('active');
                     }, 10);
                 } else {
-                    content.classList.remove('active');
-                    // Keep briefly for fade out, then hide
-                    setTimeout(() => {
+                    content.classList.remove('active');                    setTimeout(() => {
                         if (!content.classList.contains('active')) {
                             content.style.display = 'none';
                         }
@@ -5449,10 +4397,7 @@ const initAccountTabs = () => {
             });
         });
     });
-};
-
-// Initialize reviews and global prompts when DOM is ready
-if (document.readyState === 'loading') {
+};if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initProductReviews();
         initGlobalReviewPrompt();
@@ -5486,10 +4431,7 @@ const SEARCH_INTENTS = {
     'wants_growth': ['grow', 'loss', 'thinning', 'volume', 'chute', 'pousse', 'تساقط', 'نمو', 'thick', 'density'],
     'wants_smooth': ['frizz', 'frizzy', 'tangle', 'smooth', 'frisottis', 'lisse', 'tame', 'مجعد', 'ناعم', 'detangle', 'demelant'],
     'wants_antiaging': ['wrinkle', 'aging', 'youth', 'rides', 'anti-age', 'تجاعيد', 'شيخوخة', 'firm', 'lift', 'fermete']
-};
-
-// Massive SEO metadata simulation acting as a "scraped" knowledge base across site pages
-const SITE_SEO_KNOWLEDGE = {
+};const SITE_SEO_KNOWLEDGE = {
     'shampoo': [
         'sulfate-free', 'sans sulfate', 'خالي من السلفات', 'color-safe', 'daily use', 'usage quotidien', 'استخدام يومي',
         'cleansing', 'scalp care', 'purifying', 'purifiant', 'تطهير', 'mellow', 'marshmallow', 'guimauve'
@@ -5512,10 +4454,7 @@ class DODCHSearchEngine {
     constructor() {
         this.catalog = {};
         this.index = [];
-    }
-
-    // Helper to normalize strings (handle Arabic variations and French accents)
-    normalize(str) {
+    }    normalize(str) {
         if (!str) return '';
         return str.toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove French accents
@@ -5523,35 +4462,22 @@ class DODCHSearchEngine {
             .replace(/ة/g, 'ه')     // Normalize Arabic Tehmabuta
             .replace(/ى/g, 'ي')     // Normalize Arabic Alef Maksura
             .trim();
-    }
-
-    // Initialize with productCatalog
-    init(catalog) {
+    }    init(catalog) {
         this.catalog = catalog;
         this.index = Object.entries(catalog).map(([id, item]) => {
-            let tags = (item.tags || []).map(t => this.normalize(t));
-
-            // Expand searchable text with synonyms
-            const synonyms = [];
+            let tags = (item.tags || []).map(t => this.normalize(t));            const synonyms = [];
             const allText = (item.name + ' ' + (item.category || '')).toLowerCase();
 
             for (const [key, list] of Object.entries(SEARCH_SYNONYMS)) {
                 if (allText.includes(key) || list.some(l => allText.includes(l))) {
                     synonyms.push(...list, key);
                 }
-            }
-
-            // Inject massive SEO Deep Knowledge based on product type
-            const seoTags = [];
+            }            const seoTags = [];
             for (const [category, knowledgeList] of Object.entries(SITE_SEO_KNOWLEDGE)) {
                 if (allText.includes(category)) {
                     seoTags.push(...knowledgeList.map(k => this.normalize(k)));
                 }
-            }
-
-            // Inject Intent Labels (e.g. if the product is known for hydration, give it the intent tag)
-            // By default, let's map known products to their best intents so AI finds them easily based on descriptions
-            if (allText.includes('shampoo') || allText.includes('mask')) {
+            }            if (allText.includes('shampoo') || allText.includes('mask')) {
                 tags.push('needs_hydration', 'needs_repair', 'wants_smooth');
             }
             if (allText.includes('shampoo')) {
@@ -5572,18 +4498,12 @@ class DODCHSearchEngine {
                 tags: [...new Set([...tags, ...synonyms, ...seoTags])],
                 price: item.price,
                 scrapedText: '' // Will be populated asynchronously
-            };
-
-            // Stealthily fetch and scrape the product page HTML in the background
-            if (item.storyUrl && !item.storyUrl.startsWith('http')) {
+            };            if (item.storyUrl && !item.storyUrl.startsWith('http')) {
                 fetch(item.storyUrl)
                     .then(response => response.text())
                     .then(html => {
                         const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-
-                        // Extract text from meaningful SEO blocks (main content, descriptions, ingredients)
-                        const scrapeTargets = doc.querySelectorAll('main p, main h1, main h2, main h3, main li, .inci-list span, .product-story');
+                        const doc = parser.parseFromString(html, 'text/html');                        const scrapeTargets = doc.querySelectorAll('main p, main h1, main h2, main h3, main li, .inci-list span, .product-story');
                         let textAccumulator = '';
                         scrapeTargets.forEach(el => {
                             textAccumulator += ' ' + el.textContent;
@@ -5596,10 +4516,7 @@ class DODCHSearchEngine {
 
             return indexItem;
         });
-    }
-
-    // Basic Levenshtein distance for fuzzy matching
-    levenshtein(a, b) {
+    }    levenshtein(a, b) {
         const matrix = [];
         if (a.length === 0) return b.length;
         if (b.length === 0) return a.length;
@@ -5615,14 +4532,8 @@ class DODCHSearchEngine {
             }
         }
         return matrix[b.length][a.length];
-    }
-
-    // Check if a token roughly matches a target string
-    isFuzzyMatch(token, targetString) {
-        if (targetString.includes(token)) return true;
-
-        // Intelligent fuzzy threshold: longer words allow more typos
-        const threshold = token.length > 6 ? 2 : 1;
+    }    isFuzzyMatch(token, targetString) {
+        if (targetString.includes(token)) return true;        const threshold = token.length > 6 ? 2 : 1;
 
         if (token.length > 3) {
             const words = targetString.split(/\s+/);
@@ -5650,16 +4561,9 @@ class DODCHSearchEngine {
             let matchedReasons = [];
 
             for (const token of tokens) {
-                let tokenMatched = false;
-
-                // 1. Exact Name match (Highest Priority)
-                if (item.name.includes(token)) {
+                let tokenMatched = false;                if (item.name.includes(token)) {
                     score += 15;
-                    tokenMatched = true;
-                    // Don't add a specific reason for name match to keep UI clean, it's obvious to the user.
-                }
-                // 2. Intent matching (Semantic Search)
-                else if (!tokenMatched) {
+                    tokenMatched = true;                }                else if (!tokenMatched) {
                     for (const [intent, keywords] of Object.entries(SEARCH_INTENTS)) {
                         if (keywords.includes(token) && item.tags.includes(intent)) {
                             score += 12; // High priority for semantic needs
@@ -5668,33 +4572,22 @@ class DODCHSearchEngine {
                             break;
                         }
                     }
-                }
-
-                // 3. Tags/Synonyms match
-                if (!tokenMatched && item.tags.some(t => t.includes(token) || this.isFuzzyMatch(token, t))) {
+                }                if (!tokenMatched && item.tags.some(t => t.includes(token) || this.isFuzzyMatch(token, t))) {
                     score += 10;
                     tokenMatched = true;
                     matchedReasons.push(`Matches deep semantic tags related to "${token}"`);
-                }
-                // 4. Fuzzy Name match
-                else if (!tokenMatched && this.isFuzzyMatch(token, item.name)) {
+                }                else if (!tokenMatched && this.isFuzzyMatch(token, item.name)) {
                     score += 8;
                     tokenMatched = true;
-                }
-                // 5. Category match
-                else if (!tokenMatched && item.category.includes(token)) {
+                }                else if (!tokenMatched && item.category.includes(token)) {
                     score += 5;
                     tokenMatched = true;
                     matchedReasons.push(`Category match`);
-                }
-                // 6. Deep HTML Scrape Match (Lowest Priority but highly comprehensive)
-                else if (!tokenMatched && item.scrapedText && (item.scrapedText.includes(token) || this.isFuzzyMatch(token, item.scrapedText))) {
+                }                else if (!tokenMatched && item.scrapedText && (item.scrapedText.includes(token) || this.isFuzzyMatch(token, item.scrapedText))) {
                     score += 3;
                     tokenMatched = true;
                     matchedReasons.push(`Content explicitly found inside product details`);
-                }
-                // 7. Description match
-                else if (!tokenMatched && this.isFuzzyMatch(token, item.description)) {
+                }                else if (!tokenMatched && this.isFuzzyMatch(token, item.description)) {
                     score += 2;
                     tokenMatched = true;
                 }
@@ -5705,9 +4598,7 @@ class DODCHSearchEngine {
                 }
             }
 
-            if (matchesAll && score > 0) {
-                // Determine the best reason to show, distinct and concise.
-                const uniqueReasons = [...new Set(matchedReasons)];
+            if (matchesAll && score > 0) {                const uniqueReasons = [...new Set(matchedReasons)];
                 const topReason = uniqueReasons.length > 0 ? uniqueReasons[0] : "Identified as a strong contextual match";
                 results.push({ item: this.catalog[item.id], id: item.id, score: score, matchedReason: topReason });
             }
@@ -5730,38 +4621,22 @@ class DODCHSearchEngine {
     }
 }
 
-window.dodchSearchEngine = new DODCHSearchEngine();
-
-
-// Advanced Search Integration
-document.addEventListener("DOMContentLoaded", () => {
-    // We need to wait for productCatalog to load, or re-init when it does
-    // For now we will set up a watcher or just wait a bit, but ideally called after catalog loads
-    setTimeout(() => {
+window.dodchSearchEngine = new DODCHSearchEngine();document.addEventListener("DOMContentLoaded", () => {    setTimeout(() => {
         if (window.productCatalog && Object.keys(window.productCatalog).length > 0) {
             window.dodchSearchEngine.init(window.productCatalog);
             console.log("Search Engine Initialized with", Object.keys(window.productCatalog).length, "products");
         }
     }, 1500); // Wait for potential firebase load
 
-    const searchContainers = document.querySelectorAll(".search-container");
-
-    // Create halo element
-    const halo = document.createElement("div");
+    const searchContainers = document.querySelectorAll(".search-container");    const halo = document.createElement("div");
     halo.id = "search-results-halo";
-    document.body.appendChild(halo);
-
-    // Create dropdown element
-    const dropdown = document.createElement("div");
+    document.body.appendChild(halo);    const dropdown = document.createElement("div");
     dropdown.id = "search-results-dropdown";
     document.body.appendChild(dropdown);
 
     let activeInput = null;
     let selectedIndex = -1;
-    let currentResults = [];
-
-    // Debounce helper
-    function debounce(func, wait) {
+    let currentResults = [];    function debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
             const later = () => {
@@ -5771,10 +4646,7 @@ document.addEventListener("DOMContentLoaded", () => {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
-    }
-
-    // Safe global handler for trending search clicks to avoid long-string inline HTML issues
-    window.dodchSearchTrendClick = (q) => {
+    }    window.dodchSearchTrendClick = (q) => {
         const inp = document.getElementById('navbar-search-input');
         if (inp) {
             inp.value = q;
@@ -5796,10 +4668,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #D4AF37; flex-shrink: 0; opacity: 0.8;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <span style="font-weight: 500;">${t.label}</span>
             </div>`;
-        });
-
-        // Create widget container
-        const trendingWidget = document.createElement("div");
+        });        const trendingWidget = document.createElement("div");
         trendingWidget.className = "search-widget";
         trendingWidget.innerHTML = `
             <div class="search-widget-title">
@@ -5819,7 +4688,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 The Journal
             </div>
             <div class="search-widget-card" onclick="window.location.href='journal.html'">
-                <img src="IMG_3357.jpg" class="search-widget-img" alt="Journal">
+                <img src="IMG_3357.webp" class="search-widget-img" alt="Journal">
                 <div>
                     <div style="font-weight:600; font-size: 0.85rem;">Luxury Hair Care</div>
                     <div style="font-size: 0.75rem; color: #888;">5 Tips for Shine</div>
@@ -5850,7 +4719,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="os-tile os-tile-wide flipping">
                     <div class="os-tile-flipper">
                         <div class="os-tile-front">
-                            <img src="IMG_3258.jpg" class="os-tile-bg" alt="Serum">
+                            <img src="IMG_3258.webp" class="os-tile-bg" alt="Serum">
                             <div class="os-tile-content"><div style="font-weight: 700;">Daily Hydration</div></div>
                         </div>
                         <div class="os-tile-back">
@@ -5874,7 +4743,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="os-tile os-tile-wide flipping">
                     <div class="os-tile-flipper">
                         <div class="os-tile-front">
-                            <img src="F188A04D-4AA7-4D98-9EEB-14861B10D468.PNG" class="os-tile-bg" alt="Mask">
+                            <img src="F188A04D-4AA7-4D98-9EEB-14861B10D468.webp" class="os-tile-bg" alt="Mask">
                             <div class="os-tile-content"><div style="font-weight: 700;">Silk Therapy</div></div>
                         </div>
                         <div class="os-tile-back">
@@ -5884,10 +4753,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                 </div>
             </div>
-        `;
-
-        // Start flippers
-        setTimeout(() => {
+        `;        setTimeout(() => {
             const flippingTiles = container.querySelectorAll(".os-tile.flipping");
             if (flippingTiles.length > 0) {
                 if (window.tileInterval) clearInterval(window.tileInterval);
@@ -5903,10 +4769,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const container = inputEl.closest(".search-container");
         if (container && dropdown.parentNode !== container) {
             container.prepend(halo);
-            container.appendChild(dropdown);
-
-            // Add close button if missing
-            if (!container.querySelector("#search-close-btn")) {
+            container.appendChild(dropdown);            if (!container.querySelector("#search-close-btn")) {
                 const closeBtn = document.createElement("button");
                 closeBtn.id = "search-close-btn";
                 closeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px; stroke: currentColor;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
@@ -5926,18 +4789,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     inputEl.blur();
                 });
             }
-        }
-        // Use fluid CSS-based positioning
-        dropdown.style.top = "";
+        }        dropdown.style.top = "";
         if (window.innerWidth > 768) {
-            const rect = container.getBoundingClientRect();
-            // Stable dashboard width: max 1180px, but fits window
-            const dropdownWidth = Math.min(1180, window.innerWidth - 80);
+            const rect = container.getBoundingClientRect();            const dropdownWidth = Math.min(1180, window.innerWidth - 80);
             dropdown.style.width = dropdownWidth + "px";
-            dropdown.style.position = "fixed";
-
-            // Center the entire dashboard on the screen for stability
-            const globalLeft = (window.innerWidth - dropdownWidth) / 2;
+            dropdown.style.position = "fixed";            const globalLeft = (window.innerWidth - dropdownWidth) / 2;
 
             dropdown.style.left = globalLeft + "px";
             dropdown.style.top = (rect.top + rect.height + 15) + "px";
@@ -5953,10 +4809,7 @@ document.addEventListener("DOMContentLoaded", () => {
             dropdown.style.transform = "translateY(10px)";
             dropdown.style.zIndex = "200000";
         }
-    };
-
-    // Persistent Dashboard Components
-    const layoutDiv = document.createElement("div");
+    };    const layoutDiv = document.createElement("div");
     layoutDiv.className = "search-dropdown-layout";
 
     const liveTilesDiv = document.createElement("div");
@@ -5966,34 +4819,21 @@ document.addEventListener("DOMContentLoaded", () => {
     sideWidgetsDiv.className = "search-side-widgets";
 
     const mainResultsDiv = document.createElement("div");
-    mainResultsDiv.className = "search-main-results";
-
-    // Initialize content once
-    populateWidgets(sideWidgetsDiv);
-    populateLiveTiles(liveTilesDiv);
-
-    // Initial structure setup
-    // Layout and hiding logic dynamically handled via CSS Flexbox/Grid
-    layoutDiv.appendChild(liveTilesDiv);
+    mainResultsDiv.className = "search-main-results";    populateWidgets(sideWidgetsDiv);
+    populateLiveTiles(liveTilesDiv);    layoutDiv.appendChild(liveTilesDiv);
     layoutDiv.appendChild(sideWidgetsDiv);
     layoutDiv.appendChild(mainResultsDiv);
 
     const renderResults = (results, query) => {
         currentResults = results;
         selectedIndex = -1;
-        mainResultsDiv.innerHTML = ""; // Only clear the results pane
-
-        // Toggle class for responsive CSS hiding on mobile
-        if (!query || query.length < 2) {
+        mainResultsDiv.innerHTML = ""; // Only clear the results pane        if (!query || query.length < 2) {
             layoutDiv.classList.remove("has-query");
         } else {
             layoutDiv.classList.add("has-query");
         }
 
-        const history = window.dodchSearchEngine.getHistory();
-
-        // Ensure layout is injected into the dropdown
-        if (!dropdown.contains(layoutDiv)) {
+        const history = window.dodchSearchEngine.getHistory();        if (!dropdown.contains(layoutDiv)) {
             dropdown.innerHTML = "";
             dropdown.appendChild(layoutDiv);
         }
@@ -6093,10 +4933,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (query.length < 2) {
             renderResults([], query);
             return;
-        }
-
-        // Show AI Thinking ONLY in the results column - keeping widgets visible
-        if (!dropdown.contains(layoutDiv)) {
+        }        if (!dropdown.contains(layoutDiv)) {
             dropdown.innerHTML = "";
             dropdown.appendChild(layoutDiv);
         }
@@ -6149,18 +4986,12 @@ document.addEventListener("DOMContentLoaded", () => {
             container.classList.add("active");
             halo.classList.add("active");
             document.body.style.overflow = "hidden";
-            document.documentElement.style.overflow = "hidden";
-
-            // If empty, show dashboard immediately with history/widgets
-            if (query.length === 0) {
+            document.documentElement.style.overflow = "hidden";            if (query.length === 0) {
                 renderResults([], "");
             } else {
                 handleSearch(e);
             }
-        });
-
-        // Replace blur event. Instead, handle outside clicks.
-        document.addEventListener("mousedown", (evt) => {
+        });        document.addEventListener("mousedown", (evt) => {
             if (container.classList.contains("active") && !container.contains(evt.target) && !dropdown.contains(evt.target)) {
                 dropdown.classList.remove("active");
                 halo.classList.remove("active");
@@ -6217,10 +5048,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // --- Consolidated Contact Form Submission Handler ---
 document.addEventListener('submit', async (e) => {
     const form = e.target;
-    if (!form || (!form.id?.includes('contact') && !form.classList.contains('contact-form'))) return;
-
-    // 1. Cooldown Check (2 minutes)
-    const lastSubmit = localStorage.getItem('dodch_last_contact_ts');
+    if (!form || (!form.id?.includes('contact') && !form.classList.contains('contact-form'))) return;    const lastSubmit = localStorage.getItem('dodch_last_contact_ts');
     const now = Date.now();
     if (lastSubmit && (now - parseInt(lastSubmit)) < 120000) {
         e.preventDefault();
@@ -6228,20 +5056,14 @@ document.addEventListener('submit', async (e) => {
         const waitSec = Math.ceil((120000 - (now - parseInt(lastSubmit))) / 1000);
         if (window.showToast) window.showToast(`Please wait ${waitSec}s before sending another message.`, "error");
         return;
-    }
-
-    // 2. Honeypot check (Silent discard)
-    const honeypot = form.querySelector('input[name="website"]');
+    }    const honeypot = form.querySelector('input[name="website"]');
     if (honeypot && honeypot.value) {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (window.showToast) window.showToast("Message sent successfully!", "success");
         form.reset();
         return;
-    }
-
-    // 3. Process Real Submission
-    e.preventDefault();
+    }    e.preventDefault();
     const submitBtn = form.querySelector('button[type="submit"], .cta-button, .contact-submit-btn');
     const originalText = submitBtn ? submitBtn.textContent : 'Send';
     
@@ -6297,10 +5119,7 @@ document.addEventListener('submit', async (e) => {
     // --- END SMART VALIDATION ---
 
     try {
-        // --- Rock-Solid Signature ID Calculation ---
-        // We normalize the content aggressively (removing extra spaces and non-alphanumeric)
-        // to prevent spammers from bypassing the check by just adding a space.
-        const normalizedContent = `${name}${email}${message}`
+        // --- Rock-Solid Signature ID Calculation ---        const normalizedContent = `${name}${email}${message}`
             .toLowerCase()
             .replace(/[^a-z0-9]/g, '');
         
@@ -6320,10 +5139,7 @@ document.addEventListener('submit', async (e) => {
         if (window.showToast) window.showToast("Message sent successfully!", "success");
         form.reset();
     } catch (error) {
-        console.error("Error sending message:", error);
-        
-        // Custom handling for duplicates (Permission Denied for 'update' in our rules)
-        if (error.code === 'permission-denied') {
+        console.error("Error sending message:", error);        if (error.code === 'permission-denied') {
             if (window.showToast) window.showToast("Duplicate message detected. Please wait or change your wording.", "error");
         } else if (error.code !== 'already-exists') {
             if (window.showToast) window.showToast("Error sending message. Please try again later.", "error");
@@ -6336,7 +5152,185 @@ document.addEventListener('submit', async (e) => {
     }
 });
 
+// --- iOS Add to Home Screen Banner ---
+function showIOSInstallBanner() {    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
+    const isStandalone = window.navigator.standalone === true;
+    const dismissed = localStorage.getItem('dodch_ios_banner_dismissed');
+
+    if (!isIOS || !isSafari || isStandalone || dismissed) return;    const styles = document.createElement('style');
+    styles.textContent = `
+        #dodch-ios-banner {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #fff;
+            padding: 14px 16px max(env(safe-area-inset-bottom, 16px), 16px);
+            z-index: 2147483647;
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.45);
+            transform: translateY(100%);
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-family: -apple-system, 'Montserrat', sans-serif;
+            box-sizing: border-box;
+        }
+        #dodch-ios-banner.visible { transform: translateY(0); }
+        #dodch-ios-banner-inner {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #dodch-ios-banner-icon-wrap {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background: #fff;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+        #dodch-ios-banner-icon {
+            width: 100%;
+            height: 100%;
+            border-radius: 7px;
+            object-fit: cover;
+        }
+        @media (max-width: 360px) {
+            #dodch-ios-banner-icon-wrap { display: none; }
+        }
+        #dodch-ios-banner-text { flex: 1; min-width: 0; }
+        #dodch-ios-banner-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #D4AF37;
+            margin: 0 0 2px;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #dodch-ios-banner-body {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.7);
+            margin: 0 0 8px;
+            line-height: 1.4;
+        }
+        #dodch-ios-banner-steps {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.85);
+        }
+        #dodch-ios-banner-steps .step-badge {
+            background: rgba(212,175,55,0.15);
+            border: 1px solid rgba(212,175,55,0.4);
+            color: #D4AF37;
+            border-radius: 5px;
+            padding: 2px 7px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        #dodch-ios-banner-close {
+            background: rgba(255,255,255,0.08);
+            border: none;
+            color: rgba(255,255,255,0.6);
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            line-height: 1;
+            flex-shrink: 0;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+            align-self: flex-start;
+        }
+        #dodch-ios-banner-close:active {
+            background: rgba(255,255,255,0.18);
+            color: #fff;
+        }
+        #dodch-ios-banner-arrow {
+            text-align: center;
+            color: #D4AF37;
+            font-size: 1rem;
+            margin-top: 8px;
+            animation: dodch-bounce 1.2s ease-in-out infinite;
+        }
+        @keyframes dodch-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(4px); }
+        }
+    `;
+    document.head.appendChild(styles);
+
+    const banner = document.createElement('div');
+    banner.id = 'dodch-ios-banner';
+    banner.innerHTML = `
+        <div id="dodch-ios-banner-inner">
+            <div id="dodch-ios-banner-icon-wrap">
+                <img id="dodch-ios-banner-icon" src="IMG_3352.webp" alt="DODCH">
+            </div>
+            <div id="dodch-ios-banner-text">
+                <p id="dodch-ios-banner-title">Get DODCH on your Home Screen</p>
+                <p id="dodch-ios-banner-body">Receive order updates &amp; exclusive offers as push notifications.</p>
+                <div id="dodch-ios-banner-steps">
+                    <span>Tap</span>
+                    <span class="step-badge">⬆️ Share</span>
+                    <span>then</span>
+                    <span class="step-badge">＋ Add to Home Screen</span>
+                </div>
+            </div>
+            <button id="dodch-ios-banner-close" aria-label="Dismiss">&times;</button>
+        </div>
+        <div id="dodch-ios-banner-arrow">↓</div>
+    `;
+    document.body.appendChild(banner);    setTimeout(() => banner.classList.add('visible'), 1500);    document.getElementById('dodch-ios-banner-close').addEventListener('click', () => {
+        banner.classList.remove('visible');
+        localStorage.setItem('dodch_ios_banner_dismissed', '1');
+        setTimeout(() => banner.remove(), 500);
+    });    setTimeout(() => {
+        if (banner.parentNode) {
+            banner.classList.remove('visible');
+            setTimeout(() => { if (banner.parentNode) banner.remove(); }, 500);
+        }
+    }, 18000);
+}
+
+window.addEventListener('load', showIOSInstallBanner);
+
 // --- Web Push Notifications ---
+async function syncPushTokenToUser(user) {
+    if (window.location.protocol === 'file:') return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+    if (Notification.permission !== 'granted') return;
+
+    try {
+        const supported = await isSupported();
+        if (!supported) return;
+
+        if (!messaging) messaging = getMessaging(app);
+        
+        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
+        const token = await getMessagingToken(messaging, { vapidKey: VAPID });
+        
+        if (token) {
+            await setDoc(doc(db, 'subscribers', token), {
+                token,
+                userId: user ? user.uid : null,
+                lastSeen: serverTimestamp()
+            }, { merge: true });
+        }
+    } catch (err) {
+        console.warn('Silent token sync failed:', err);
+    }
+}
+
 async function initPushNotifications() {
     if (window.location.protocol === 'file:') return;
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
@@ -6347,49 +5341,208 @@ async function initPushNotifications() {
 
         if (!messaging) messaging = getMessaging(app);
 
-        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-
-        // Handle foreground messages as a toast
-        onMessage(messaging, (payload) => {
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');        onMessage(messaging, (payload) => {
             const title = payload.notification?.title || payload.data?.title || 'DODCH';
             const body  = payload.notification?.body  || payload.data?.body  || '';
             if (window.showToast) window.showToast(`🔔 ${title} — ${body}`, 'info', 6000);
         });
 
-        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
+        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';        const authObj = getAuth(app);
+        onAuthStateChanged(authObj, async (user) => {
+            if (Notification.permission === 'granted') {
+                syncPushTokenToUser(user);
+            }
+            if (user) {
+                initShippingInfo(user);                if (window.location.pathname.includes('my-account.html')) {                    const q = query(collection(db, "orders"), where("userId", "==", user.uid), where("hasUnseenUpdate", "==", true));
+                    const snap = await getDocs(q);
+                    snap.forEach(async (orderDoc) => {
+                        await updateDoc(doc(db, "orders", orderDoc.id), { hasUnseenUpdate: false });
+                    });
+                    document.body.classList.remove('has-notification');                    const tabBtns = document.querySelectorAll('.account-tab-btn');
+                    const tabContents = document.querySelectorAll('.tab-content');
 
-        if (Notification.permission === 'default') {
-            // Directly request browser permission after a short delay
-            setTimeout(async () => {
+                    tabBtns.forEach(btn => {                        if (btn.dataset.tabBound) return;
+                        btn.dataset.tabBound = "true";
+                        
+                        btn.addEventListener('click', () => {
+                            const targetTab = btn.getAttribute('data-tab');
+                            tabBtns.forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            tabContents.forEach(content => {
+                                if (content.id === `${targetTab}-tab-content`) {
+                                    content.classList.add('active');
+                                    if (targetTab === 'shipping') initShippingInfo(user); 
+                                } else {
+                                    content.classList.remove('active');
+                                }
+                            });
+                        });
+                    });                    setTimeout(() => initUserReviewsHistory(user), 500);
+                }
+            }
+        });        const showBell = () => {
+            if (document.getElementById('push-bell-container')) return;
+            const bell = document.createElement('div');
+            bell.id = 'push-bell-container';
+             bell.setAttribute('role', 'button');
+             bell.setAttribute('aria-label', 'Enable Push Notifications');
+            bell.innerHTML = `
+                <div class="bell-pulse"></div>
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            `;
+            document.body.appendChild(bell);
+            setTimeout(() => bell.classList.add('visible'), 100);
+
+            bell.addEventListener('click', async () => {
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
-                    try {
-                        const token = await getMessagingToken(messaging, { vapidKey: VAPID });
-                        if (token) {
-                            await setDoc(doc(db, 'subscribers', token), {
-                                token,
-                                subscribedAt: serverTimestamp(),
-                                userAgent: navigator.userAgent
-                            }, { merge: true });
-                        }
-                    } catch (err) {
-                        console.error('FCM token error:', err);
-                    }
+                    bell.classList.remove('visible');
+                    setTimeout(() => bell.remove(), 400);
+                    syncPushTokenToUser(authObj.currentUser);
+                    if (window.showToast) window.showToast("Notifications enabled! 🎉", "success");
+                } else if (permission === 'denied') {
+                    if (window.showToast) window.showToast("Notifications blocked. Please enable them in your browser settings.", "info");
                 }
-            }, 3000);
+            });
+        };
 
-        } else if (Notification.permission === 'granted') {
-            // Already subscribed — silently refresh token
-            getMessagingToken(messaging, { vapidKey: VAPID })
-                .then(token => {
-                    if (token) setDoc(doc(db, 'subscribers', token), { token, lastSeen: serverTimestamp() }, { merge: true });
-                })
-                .catch(() => {});
+        if (Notification.permission === 'default') {            setTimeout(showBell, 2000);
         }
 
     } catch (err) {
         console.error('Push init failed:', err);
     }
 }
+
+// --- Shipping Info Logic ---
+async function initShippingInfo(user) {
+    if (!user) return;
+
+    const profileForm = document.getElementById('profile-shipping-form');
+    const checkoutForm = document.querySelector('.checkout-form form');    try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists() && userDoc.data().shippingInfo) {
+            const info = userDoc.data().shippingInfo;
+            console.log("Loading shipping info into UI...", info);            if (profileForm) {
+                const pEmail = document.getElementById('profile-shipping-email');
+                const pName = document.getElementById('profile-shipping-name');
+                const pPhone = document.getElementById('profile-shipping-phone');
+                const pAddress = document.getElementById('profile-shipping-address');
+                const pCity = document.getElementById('profile-shipping-city');
+                const pPostal = document.getElementById('profile-shipping-postal');
+
+                if (pEmail) pEmail.value = info.email || '';
+                if (pName) pName.value = info.fullName || '';
+                if (pPhone) pPhone.value = info.phone || '';
+                if (pAddress) pAddress.value = info.address || '';
+                if (pCity) pCity.value = info.city || '';
+                if (pPostal) pPostal.value = info.postalCode || '';
+            }            if (checkoutForm) {
+                const fields = {
+                    'checkout-email': info.email,
+                    'checkout-name': info.fullName,
+                    'checkout-phone': info.phone,
+                    'checkout-address': info.address,
+                    'checkout-city': info.city,
+                    'checkout-postal-code': info.postalCode
+                };
+                for (const [id, val] of Object.entries(fields)) {
+                    const el = document.getElementById(id);
+                    if (el && !el.value && val) el.value = val;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Error loading shipping info:", err);
+    }    if (profileForm) {        if (profileForm.dataset.listener) return;
+        profileForm.dataset.listener = "true";
+
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = profileForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerText;
+            
+            submitBtn.innerText = "Saving...";
+            submitBtn.disabled = true;
+
+            const shippingInfo = {
+                email: document.getElementById('profile-shipping-email').value.trim(),
+                fullName: document.getElementById('profile-shipping-name').value.trim(),
+                phone: document.getElementById('profile-shipping-phone').value.trim(),
+                address: document.getElementById('profile-shipping-address').value.trim(),
+                city: document.getElementById('profile-shipping-city').value,
+                postalCode: document.getElementById('profile-shipping-postal').value.trim(),
+                updatedAt: serverTimestamp()
+            };
+
+            try {
+                await setDoc(doc(db, "users", user.uid), { shippingInfo }, { merge: true });
+                window.showToast("Shipping details saved successfully!", "success");
+            } catch (err) {
+                console.error("Error saving shipping info:", err);
+                window.showToast("Failed to save. Please try again.", "error");
+            } finally {
+                submitBtn.innerText = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+}window.saveShippingFromCheckout = async function(userId) {
+    if (!userId || userId === 'guest') return;
+    const checkbox = document.getElementById('save-shipping-info');
+    if (!checkbox || !checkbox.checked) return;
+
+    try {
+        const shippingInfo = {
+            email: document.getElementById('checkout-email').value.trim(),
+            fullName: document.getElementById('checkout-name').value.trim(),
+            phone: document.getElementById('checkout-phone').value.trim(),
+            address: document.getElementById('checkout-address').value.trim(),
+            city: document.getElementById('checkout-city').value,
+            postalCode: document.getElementById('checkout-postal-code').value.trim(),
+            updatedAt: serverTimestamp()
+        };
+
+        console.log("Attempting to sync shipping info to Firestore for:", userId);
+        await setDoc(doc(db, "users", userId), { shippingInfo }, { merge: true });
+        console.log("Shipping info synced successfully.");
+        if (window.showToast) window.showToast("Address saved to your profile! ✨", "success");
+    } catch (err) {
+        console.error("Firestore Save Error:", err);
+        if (err.code === 'permission-denied') {
+            if (window.showToast) window.showToast("Save Failed: Database permission denied.", "error");
+        } else {
+            if (window.showToast) window.showToast(`Save Error: ${err.message}`, "error");
+        }
+    }
+};document.addEventListener('DOMContentLoaded', () => {
+    const prefetchedUrls = new Set();
+
+    const prefetchUrl = (url) => {
+        if (prefetchedUrls.has(url)) return;        if (url.startsWith(window.location.origin) || !url.startsWith('http')) {
+            if (url.includes('.html')) {
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = url;
+                link.as = 'document';
+                document.head.appendChild(link);
+                prefetchedUrls.add(url);
+                console.log('🚀 Prefetched background HTML:', url);
+            }
+        }
+    };    document.body.addEventListener('mouseover', (e) => {
+        const linkElem = e.target.closest('a');
+        if (linkElem && linkElem.href) {
+            prefetchUrl(linkElem.href);
+        }
+    }, { passive: true });
+
+    document.body.addEventListener('touchstart', (e) => {
+        const linkElem = e.target.closest('a');
+        if (linkElem && linkElem.href) {
+            prefetchUrl(linkElem.href);
+        }
+    }, { passive: true });
+});
 
 window.addEventListener('load', initPushNotifications);

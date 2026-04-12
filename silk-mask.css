@@ -17,7 +17,7 @@
 }
 
 .hero-mask .hero-bg {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('IMG_3258.jpg');
+    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('IMG_3258.webp');
     /* Using a silky hair image */
     background-size: cover;
     background-position: center;
