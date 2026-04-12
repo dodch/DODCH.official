@@ -230,10 +230,14 @@ class DynamicSEO {
                 }
 
                 // Determine stock availability
+                
+                // Determine stock availability with higher precision
                 let availability = "https://schema.org/InStock";
-                if (priceEl && priceEl.textContent.toLowerCase().includes("out of stock")) {
+                const outOfStockEl = document.querySelector('.out-of-stock, .product-badge.out-of-stock, .stock-status.out');
+                if (outOfStockEl || (priceEl && priceEl.textContent.toLowerCase().includes("out of stock"))) {
                     availability = "https://schema.org/OutOfStock";
                 }
+
 
                 productData = {
                     "@context": "https://schema.org",
