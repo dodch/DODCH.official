@@ -86,17 +86,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentLetter.classList.add('focus');
 
                 if (activeId === 'D') {
-                    // Pull back on translation to keep it on screen
-                    currentLetter.style.transform = 'translate3d(-15vw, 0, 30px) rotateY(-10deg) scale(1.6)';
+                    // Move D to the right to overlap with the .right glass card
+                    currentLetter.style.transform = 'translate3d(12vw, 0, 40px) rotateY(-15deg) scale(1.8)';
                 } else if (activeId === 'O') {
-                    currentLetter.style.transform = 'translate3d(0, 0, -200px) scale(6)';
-                    currentLetter.style.opacity = '0.1';
+                    // Center overlap with .center glass card
+                    currentLetter.style.transform = 'translate3d(0, 0, -250px) scale(8)';
+                    currentLetter.style.opacity = '0.15';
                 } else if (activeId === 'D2') {
-                    currentLetter.style.transform = 'translate3d(0, 0, 80px) rotateY(180deg) scale(1.8)';
+                    // Move second D to the left to overlap with the .left glass card
+                    currentLetter.style.transform = 'translate3d(-12vw, 0, 100px) rotateY(180deg) scale(2.2)';
                 } else if (activeId === 'C') {
-                    currentLetter.style.transform = 'translate3d(12vw, 0, 30px) scale(1.8) rotateX(8deg)';
+                    currentLetter.style.transform = 'translate3d(0, 0, 50px) scale(2.5) rotateX(12deg)';
                 } else if (activeId === 'H') {
-                    currentLetter.style.transform = 'translate3d(0, -25vh, 60px) scale(3)';
+                    currentLetter.style.transform = 'translate3d(0, -30vh, 120px) scale(4)';
                 }
             }
         }

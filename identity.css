@@ -132,25 +132,36 @@ body.hovering .cursor-circle span { opacity: 1; }
 
 /* Story Blocks */
 .glass-text {
-    max-width: 450px;
-    padding: 40px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border-radius: 4px;
+    max-width: 480px;
+    padding: 50px;
+    background: rgba(255, 255, 255, 0.05); /* Slightly more opaque for better glass signal */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(25px); /* Stronger blur for glass effect */
+    -webkit-backdrop-filter: blur(25px);
+    border-radius: 8px;
     opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.8s ease;
+    transform: translateY(30px);
+    transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+    position: relative;
 }
 .identity-section.active .glass-text { opacity: 1; transform: translateY(0); }
+
+/* Force Overlap Placement */
+.right { margin-left: 55%; } /* Shifts the block so it sits over the right half of the logo */
+.left { margin-right: 55%; } /* Shifts the block so it sits over the left half of the logo */
+.center { margin: 0 auto; text-align: center; } /* Center overlap is natural */
+
+/* Specific Card Overlaps to fix 'Out of Glass' issue */
+#sec-d .glass-text { transform: translate3d(5vw, 40px, 0); } /* Pulls D content towards the center-right */
+#sec-d2 .glass-text { transform: translate3d(-5vw, 40px, 0); } /* Pulls second D content towards center-left */
+
+section.active#sec-d .glass-text { transform: translate3d(5vw, 0, 0); }
+section.active#sec-d2 .glass-text { transform: translate3d(-5vw, 0, 0); }
 
 .mono { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 4px; font-size: 0.75rem; }
 .glass-text h2 { margin-bottom: 20px; font-size: 1rem; color: var(--accent-gold); }
 .glass-text p { font-size: 1.15rem; font-weight: 300; line-height: 1.8; opacity: 0.8; }
-
-.right { margin-left: auto; }
-.left { margin-right: auto; }
-.center { margin: 0 auto; text-align: center; }
 
 /* Manifesto */
 .manifesto {
