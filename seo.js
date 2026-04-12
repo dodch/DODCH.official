@@ -294,6 +294,21 @@ class DynamicSEO {
         }
 
         if (productData) {
+        
+        // Explicit Thumbnail Schema for Search Snippets
+        const mainImg = productData.image || "https://dodch.com/IMG_3352.webp";
+        const absoluteImg = mainImg.startsWith('http') ? mainImg : 'https://dodch.com/' + mainImg.replace(/^\//, '');
+        
+        productData.image = absoluteImg;
+        productData.thumbnailUrl = absoluteImg;
+        productData.primaryImageOfPage = {
+            "@type": "ImageObject",
+            "url": absoluteImg,
+            "contentUrl": absoluteImg,
+            "width": "1200",
+            "height": "1200"
+        };
+
             // Trilingual Category Enrichment
             const name = productData.name.toLowerCase();
             let trilingualCategories = [];
