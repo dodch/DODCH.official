@@ -4628,6 +4628,24 @@ window.dodchSearchEngine = new DODCHSearchEngine();document.addEventListener("D
         }
     }, 1500); // Wait for potential firebase load
 
+    // --- DEEP LINK SEARCH INTEGRATION ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSearch = urlParams.get('search');
+    if (initialSearch) {
+        setTimeout(() => {
+            const inp = document.getElementById('navbar-search-input');
+            const toggle = document.getElementById('search-toggle-btn');
+            if (inp && toggle) {
+                if (!document.querySelector('.search-container').classList.contains('active')) {
+                    toggle.click();
+                }
+                inp.value = initialSearch;
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, 2000);
+    }
+
+
     const searchContainers = document.querySelectorAll(".search-container");    const halo = document.createElement("div");
     halo.id = "search-results-halo";
     document.body.appendChild(halo);    const dropdown = document.createElement("div");

@@ -187,7 +187,7 @@ class DynamicSEO {
             "url": "https://dodch.com",
             "potentialAction": {
                 "@type": "SearchAction",
-                "target": "https://dodch.com/shop?q={search_term_string}",
+                "target": "https://dodch.com/index.html?search={search_term_string}",
                 "query-input": "required name=search_term_string"
             }
         };
