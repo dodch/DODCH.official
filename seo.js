@@ -48,7 +48,7 @@ class DynamicSEO {
         this.setMeta('name', 'description', enrichedDescription);
 
         // Keywords for multi-lingual reach
-        this.setMeta('name', 'keywords', 'Cosmetics Tunisia, Luxury Skincare, Hair Treatments, Professional Shampoos, Soins du visage, Masques capillaires, Cosmétiques Tunisie, عناية بالشعر, منتجات تجميل تونس, سيروم للوجه, شامبو طبيعي');
+        this.setMeta('name', 'keywords', 'Cosmetics Tunisia, Luxury Skincare, Hair Treatments, Professional Shampoos, Soins du visage, Masques capillaires, Cosmétiques Tunisie, عناية بالشعر, منتجات تجميل تونس, سيروم للوجه, شامبو طبيعي, أفضل شامبو في تونس, soin cheveux tunisie, boutique cosmétique luxe');
 
         // Try to find the main image for og:image
         let ogImageNode = document.querySelector('meta[property="og:image"]');
@@ -79,22 +79,52 @@ class DynamicSEO {
         const organizationSchema = {
             "@context": "https://schema.org",
             "@type": "HealthAndBeautyBusiness",
+            
             "name": "DODCH",
             "legalName": "DODCH Luxury Cosmetics & Hair Care",
-            "alternateName": ["DODCH Hair Care", "DODCH Cosmetics", "DODCH Skincare", "دوتش للتجميل"],
+            "alternateName": ["DODCH Hair Care", "DODCH Cosmetics", "DODCH Skincare", "دوتش للتجميل", "DODCH Tunisia"],
             "url": "https://dodch.com",
             "logo": "https://dodch.com/IMG_3352.webp",
             "image": "https://dodch.com/IMG_3352.webp",
-            "description": "DODCH is a luxury hair care and cosmetics brand based in Tunisia. Specialized professional treatments: Glass Glow Shampoo, Silk Therapy Mask, and Advanced HA Face Serums. Cosmétiques de luxe Tunisie. منتجات تجميل تونسية فاخرة.",
+            "description": "DODCH is the golden standard of Mediterranean hair and skincare. Hand-poured in Tunisia. Specialized professional treatments: Glass Glow Shampoo, Silk Therapy Mask, and Advanced HA Face Serums. Cosmétiques de luxe Tunisie. منتجات تجميل تونسية فاخرة.",
             "knowsAbout": [
                 "Luxury Hair Care", "Skin Care Treatments", "Sulfate-free Shampoos", "Professional Cosmetics Tunisia",
                 "Soins capillaires professionnels", "Soins du visage bio", "Masque capillaire à la soie",
-                "عناية بالشعر تونس", "منتجات تجميل طبيعية", "علاج تساقط الشعر", "سيروم الهيالورونيك"
+                "عناية بالشعر تونس", "منتجات تجميل طبيعية", "علاج تساقط الشعر", "سيروم الهيالورونيك", "Prickly Pear Seed Oil Tunisia", "Huile de pépins de figue de barbarie"
             ],
-            "areaServed": {
-                "@type": "Country",
-                "name": "Tunisia"
+            "location": {
+                "@type": "Place",
+                "name": "DODCH Tunisia HQ",
+                "address": {
+                    "@type": "PostalAddress",
+                    "addressCountry": "TN",
+                    "addressLocality": "Tunis",
+                    "addressRegion": "Tunisia"
+                }
             },
+            "hasOfferCatalog": {
+                "@type": "OfferCatalog",
+                "name": "DODCH Collection",
+                "itemListElement": [
+                   { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Luxury Hair Care Tunisia" } },
+                   { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Premium Skincare Tunisia" } }
+                ]
+            },
+            "areaServed": [
+                {"@type": "City", "name": "Tunis", "addressCountry": "TN"},
+                {"@type": "City", "name": "Ariana", "addressCountry": "TN"},
+                {"@type": "City", "name": "Ben Arous", "addressCountry": "TN"},
+                {"@type": "City", "name": "Manouba", "addressCountry": "TN"},
+                {"@type": "City", "name": "Sousse", "addressCountry": "TN"},
+                {"@type": "City", "name": "Sfax", "addressCountry": "TN"},
+                {"@type": "City", "name": "Monastir", "addressCountry": "TN"},
+                {"@type": "City", "name": "Hammamet", "addressCountry": "TN"},
+                {"@type": "City", "name": "Bizerte", "addressCountry": "TN"},
+                {"@type": "City", "name": "Gabès", "addressCountry": "TN"},
+                {"@type": "City", "name": "Gafsa", "addressCountry": "TN"},
+                {"@type": "City", "name": "Kairouan", "addressCountry": "TN"},
+                {"@type": "City", "name": "Tozeur", "addressCountry": "TN"}
+            ],
             "priceRange": "$$",
             "address": {
                 "@type": "PostalAddress",
