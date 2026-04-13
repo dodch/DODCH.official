@@ -13,6 +13,47 @@ document.addEventListener('DOMContentLoaded', () => {
         mouseY = e.clientY;
     });
 
+    // Aggressive Audio Logic
+    const audio = document.getElementById('identity-audio');
+    const soundToggle = document.getElementById('sound-control');
+    let isPlaying = false;
+    let audioUnlocked = false;
+
+    const tryAutoPlay = () => {
+        if (audioUnlocked) return;
+        
+        audio.play().then(() => {
+            audioUnlocked = true;
+            isPlaying = true;
+            soundToggle.classList.add('playing');
+            ['click', 'mousedown', 'touchstart', 'keydown', 'pointerdown'].forEach(evt => {
+                document.removeEventListener(evt, tryAutoPlay, { capture: true });
+            });
+        }).catch(() => {
+            // Blocked by browser - will retry on next interaction
+        });
+    };
+
+    ['click', 'mousedown', 'touchstart', 'keydown', 'pointerdown'].forEach(evt => {
+        document.addEventListener(evt, tryAutoPlay, { capture: true });
+    });
+
+    soundToggle.addEventListener('click', (e) => {
+        e.stopPropagation(); 
+        if (!audioUnlocked) {
+            audioUnlocked = true; 
+        }
+        
+        if (isPlaying) {
+            audio.pause();
+            soundToggle.classList.remove('playing');
+        } else {
+            audio.play();
+            soundToggle.classList.add('playing');
+        }
+        isPlaying = !isPlaying;
+    });
+
     function animateCursor() {
         const easing = 0.15;
         cursorX += (mouseX - cursorX) * easing;
@@ -27,11 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('mouseleave', () => body.classList.remove('hovering'));
     });
 
-    // 2. Intersection Observer with larger margin
+    // 2. Intersection Observer with scroll-snap support
+    const scrollContainer = document.querySelector('.scroll-container');
     const observerOptions = {
-        threshold: 0.6,
+        root: scrollContainer,
+        threshold: 0.5,
         rootMargin: '0px'
     };
+    
+    let currentActiveSection = '';
 
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -39,6 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sectionId = entry.target.id;
                 const activeLetter = entry.target.dataset.active;
                 
+                if (currentActiveSection === sectionId) return;
+                currentActiveSection = sectionId;
+
                 // Remove active from others
                 sections.forEach(s => s.classList.remove('active'));
                 entry.target.classList.add('active');
@@ -62,7 +110,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (sectionId === 'sec-intro') {
-            // Intro state: Logo centered but slightly higher to leave room for subtitle
             logoContainer.style.transform = 'translate3d(0, -5vh, 0) scale(0.55)';
             logoContainer.style.opacity = '1';
             letters.forEach(l => {
@@ -85,15 +132,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentLetter.style.filter = 'none';
                 currentLetter.classList.add('focus');
 
+                // SLOWER, SMOOTHER CURVES: 
+                // We let the CSS handle the timing (2s) but the targets are set here
                 if (activeId === 'D') {
-                    // Move D to the right to overlap with the .right glass card
                     currentLetter.style.transform = 'translate3d(12vw, 0, 40px) rotateY(-15deg) scale(1.8)';
                 } else if (activeId === 'O') {
-                    // Center overlap with .center glass card
                     currentLetter.style.transform = 'translate3d(0, 0, -250px) scale(8)';
                     currentLetter.style.opacity = '0.15';
                 } else if (activeId === 'D2') {
-                    // Move second D to the left to overlap with the .left glass card
                     currentLetter.style.transform = 'translate3d(-12vw, 0, 100px) rotateY(180deg) scale(2.2)';
                 } else if (activeId === 'C') {
                     currentLetter.style.transform = 'translate3d(0, 0, 50px) scale(2.5) rotateX(12deg)';

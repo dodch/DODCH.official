@@ -1,4 +1,3 @@
-
 // Universal Image WebP Fallback Fix
 window.addEventListener('error', function(e) {
     if (e.target && e.target.tagName === 'IMG') {
@@ -756,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
 
                         const sectionHTML = `
-                            <div class="shop-category-section" style="padding-top: 60px;">
+                            <div class="shop-category-section">
                                 <h2 class="shop-category-title">${section.title}</h2>
                                 ${contentHTML}
                             </div>
@@ -776,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (filteredProducts.length > 0) {
                     const gridHTML = `
-                        <div class="shop-category-section" style="padding-top: 60px;">
+                        <div class="shop-category-section">
                             <h2 class="shop-category-title">${subCatDisplay[activeSub] || (activeSub.charAt(0).toUpperCase() + activeSub.slice(1))}</h2>
                             <div class="shop-grid">
                                 ${filteredProducts.map(([id, p], i) => generateCardHTML(id, p, i)).join('')}
@@ -2201,28 +2200,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 children: [
                     { label: "All Products", link: "index.html?cat=all", type: "link", className: "sidebar-separator-link" },
                     {
-                        label: "Hair Care",
+                        label: "Hair Care", icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 22s1-4 4-4 5-4 5-4V3s-2 1-3 1-3-2-3-2"></path></svg>`,
                         id: "hair-care",
                         type: "group",
                         children: [
                             { label: "All Hair Products", link: "index.html?cat=hair-care&sub=all", type: "link" },
-                            { label: "Shampoo", link: "index.html?cat=hair-care&sub=shampoo", type: "link" },
-                            { label: "Conditioners", link: "index.html?cat=hair-care&sub=conditioners", type: "link" },
-                            { label: "Masks", link: "index.html?cat=hair-care&sub=masks", type: "link" },
+                            { label: "Shampoo", icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9zM9 9V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5"></path></svg>`, link: "index.html?cat=hair-care&sub=shampoo", type: "link" },
+                            { label: "Conditioners", icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"></path></svg>`, link: "index.html?cat=hair-care&sub=conditioners", type: "link" },
+                            { label: "Masks", icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`, link: "index.html?cat=hair-care&sub=masks", type: "link" },
                             { label: "Leave-in", link: "index.html?cat=hair-care&sub=leave-in", type: "link" }
                         ]
                     },
                     {
-                        label: "Face Care",
+                        label: "Face Care", icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 16s2-3.5 2-6.5a2 2 0 1 0-4 0c0 3 2 6.5 2 6.5z"></path></svg>`,
                         id: "face-care",
                         type: "group",
                         children: [
                             { label: "All Face Products", link: "index.html?cat=face-care&sub=all", type: "link" },
-                            { label: "Cleansers", link: "index.html?cat=face-care&sub=cleansers", type: "link" },
-                            { label: "Serums", link: "index.html?cat=face-care&sub=serums", type: "link" }
+                            { label: "Cleansers", icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="8 12 12 16 16 12"></polyline></svg>`, link: "index.html?cat=face-care&sub=cleansers", type: "link" },
+                            { label: "Serums", icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 3.43-2 3.43s2.17-.5 3.43-2c1.57-1.87 3.23-3.04 4.07-3.88l3.43-3.43-1.07-1.07-3.88 4.07c-.42.42-1.57 2.08-3.98 2.88z"></path></svg>`, link: "index.html?cat=face-care&sub=serums", type: "link" }
                         ]
                     },
-                    { label: "Sets & Bundles", link: "index.html?cat=sets", type: "link" }
+                    { label: "Sets & Bundles", icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2" ry="2"></rect><path d="M12 12V3"></path></svg>`, link: "index.html?cat=sets", type: "link" }
                 ]
             },
                         {
@@ -5570,3 +5569,45 @@ async function initShippingInfo(user) {
 });
 
 window.addEventListener('load', initPushNotifications);
+
+// --- GLOBAL MOTION BLUR ENGINE ---
+const MotionBlurEngine = {
+    settings: {
+        maxBlur: 4.5,
+        velocityMult: 0.15,
+        lerpFactor: 0.1,
+    },
+    state: {
+        lastScroll: window.pageYOffset || document.documentElement.scrollTop,
+        currentBlur: 0,
+        ticking: false
+    },
+    update() {
+        const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+        const delta = Math.abs(currentScroll - this.state.lastScroll);
+        const targetBlur = Math.min(delta * this.settings.velocityMult, this.settings.maxBlur);
+        this.state.currentBlur += (targetBlur - this.state.currentBlur) * this.settings.lerpFactor;
+        if (this.state.currentBlur < 0.01 && delta < 1) {
+            this.state.currentBlur = 0;
+            document.documentElement.style.setProperty('--scroll-blur', '0px');
+        } else {
+            document.documentElement.style.setProperty('--scroll-blur', this.state.currentBlur.toFixed(3) + 'px');
+        }
+        this.state.lastScroll = currentScroll;
+        if (this.state.currentBlur > 0.01) {
+            requestAnimationFrame(() => this.update());
+        } else {
+            this.state.ticking = false;
+        }
+    },
+    init() {
+        window.addEventListener('scroll', () => {
+            if (!this.state.ticking) {
+                this.state.ticking = true;
+                requestAnimationFrame(() => this.update());
+            }
+        }, { passive: true });
+    }
+};
+MotionBlurEngine.init();
+

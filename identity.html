@@ -11,14 +11,23 @@
 <body class="identity-page">
     <div id="custom-cursor">
         <div class="cursor-dot"></div>
-        <div class="cursor-circle"><span>EXPLORE</span></div>
+        <div class="cursor-circle"></div>
     </div>
 
     <header class="identity-header">
         <a href="index.html" class="small-logo">DODCH</a>
+        
         <div class="pronunciation">
-            <div class="waveform">
-                <span></span><span></span><span></span><span></span><span></span><span></span>
+            <div id="sound-control" class="sound-toggle playing">
+                <div class="sound-visual">
+                    <div class="sound-icons">
+                        <svg class="icon-play" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                        <svg class="icon-mute" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+                    </div>
+                    <div class="waveform">
+                        <span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
             </div>
             [ P R O N U N C I A T I O N : D O H - D E C H ]
         </div>
@@ -102,5 +111,6 @@
     </main>
 
     <script src="identity.js"></script>
+    <audio id="identity-audio" src="Clinical_Observation.mp3" loop preload="auto"></audio>
 </body>
 </html>
