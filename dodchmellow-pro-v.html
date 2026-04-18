@@ -156,6 +156,81 @@
             </div>
         </section>
 
+        <!-- Gentleness Scale Section -->
+        <section id="gentleness-scale" class="gentleness-scale-section reveal">
+            <div class="gentleness-scale-container container">
+                <h2 class="section-title" style="margin-bottom: 3rem;">The Gentleness Scale</h2>
+                
+                <div class="gentleness-levels">
+                    <div class="gentleness-level">Level 1: Ultra-Mild</div>
+                    <div class="gentleness-level active">Level 2: Soothing Daily</div>
+                    <div class="gentleness-level">Level 3: Active-But-Calm</div>
+                </div>
+
+                <div class="glow-meter-wrapper">
+                    <div class="glow-line"></div>
+                    <div class="scale-ticks">
+                        <div class="tick" id="tick-1"></div>
+                        <div class="tick" id="tick-2"></div>
+                        <div class="tick" id="tick-3"></div>
+                    </div>
+                    <div class="glow-indicator-container" id="indicator-container">
+                        <div class="glow-indicator" id="gentleness-indicator">
+                            <img src="IMG_3863.webp" alt="Gentleness Cloud" class="gentleness-icon">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gentleness-info">
+                    <div class="gentleness-rating">
+                        <strong>Rating:</strong> Daily-Gentleness Approved
+                    </div>
+                    <p class="gentleness-description">
+                        The Marshmallow Cloud lather provides a physical buffer between your hands and your hair, reducing mechanical friction and soothing the scalp.
+                    </p>
+                    <div class="soothing-profile">
+                        Gentleness Profile: <em>Friction-Reducing / Softening / Moisture-Lock</em>
+                    </div>
+                    <div class="gentleness-patch-test">
+                        *Patch test on small skin area with product before full use.
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const section = document.getElementById('gentleness-scale');
+                    const indicatorContainer = document.getElementById('indicator-container');
+                    const tick2 = document.getElementById('tick-2');
+                    
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                // Dynamic fetch of level 2 position
+                                const targetPos = getComputedStyle(section).getPropertyValue('--level-2').trim();
+                                
+                                setTimeout(() => {
+                                    indicatorContainer.style.left = targetPos;
+                                    if(tick2) tick2.classList.add('active');
+                                }, 500);
+                                observer.unobserve(entry.target);
+                            }
+                        });
+                    }, { threshold: 0.8 });
+                    
+                    observer.observe(section);
+
+                    indicatorContainer.addEventListener('click', (e) => {
+                        if (window.triggerHaptic) window.triggerHaptic('light');
+                        
+                        indicatorContainer.classList.remove('jelly-active');
+                        void indicatorContainer.offsetWidth;
+                        indicatorContainer.classList.add('jelly-active');
+                        setTimeout(() => indicatorContainer.classList.remove('jelly-active'), 1500);
+                    });
+                });
+            </script>
+        </section>
+
         <!-- 2. Product Highlight / Triple-Action Effect -->
         <section class="section-padding bg-white">
             <div class="container">
