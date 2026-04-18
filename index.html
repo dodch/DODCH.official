@@ -18,117 +18,15 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=4" media="print" onload="this.media='all'">
-    <link rel="preload" href="IMG_3242.webp" as="image">
-    <style>
-        :root {
-            --bg-cream: #FDFBF7;
-            --text-charcoal: #2D2D2D;
-            --accent-gold: #D4AF37;
-            --font-serif: 'Playfair Display', serif;
-            --font-sans: 'Montserrat', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-cream);
-            color: var(--text-charcoal);
-            font-family: var(--font-sans);
-            margin: 0;
-        }
-
-        body.has-sidebar {
-            padding-left: 300px;
-        }
-
-        #navbar {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-            padding: 1.5rem 0;
-            transition: all 0.4s ease;
-        }
-
-        body.has-sidebar #navbar {
-            left: 300px;
-            width: calc(100% - 300px);
-        }
-
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 2rem;
-            position: relative;
-        }
-
-        .logo {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            font-family: var(--font-serif);
-            font-size: 1.5rem;
-            letter-spacing: 2px;
-            font-weight: 600;
-            color: #FFFFFF;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-            text-decoration: none;
-        }
-
-        #hero {
-            height: 100vh;
-            width: 100%;
-            position: relative;
-            display: flex;
-            align-items: flex-start;
-            padding-top: 140px;
-            overflow: hidden;
-            background-color: var(--text-charcoal);
-        }
-
-        .hero-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('IMG_3242.webp');
-            background-size: cover;
-            background-position: 70% center;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 2;
-            padding: 0 1.5rem;
-            max-width: 800px;
-            color: #fff;
-        }
-
-        .skeleton-card {
-            background: #f0f0f0;
-            border-radius: 20px;
-            height: 400px;
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .grecaptcha-badge {
-            visibility: hidden !important;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css?v=4">
     <!-- reCAPTCHA v3 - Standard App Check -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy" async
-        defer></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy" async defer></script>
     <!-- Dynamic SEO Injection -->
     <script type="module" src="seo.js"></script>
     <meta name="view-transition" content="same-origin">
 </head>
 
-<body class="has-sidebar">
+<body>
     <!-- Desktop Sidebar -->
     <aside id="desktop-sidebar">
         <button class="sidebar-close-btn">&times;</button>
@@ -219,11 +117,9 @@
 
         <div class="container shop-layout">
             <!-- Product Grid -->
-            <section class="shop-grid">
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
+            <section class="shop-grid reveal">
+                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; opacity: 0.6;">Loading collection...
+                </div>
             </section>
         </div>
 
@@ -279,3 +175,4 @@
 </body>
 
 </html>
+
