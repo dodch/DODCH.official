@@ -41,49 +41,6 @@ html {
     scroll-behavior: smooth;
 }
 
-@view-transition {
-    navigation: auto;
-}
-
-/* --- SURGICAL TRANSITIONS --- */
-#top-loader {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 0%;
-    height: 3px;
-    background: linear-gradient(to right, var(--accent-gold), #fff);
-    z-index: 11000;
-    pointer-events: none;
-    display: none;
-}
-
-#top-loader.active {
-    display: block;
-    animation: loaderProgress 2s ease-out forwards;
-}
-
-@keyframes loaderProgress {
-    0% { width: 0%; }
-    10% { width: 20%; }
-    50% { width: 70%; }
-    100% { width: 95%; }
-}
-
-main {
-    animation: mainReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    will-change: opacity, transform;
-}
-
-@keyframes mainReveal {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-html {
-    scroll-behavior: smooth;
-}
-
 html.search-active,
 body.search-active {
     overflow: hidden !important;
