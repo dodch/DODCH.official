@@ -1,4 +1,4 @@
-// Universal Image WebP Fallback Fix
+﻿// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -667,10 +667,12 @@ document.addEventListener('DOMContentLoaded', () => {
             subtitle: "The Elixir of 10,000 Seeds",
             price: "35.00",
             image: "IMG_3357.webp",
-            description: "A high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil. Experience the 'Solar-Floral' journey with notes of Tunisian Orange Blossom and Tropical Vanilla.",
+            description: "THIS PRODUCT IS NO LONGER AVAILABLE. Experience the legacy of our original Glass Glow formula. While this specific treatment has been retired from our permanent collection, its spirit lives on in our newer innovations.",
             style: "",
             storyUrl: "glass-glow-shampoo.html",
             orderIndex: 0,
+            outOfStock: true,
+            isPermanentlyUnavailable: true,
             sizes: [
                 { label: '50ml', price: '35.00' },
                 { label: '100ml', price: '65.00' },
@@ -779,7 +781,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 let linkAttributes = `href="${targetUrl}"`;
 
                 let badgeHTML = '';
-                if (product.outOfStock) {
+                if (product.isPermanentlyUnavailable) {
+                    badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">UNAVAILABLE</span>';
+                } else if (product.outOfStock) {
                     badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">OUT OF STOCK</span>';
                 } else if (hasDiscount && discountPercentage > 0) {
                     badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1;">-${discountPercentage}%</span>`;
@@ -3676,12 +3680,12 @@ The DODCH Team`;
                 e.stopPropagation();
 
                 const id = btn.dataset.id;
+                const product = productCatalog[id];
 
-                if (id === 'glass-glow-shampoo') {
+                if (product && product.isPermanentlyUnavailable) {
                     window.showToast('This product is no longer available.', 'error');
                     return;
                 }
-                const product = productCatalog[id];
 
                 const title = product ? product.name : btn.dataset.title;
                 const price = product ? product.price : btn.dataset.price;
@@ -5186,7 +5190,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (nav) nav.classList.remove("search-active");
                     container.classList.remove("active");
                     document.body.classList.remove("search-active");
-                    document.body.style.overflow = '';
+                    document.documentElement.classList.remove("search-active");
                     inputEl.blur();
                 });
             }
@@ -5224,6 +5228,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+
+    const syncHeight = () => {
+        if (!dropdown || !dropdown.classList.contains("active")) return;
+
+        // 1. Disable transition to measure natural height instantly
+        dropdown.style.transition = 'none';
+        const currentHeight = dropdown.offsetHeight;
+        dropdown.style.height = 'auto';
+
+        // 2. Measure the exact height the content *wants* to be
+        const targetHeight = Math.min(layoutDiv.offsetHeight + 40, window.innerHeight - 110);
+
+        // 3. Snap back to the starting height before the browser paints
+        dropdown.style.height = `${currentHeight}px`;
+
+        // 4. Force a layout recalculation
+        void dropdown.offsetHeight;
+
+        // 5. Apply the transition and target height in the next frame for a smooth glide
+        requestAnimationFrame(() => {
+            dropdown.style.transition = 'height 0.3s ease';
+            dropdown.style.height = `${targetHeight}px`;
+
+            // Clean up inline transition so CSS takes over again
+            setTimeout(() => {
+                dropdown.style.transition = '';
+            }, 350);
+        });
+    };
 
     const renderResults = (results, query) => {
         currentResults = results;
@@ -5338,9 +5371,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         dropdown.classList.add("active");
         halo.classList.add("active");
-        if (dropdown.classList.contains("active")) {
-            dropdown.style.transform = "translateY(0)";
-        }
+        syncHeight();
     };
 
     const updateSelection = (index) => {
@@ -5376,6 +5407,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         dropdown.classList.add("active");
         halo.classList.add("active");
+        syncHeight();
 
         setTimeout(() => {
             if (Object.keys(window.dodchSearchEngine.catalog).length === 0 && window.productCatalog) {
@@ -5396,6 +5428,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.preventDefault();
                 input.value = "";
                 renderResults([], ""); // Show history immediately
+                syncHeight();
                 input.focus();
             });
         }
@@ -5407,11 +5440,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const query = e.target.value.trim();
 
             document.body.classList.add("search-active");
-            if (window.innerWidth < 768) document.body.style.overflow = 'hidden';
+            document.documentElement.classList.add("search-active");
+            const nav = document.getElementById("navbar");
+            if (nav) nav.classList.add("search-active");
+
             container.classList.add("active");
             halo.classList.add("active");
             if (query.length === 0) {
                 renderResults([], "");
+                syncHeight();
             } else {
                 handleSearch(e);
             }
@@ -5424,7 +5461,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (nav) nav.classList.remove("search-active");
                 container.classList.remove("active");
                 document.body.classList.remove("search-active");
-                document.body.style.overflow = '';
+                document.documentElement.classList.remove("search-active");
             }
         });
 
@@ -5457,12 +5494,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.location.href = item.storyUrl || `product.html?id=${id}`;
                 }
             } else if (e.key === "Escape") {
+                selectedIndex = -1;
                 dropdown.classList.remove("active");
                 halo.classList.remove("active");
                 const nav = document.getElementById("navbar");
                 if (nav) nav.classList.remove("search-active");
                 container.classList.remove("active");
                 document.body.classList.remove("search-active");
+                document.documentElement.classList.remove("search-active");
                 input.blur();
             }
         });
@@ -6079,3 +6118,4 @@ if (initialSearch) {
 }
 
 MotionBlurEngine.init();
+window.addEventListener('load', initPushNotifications);

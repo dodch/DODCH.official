@@ -32,9 +32,19 @@
     color: #FFFFFF;
 }
 
+::-moz-selection {
+    background: var(--accent-gold);
+    color: #FFFFFF;
+}
+
 html {
     scroll-behavior: smooth;
-    overscroll-behavior-y: none;
+}
+
+html.search-active,
+body.search-active {
+    overflow: hidden !important;
+    height: 100% !important;
 }
 
 body {
@@ -67,7 +77,7 @@ main {
     transition: width 0.1s ease-out;
 }
 
-/* --- Typography --- */
+/* --- Typography (Fluid Scaling) --- */
 h1,
 h2,
 h3,
@@ -77,13 +87,17 @@ h4 {
 }
 
 h1 {
-    font-size: 2.2rem;
+    font-size: clamp(1.6rem, 4vw + 0.5rem, 2.2rem);
     line-height: 1.2;
     margin-bottom: 1rem;
 }
 
+h2 {
+    font-size: clamp(1.3rem, 3vw + 0.4rem, 1.8rem);
+}
+
 p {
-    font-size: 1rem;
+    font-size: clamp(0.875rem, 1.5vw + 0.4rem, 1rem);
     font-weight: 300;
     letter-spacing: 0.5px;
 }
@@ -6713,16 +6727,23 @@ body.has-notification #login-btn::after {
 @media (max-width: 650px) {
     #search-results-dropdown {
         position: fixed;
-        width: 100vw;
+        width: 94vw;
         min-width: unset;
-        left: 0 !important;
-        top: 60px !important;
-        bottom: 0 !important;
+        left: 3vw !important;
+        top: 85px !important;
         padding: 20px;
-        border-radius: 24px 24px 0 0;
-        max-height: none;
-        height: calc(100vh - 60px);
+        border-radius: 24px;
+        max-height: calc(100vh - 110px);
+        height: auto;
         transform: translateY(10px);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        z-index: 200000;
+        overflow-y: auto;
+        background: #FFFFFF !important;
+        transition: transform 0.3s ease, height 0.3s ease, max-height 0.3s ease;
+        display: flex;
+        flex-direction: column;
     }
 
     #search-results-dropdown.active {
@@ -7104,4 +7125,123 @@ button[type="submit"]:hover,
     margin-top: auto !important;
     padding-top: 30px !important;
     border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* === SMALL MOBILE (≤480px) === */
+@media (max-width: 480px) {
+
+    /* Search: full-width mobile takeover */
+    #navbar.search-active .nav-search-item {
+        margin-right: 50px !important;
+    }
+
+    #navbar.search-active .search-input {
+        padding: 10px 50px 10px 18px !important;
+        height: 46px;
+        font-size: 0.9rem !important;
+        border-radius: 30px !important;
+    }
+
+    /* --- Unified Search UI Fix --- */
+    #navbar.search-active {
+        z-index: 200005 !important;
+    }
+
+    #navbar.search-active .search-container {
+        position: relative;
+        z-index: 200006 !important;
+    }
+
+    #navbar.search-active .search-input {
+        background: #FFFFFF !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-radius: 30px !important;
+        padding: 12px 50px 12px 20px !important;
+        font-size: 1rem !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+        height: 48px;
+        width: 100% !important;
+    }
+
+    #navbar.search-active #search-close-btn {
+        position: absolute !important;
+        right: -52px !important; /* Positioned horizontally next to the pill */
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 44px;
+        height: 44px;
+        background: #FFFFFF !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+        z-index: 200002 !important;
+        border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        color: #333 !important;
+    }
+
+    #search-results-halo.active {
+        display: block !important;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 199999 !important;
+    }
+
+    #search-clear-btn {
+        right: 36px;
+        width: 22px;
+        height: 22px;
+    }
+
+    /* Search dropdown: mobile sheet */
+    #search-results-dropdown {
+        padding: 16px;
+        border-radius: 20px 20px 0 0;
+    }
+
+    .search-result-item {
+        padding: 10px 12px;
+        gap: 12px;
+        border-radius: 14px;
+    }
+
+    .search-result-image {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+    }
+
+    .search-result-title {
+        font-size: 0.9rem;
+    }
+
+    .search-result-price {
+        font-size: 0.85rem;
+    }
+
+    .ai-reasoning-text {
+        font-size: 0.7rem;
+    }
+
+    /* Search widgets */
+    .search-widget {
+        padding: 14px;
+        border-radius: 12px;
+    }
+
+    .search-widget-title {
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+    }
+
+    .search-widget-list li {
+        padding: 8px 10px;
+        font-size: 0.82rem;
+        gap: 8px;
+    }
+
+    .search-widget-img {
+        width: 40px;
+        height: 40px;
+    }
 }

@@ -1,5 +1,5 @@
 // Universal Image WebP Fallback Fix
-window.addEventListener('error', function(e) {
+window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
         if (src.match(/\.(png|jpg|jpeg)(\?.*)?$/i)) {
@@ -15,7 +15,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
 import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { getMessaging, getToken as getMessagingToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
@@ -35,7 +35,7 @@ const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
 // --- SECURITY & VALIDATION ENGINE ---
 const SecurityValidator = {
     TUNISIA_GOVERNORATES: ["Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa", "Jendouba", "Kairouan", "Kasserine", "Kebili", "Kef", "Mahdia", "Manouba", "Medenine", "Monastir", "Nabeul", "Sfax", "Sidi Bouzid", "Siliana", "Sousse", "Tataouine", "Tozeur", "Tunis", "Zaghouan"],
-    
+
     MAX_NAME_LENGTH: 100,
     MAX_MESSAGE_LENGTH: 3000,
     validatePhone: (num) => {
@@ -51,8 +51,8 @@ const SecurityValidator = {
     isProfane: (text) => {
         if (!text) return false;
         const normalized = text.toLowerCase();
-        return SecurityValidator.PROFANITY_LIST.some(word => 
-            normalized.includes(word) || 
+        return SecurityValidator.PROFANITY_LIST.some(word =>
+            normalized.includes(word) ||
             normalized.replace(/[*#@!]/g, '').includes(word)
         );
     },
@@ -93,7 +93,10 @@ getToken(appCheck)
     });
 
 const auth = getAuth(app);
-const db = getFirestore(app);
+// Intelligent Caching: Enable persistent local cache so products load instantly on repeat visits
+const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 const storage = getStorage(app);
 const functions = getFunctions(app, 'europe-west1');
 const provider = new GoogleAuthProvider();
@@ -347,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     progressBar.style.width = `${scrollPercent}%`;
                 }
                 runCounterAnimation();
-                
+
                 mainScrollTicking = false;
             });
             mainScrollTicking = true;
@@ -662,16 +665,18 @@ document.addEventListener('DOMContentLoaded', () => {
             category: "hair-care",
             subCategory: "shampoo",
             subtitle: "The Elixir of 10,000 Seeds",
-            price: "24.00",
+            price: "35.00",
             image: "IMG_3357.webp",
-            description: "A high-performance treatment formulated around the rarest, most expensive cosmetic oil on the planet: Pure Cold-Pressed Prickly Pear Seed Oil. Experience the 'Solar-Floral' journey with notes of Tunisian Orange Blossom and Tropical Vanilla.",
-            style: "", // CSS filter if needed
+            description: "THIS PRODUCT IS NO LONGER AVAILABLE. Experience the legacy of our original Glass Glow formula. While this specific treatment has been retired from our permanent collection, its spirit lives on in our newer innovations.",
+            style: "",
             storyUrl: "glass-glow-shampoo.html",
             orderIndex: 0,
+            outOfStock: true,
+            isPermanentlyUnavailable: true,
             sizes: [
-                { label: '50ml', price: '24.00' },
-                { label: '100ml', price: '44.00' },
-                { label: '250ml', price: '95.00', originalPrice: '105.00' }
+                { label: '50ml', price: '35.00' },
+                { label: '100ml', price: '65.00' },
+                { label: '250ml', price: '140.00' }
             ]
         },
         'dodchmellow-pro-v': {
@@ -694,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
             category: "face-care",
             subCategory: "cleansers",
             subtitle: "Luminous Purity",
-            price: "45.00",
+            price: "32.00",
             image: "IMG_3352.webp",
             description: "A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",
             style: "filter: brightness(1.05);",
@@ -707,14 +712,14 @@ document.addEventListener('DOMContentLoaded', () => {
             category: "hair-care",
             subCategory: ["masks", "conditioners", "leave-in"],
             subtitle: "Deep Repair & Glass Shine",
-            price: "39.00",
+            price: "45.00",
             image: "F188A04D-4AA7-4D98-9EEB-14861B10D468.webp",
             description: "Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",
             style: "",
             storyUrl: "silk-mask.html",
             orderIndex: 2,
             sizes: [
-                { label: '250ml', price: '39.00' }
+                { label: '250ml', price: '45.00' }
             ]
         },
         'advanced-ha-serum': {
@@ -757,30 +762,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 let originalPriceDisplay = '';
                 let hasDiscount = false;
                 let discountPercentage = 0;
-                
+
                 if (product.sizes && product.sizes.length > 0) {
                     const prices = product.sizes.map(s => parseFloat(s.price));
                     const basePriceIndex = product.sizes.findIndex(s => parseFloat(s.price) === Math.min(...prices));
                     const baseSize = product.sizes[basePriceIndex] || product.sizes[0];
-                    
+
                     displayPrice = parseFloat(baseSize.price).toFixed(2);
-                    
+
                     if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
                         hasDiscount = true;
                         discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
                         originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
                     }
                 }
-                
+
                 let targetUrl = product.storyUrl || `product.html?id=${id}`;
                 let linkAttributes = `href="${targetUrl}"`;
 
-                if (id === 'glass-glow-shampoo') {
-                    linkAttributes = `href="#" onclick="window.showToast('This product is no longer available.', 'error'); return false;"`;
-                }
-
                 let badgeHTML = '';
-                if (product.outOfStock) {
+                if (product.isPermanentlyUnavailable) {
+                    badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">UNAVAILABLE</span>';
+                } else if (product.outOfStock) {
                     badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">OUT OF STOCK</span>';
                 } else if (hasDiscount && discountPercentage > 0) {
                     badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1;">-${discountPercentage}%</span>`;
@@ -2096,7 +2099,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     placeOrderBtn.innerText = "Place Order";
                     placeOrderBtn.style.opacity = "1";
                     placeOrderBtn.style.pointerEvents = "auto";
-                                                }, 15000); // 15 seconds
+                }, 15000); // 15 seconds
 
                 try {
                     const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
@@ -2226,7 +2229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp(),
                     source: 'footer'
                 });
-                
+
                 window.showToast("Welcome to the Inner Circle!", "success");
                 newsletterForm.reset();
                 btn.style.backgroundColor = "#4CAF50"; // Green for success
@@ -2363,9 +2366,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                     
                                     <div class="social-links">
-                                        <a href="#" class="social-icon" aria-label="Instagram" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
-                                        <a href="#" class="social-icon" aria-label="TikTok" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg></a>
-                                        <a href="https://www.facebook.com/profile.php?id=61586824002342" class="social-icon" aria-label="Facebook" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
+                                        <a href="https://www.instagram.com/dodch.official/" class="social-icon" aria-label="Instagram" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
+                                        <a href="https://www.tiktok.com/@dodch.official" class="social-icon" aria-label="TikTok" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg></a>
+                                        <a href="https://www.facebook.com/dodch.official" class="social-icon" aria-label="Facebook" target="_blank"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a>
                                     </div>
                                 </div>
                                 
@@ -2407,7 +2410,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="footer-col">
                             <h4>Company</h4>
                             <ul style="list-style: none;">
-                                <li><a href="about.html" class="footer-link">About Us</a></li>
+                                <li><a href="identity.html" class="footer-link">Identity & Vision</a></li>
                                 <li><a href="careers.html" class="footer-link">Careers</a></li>
                             </ul>
                         </div>
@@ -2501,7 +2504,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     { label: "Sets & Bundles", link: "index.html?cat=sets", type: "link" }
                 ]
             },
-                        {
+            {
                 label: "Our Identity",
                 link: "identity.html",
                 type: "link",
@@ -2572,7 +2575,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
                         updateMainPageSEO();
                         if (window.dodchSEO) window.dodchSEO.runSEO();
-                        
+
                         // Reset scroll position so new section starts from the top
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
@@ -3235,14 +3238,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             try {
                                 await updateDoc(doc(db, "orders", orderId), { status: newStatus, hasUnseenUpdate: true });
                                 window.showToast("Order status updated", "success");
-                                
+
                                 const order = orders.find(o => o.id === orderId);
 
                                 // --- Automated Target Push Notification ---
                                 if (order && order.userId && order.userId !== 'guest' && typeof window.sendTargetedPushNotification === 'function') {
                                     let pushTitle = `Order Update`;
                                     let pushBody = `Your order #${order.orderReference || order.id.slice(-6)} is now ${newStatus}.`;
-                                    
+
                                     if (newStatus === 'Confirmed') {
                                         pushTitle = `Order Confirmed! 🎉`;
                                         pushBody = `We're preparing your order #${order.orderReference || order.id.slice(-6)} with care.`;
@@ -3253,7 +3256,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         pushTitle = `Order Delivered! 📦`;
                                         pushBody = `We hope you enjoy your DODCH products.`;
                                     }
-                                    
+
                                     window.sendTargetedPushNotification(db, order.userId, pushTitle, pushBody, '/my-account.html#orders');
                                 } else if (order && order.userId === 'guest') {
                                     window.showToast("Push Not Sent: Guest order (not linked to a user account).", "info");
@@ -3677,12 +3680,12 @@ The DODCH Team`;
                 e.stopPropagation();
 
                 const id = btn.dataset.id;
+                const product = productCatalog[id];
 
-                if (id === 'glass-glow-shampoo') {
+                if (product && product.isPermanentlyUnavailable) {
                     window.showToast('This product is no longer available.', 'error');
                     return;
                 }
-                const product = productCatalog[id];
 
                 const title = product ? product.name : btn.dataset.title;
                 const price = product ? product.price : btn.dataset.price;
@@ -4900,7 +4903,7 @@ const SEARCH_INTENTS = {
     'wants_growth': ['grow', 'loss', 'thinning', 'volume', 'chute', 'pousse', 'تساقط', 'نمو', 'thick', 'density'],
     'wants_smooth': ['frizz', 'frizzy', 'tangle', 'smooth', 'frisottis', 'lisse', 'tame', 'مجعد', 'ناعم', 'detangle', 'demelant'],
     'wants_antiaging': ['wrinkle', 'aging', 'youth', 'rides', 'anti-age', 'تجاعيد', 'شيخوخة', 'firm', 'lift', 'fermete']
-};const SITE_SEO_KNOWLEDGE = {
+}; const SITE_SEO_KNOWLEDGE = {
     'shampoo': [
         'sulfate-free', 'sans sulfate', 'خالي من السلفات', 'color-safe', 'daily use', 'usage quotidien', 'استخدام يومي',
         'cleansing', 'scalp care', 'purifying', 'purifiant', 'تطهير', 'mellow', 'marshmallow', 'guimauve'
@@ -4923,7 +4926,7 @@ class DODCHSearchEngine {
     constructor() {
         this.catalog = {};
         this.index = [];
-    }    normalize(str) {
+    } normalize(str) {
         if (!str) return '';
         return str.toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove French accents
@@ -4931,22 +4934,22 @@ class DODCHSearchEngine {
             .replace(/ة/g, 'ه')     // Normalize Arabic Tehmabuta
             .replace(/ى/g, 'ي')     // Normalize Arabic Alef Maksura
             .trim();
-    }    init(catalog) {
+    } init(catalog) {
         this.catalog = catalog;
         this.index = Object.entries(catalog).map(([id, item]) => {
-            let tags = (item.tags || []).map(t => this.normalize(t));            const synonyms = [];
+            let tags = (item.tags || []).map(t => this.normalize(t)); const synonyms = [];
             const allText = (item.name + ' ' + (item.category || '')).toLowerCase();
 
             for (const [key, list] of Object.entries(SEARCH_SYNONYMS)) {
                 if (allText.includes(key) || list.some(l => allText.includes(l))) {
                     synonyms.push(...list, key);
                 }
-            }            const seoTags = [];
+            } const seoTags = [];
             for (const [category, knowledgeList] of Object.entries(SITE_SEO_KNOWLEDGE)) {
                 if (allText.includes(category)) {
                     seoTags.push(...knowledgeList.map(k => this.normalize(k)));
                 }
-            }            if (allText.includes('shampoo') || allText.includes('mask')) {
+            } if (allText.includes('shampoo') || allText.includes('mask')) {
                 tags.push('needs_hydration', 'needs_repair', 'wants_smooth');
             }
             if (allText.includes('shampoo')) {
@@ -4967,12 +4970,12 @@ class DODCHSearchEngine {
                 tags: [...new Set([...tags, ...synonyms, ...seoTags])],
                 price: item.price,
                 scrapedText: '' // Will be populated asynchronously
-            };            if (item.storyUrl && !item.storyUrl.startsWith('http')) {
+            }; if (item.storyUrl && !item.storyUrl.startsWith('http')) {
                 fetch(item.storyUrl)
                     .then(response => response.text())
                     .then(html => {
                         const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');                        const scrapeTargets = doc.querySelectorAll('main p, main h1, main h2, main h3, main li, .inci-list span, .product-story');
+                        const doc = parser.parseFromString(html, 'text/html'); const scrapeTargets = doc.querySelectorAll('main p, main h1, main h2, main h3, main li, .inci-list span, .product-story');
                         let textAccumulator = '';
                         scrapeTargets.forEach(el => {
                             textAccumulator += ' ' + el.textContent;
@@ -4985,7 +4988,7 @@ class DODCHSearchEngine {
 
             return indexItem;
         });
-    }    levenshtein(a, b) {
+    } levenshtein(a, b) {
         const matrix = [];
         if (a.length === 0) return b.length;
         if (b.length === 0) return a.length;
@@ -5001,8 +5004,8 @@ class DODCHSearchEngine {
             }
         }
         return matrix[b.length][a.length];
-    }    isFuzzyMatch(token, targetString) {
-        if (targetString.includes(token)) return true;        const threshold = token.length > 6 ? 2 : 1;
+    } isFuzzyMatch(token, targetString) {
+        if (targetString.includes(token)) return true; const threshold = token.length > 6 ? 2 : 1;
 
         if (token.length > 3) {
             const words = targetString.split(/\s+/);
@@ -5030,9 +5033,10 @@ class DODCHSearchEngine {
             let matchedReasons = [];
 
             for (const token of tokens) {
-                let tokenMatched = false;                if (item.name.includes(token)) {
+                let tokenMatched = false; if (item.name.includes(token)) {
                     score += 15;
-                    tokenMatched = true;                }                else if (!tokenMatched) {
+                    tokenMatched = true;
+                } else if (!tokenMatched) {
                     for (const [intent, keywords] of Object.entries(SEARCH_INTENTS)) {
                         if (keywords.includes(token) && item.tags.includes(intent)) {
                             score += 12; // High priority for semantic needs
@@ -5041,22 +5045,22 @@ class DODCHSearchEngine {
                             break;
                         }
                     }
-                }                if (!tokenMatched && item.tags.some(t => t.includes(token) || this.isFuzzyMatch(token, t))) {
+                } if (!tokenMatched && item.tags.some(t => t.includes(token) || this.isFuzzyMatch(token, t))) {
                     score += 10;
                     tokenMatched = true;
                     matchedReasons.push(`Matches deep semantic tags related to "${token}"`);
-                }                else if (!tokenMatched && this.isFuzzyMatch(token, item.name)) {
+                } else if (!tokenMatched && this.isFuzzyMatch(token, item.name)) {
                     score += 8;
                     tokenMatched = true;
-                }                else if (!tokenMatched && item.category.includes(token)) {
+                } else if (!tokenMatched && item.category.includes(token)) {
                     score += 5;
                     tokenMatched = true;
                     matchedReasons.push(`Category match`);
-                }                else if (!tokenMatched && item.scrapedText && (item.scrapedText.includes(token) || this.isFuzzyMatch(token, item.scrapedText))) {
+                } else if (!tokenMatched && item.scrapedText && (item.scrapedText.includes(token) || this.isFuzzyMatch(token, item.scrapedText))) {
                     score += 3;
                     tokenMatched = true;
                     matchedReasons.push(`Content explicitly found inside product details`);
-                }                else if (!tokenMatched && this.isFuzzyMatch(token, item.description)) {
+                } else if (!tokenMatched && this.isFuzzyMatch(token, item.description)) {
                     score += 2;
                     tokenMatched = true;
                 }
@@ -5067,7 +5071,8 @@ class DODCHSearchEngine {
                 }
             }
 
-            if (matchesAll && score > 0) {                const uniqueReasons = [...new Set(matchedReasons)];
+            if (matchesAll && score > 0) {
+                const uniqueReasons = [...new Set(matchedReasons)];
                 const topReason = uniqueReasons.length > 0 ? uniqueReasons[0] : "Identified as a strong contextual match";
                 results.push({ item: this.catalog[item.id], id: item.id, score: score, matchedReason: topReason });
             }
@@ -5185,7 +5190,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (nav) nav.classList.remove("search-active");
                     container.classList.remove("active");
                     document.body.classList.remove("search-active");
-                    document.body.style.overflow = '';
+                    document.documentElement.classList.remove("search-active");
                     inputEl.blur();
                 });
             }
@@ -5223,6 +5228,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+
+    const syncHeight = () => {
+        if (!dropdown || !dropdown.classList.contains("active")) return;
+
+        // 1. Disable transition to measure natural height instantly
+        dropdown.style.transition = 'none';
+        const currentHeight = dropdown.offsetHeight;
+        dropdown.style.height = 'auto';
+
+        // 2. Measure the exact height the content *wants* to be
+        const targetHeight = Math.min(layoutDiv.offsetHeight + 40, window.innerHeight - 110);
+
+        // 3. Snap back to the starting height before the browser paints
+        dropdown.style.height = `${currentHeight}px`;
+
+        // 4. Force a layout recalculation
+        void dropdown.offsetHeight;
+
+        // 5. Apply the transition and target height in the next frame for a smooth glide
+        requestAnimationFrame(() => {
+            dropdown.style.transition = 'height 0.3s ease';
+            dropdown.style.height = `${targetHeight}px`;
+
+            // Clean up inline transition so CSS takes over again
+            setTimeout(() => {
+                dropdown.style.transition = '';
+            }, 350);
+        });
+    };
 
     const renderResults = (results, query) => {
         currentResults = results;
@@ -5268,9 +5302,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                         <div class="trending-grid" style="display: grid; grid-template-columns: 1fr; gap: 10px;">
                             ${[
-                                { q: 'Shampoo', l: 'Healthy Hair Routine', i: '✨' },
-                                { q: 'Serum', l: 'Glass Skin Essentials', i: '💧' }
-                            ].map((t, i) => `
+                    { q: 'Shampoo', l: 'Healthy Hair Routine', i: '✨' },
+                    { q: 'Serum', l: 'Glass Skin Essentials', i: '💧' }
+                ].map((t, i) => `
                                 <div class="trending-item search-reveal-item" onclick="window.dodchSearchTrendClick('${t.q}')" style="display: flex; align-items: center; gap: 15px; padding: 12px; background: #fff; border-radius: 16px; border: 1px solid rgba(0,0,0,0.04); cursor: pointer; transition: 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.02); animation-delay: ${0.45 + (i * 0.12)}s;">
                                     <div style="width: 40px; height: 40px; background: #fdf8e6; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #D4AF37;">${t.i}</div>
                                     <span style="font-size: 0.95rem; font-weight: 600; color: #1a1a1a;">${t.l}</span>
@@ -5337,9 +5371,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         dropdown.classList.add("active");
         halo.classList.add("active");
-        if (dropdown.classList.contains("active")) {
-            dropdown.style.transform = "translateY(0)";
-        }
+        syncHeight();
     };
 
     const updateSelection = (index) => {
@@ -5375,6 +5407,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         dropdown.classList.add("active");
         halo.classList.add("active");
+        syncHeight();
 
         setTimeout(() => {
             if (Object.keys(window.dodchSearchEngine.catalog).length === 0 && window.productCatalog) {
@@ -5395,6 +5428,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.preventDefault();
                 input.value = "";
                 renderResults([], ""); // Show history immediately
+                syncHeight();
                 input.focus();
             });
         }
@@ -5406,11 +5440,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const query = e.target.value.trim();
 
             document.body.classList.add("search-active");
-            if (window.innerWidth < 768) document.body.style.overflow = 'hidden';
+            document.documentElement.classList.add("search-active");
+            const nav = document.getElementById("navbar");
+            if (nav) nav.classList.add("search-active");
+
             container.classList.add("active");
             halo.classList.add("active");
             if (query.length === 0) {
                 renderResults([], "");
+                syncHeight();
             } else {
                 handleSearch(e);
             }
@@ -5423,7 +5461,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (nav) nav.classList.remove("search-active");
                 container.classList.remove("active");
                 document.body.classList.remove("search-active");
-                document.body.style.overflow = '';
+                document.documentElement.classList.remove("search-active");
             }
         });
 
@@ -5456,12 +5494,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.location.href = item.storyUrl || `product.html?id=${id}`;
                 }
             } else if (e.key === "Escape") {
+                selectedIndex = -1;
                 dropdown.classList.remove("active");
                 halo.classList.remove("active");
                 const nav = document.getElementById("navbar");
                 if (nav) nav.classList.remove("search-active");
                 container.classList.remove("active");
                 document.body.classList.remove("search-active");
+                document.documentElement.classList.remove("search-active");
                 input.blur();
             }
         });
@@ -5492,7 +5532,7 @@ document.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = form.querySelector('button[type="submit"], .cta-button, .contact-submit-btn');
     const originalText = submitBtn ? submitBtn.textContent : 'Send';
-    
+
     if (submitBtn) {
         submitBtn.textContent = 'Sending...';
         submitBtn.disabled = true;
@@ -5553,7 +5593,7 @@ document.addEventListener('submit', async (e) => {
     }
 
     // Basic size check to prevent multi-megabyte payloads hitting the network
-    if (new Blob([name, email, message]).size > 10000) { 
+    if (new Blob([name, email, message]).size > 10000) {
         if (window.showToast) window.showToast("Message payload is too large.", "error");
         if (submitBtn) {
             submitBtn.textContent = originalText;
@@ -5568,7 +5608,7 @@ document.addEventListener('submit', async (e) => {
         const normalizedContent = `${name}${email}${message}`
             .toLowerCase()
             .replace(/[^a-z0-9]/g, '');
-        
+
         const signatureId = btoa(unescape(encodeURIComponent(normalizedContent)))
             .replace(/[/+=]/g, '_')
             .slice(0, 100);
@@ -5770,10 +5810,10 @@ async function syncPushTokenToUser(user) {
         if (!supported) return;
 
         if (!messaging) messaging = getMessaging(app);
-        
+
         const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
         const token = await getMessagingToken(messaging, { vapidKey: VAPID });
-        
+
         if (token) {
             await setDoc(doc(db, 'subscribers', token), {
                 token,
@@ -5799,7 +5839,7 @@ async function initPushNotifications() {
         await navigator.serviceWorker.register('/firebase-messaging-sw.js');
         onMessage(messaging, (payload) => {
             const title = payload.notification?.title || payload.data?.title || 'DODCH';
-            const body  = payload.notification?.body  || payload.data?.body  || '';
+            const body = payload.notification?.body || payload.data?.body || '';
             if (window.showToast) window.showToast(`🔔 ${title} — ${body}`, 'info', 6000);
         });
 
@@ -5824,7 +5864,7 @@ async function initPushNotifications() {
                     tabBtns.forEach(btn => {
                         if (btn.dataset.tabBound) return;
                         btn.dataset.tabBound = "true";
-                        
+
                         btn.addEventListener('click', () => {
                             const targetTab = btn.getAttribute('data-tab');
                             tabBtns.forEach(b => b.classList.remove('active'));
@@ -5832,7 +5872,7 @@ async function initPushNotifications() {
                             tabContents.forEach(content => {
                                 if (content.id === `${targetTab}-tab-content`) {
                                     content.classList.add('active');
-                                    if (targetTab === 'shipping') initShippingInfo(user); 
+                                    if (targetTab === 'shipping') initShippingInfo(user);
                                 } else {
                                     content.classList.remove('active');
                                 }
@@ -5847,8 +5887,8 @@ async function initPushNotifications() {
             if (document.getElementById('push-bell-container')) return;
             const bell = document.createElement('div');
             bell.id = 'push-bell-container';
-             bell.setAttribute('role', 'button');
-             bell.setAttribute('aria-label', 'Enable Push Notifications');
+            bell.setAttribute('role', 'button');
+            bell.setAttribute('aria-label', 'Enable Push Notifications');
             bell.innerHTML = `
                 <div class="bell-pulse"></div>
                 <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
@@ -5930,7 +5970,7 @@ async function initShippingInfo(user) {
             e.preventDefault();
             const submitBtn = profileForm.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerText;
-            
+
             submitBtn.innerText = "Saving...";
             submitBtn.disabled = true;
 
@@ -5957,7 +5997,7 @@ async function initShippingInfo(user) {
         });
     }
 }
-window.saveShippingFromCheckout = async function(userId) {
+window.saveShippingFromCheckout = async function (userId) {
     if (!userId || userId === 'guest') return;
     const checkbox = document.getElementById('save-shipping-info');
     if (!checkbox || !checkbox.checked) return;
@@ -6060,21 +6100,22 @@ const MotionBlurEngine = {
     }
 };
 
-    // --- DEEP LINK SEARCH INTEGRATION ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialSearch = urlParams.get('search');
-    if (initialSearch) {
-        setTimeout(() => {
-            const inp = document.getElementById('navbar-search-input');
-            const toggle = document.getElementById('search-toggle-btn');
-            if (inp && toggle) {
-                if (!document.querySelector('.search-container').classList.contains('active')) {
-                    toggle.click();
-                }
-                inp.value = initialSearch;
-                inp.dispatchEvent(new Event('input', { bubbles: true }));
+// --- DEEP LINK SEARCH INTEGRATION ---
+const urlParams = new URLSearchParams(window.location.search);
+const initialSearch = urlParams.get('search');
+if (initialSearch) {
+    setTimeout(() => {
+        const inp = document.getElementById('navbar-search-input');
+        const toggle = document.getElementById('search-toggle-btn');
+        if (inp && toggle) {
+            if (!document.querySelector('.search-container').classList.contains('active')) {
+                toggle.click();
             }
-        }, 2000);
-    }
+            inp.value = initialSearch;
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }, 2000);
+}
 
 MotionBlurEngine.init();
+window.addEventListener('load', initPushNotifications);

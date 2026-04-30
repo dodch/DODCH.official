@@ -32,8 +32,62 @@
     color: #FFFFFF;
 }
 
+::-moz-selection {
+    background: var(--accent-gold);
+    color: #FFFFFF;
+}
+
 html {
     scroll-behavior: smooth;
+}
+
+@view-transition {
+    navigation: auto;
+}
+
+/* --- SURGICAL TRANSITIONS --- */
+#top-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 3px;
+    background: linear-gradient(to right, var(--accent-gold), #fff);
+    z-index: 11000;
+    pointer-events: none;
+    display: none;
+}
+
+#top-loader.active {
+    display: block;
+    animation: loaderProgress 2s ease-out forwards;
+}
+
+@keyframes loaderProgress {
+    0% { width: 0%; }
+    10% { width: 20%; }
+    50% { width: 70%; }
+    100% { width: 95%; }
+}
+
+main {
+    animation: mainReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: opacity, transform;
+}
+
+@keyframes mainReveal {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+html.search-active,
+body.search-active {
+    overflow: hidden !important;
+    height: 100% !important;
 }
 
 body {
@@ -6720,17 +6774,19 @@ body.has-notification #login-btn::after {
         min-width: unset;
         left: 3vw !important;
         top: 85px !important;
-        bottom: 20px !important;
         padding: 20px;
         border-radius: 24px;
-        max-height: none;
-        height: calc(100vh - 110px);
+        max-height: calc(100vh - 110px);
+        height: auto;
         transform: translateY(10px);
         border: 1px solid rgba(0, 0, 0, 0.05);
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
         z-index: 200000;
         overflow-y: auto;
         background: #FFFFFF !important;
+        transition: transform 0.3s ease, height 0.3s ease, max-height 0.3s ease;
+        display: flex;
+        flex-direction: column;
     }
 
     #search-results-dropdown.active {
@@ -7170,8 +7226,7 @@ button[type="submit"]:hover,
 
     #search-results-halo.active {
         display: block !important;
-        backdrop-filter: blur(6px);
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.4);
         z-index: 199999 !important;
     }
 

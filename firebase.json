@@ -15,8 +15,9 @@
     ]
   },
   "hosting": {
-    "public": "public",
+    "public": "dist",
     "cleanUrls": true,
+    "trailingSlash": false,
     "ignore": [
       "**/.*"
     ],

@@ -281,3 +281,140 @@ section.active#sec-d2 .glass-text { transform: translate3d(0, 0, 0); }
     .manifesto-grid { grid-template-columns: 1fr; }
     .statement { font-size: 1.6rem; }
 }
+
+/* ============================================
+   SECTION 8: CONNECT WITH DODCH
+   ============================================ */
+.connect-section {
+    background: #000;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10%;
+}
+
+.connect-inner {
+    max-width: 700px;
+    width: 100%;
+    text-align: center;
+}
+
+.connect-title {
+    font-family: var(--font-serif);
+    font-size: 3rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 2px;
+    margin-bottom: 0.75rem;
+}
+
+.connect-sub {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 1px;
+    margin-bottom: 3rem;
+    font-family: var(--font-mono);
+}
+
+.connect-socials {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 3rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.connect-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.4rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    text-decoration: none;
+    color: rgba(255,255,255,0.6);
+    transition: color 0.3s ease, padding-left 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.connect-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 0;
+    height: 1px;
+    background: var(--accent-gold);
+    transition: width 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.connect-link:hover {
+    color: #fff;
+    padding-left: 0.5rem;
+}
+
+.connect-link:hover::before {
+    width: 100%;
+}
+
+.connect-platform {
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: inherit;
+}
+
+.connect-handle {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--accent-gold);
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.connect-link:hover .connect-handle {
+    opacity: 1;
+}
+
+.connect-arrow {
+    width: 20px;
+    height: 20px;
+    opacity: 0.4;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    flex-shrink: 0;
+}
+
+.connect-link:hover .connect-arrow {
+    transform: translate(4px, -4px);
+    opacity: 1;
+}
+
+.connect-shop-cta {
+    display: inline-block;
+    padding: 1rem 2.5rem;
+    border: 1px solid rgba(212,175,55,0.5);
+    color: var(--accent-gold);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    border-radius: 60px;
+    transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.connect-shop-cta:hover {
+    background: var(--accent-gold);
+    color: #000;
+    border-color: var(--accent-gold);
+}
+
+@media (max-width: 768px) {
+    .connect-title { font-size: 2rem; }
+    .connect-platform { font-size: 1.1rem; }
+    .connect-handle { display: none; }
+    .connect-section { padding: 0 6%; }
+}
