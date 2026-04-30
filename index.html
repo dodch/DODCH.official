@@ -13,22 +13,44 @@
 
     <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
     <link rel="manifest" href="manifest.json">
-    <!-- Critical Preconnects: Eliminates connection latency for key origins -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://dodch-96b15.firebaseapp.com" crossorigin>
-    <link rel="preconnect" href="https://firebase.googleapis.com" crossorigin>
-    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <!-- Critical CSS (Above the fold) -->
+    <style>
+        :root { --bg-cream: #FDFBF7; --card-white: #FFFFFF; --text-charcoal: #2D2D2D; --accent-gold: #D4AF37; --font-serif: 'Playfair Display', serif; --font-sans: 'Montserrat', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg-cream); color: var(--text-charcoal); font-family: var(--font-sans); line-height: 1.6; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+        #navbar { position: fixed; top: 0; width: 100%; z-index: 1000; padding: 1.5rem 0; background-color: rgba(253, 251, 247, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: all 0.4s ease; }
+        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 2rem; position: relative; }
+        .logo { position: absolute; left: 50%; transform: translateX(-50%); font-family: var(--font-serif); font-size: 1.5rem; letter-spacing: 2px; font-weight: 600; color: var(--text-charcoal); text-decoration: none; }
+        #hero { height: 100vh; background: var(--text-charcoal); display: flex; align-items: center; justify-content: flex-start; padding-top: 140px; }
+        .skeleton { background: #eee; background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%); background-size: 200% 100%; animation: 1.5s shine linear infinite; }
+        @keyframes shine { to { background-position-x: -200%; } }
+    </style>
 
-    <!-- Non-render-blocking Google Fonts (font-display=swap prevents invisible text) -->
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"></noscript>
+    <!-- Main CSS (Non-blocking) -->
+    <link rel="preload" as="style" href="styles.css?v=6" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css?v=6"></noscript>
 
-    <!-- Critical CSS loaded normally; will be inlined in a future optimization -->
-    <link rel="stylesheet" href="styles.css?v=5">
+    <!-- Lazy-Loaded Security (Firebase App Check & reCAPTCHA) -->
+    <script>
+        window.lazySecurityInitialized = false;
+        function initSecurity() {
+            if (window.lazySecurityInitialized) return;
+            window.lazySecurityInitialized = true;
+            console.log("⚡ Optimizing: Initializing Security & App Check on interaction...");
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = 'script.js?v=6';
+            document.body.appendChild(script);
+        }
+        ['mousedown', 'mousemove', 'touchstart', 'scroll', 'keydown'].forEach(e => window.addEventListener(e, initSecurity, {once: true, passive: true}));
 
-    <!-- NOTE: reCAPTCHA is loaded automatically by Firebase App Check (ReCaptchaV3Provider). -->
-    <!-- Loading it manually here would cause it to load 5x and waste 1.8MB of bandwidth. -->
+        // Navbar Bridge: Handles immediate UI states before script.js loads
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) nav?.classList.add('scrolled');
+            else nav?.classList.remove('scrolled');
+        }, { passive: true });
+    </script>
 
     <!-- Dynamic SEO Injection -->
     <script type="module" src="seo.js" defer></script>
@@ -157,7 +179,7 @@
         </div>
     </div>
 
-    <script type="module" src="script.js?v=4"></script>
+    <!-- Finalization: script.js is loaded lazily via head script -->
 </body>
 
 </html>
