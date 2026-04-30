@@ -84,7 +84,8 @@ service cloud.firestore {
     
     // Public Submissions (Newsletter & Contact Form)
     match /newsletter/{document=**} {
-      allow create: if isValidString(request.resource.data.email, 5, 150);
+      allow create: if request.appCheck != null 
+                    && isValidString(request.resource.data.email, 5, 100);
       allow read, update, delete: if isAdmin();
     }
     
@@ -111,9 +112,11 @@ service cloud.firestore {
     // --- ROCK-SOLID MESSAGES (Signature ID Deduplication) ---
     match /messages/{messageId} {
       // Rule: Allows 'create' only if the document name (Signature ID) does NOT already exist.
-      allow create: if isValidString(request.resource.data.name, 2, 100)
-        && isValidString(request.resource.data.email, 5, 150)
-        && isValidString(request.resource.data.message, 1, 3000)
+      // App Check provides bot protection on the Spark (Free) plan.
+      allow create: if request.appCheck != null 
+        && isValidString(request.resource.data.name, 2, 100)
+        && isValidString(request.resource.data.email, 5, 100)
+        && isValidString(request.resource.data.message, 1, 2000)
         && request.resource.data.status == 'unread'
         && request.resource.data.createdAt is timestamp;
       
