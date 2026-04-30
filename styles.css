@@ -67,7 +67,7 @@ main {
     transition: width 0.1s ease-out;
 }
 
-/* --- Typography --- */
+/* --- Typography (Fluid Scaling) --- */
 h1,
 h2,
 h3,
@@ -77,13 +77,17 @@ h4 {
 }
 
 h1 {
-    font-size: 2.2rem;
+    font-size: clamp(1.6rem, 4vw + 0.5rem, 2.2rem);
     line-height: 1.2;
     margin-bottom: 1rem;
 }
 
+h2 {
+    font-size: clamp(1.3rem, 3vw + 0.4rem, 1.8rem);
+}
+
 p {
-    font-size: 1rem;
+    font-size: clamp(0.875rem, 1.5vw + 0.4rem, 1rem);
     font-weight: 300;
     letter-spacing: 0.5px;
 }
@@ -7104,4 +7108,410 @@ button[type="submit"]:hover,
     margin-top: auto !important;
     padding-top: 30px !important;
     border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ==========================================================
+   COMPREHENSIVE MOBILE-ADAPTIVE RESPONSIVENESS SYSTEM
+   Fluid typography, icon protection, search UX, layout fixes
+   ========================================================== */
+
+/* --- Fluid Hero Text --- */
+.hero-content h1 {
+    font-size: clamp(1.5rem, 5vw + 0.5rem, 2.25rem);
+}
+
+.sub-headline {
+    font-size: clamp(0.8rem, 2vw + 0.4rem, 0.9375rem);
+    max-width: 100%;
+}
+
+/* --- Fluid Section Titles --- */
+.section-title {
+    font-size: clamp(1.4rem, 4vw + 0.5rem, 2rem);
+}
+
+.masterpiece-intro h3 {
+    font-size: clamp(1.3rem, 3.5vw + 0.3rem, 1.8rem);
+}
+
+.experience-content h3 {
+    font-size: clamp(1.4rem, 3vw + 0.5rem, 2rem);
+}
+
+.experience-content p {
+    font-size: clamp(0.9rem, 1.5vw + 0.4rem, 1.1rem);
+}
+
+.shop-category-title {
+    font-size: clamp(1.3rem, 3.5vw + 0.3rem, 2rem);
+}
+
+/* --- Fluid Product Cards --- */
+.product-card-title {
+    font-size: clamp(0.8rem, 2vw + 0.3rem, 1rem);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+}
+
+.product-card-price {
+    font-size: clamp(0.78rem, 1.8vw + 0.2rem, 0.9rem);
+}
+
+.product-card-info {
+    padding: clamp(0.5rem, 2vw, 1rem) clamp(0.25rem, 1vw, 0.5rem);
+}
+
+/* --- Fluid Product Detail Page --- */
+.product-info h1 {
+    font-size: clamp(1.5rem, 4vw + 0.5rem, 2.5rem);
+}
+
+.product-price {
+    font-size: clamp(1.1rem, 2.5vw + 0.3rem, 1.5rem);
+}
+
+/* --- Nav Icon Protection (prevent squishing) --- */
+.nav-icon {
+    width: 1.1em;
+    height: 1.1em;
+    min-width: 18px;
+    min-height: 18px;
+    flex-shrink: 0;
+}
+
+#cart-toggle .nav-icon {
+    min-width: 20px;
+    min-height: 20px;
+}
+
+/* --- Promise Section Grid (prevent icon squish) --- */
+.promise-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 32px;
+    min-height: 32px;
+    flex-shrink: 0;
+}
+
+/* --- CTA Buttons Fluid --- */
+.cta-button {
+    font-size: clamp(0.75rem, 1.5vw + 0.3rem, 0.9rem);
+    padding: clamp(0.6rem, 1.5vw, 0.8rem) clamp(1rem, 3vw, 1.5rem);
+    white-space: nowrap;
+}
+
+/* --- Testimonial Text Scaling --- */
+.testimonial-text {
+    font-size: clamp(0.95rem, 2vw + 0.3rem, 1.15rem);
+}
+
+.testimonial-slide {
+    padding: clamp(1.5rem, 4vw, 3rem) clamp(1.5rem, 5vw, 4.5rem);
+}
+
+/* --- Founder's Note --- */
+.founders-note {
+    font-size: clamp(1rem, 2vw + 0.3rem, 1.2rem);
+}
+
+/* --- Footer Fluid --- */
+.footer-col {
+    min-width: 0;
+}
+
+/* === SMALL MOBILE (≤480px) === */
+@media (max-width: 480px) {
+
+    /* Search: full-width mobile takeover */
+    #navbar.search-active .nav-search-item {
+        margin-right: 50px !important;
+    }
+
+    #navbar.search-active .search-input {
+        padding: 10px 50px 10px 18px !important;
+        height: 46px;
+        font-size: 0.9rem !important;
+        border-radius: 30px !important;
+    }
+
+    #navbar.search-active #search-close-btn {
+        right: -50px;
+        width: 40px;
+        height: 40px;
+        font-size: 1.4rem;
+    }
+
+    #search-clear-btn {
+        right: 36px;
+        width: 22px;
+        height: 22px;
+    }
+
+    /* Search dropdown: mobile sheet */
+    #search-results-dropdown {
+        padding: 16px;
+        border-radius: 20px 20px 0 0;
+    }
+
+    .search-result-item {
+        padding: 10px 12px;
+        gap: 12px;
+        border-radius: 14px;
+    }
+
+    .search-result-image {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+    }
+
+    .search-result-title {
+        font-size: 0.9rem;
+    }
+
+    .search-result-price {
+        font-size: 0.85rem;
+    }
+
+    .ai-reasoning-text {
+        font-size: 0.7rem;
+    }
+
+    /* Search widgets */
+    .search-widget {
+        padding: 14px;
+        border-radius: 12px;
+    }
+
+    .search-widget-title {
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+    }
+
+    .search-widget-list li {
+        padding: 8px 10px;
+        font-size: 0.82rem;
+        gap: 8px;
+    }
+
+    .search-widget-img {
+        width: 40px;
+        height: 40px;
+    }
+
+    /* Live tiles */
+    .live-tiles-grid {
+        grid-template-columns: 1fr;
+        grid-auto-rows: minmax(140px, auto);
+    }
+
+    .os-tile-wide,
+    .os-tile-large {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+
+    .os-tile-content {
+        padding: 12px;
+    }
+
+    /* History pills */
+    .history-pill {
+        font-size: 0.75rem !important;
+        padding: 6px 10px !important;
+    }
+
+    /* Shop grid: tighter on very small screens */
+    .shop-grid {
+        gap: 0.6rem;
+    }
+
+    .product-image-wrapper {
+        border-radius: 14px;
+    }
+
+    /* Hero section */
+    #hero {
+        padding-top: 100px;
+    }
+
+    .hero-content {
+        padding: 0 1rem;
+    }
+
+    .hero-cta-wrapper {
+        padding: 0 1rem;
+        bottom: 35px;
+    }
+
+    /* Section padding: less wasteful on small screens */
+    .section-padding {
+        padding: 3rem 1rem;
+    }
+
+    /* Promise grid: single column on tiny screens */
+    .grid-4 {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .promise-item h4 {
+        font-size: 0.85rem;
+    }
+
+    /* Footer: prevent overflow */
+    #newsletter-form {
+        flex-direction: column;
+    }
+
+    #newsletter-form input,
+    #newsletter-form button {
+        width: 100%;
+    }
+
+    /* Cart drawer */
+    #cart-drawer {
+        max-width: 100%;
+    }
+
+    /* Quick-view modal */
+    .qv-modal-content {
+        max-height: 92vh;
+    }
+
+    .qv-modal-info {
+        padding: 1.5rem !important;
+    }
+
+    /* Pillar cards */
+    .pillar-card h3 {
+        font-size: clamp(1.1rem, 3vw + 0.3rem, 1.5rem);
+    }
+
+    /* Ritual steps */
+    .ritual-step h4 {
+        font-size: clamp(0.95rem, 2vw + 0.3rem, 1.2rem);
+    }
+
+    /* Pro tip box */
+    .pro-tip-box {
+        padding: 1.2rem;
+        margin: 2rem auto;
+    }
+
+    /* Concentration note */
+    .concentration-note {
+        font-size: 0.85rem;
+    }
+
+    /* Batch info */
+    .batch-info {
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+    }
+
+    /* Nav container: tighter padding */
+    .nav-container {
+        padding: 0 1rem;
+    }
+
+    /* Ensure minimum touch targets (44px x 44px for WCAG) */
+    .hamburger {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #cart-toggle,
+    #login-btn {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .login-text {
+        display: none;
+    }
+}
+
+/* === MEDIUM MOBILE (481px–767px) === */
+@media (min-width: 481px) and (max-width: 767px) {
+    #navbar.search-active .nav-search-item {
+        margin-right: 60px !important;
+    }
+
+    #navbar.search-active .search-input {
+        height: 48px;
+    }
+
+    .section-padding {
+        padding: 4rem 1.25rem;
+    }
+
+    .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .live-tiles-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-auto-rows: minmax(100px, auto);
+    }
+}
+
+/* === TABLET (768px–1023px) === */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+
+    .grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .experience-card {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ritual-steps {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .dual-action-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .footer-content {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
+
+/* === LARGE DESKTOP (≥1024px) === */
+@media (min-width: 1024px) {
+    .grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .experience-card {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ritual-steps {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .footer-content {
+        flex-direction: row;
+    }
 }
