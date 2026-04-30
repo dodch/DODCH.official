@@ -6,8 +6,6 @@ admin.initializeApp();
 
 /**
  * Generates the HTML for the order confirmation email.
- * @param {object} orderData - The data from the order document.
- * @return {string} The HTML content of the email.
  */
 function getEmailHtml(orderData) {
   const orderId = orderData.id.slice(0, 8).toUpperCase();
@@ -47,10 +45,9 @@ exports.sendOrderConfirmationEmail = functions.region("europe-west1").firestore
       const orderData = snap.data();
       orderData.id = context.params.orderId;
 
-      // Initialize Resend safely inside the function
       const apiKey = functions.config().resend ? functions.config().resend.apikey : null;
       if (!apiKey) {
-        functions.logger.error("Resend API key is missing. Run: firebase functions:config:set resend.apikey='YOUR_KEY'");
+        functions.logger.error("Resend API key is missing.");
         return null;
       }
       const resend = new Resend(apiKey);
@@ -62,142 +59,151 @@ exports.sendOrderConfirmationEmail = functions.region("europe-west1").firestore
           subject: `Your DODCH Order Confirmation (#${orderData.id.slice(0, 8).toUpperCase()})`,
           html: getEmailHtml(orderData),
         });
-        functions.logger.log("Confirmation email sent to:", orderData.shipping.email);
       } catch (error) {
-        functions.logger.error("There was an error sending the email:", error);
+        functions.logger.error("Error sending email:", error);
       }
 
       return null;
     });
 
 /**
- * Handles contact form submissions with server-side rate limiting.
+ * Shared Rate Limiter Logic
  */
-exports.submitContactMessage = functions.region("europe-west1").https.onCall(async (data, context) => {
-  // 1. Enforce App Check (Security Hardening)
-  if (!context.app) {
-    throw new functions.https.HttpsError(
-        "failed-precondition",
-        "The function must be called from an App Check verified app."
-    );
-  }
-
-  // 2. Validate Input
-  if (!data.name || !data.email || !data.message) {
-    throw new functions.https.HttpsError("invalid-argument", "Missing required fields.");
-  }
-  if (data.message.length > 2000) {
-    throw new functions.https.HttpsError("invalid-argument", "Message is too long.");
-  }
-
-  // 3. Rate Limiting (IP-based)
-  const clientIp = context.rawRequest ? (context.rawRequest.headers["x-forwarded-for"] || context.rawRequest.connection.remoteAddress) : "unknown_ip";
-  const sanitizedIp = String(clientIp).replace(/[^a-zA-Z0-9]/g, "_");
-
-  const db = admin.firestore();
-  const rateLimitRef = db.collection("rateLimits").doc(sanitizedIp);
+async function checkRateLimit(ip, db, type = "contact") {
+  const sanitizedIp = String(ip).replace(/[^a-zA-Z0-9]/g, "_");
+  const rateLimitRef = db.collection("rateLimits").doc(`${type}_${sanitizedIp}`);
   const docSnap = await rateLimitRef.get();
   const now = Date.now();
   const COOLDOWN = 120000; // 2 minutes
 
-  // Compute a simple hash of the message content to prevent exact duplicates
-  const currentMessageContent = `${data.name}|${data.email}|${data.message}`.toLowerCase().trim();
-
   if (docSnap.exists) {
     const rateData = docSnap.data();
     const lastTimestamp = rateData.timestamp;
-    const lastContent = rateData.lastContent;
+    const lastTimestampMillis = (typeof lastTimestamp === 'number') ? lastTimestamp : (lastTimestamp.toMillis ? lastTimestamp.toMillis() : 0);
     const violationCount = rateData.violationCount || 0;
 
-    // Rule 1: Stealth Mode (Shadow Ban)
-    // If the user has violated rules more than 3 times, they enter the "Black Hole"
-    if (violationCount >= 3) {
-      functions.logger.warn(`Stealth Mode active for IP: ${sanitizedIp}. Dropping request silently.`);
-      // Add a small fake delay to simulate real processing time
-      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 600));
-      return { success: true, status: 'stealth' };
+    if (violationCount >= 5) {
+      return { status: 'blocked', ref: rateLimitRef };
     }
 
-    // Rule 2: Time-based Rate Limit
-    if (now - lastTimestamp < COOLDOWN) {
+    if (now - lastTimestampMillis < COOLDOWN) {
       await rateLimitRef.update({ violationCount: admin.firestore.FieldValue.increment(1) });
-      throw new functions.https.HttpsError("resource-exhausted", "Too many requests. Please wait a few minutes.");
-    }
-
-    // Rule 3: Content-based Deduplication
-    if (lastContent === currentMessageContent) {
-      await rateLimitRef.update({ violationCount: admin.firestore.FieldValue.increment(1) });
-      throw new functions.https.HttpsError("already-exists", "Duplicate message detected. Please don't spam identical content.");
+      return { status: 'rate-limited', ref: rateLimitRef };
     }
   }
+  return { status: 'ok', ref: rateLimitRef };
+}
 
-  // 4. Save Message (Schema Updated for Admin Console)
+/**
+ * Handles contact form submissions
+ */
+exports.submitContactMessage = functions.region("europe-west1").https.onCall(async (data, context) => {
+  if (!context.app) {
+    throw new functions.https.HttpsError("failed-precondition", "App Check required.");
+  }
+
+  // 1. Strict Validation
+  if (!data.name || data.name.length > 100 || !data.email || data.email.length > 150 || !data.message || data.message.length > 2000) {
+    throw new functions.https.HttpsError("invalid-argument", "Invalid input.");
+  }
+
+  // 2. reCAPTCHA Verification
+  const recaptchaSecret = functions.config().recaptcha ? functions.config().recaptcha.secret : null;
+  if (!recaptchaSecret) {
+    throw new functions.https.HttpsError("internal", "Security misconfiguration.");
+  }
+
+  const verifyResponse = await fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${data.recaptchaToken}`, { method: "POST" });
+  const verifyData = await verifyResponse.json();
+  if (!verifyData.success || verifyData.score < 0.5) {
+    throw new functions.https.HttpsError("permission-denied", "Security check failed.");
+  }
+
+  // 3. Rate Limiting
+  const db = admin.firestore();
+  const clientIp = context.rawRequest ? (context.rawRequest.ip || context.rawRequest.headers["x-forwarded-for"] || context.rawRequest.connection.remoteAddress) : "unknown_ip";
+  const limit = await checkRateLimit(clientIp, db, "contact");
+
+  if (limit.status === 'blocked') {
+    await new Promise(r => setTimeout(r, 1000));
+    return { success: true, stealth: true };
+  }
+  if (limit.status === 'rate-limited') {
+    throw new functions.https.HttpsError("resource-exhausted", "Please wait before sending another message.");
+  }
+
+  // 4. Save
   await db.collection("messages").add({
     name: data.name,
     email: data.email,
     message: data.message,
     status: "unread",
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    ip: clientIp // Audit log
+    ip: clientIp
   });
 
-  // 5. Update Rate Limit & Content Reference (Reset violations on successful real message)
-  await rateLimitRef.set({ 
-    timestamp: now,
-    lastContent: currentMessageContent,
-    violationCount: 0 
-  });
-
+  await limit.ref.set({ timestamp: Date.now(), violationCount: 0 });
   return { success: true };
 });
 
 /**
- * Creates an order after verifying prices and stock server-side.
+ * Handles newsletter subscriptions
+ */
+exports.subscribeNewsletter = functions.region("europe-west1").https.onCall(async (data, context) => {
+  if (!context.app) {
+    throw new functions.https.HttpsError("failed-precondition", "App Check required.");
+  }
+
+  if (!data.email || data.email.length > 150) {
+    throw new functions.https.HttpsError("invalid-argument", "Invalid email.");
+  }
+
+  const db = admin.firestore();
+  const clientIp = context.rawRequest ? (context.rawRequest.ip || context.rawRequest.headers["x-forwarded-for"] || context.rawRequest.connection.remoteAddress) : "unknown_ip";
+  const limit = await checkRateLimit(clientIp, db, "newsletter");
+
+  if (limit.status !== 'ok') {
+    throw new functions.https.HttpsError("resource-exhausted", "Too many attempts.");
+  }
+
+  await db.collection("newsletter").add({
+    email: data.email,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    ip: clientIp
+  });
+
+  await limit.ref.set({ timestamp: Date.now(), violationCount: 0 });
+  return { success: true };
+});
+
+/**
+ * Creates an order
  */
 exports.createOrder = functions.region("europe-west1").https.onCall(async (data, context) => {
   const db = admin.firestore();
   const items = data.items;
   const shipping = data.shipping;
 
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    throw new functions.https.HttpsError('invalid-argument', 'Order must contain items.');
-  }
-  if (!shipping) {
-    throw new functions.https.HttpsError('invalid-argument', 'Shipping information is missing.');
+  if (!items || !Array.isArray(items) || items.length === 0 || !shipping) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid order data.');
   }
 
   let calculatedTotal = 0;
   const verifiedItems = [];
 
-  // Verify each item's price against the database
   for (const item of items) {
-    const productId = item.productId;
-    const sizeLabel = item.size;
-    const quantity = item.quantity;
-
-    if (!productId || !quantity) {
-      throw new functions.https.HttpsError('invalid-argument', 'Invalid item data.');
-    }
-
-    const productDoc = await db.collection('products').doc(productId).get();
-    if (!productDoc.exists) {
-      throw new functions.https.HttpsError('not-found', `Product not found: ${productId}`);
-    }
+    const productDoc = await db.collection('products').doc(item.productId).get();
+    if (!productDoc.exists) throw new functions.https.HttpsError('not-found', 'Product not found.');
     const productData = productDoc.data();
+    let price = parseFloat(productData.price);
 
-    let price = parseFloat(productData.price); // Default base price
-
-    // If product has sizes, find the specific size price
     if (productData.sizes && Array.isArray(productData.sizes) && productData.sizes.length > 0) {
-      const sizeObj = productData.sizes.find(s => s.label === sizeLabel);
-      if (!sizeObj) {
-        throw new functions.https.HttpsError('invalid-argument', `Invalid size ${sizeLabel} for product ${productId}`);
-      }
-      price = parseFloat(sizeObj.price);
+      const sizeObj = productData.sizes.find(s => s.label === item.size);
+      if (sizeObj) price = parseFloat(sizeObj.price);
     }
 
-    calculatedTotal += price * quantity;
-    verifiedItems.push({ ...item, price: price.toFixed(2) }); // Store verified price
+    calculatedTotal += price * item.quantity;
+    verifiedItems.push({ ...item, price: price.toFixed(2) });
   }
 
   const SHIPPING_FEE = 7;
@@ -205,13 +211,13 @@ exports.createOrder = functions.region("europe-west1").https.onCall(async (data,
   const shippingFee = calculatedTotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
   const finalTotal = calculatedTotal + shippingFee;
 
-  const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
+  const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase();
   const orderData = {
     orderReference,
     items: verifiedItems,
     shipping,
     subtotal: parseFloat(calculatedTotal.toFixed(2)),
-    shippingFee: shippingFee,
+    shippingFee,
     total: parseFloat(finalTotal.toFixed(2)),
     timestamp: admin.firestore.FieldValue.serverTimestamp(),
     status: 'Pending',

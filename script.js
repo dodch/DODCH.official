@@ -36,6 +36,8 @@ const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
 const SecurityValidator = {
     TUNISIA_GOVERNORATES: ["Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa", "Jendouba", "Kairouan", "Kasserine", "Kebili", "Kef", "Mahdia", "Manouba", "Medenine", "Monastir", "Nabeul", "Sfax", "Sidi Bouzid", "Siliana", "Sousse", "Tataouine", "Tozeur", "Tunis", "Zaghouan"],
     
+    MAX_NAME_LENGTH: 100,
+    MAX_MESSAGE_LENGTH: 3000,
     validatePhone: (num) => {
         const cleaned = num.replace(/[^0-9]/g, '');
         return /^[24579]\d{7}$/.test(cleaned);
@@ -114,40 +116,28 @@ const escapeHTML = (str) => {
 document.addEventListener('DOMContentLoaded', () => {
     const initialHash = window.location.hash;
 
-    // --- Custom UI Helpers (Toast & Confirm) ---
-    let _lastToastMsg = '';
-    let _lastToastTime = 0;
-    window.showToast = (message, type = 'info', duration = 3500) => {
-        const now = Date.now();
-        if (message === _lastToastMsg && now - _lastToastTime < 600) return;
-        _lastToastMsg = message;
-        _lastToastTime = now;
-
-        const toast = document.createElement('div');
-        toast.className = `custom-toast ${type}`;
-
-        let icon = '';
-        if (type === 'success') icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-        else if (type === 'error') icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
-        else icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
-
-        toast.innerHTML = `${icon} <span>${message}</span>`;
-        if (type === 'success') window.triggerHaptic('success');
-        else if (type === 'error') window.triggerHaptic('error');
-        else window.triggerHaptic('light');
+    window.showToast = (message, type = 'info', duration = 4000) => {
         let container = document.getElementById('toast-container');
         if (!container) {
             container = document.createElement('div');
             container.id = 'toast-container';
             document.body.appendChild(container);
         }
+
+        const toast = document.createElement('div');
+        toast.className = `custom-toast ${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <span class="toast-message">${message}</span>
+            </div>
+            <div class="toast-progress"></div>
+        `;
+
         const existingToasts = [...container.querySelectorAll('.custom-toast')];
         const firstRects = existingToasts.map(t => t.getBoundingClientRect());
 
-        // (L)ast — insert new toast at top (DOM changes, existing toasts jump)
-        container.prepend(toast);
+        container.insertBefore(toast, container.firstChild);
 
-        // (I)nvert — read new positions of existing toasts, apply inverse offset
         existingToasts.forEach((t, i) => {
             const lastRect = t.getBoundingClientRect();
             const dy = firstRects[i].top - lastRect.top;
@@ -157,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // (P)lay — on next frame, animate everything to its natural position
         requestAnimationFrame(() => {
             existingToasts.forEach(t => {
                 t.style.transition = '';
@@ -165,51 +154,31 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             setTimeout(() => toast.classList.add('active'), 10);
         });
-        const removeToast = (t) => {
-            const container = document.getElementById('toast-container');
-            if (!container || !t.parentNode) return;
 
-            const allToasts = [...container.querySelectorAll('.custom-toast')];
-            const isTop = allToasts[0] === t;
-            const others = allToasts.filter(x => x !== t);
+        const removeToast = (t) => {
+            if (!t.parentNode) return;
+            const container = document.getElementById('toast-container');
+            const others = [...container.querySelectorAll('.custom-toast')].filter(x => x !== t);
             const beforeRects = others.map(x => x.getBoundingClientRect());
 
-            if (isTop) {
-                t.classList.remove('active');
-                setTimeout(() => {
-                    if (t.parentNode) t.remove();
-                    const afterRects = others.map(x => x.getBoundingClientRect());
-                    others.forEach((x, i) => {
-                        const dy = beforeRects[i].top - afterRects[i].top;
-                        if (dy !== 0) {
-                            x.style.transition = 'none';
-                            x.style.transform = `translateX(0) translateY(${dy}px)`;
-                            requestAnimationFrame(() => {
-                                x.style.transition = '';
-                                x.style.transform = 'translateX(0) translateY(0)';
-                            });
-                        }
-                    });
-                }, 450);
-            } else {
-                t.classList.add('toast-exit-blur');
-                setTimeout(() => {
-                    if (t.parentNode) t.remove();
-                    const afterRects = others.map(x => x.getBoundingClientRect());
-                    others.forEach((x, i) => {
-                        const dy = beforeRects[i].top - afterRects[i].top;
-                        if (dy !== 0) {
-                            x.style.transition = 'none';
-                            x.style.transform = `translateX(0) translateY(${dy}px)`;
-                            requestAnimationFrame(() => {
-                                x.style.transition = '';
-                                x.style.transform = 'translateX(0) translateY(0)';
-                            });
-                        }
-                    });
-                }, 550);
-            }
+            t.classList.remove('active');
+            setTimeout(() => {
+                if (t.parentNode) t.remove();
+                const afterRects = others.map(x => x.getBoundingClientRect());
+                others.forEach((x, i) => {
+                    const dy = beforeRects[i].top - afterRects[i].top;
+                    if (dy !== 0) {
+                        x.style.transition = 'none';
+                        x.style.transform = `translateX(0) translateY(${dy}px)`;
+                        requestAnimationFrame(() => {
+                            x.style.transition = '';
+                            x.style.transform = 'translateX(0) translateY(0)';
+                        });
+                    }
+                });
+            }, 550);
         };
+
         setTimeout(() => removeToast(toast), duration);
     };
 
@@ -945,6 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.shop-layout .product-card.reveal').forEach(el => {
                 if (typeof revealObserver !== 'undefined') {
                     revealObserver.observe(el);
+                    if (window.dodchSEO) window.dodchSEO.runSEO();
                 }
             });
         };
@@ -2232,10 +2202,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const newsletterForm = document.getElementById('newsletter-form');
     if (newsletterForm) {
-        newsletterForm.addEventListener('submit', (e) => {
+        newsletterForm.addEventListener('submit', async (e) => {
             window.triggerHaptic('medium');
             e.preventDefault();
             const btn = newsletterForm.querySelector('button');
+            const originalText = btn.innerText;
             const emailInput = newsletterForm.querySelector('input[type="email"]');
             const email = emailInput ? emailInput.value.trim() : "";
 
@@ -2244,23 +2215,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            addDoc(collection(db, "newsletter"), {
-                email: email,
-                createdAt: serverTimestamp()
-            }).then(() => {
+            btn.disabled = true;
+            btn.innerText = "Joining...";
+
+            try {
+                const subscribeNewsletter = httpsCallable(functions, 'subscribeNewsletter');
+                await subscribeNewsletter({ email });
+                
                 window.showToast("Welcome to the Inner Circle!", "success");
                 newsletterForm.reset();
-            }).catch(err => {
+                btn.style.backgroundColor = "#4CAF50"; // Green for success
+            } catch (err) {
                 console.error(err);
-                window.showToast("Failed to subscribe. Please try again later.", "error");
-            });
-            btn.style.backgroundColor = "#4CAF50"; // Green for success
-            newsletterForm.reset();
-
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.backgroundColor = "";
-            }, 3000);
+                if (err.code === 'resource-exhausted') {
+                    window.showToast("Too many attempts. Please try again later.", "error");
+                } else {
+                    window.showToast("Failed to subscribe. Please try again later.", "error");
+                }
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    btn.style.backgroundColor = "";
+                }, 3000);
+            }
         });
     }
     const initBreadcrumbs = () => {
@@ -2587,6 +2565,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         initShopPage(true);
                         updateSidebarActiveState();
                         if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
+                        updateMainPageSEO();
+                        if (window.dodchSEO) window.dodchSEO.runSEO();
                         
                         // Reset scroll position so new section starts from the top
                         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4009,6 +3989,8 @@ The DODCH Team`;
             initShopPage(true);
             updateSidebarActiveState();
             initBreadcrumbs();
+            updateMainPageSEO();
+            if (window.dodchSEO) window.dodchSEO.runSEO();
         }
     });
     const silkTabs = document.querySelectorAll('.hair-type-btn');
@@ -5197,6 +5179,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     const nav = document.getElementById("navbar");
                     if (nav) nav.classList.remove("search-active");
                     container.classList.remove("active");
+                    document.body.classList.remove("search-active");
+                    document.body.style.overflow = '';
                     inputEl.blur();
                 });
             }
@@ -5261,7 +5245,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 30px;">
                         ${history.map((h, i) => `
-                            <div class="history-pill search-reveal-item" onclick="var inp=document.getElementById('navbar-search-input'); if(inp){ inp.value='${h}'; inp.focus(); inp.dispatchEvent(new Event('input')); }" style="padding: 8px 18px; background: #fafafa; border-radius: 20px; font-size: 0.85rem; color: #333; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); transition: all 0.2s; font-weight: 600; animation-delay: ${0.35 + (i * 0.08)}s;">
+                            <div class="history-pill search-reveal-item" onclick="var inp=document.getElementById('navbar-search-input'); if(inp){ inp.value='${h}'; inp.focus(); inp.dispatchEvent(new Event('input')); }" style="padding: 10px 18px; background: #fafafa; border-radius: 20px; font-size: 0.85rem; color: #333; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); transition: all 0.2s; font-weight: 600; animation-delay: ${0.35 + (i * 0.08)}s;">
                                 ${h}
                             </div>
                         `).join('')}
@@ -5417,6 +5401,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const query = e.target.value.trim();
 
             document.body.classList.add("search-active");
+            if (window.innerWidth < 768) document.body.style.overflow = 'hidden';
             container.classList.add("active");
             halo.classList.add("active");
             if (query.length === 0) {
@@ -5433,6 +5418,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (nav) nav.classList.remove("search-active");
                 container.classList.remove("active");
                 document.body.classList.remove("search-active");
+                document.body.style.overflow = '';
             }
         });
 
@@ -5551,6 +5537,25 @@ document.addEventListener('submit', async (e) => {
         }
         return;
     }
+
+    if (name.length > SecurityValidator.MAX_NAME_LENGTH || message.length > SecurityValidator.MAX_MESSAGE_LENGTH) {
+        if (window.showToast) window.showToast("Input length exceeds safety limits.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
+
+    // Basic size check to prevent multi-megabyte payloads hitting the network
+    if (new Blob([name, email, message]).size > 10000) { 
+        if (window.showToast) window.showToast("Message payload is too large.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
     // --- END SMART VALIDATION ---
 
     try {
@@ -5558,30 +5563,56 @@ document.addEventListener('submit', async (e) => {
         const normalizedContent = `${name}${email}${message}`
             .toLowerCase()
             .replace(/[^a-z0-9]/g, '');
+        // SECURITY UPGRADE: Transition from direct Firestore write to a Cloud Function call.
+        // This allows for server-side reCAPTCHA/App Check verification and real rate-limiting.
+        const submitContactMessage = httpsCallable(functions, 'submitContactMessage');
         
         const signatureId = btoa(unescape(encodeURIComponent(normalizedContent)))
             .replace(/[/+=]/g, '_')
             .slice(0, 100);
 
-        await setDoc(doc(db, "messages", signatureId), {
-            name: name,
-            email: email,
-            message: message,
-            status: 'unread',
-            createdAt: serverTimestamp()
-        });
-
-        localStorage.setItem('dodch_last_contact_ts', Date.now());
-        if (window.showToast) window.showToast("Message sent successfully!", "success");
-        form.reset();
-    } catch (error) {
-        console.error("Error sending message:", error);
-        if (error.code === 'permission-denied') {
-            if (window.showToast) window.showToast("Duplicate message detected. Please wait or change your wording.", "error");
-        } else if (error.code !== 'already-exists') {
-            if (window.showToast) window.showToast("Error sending message. Please try again later.", "error");
+        // Execute reCAPTCHA
+        if (typeof grecaptcha === 'undefined') {
+            throw new Error("reCAPTCHA library is not loaded.");
         }
-    } finally {
+
+        grecaptcha.ready(async () => {
+            try {
+                const recaptchaToken = await grecaptcha.execute('6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy', {action: 'submitContact'});
+                
+                const response = await submitContactMessage({
+                    signatureId,
+                    name,
+                    email,
+                    message,
+                    recaptchaToken
+                });
+
+                if (response.data?.stealth) {
+                    // Silent drop (shadow ban)
+                }
+
+                localStorage.setItem('dodch_last_contact_ts', Date.now());
+                if (window.showToast) window.showToast("Message sent successfully!", "success");
+                form.reset();
+            } catch (error) {
+                console.error("Error sending message:", error);
+                if (error.code === 'resource-exhausted') {
+                    window.showToast("Please wait 2 minutes before sending another message.", "error");
+                } else if (error.code === 'permission-denied' || error.message.includes('reCAPTCHA')) {
+                    window.showToast("Security verification failed. Please refresh and try again.", "error");
+                } else {
+                    window.showToast("Error sending message. Please try again later.", "error");
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Error initializing submission:", error);
         if (submitBtn) {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
@@ -6046,5 +6077,22 @@ const MotionBlurEngine = {
         }, { passive: true });
     }
 };
-MotionBlurEngine.init();
 
+    // --- DEEP LINK SEARCH INTEGRATION ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSearch = urlParams.get('search');
+    if (initialSearch) {
+        setTimeout(() => {
+            const inp = document.getElementById('navbar-search-input');
+            const toggle = document.getElementById('search-toggle-btn');
+            if (inp && toggle) {
+                if (!document.querySelector('.search-container').classList.contains('active')) {
+                    toggle.click();
+                }
+                inp.value = initialSearch;
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, 2000);
+    }
+
+MotionBlurEngine.init();
