@@ -94,7 +94,9 @@ p {
     top: 0;
     width: 100%;
     z-index: 1000;
-    transition: background-color 0.4s ease, padding 0.4s ease, backdrop-filter 0.4s ease;
+    /* Use transform instead of padding for GPU-composited animations (fixes Lighthouse CLS warning) */
+    transition: background-color 0.4s ease, backdrop-filter 0.4s ease;
+    will-change: transform;
     padding: 1.5rem 0;
 }
 
@@ -575,6 +577,7 @@ p {
     z-index: 0;
     pointer-events: none;
     will-change: transform;
+    transform: translateZ(0); /* Force GPU layer */
 }
 
 .hero-bg {

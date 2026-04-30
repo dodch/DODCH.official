@@ -28,7 +28,9 @@ service cloud.firestore {
     // - Read: Admin can read all. Users can read only their own.
     // - Update: Finalized security logic
     match /orders/{orderId} {
-      allow create: if request.resource.data.status == 'Pending'
+      allow create: if request.appCheck != null 
+                   && request.resource.data.status == 'Pending'
+                   && isValidString(request.resource.data.shipping.fullName, 2, 100)
                    && request.resource.data.total == (request.resource.data.subtotal + request.resource.data.shippingFee)
                    && (
                       (request.resource.data.subtotal >= 100 && request.resource.data.shippingFee == 0) ||

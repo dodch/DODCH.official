@@ -13,17 +13,25 @@
 
     <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
     <link rel="manifest" href="manifest.json">
+    <!-- Critical Preconnects: Eliminates connection latency for key origins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=4">
-    <!-- reCAPTCHA v3 - Standard App Check -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy" async
-        defer></script>
+    <link rel="preconnect" href="https://dodch-96b15.firebaseapp.com" crossorigin>
+    <link rel="preconnect" href="https://firebase.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+
+    <!-- Non-render-blocking Google Fonts (font-display=swap prevents invisible text) -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"></noscript>
+
+    <!-- Critical CSS loaded normally; will be inlined in a future optimization -->
+    <link rel="stylesheet" href="styles.css?v=5">
+
+    <!-- NOTE: reCAPTCHA is loaded automatically by Firebase App Check (ReCaptchaV3Provider). -->
+    <!-- Loading it manually here would cause it to load 5x and waste 1.8MB of bandwidth. -->
+
     <!-- Dynamic SEO Injection -->
-    <script type="module" src="seo.js"></script>
+    <script type="module" src="seo.js" defer></script>
     <meta name="view-transition" content="same-origin">
 </head>
 
