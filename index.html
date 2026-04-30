@@ -24,8 +24,21 @@
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"></noscript>
 
-    <!-- Critical CSS loaded normally; will be inlined in a future optimization -->
-    <link rel="stylesheet" href="styles.css?v=5">
+    <!-- Critical CSS (Above the fold) for Instant Paint -->
+    <style>
+        :root { --bg-cream: #FDFBF7; --card-white: #FFFFFF; --text-charcoal: #2D2D2D; --accent-gold: #D4AF37; --font-serif: 'Playfair Display', serif; --font-sans: 'Montserrat', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg-cream); color: var(--text-charcoal); font-family: var(--font-sans); line-height: 1.6; overflow-x: hidden; -webkit-font-smoothing: antialiased; margin: 0; }
+        #navbar { position: fixed; top: 0; width: 100%; z-index: 1000; padding: 1.5rem 0; background-color: rgba(253, 251, 247, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
+        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 2rem; position: relative; }
+        .logo { position: absolute; left: 50%; transform: translateX(-50%); font-family: var(--font-serif); font-size: 1.5rem; letter-spacing: 2px; font-weight: 600; color: var(--text-charcoal); text-decoration: none; }
+        main { padding-top: 100px; min-height: 100vh; }
+        .shop-grid { padding: 2rem; }
+    </style>
+
+    <!-- Main CSS (Deferred to prevent render-blocking) -->
+    <link rel="preload" as="style" href="styles.css?v=6" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css?v=6"></noscript>
 
     <!-- NOTE: reCAPTCHA is loaded automatically by Firebase App Check (ReCaptchaV3Provider). -->
     <!-- Loading it manually here would cause it to load 5x and waste 1.8MB of bandwidth. -->
