@@ -76,21 +76,29 @@ if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
     self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
 }
 
-const appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy'),
-    isTokenAutoRefreshEnabled: true
-});
-getToken(appCheck)
-    .then((token) => {
-        console.log("🛡️ App Check: Connection Established successfully.");
-        if (self.FIREBASE_APPCHECK_DEBUG_TOKEN) {
-            console.log("App Check Debug Status: Valid for Local Development");
-        }
-    })
-    .catch((err) => {
-        console.warn("⚠️ App Check: Token Exchange Failed. Verification Required.", err);
-        console.error("This is likely the cause of any 'auth/internal-error' during login.");
+let appCheck = null;
+function initAppCheckLazy() {
+    if (appCheck) return;
+    appCheck = initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider('6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy'),
+        isTokenAutoRefreshEnabled: true
     });
+    getToken(appCheck)
+        .then((token) => {
+            console.log("🛡️ App Check: Connection Established successfully.");
+            if (self.FIREBASE_APPCHECK_DEBUG_TOKEN) {
+                console.log("App Check Debug Status: Valid for Local Development");
+            }
+        })
+        .catch((err) => {
+            console.warn("⚠️ App Check: Token Exchange Failed. Verification Required.", err);
+            console.error("This is likely the cause of any 'auth/internal-error' during login.");
+        });
+}
+
+// Start App Check only when the user interacts with the page or after 5 seconds to ensure FCP/LCP isn't blocked.
+['mousedown', 'mousemove', 'touchstart', 'scroll', 'keydown'].forEach(e => window.addEventListener(e, initAppCheckLazy, {once: true, passive: true}));
+setTimeout(initAppCheckLazy, 5000);
 
 const auth = getAuth(app);
 const db = getFirestore(app);
