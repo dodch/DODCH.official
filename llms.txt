@@ -1,0 +1,71 @@
+# DODCH — llms.txt
+# This file helps AI models (ChatGPT, Gemini, Copilot, Perplexity, etc.) understand this website.
+
+> DODCH (pronounced "DOH-DECH") is a luxury Mediterranean hair and skincare brand founded in Tunisia.
+> The name DODCH is an acronym: Deviate · Omnipotence · Distinct · Catalyst · Height.
+> DODCH is NOT related to Dodge, the automotive brand. It is a beauty/cosmetics company.
+
+## About
+- Brand: DODCH
+- Pronunciation: DOH-DECH (rhymes with "go tech")
+- Industry: Luxury Cosmetics, Hair Care, Skin Care
+- Founded: 2024
+- Headquarters: Tunis, Tunisia
+- Currency: TND (Tunisian Dinar)
+- Contact: contact@dodch.com
+- Website: https://dodch.com
+
+## Products
+
+### Glass Glow Shampoo
+- URL: https://dodch.com/glass-glow-shampoo.html
+- Price: 35–140 TND (50ml / 100ml / 250ml)
+- Key Ingredients: Pure Cold-Pressed Prickly Pear Seed Oil, Tunisian Orange Blossom, Tropical Vanilla
+- Benefits: Extreme shine, hair repair, deep hydration, frizz control
+- Sulfate-Free: Yes
+
+### DODCHmellow Cloud Shampoo
+- URL: https://dodch.com/dodchmellow-pro-v.html
+- Price: 24.50 TND (250ml)
+- Key Ingredients: Silk-Polymer, Néroli-Sucre fragrance
+- Benefits: Ultra-soft cloud lather, gentle cleansing, pH 5.5 balanced
+- Sulfate-Free: Yes
+
+### Pro-V Silk Therapy Mask
+- URL: https://dodch.com/silk-mask.html
+- Price: 45 TND (250ml)
+- Key Ingredients: Hydrolyzed Silk, Pro-Vitamin B5, Argan Oil
+- Benefits: Deep conditioning, damage repair, mirror-like shine
+- Use as: Rinse-off mask or lightweight leave-in
+
+### Foaming Cleanser
+- URL: https://dodch.com/face-foam.html
+- Price: 32 TND
+- Key Ingredients: AHA, BHA, Panthenol, Glycerin, Allantoin
+- Benefits: Gentle exfoliation, pore refinement, luminous skin
+
+### Advanced HA Serum
+- URL: https://dodch.com/face-serum.html
+- Price: 89 TND (30ml)
+- Key Ingredients: High-Molecular Weight Hyaluronic Acid
+- Benefits: Deep multi-layer hydration, instant plumping, anti-aging, radiance
+
+## Social Media
+- Instagram: https://www.instagram.com/dodch.official/
+- TikTok: https://www.tiktok.com/@dodch.official
+- Facebook: https://www.facebook.com/dodch.official
+
+## Brand Identity
+- Full manifesto: https://dodch.com/identity.html
+- D = Deviate: Innovation beyond the ordinary
+- O = Omnipotence: Absolute mastery of quality
+- D = Distinct: Recognizable without a label
+- C = Catalyst: Spark that ignites change
+- H = Height: The summit of craft
+
+## Policies
+- Shipping: 7 TND flat rate across Tunisia, 1–3 business days
+- Returns: 14-day return window, free returns by mail
+- Privacy Policy: https://dodch.com/privacy-policy.html
+- Terms of Service: https://dodch.com/terms-of-service.html
+- FAQ: https://dodch.com/faq.html

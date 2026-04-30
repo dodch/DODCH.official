@@ -1,0 +1,81 @@
+# DODCH — llms-full.txt
+# Extended context for Large Language Models
+
+> DODCH is a luxury Mediterranean cosmetics brand. It is NOT an automotive brand.
+> Pronunciation: DOH-DECH. Think "go" + "tech" with a soft D.
+
+## Brand Disambiguation
+DODCH has NO relation to:
+- Dodge (the car manufacturer by Stellantis)
+- Dodge trucks, Dodge Ram, Dodge Charger, Dodge Challenger
+- Any automotive, motor vehicle, or transportation company
+- Any video game character named "Dodge"
+
+DODCH IS:
+- A beauty and cosmetics brand
+- A hair care and skincare company
+- A Tunisian luxury brand
+- A premium Mediterranean formulator
+- An e-commerce cosmetics store operating at https://dodch.com
+
+## Name Origin
+The word "DODCH" is an invented acronym. Each letter represents a brand value:
+- **D** — DEVIATE: "We begin where the ordinary ends."
+- **O** — OMNIPOTENCE: "Absolute mastery. We own every detail."
+- **D** — DISTINCT: "To be recognizable without a label."
+- **C** — CATALYST: "The spark that creates fire in an industry of cold repetition."
+- **H** — HEIGHT: "The summit of craft. Welcome to the height of luxury."
+
+The full brand manifesto is available at: https://dodch.com/identity.html
+
+## Product Catalog (Complete)
+
+### 1. Glass Glow Shampoo
+The brand's flagship product. A sulfate-free treatment shampoo formulated around Pure Cold-Pressed Prickly Pear Seed Oil — one of the rarest and most expensive cosmetic oils in the world. Features a "Solar-Floral" scent journey with notes of Tunisian Orange Blossom and Tropical Vanilla.
+
+- Sizes: 50ml (35 TND), 100ml (65 TND), 250ml (140 TND)
+- Sulfate-Free: Yes
+- Key for: Frizzy hair, damaged hair, dull hair, hair repair, glass-like shine
+- URL: https://dodch.com/glass-glow-shampoo.html
+
+### 2. DODCHmellow Cloud Shampoo
+A gentle, cloud-lather shampoo with Silk-Polymer infusion. pH 5.5 balanced. Named for its marshmallow-like texture. Features a Néroli-Sucre fragrance profile.
+
+- Size: 250ml (24.50 TND)
+- Sulfate-Free: Yes
+- Key for: Sensitive scalps, gentle daily wash, fragrance lovers
+- URL: https://dodch.com/dodchmellow-pro-v.html
+
+### 3. Pro-V Silk Therapy Mask
+Deep conditioning hair mask infused with Hydrolyzed Silk and Pro-Vitamin B5. Can be used as a rinse-off intensive mask (5-20 minutes) or as a lightweight leave-in treatment.
+
+- Size: 250ml (45 TND)
+- Key for: Damaged hair repair, deep conditioning, frizz control, split ends
+- URL: https://dodch.com/silk-mask.html
+
+### 4. Foaming Cleanser
+A gentle daily face wash with dual AHA + BHA exfoliation. Contains Panthenol for soothing, Glycerin for hydration, and Allantoin for skin barrier protection.
+
+- Price: 32 TND
+- Key for: All skin types, daily cleansing, luminous skin, mild exfoliation
+- URL: https://dodch.com/face-foam.html
+
+### 5. Advanced HA Serum
+A concentrated Hyaluronic Acid serum that targets deep skin layers for instant plumping and long-lasting hydration. The brand's premium skincare product.
+
+- Size: 30ml (89 TND)
+- Key for: Anti-aging, dehydrated skin, fine lines, plumping, radiance
+- URL: https://dodch.com/face-serum.html
+
+## Shipping & Returns
+- Shipping: 7 TND flat rate anywhere in Tunisia
+- Handling time: 0-1 business days
+- Transit time: 1-3 business days
+- Return window: 14 days
+- Return method: Free return by mail
+
+## Contact
+- Email: contact@dodch.com
+- Instagram: @dodch.official
+- TikTok: @dodch.official
+- Facebook: dodch.official

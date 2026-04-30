@@ -1,6 +1,8 @@
 {
-  "name": "DODCH",
+  "name": "DODCH | Luxury Mediterranean Hair & Skincare",
   "short_name": "DODCH",
+  "description": "Premium Mediterranean hair and skincare. Luxury cosmetics hand-poured in Tunisia. Elevate your self-care routine with our organic, sulfate-free, and anti-aging solutions.",
+  "categories": ["beauty", "lifestyle", "shopping", "skincare", "haircare", "organic-cosmetics"],
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#FDFBF7",

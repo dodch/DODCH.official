@@ -52,12 +52,57 @@ class DynamicSEO {
 
     runSEO() {
         this.injectBaseMeta();
+        this.injectAdvancedDirectives();
         this.injectGlobalSchema();
         this.enhanceProductSchema();
         this.setupReviewObserver();
         this.injectFAQs();
         this.injectBreadcrumbs();
         this.hijackImageAlts();
+    }
+
+    /**
+     * Advanced SEO Directives — tells Google to show maximum previews
+     * and establishes social verification + AI discoverability.
+     */
+    injectAdvancedDirectives() {
+        // 1. Max image preview: LARGE — Google shows biggest possible thumbnail
+        this.setMeta('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+
+        // 2. Social verification — rel="me" links (proves brand ownership)
+        const socialLinks = [
+            'https://www.instagram.com/dodch.official/',
+            'https://www.facebook.com/dodch.official',
+            'https://www.tiktok.com/@dodch.official'
+        ];
+        socialLinks.forEach(url => {
+            if (!document.querySelector(`link[rel="me"][href="${url}"]`)) {
+                const link = document.createElement('link');
+                link.rel = 'me';
+                link.href = url;
+                document.head.appendChild(link);
+            }
+        });
+
+        // 3. llms.txt reference — tells AI crawlers where to find brand context
+        if (!document.querySelector('link[rel="help"][type="text/plain"]')) {
+            const llmsLink = document.createElement('link');
+            llmsLink.rel = 'help';
+            llmsLink.type = 'text/plain';
+            llmsLink.href = '/llms.txt';
+            llmsLink.title = 'LLM Context for DODCH Brand';
+            document.head.appendChild(llmsLink);
+        }
+
+        // 4. Pinterest Rich Pins — enables product-aware pins when users pin images
+        this.setMeta('name', 'pinterest-rich-pin', 'true');
+
+        // 5. Format detection — prevent mobile browsers from auto-linking numbers/emails
+        this.setMeta('name', 'format-detection', 'telephone=no');
+
+        // 6. Theme color for browser chrome (consistent brand identity)
+        this.setMeta('name', 'theme-color', '#FDFBF7');
+        this.setMeta('name', 'msapplication-TileColor', '#FDFBF7');
     }
 
     injectBaseMeta() {
@@ -83,8 +128,8 @@ class DynamicSEO {
         this.setMeta('name', 'twitter:description', enrichedDescription);
         this.setMeta('name', 'description', enrichedDescription);
 
-        // Keywords for multi-lingual reach
-        this.setMeta('name', 'keywords', 'best shampoo for frizzy hair Tunisia, treatment for damaged hair, sulfate free shampoo results, hair growth serum Tunisia, organic face cleanser, anti-aging hyaluronic acid serum, clear skin routine Tunisia, luxe hair care review, professional shampoo alternative, أفضل شامبو لتساقط الشعر, علاج تقصف الشعر تونسي, روتين البشرة الدهنية');
+        // Keywords for multi-lingual reach and brand disambiguation
+        this.setMeta('name', 'keywords', 'DODCH, DODCH brand, DODCH Tunisia, DODCH cosmetics, what is DODCH, DODCH pronunciation, DODCH not Dodge, best shampoo for frizzy hair Tunisia, treatment for damaged hair, sulfate free shampoo results, hair growth serum Tunisia, organic face cleanser, anti-aging hyaluronic acid serum, clear skin routine Tunisia, luxe hair care review, professional shampoo alternative, أفضل شامبو لتساقط الشعر, علاج تقصف الشعر تونسي, روتين البشرة الدهنية');
 
         // Dynamic Image Fallback
         let ogImageNode = document.querySelector('meta[property="og:image"]');
@@ -120,26 +165,57 @@ class DynamicSEO {
     }
 
     injectGlobalSchema() {
-        // 1. Organization Schema
-        const globalData = {
+        const organizationData = {
             "@context": "https://schema.org",
             "@type": "Organization",
             "name": "DODCH",
+            "alternateName": [
+                "DODCH Luxury Cosmetics",
+                "DODCH Hair Care Tunisia",
+                "DODCH Official Store"
+            ],
+            "legalName": "DODCH Official",
             "url": "https://dodch.com",
             "logo": "https://dodch.com/IMG_3352.webp",
+            "image": "https://dodch.com/IMG_3352.webp",
+            "description": "DODCH (pronounced DOH-DECH) is a premium Mediterranean hair and skincare brand founded in Tunisia. The name DODCH is an acronym: D for Deviate, O for Omnipotence, D for Distinct, C for Catalyst, H for Height. It is a luxury cosmetics brand — not related to, and not to be confused with, the automotive brand Dodge. DODCH specializes in sulfate-free shampoos, silk therapy masks, hyaluronic acid serums, and foaming cleansers.",
+            "knowsAbout": [
+                "Luxury Hair Care",
+                "Mediterranean Cosmetics",
+                "Sulfate-Free Formulations",
+                "Prickly Pear Seed Oil",
+                "Hyaluronic Acid Skin Care",
+                "Silk Protein Hair Treatments"
+            ],
+            "foundingLocation": {
+                "@type": "Place",
+                "name": "Tunis, Tunisia"
+            },
+            "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Tunis",
+                "addressCountry": "TN"
+            },
             "sameAs": [
                 "https://www.instagram.com/dodch.official/",
-                "https://www.facebook.com/dodch.official"
+                "https://www.facebook.com/dodch.official",
+                "https://www.tiktok.com/@dodch.official"
             ],
+            "subjectOf": {
+                "@type": "WebPage",
+                "name": "DODCH Identity & Manifesto",
+                "url": "https://dodch.com/identity.html",
+                "description": "The official brand identity, manifesto, and name etymology of DODCH."
+            },
             "contactPoint": {
                 "@type": "ContactPoint",
-                "telephone": "+216-XX-XXX-XXX",
+                "email": "contact@dodch.com",
                 "contactType": "customer service",
                 "areaServed": "TN",
                 "availableLanguage": ["Arabic", "French", "English"]
             }
         };
-        this.updateOrInjectSchema('Organization', globalData);
+        this.updateOrInjectSchema('Organization', organizationData);
 
         // 2. WebSite Schema (with Search Action)
         const websiteData = {
@@ -158,7 +234,7 @@ class DynamicSEO {
 
     enhanceProductSchema() {
         const productSchemaNode = document.querySelector('script[type="application/ld+json"]');
-        if (!productSchemaNode) return;
+        if (!productSchemaNode || productSchemaNode.innerHTML.includes('"@type": "ItemList"')) return; // Don't touch ItemList on homepage
 
         let productData = null;
         try {
@@ -171,9 +247,15 @@ class DynamicSEO {
         if (productData) {
             this.currentProductData = productData;
             
-            // 1. Force Absolute Image URL
-            if (productData.image && !productData.image.startsWith('http')) {
-                productData.image = `${this.baseUrl}/${productData.image.replace(/^\//, '')}`;
+            // 1. Force Absolute Image URL (handle array or string)
+            if (productData.image) {
+                if (Array.isArray(productData.image)) {
+                    productData.image = productData.image.map(img => 
+                        (typeof img === 'string' && !img.startsWith('http')) ? `${this.baseUrl}/${img.replace(/^\//, '')}` : img
+                    );
+                } else if (typeof productData.image === 'string' && !productData.image.startsWith('http')) {
+                    productData.image = `${this.baseUrl}/${productData.image.replace(/^\//, '')}`;
+                }
             }
 
             // 2. Add Brand Data

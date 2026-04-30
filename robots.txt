@@ -1,8 +1,30 @@
+# DODCH Official — robots.txt
+# https://dodch.com
+
 User-agent: *
 Disallow: /admin.html
 Disallow: /checkout.html
+Disallow: /checkout_recaptcha.html
+Disallow: /checkout_recovered.html
 Disallow: /my-account.html
 Disallow: /tracking.html
 Disallow: /functions/
+Disallow: /dist/
+Disallow: /node_modules/
+Disallow: /_next/
+Disallow: /out/
 
+# Allow critical assets for rendering
+Allow: /styles.css
+Allow: /styles.min.css
+Allow: /script.min.js
+Allow: /seo.js
+Allow: /*.webp$
+Allow: /*.mp4$
+
+# Sitemap location
 Sitemap: https://dodch.com/sitemap.xml
+
+# AI / LLM context files
+# See https://llmstxt.org for specification
+# These files help AI assistants understand the DODCH brand
