@@ -13,5 +13,11 @@
       "firestore-debug.log",
       "firebaserc"
     ]
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "**/.*"
+    ]
   }
 }

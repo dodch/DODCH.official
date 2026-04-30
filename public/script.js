@@ -2219,16 +2219,21 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerText = "Joining...";
 
             try {
-                const subscribeNewsletter = httpsCallable(functions, 'subscribeNewsletter');
-                await subscribeNewsletter({ email });
+                // Direct Firestore write (Spark-compatible)
+                // App Check will verify this request automatically
+                await addDoc(collection(db, "newsletter"), {
+                    email: email,
+                    createdAt: serverTimestamp(),
+                    source: 'footer'
+                });
                 
                 window.showToast("Welcome to the Inner Circle!", "success");
                 newsletterForm.reset();
                 btn.style.backgroundColor = "#4CAF50"; // Green for success
             } catch (err) {
-                console.error(err);
-                if (err.code === 'resource-exhausted') {
-                    window.showToast("Too many attempts. Please try again later.", "error");
+                console.error("Newsletter Error:", err);
+                if (err.code === 'permission-denied') {
+                    window.showToast("Security verification failed. Please refresh.", "error");
                 } else {
                     window.showToast("Failed to subscribe. Please try again later.", "error");
                 }
@@ -5563,56 +5568,33 @@ document.addEventListener('submit', async (e) => {
         const normalizedContent = `${name}${email}${message}`
             .toLowerCase()
             .replace(/[^a-z0-9]/g, '');
-        // SECURITY UPGRADE: Transition from direct Firestore write to a Cloud Function call.
-        // This allows for server-side reCAPTCHA/App Check verification and real rate-limiting.
-        const submitContactMessage = httpsCallable(functions, 'submitContactMessage');
         
         const signatureId = btoa(unescape(encodeURIComponent(normalizedContent)))
             .replace(/[/+=]/g, '_')
             .slice(0, 100);
 
-        // Execute reCAPTCHA
-        if (typeof grecaptcha === 'undefined') {
-            throw new Error("reCAPTCHA library is not loaded.");
-        }
-
-        grecaptcha.ready(async () => {
-            try {
-                const recaptchaToken = await grecaptcha.execute('6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy', {action: 'submitContact'});
-                
-                const response = await submitContactMessage({
-                    signatureId,
-                    name,
-                    email,
-                    message,
-                    recaptchaToken
-                });
-
-                if (response.data?.stealth) {
-                    // Silent drop (shadow ban)
-                }
-
-                localStorage.setItem('dodch_last_contact_ts', Date.now());
-                if (window.showToast) window.showToast("Message sent successfully!", "success");
-                form.reset();
-            } catch (error) {
-                console.error("Error sending message:", error);
-                if (error.code === 'resource-exhausted') {
-                    window.showToast("Please wait 2 minutes before sending another message.", "error");
-                } else if (error.code === 'permission-denied' || error.message.includes('reCAPTCHA')) {
-                    window.showToast("Security verification failed. Please refresh and try again.", "error");
-                } else {
-                    window.showToast("Error sending message. Please try again later.", "error");
-                }
-            } finally {
-                if (submitBtn) {
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                }
-            }
+        // Direct Firestore write (Spark-compatible)
+        // App Check will automatically verify the reCAPTCHA token internally.
+        await setDoc(doc(db, "messages", signatureId), {
+            name,
+            email,
+            message,
+            status: 'unread',
+            createdAt: serverTimestamp(),
+            signatureId
         });
+
+        localStorage.setItem('dodch_last_contact_ts', Date.now());
+        if (window.showToast) window.showToast("Message sent successfully!", "success");
+        form.reset();
     } catch (error) {
-        console.error("Error initializing submission:", error);
+        console.error("Detailed Submission Error:", error);
+        if (error.code === 'permission-denied') {
+            if (window.showToast) window.showToast(`Security check failed (${error.code}). Check for duplicates or refresh.`, "error");
+        } else {
+            if (window.showToast) window.showToast(`Submission Error: ${error.code || error.message}`, "error");
+        }
+    } finally {
         if (submitBtn) {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
