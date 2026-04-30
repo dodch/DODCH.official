@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://dodch.com/</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/face-foam.html</loc>
+    <image:image>
+      <image:loc>https://dodch.com/IMG_3352.webp</image:loc>
+      <image:title>DODCH Foaming Cleanser</image:title>
+    </image:image>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/glass-glow-shampoo.html</loc>
+    <image:image>
+      <image:loc>https://dodch.com/IMG_3256.webp</image:loc>
+      <image:title>DODCH Glass Glow Shampoo Texture</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://dodch.com/IMG_3257.webp</image:loc>
+      <image:title>DODCH Glass Glow Shampoo Lather</image:title>
+    </image:image>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/silk-mask.html</loc>
+    <image:image>
+      <image:loc>https://dodch.com/IMG_3256.webp</image:loc>
+      <image:title>Pro-V Silk Therapy Mask by DODCH</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://dodch.com/IMG_3257.webp</image:loc>
+      <image:title>Pro-V Silk Therapy Mask Application</image:title>
+    </image:image>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/face-serum.html</loc>
+    <image:image>
+      <image:loc>https://dodch.com/IMG_3407.webp</image:loc>
+      <image:title>DODCH Advanced HA Face Serum</image:title>
+    </image:image>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/dodchmellow-pro-v.html</loc>
+    <image:image>
+      <image:loc>https://dodch.com/IMG_3490.webp</image:loc>
+      <image:title>DODCHmello Cloud Shampoo Bottle</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://dodch.com/dodchmello,after.webp</image:loc>
+      <image:title>DODCHmello Shampoo Before and After Results</image:title>
+    </image:image>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/about.html</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/faq.html</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/shipping-returns.html</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/privacy-policy.html</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/terms-of-service.html</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://dodch.com/careers.html</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>
