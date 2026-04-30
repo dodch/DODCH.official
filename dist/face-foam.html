@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foaming Cleanser | DODCH Skincare Tunisia</title>
+    <link rel="icon" href="IMG_3352.webp?v=3" type="image/webp" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="IMG_3355.webp?v=3" type="image/webp" media="(prefers-color-scheme: dark)">
+    <meta name="description"
+        content="DODCH Foaming Cleanser. A gentle daily face wash with AHA/BHA for mild exfoliation and Panthenol for soothing hydration. Perfect for luminous, pure skin.">
+    <meta name="keywords"
+        content="Foaming Cleanser, Face Wash, Gentle Cleanser, Exfoliating Cleanser, AHA BHA, DODCH, Skincare">
+    <link rel="canonical" href="https://dodch.com/face-foam.html" />
+    <meta property="og:type" content="product" />
+    <meta property="og:title" content="Foaming Cleanser | DODCH Skincare Tunisia" />
+    <meta property="og:description" content="A gentle daily face wash with AHA/BHA for mild exfoliation and Panthenol for soothing hydration." />
+    <meta property="og:image" content="https://dodch.com/IMG_3352.webp" />
+    <meta property="og:url" content="https://dodch.com/face-foam.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="DODCH Foaming Cleanser" />
+    <meta name="twitter:image" content="https://dodch.com/IMG_3352.webp" />
+
+    <!-- Product Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "DODCH Foaming Cleanser",
+      "image": "https://dodch.com/IMG_3352.webp",
+      "description": "A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",
+      "brand": {
+        "@type": "Brand",
+        "name": "DODCH",
+        "logo": "https://dodch.com/IMG_3352.webp"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": "https://dodch.com/face-foam.html",
+        "priceCurrency": "TND",
+        "price": "45.00",
+        "availability": "https://schema.org/InStock",
+        "itemCondition": "https://schema.org/NewCondition",
+        "hasMerchantReturnPolicy": {
+          "@type": "MerchantReturnPolicy",
+          "applicableCountry": "TN",
+          "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+          "merchantReturnDays": 14,
+          "returnMethod": "https://schema.org/ReturnByMail",
+          "returnFees": "https://schema.org/FreeReturn"
+        },
+        "shippingDetails": {
+          "@type": "OfferShippingDetails",
+          "shippingRate": {
+            "@type": "MonetaryAmount",
+            "value": 7.00,
+            "currency": "TND"
+          },
+          "deliveryTime": {
+            "@type": "ShippingDeliveryTime",
+            "handlingTime": {
+              "@type": "QuantitativeValue",
+              "minValue": 0,
+              "maxValue": 1,
+              "unitCode": "DAY"
+            },
+            "transitTime": {
+              "@type": "QuantitativeValue",
+              "minValue": 1,
+              "maxValue": 3,
+              "unitCode": "DAY"
+            }
+          },
+          "shippingDestination": {
+            "@type": "DefinedRegion",
+            "addressCountry": "TN"
+          }
+        }
+      }
+    }
+    </script>
+
+    <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* --- Luminous Purity Theme Overrides --- */
+        :root {
+            --accent-aqua: #A8DADC;
+            --accent-aqua-dark: #87C4D5;
+            --text-slate: #2D2D2D;
+            /* Deep Slate */
+            --frost-blur: 2px;
+            /* From example */
+        }
+
+        /* Hero Section */
+        .foam-hero {
+            height: 100vh;
+            width: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 5%;
+            background-color: #f4f7f6;
+            /* Soft neutral base */
+            overflow: hidden;
+        }
+
+        .foam-hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 70% 30%, rgba(168, 218, 220, 0.2), transparent 50%);
+            z-index: 0;
+        }
+
+        .foam-hero-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            transition: filter 2s ease, transform 2s ease;
+        }
+
+        .foam-hero-video.blurred {
+            filter: blur(2px);
+            transform: scale(1.05);
+        }
+
+        .foam-hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: left;
+            max-width: 800px;
+            padding: 2rem;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 1s ease-out, transform 1s ease-out;
+        }
+
+        .foam-hero-content.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .foam-hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            color: #000000;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .foam-hero h1::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -10px;
+            width: 0;
+            height: 4px;
+            background-color: #000000;
+            transition: width 1.2s ease-out 0.2s;
+        }
+
+        .foam-hero-content.active h1::after {
+            width: 85%;
+        }
+
+        /* Hero Text Animation */
+        .foam-hero-content h1,
+        .foam-hero-content p,
+        .foam-hero-content .cta-button {
+            /* Start state for staggered animation */
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .foam-hero-content.active h1 {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.3s;
+        }
+
+        .foam-hero-content.active p {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.5s;
+        }
+
+        .foam-hero-content.active .cta-button {
+            opacity: 1;
+            transform: translateY(0);
+            transition-delay: 0.7s;
+        }
+
+        .foam-hero p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            color: #FFFFFF;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 4px 12px rgba(0, 0, 0, 0.8);
+            font-weight: 500;
+            max-width: 85%;
+        }
+
+        /* Aqua CTA */
+        .cta-button.aqua {
+            background-color: var(--accent-aqua);
+            color: #000;
+            border: none;
+        }
+
+        .cta-button.aqua:hover {
+            background-color: var(--accent-aqua-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(168, 218, 220, 0.6);
+        }
+
+        /* Features Grid */
+        .features-grid {
+            position: relative;
+            height: 600px;
+            /* Height for the liquid animation area */
+            width: 100%;
+            margin-top: 3rem;
+            /* Center the cluster */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .feature-card {
+            background: transparent;
+            isolation: isolate;
+            padding: 2rem;
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            /* box-shadow: 0 8px 32px rgba(168, 218, 220, 0.15), inset 0 0 15px rgba(255, 255, 255, 0.8); */
+            /* border: 1px solid rgba(168, 218, 220, 0.2); */
+            text-align: center;
+
+            /* Liquid Animation Positioning */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 280px;
+            height: 280px;
+            margin-top: -140px;
+            /* Half height */
+            margin-left: -140px;
+            /* Half width */
+
+            /* Animation defaults */
+            transform: scale(0) translate(0, 0);
+        }
+
+        /* Glass Effect Layers */
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            border-radius: inherit;
+            background: rgba(168, 218, 220, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1), inset 0 1px 20px -5px rgba(255, 255, 255, 0.7);
+            pointer-events: none;
+            filter: url(#glass-distortion);
+            -webkit-filter: url(#glass-distortion);
+        }
+
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: -2;
+            border-radius: inherit;
+            backdrop-filter: blur(var(--frost-blur));
+            -webkit-backdrop-filter: blur(var(--frost-blur));
+            pointer-events: none;
+        }
+
+        /* Animation Variables */
+        :root {
+            --dist-x: 150px;
+            --dist-y: 150px;
+        }
+
+        /* Keyframes adapted for content readability (less extreme scaling) */
+        @keyframes bubble-float-1 {
+
+            0%,
+            100% {
+                transform: translate(calc(-1 * var(--dist-x)), calc(-1 * var(--dist-y)));
+                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            }
+
+            33% {
+                transform: translate(calc(-0.9 * var(--dist-x)), calc(-1.1 * var(--dist-y)));
+                border-radius: 70% 30% 50% 50% / 50% 40% 60% 50%;
+            }
+
+            66% {
+                transform: translate(calc(-1.1 * var(--dist-x)), calc(-0.9 * var(--dist-y)));
+                border-radius: 50% 50% 40% 60% / 40% 50% 50% 60%;
+            }
+        }
+
+        @keyframes bubble-float-2 {
+
+            0%,
+            100% {
+                transform: translate(var(--dist-x), calc(-1 * var(--dist-y)));
+                border-radius: 50% 50% 40% 60% / 50% 40% 60% 50%;
+            }
+
+            33% {
+                transform: translate(calc(1.1 * var(--dist-x)), calc(-0.9 * var(--dist-y)));
+                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            }
+
+            66% {
+                transform: translate(calc(0.9 * var(--dist-x)), calc(-1.1 * var(--dist-y)));
+                border-radius: 40% 60% 60% 40% / 40% 50% 50% 60%;
+            }
+        }
+
+        @keyframes bubble-float-3 {
+
+            0%,
+            100% {
+                transform: translate(calc(-1 * var(--dist-x)), var(--dist-y));
+                border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            }
+
+            33% {
+                transform: translate(calc(-1.1 * var(--dist-x)), calc(0.9 * var(--dist-y)));
+                border-radius: 50% 50% 40% 60% / 50% 40% 60% 50%;
+            }
+
+            66% {
+                transform: translate(calc(-0.9 * var(--dist-x)), calc(1.1 * var(--dist-y)));
+                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            }
+        }
+
+        @keyframes bubble-float-4 {
+
+            0%,
+            100% {
+                transform: translate(var(--dist-x), var(--dist-y));
+                border-radius: 70% 30% 40% 60% / 50% 40% 60% 50%;
+            }
+
+            33% {
+                transform: translate(calc(0.9 * var(--dist-x)), calc(1.1 * var(--dist-y)));
+                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            }
+
+            66% {
+                transform: translate(calc(1.1 * var(--dist-x)), calc(0.9 * var(--dist-y)));
+                border-radius: 40% 60% 60% 40% / 40% 50% 50% 60%;
+            }
+        }
+
+        /* Entrance Animations (Spread from center) */
+        @keyframes spread-1 {
+            0% {
+                transform: translate(0, 0) scale(0);
+                border-radius: 50%;
+            }
+
+            100% {
+                transform: translate(calc(-1 * var(--dist-x)), calc(-1 * var(--dist-y))) scale(1);
+                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            }
+        }
+
+        @keyframes spread-2 {
+            0% {
+                transform: translate(0, 0) scale(0);
+                border-radius: 50%;
+            }
+
+            100% {
+                transform: translate(var(--dist-x), calc(-1 * var(--dist-y))) scale(1);
+                border-radius: 50% 50% 40% 60% / 50% 40% 60% 50%;
+            }
+        }
+
+        @keyframes spread-3 {
+            0% {
+                transform: translate(0, 0) scale(0);
+                border-radius: 50%;
+            }
+
+            100% {
+                transform: translate(calc(-1 * var(--dist-x)), var(--dist-y)) scale(1);
+                border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            }
+        }
+
+        @keyframes spread-4 {
+            0% {
+                transform: translate(0, 0) scale(0);
+                border-radius: 50%;
+            }
+
+            100% {
+                transform: translate(var(--dist-x), var(--dist-y)) scale(1);
+                border-radius: 70% 30% 40% 60% / 50% 40% 60% 50%;
+            }
+        }
+
+        /* Apply animations when visible */
+        .features-grid.reveal.active .feature-card:nth-child(1) {
+            animation: spread-1 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .features-grid.reveal.active .feature-card:nth-child(2) {
+            animation: spread-2 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            animation-delay: 0.2s;
+        }
+
+        .features-grid.reveal.active .feature-card:nth-child(3) {
+            animation: spread-3 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            animation-delay: 0.4s;
+        }
+
+        .features-grid.reveal.active .feature-card:nth-child(4) {
+            animation: spread-4 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            animation-delay: 0.6s;
+        }
+
+        /* Performance Optimization: Disable filters when off-screen */
+        .features-grid.filters-off .feature-card::before {
+            filter: none !important;
+            -webkit-filter: none !important;
+        }
+
+        .features-grid.filters-off .feature-card::after {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        /* Mobile Adjustment */
+        .mobile-scroll-dots {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .luminous-purity-section {
+                height: 250vh;
+                /* Create scroll track */
+                padding: 0 !important;
+                /* Override section padding */
+                background-image: none !important;
+                /* Remove bg from section to prevent zoom/scroll */
+            }
+
+            .luminous-purity-section .container {
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                width: 100vw;
+                /* Full width for background */
+                max-width: none;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                overflow: hidden;
+                /* Apply background to sticky container for static effect */
+                background-image: url('5AAEB232-D641-49B1-83AB-1CD86ADC05FC (2).webp');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+            }
+
+            .features-grid {
+                height: 100%;
+                width: 100%;
+                margin-top: 0;
+            }
+
+            /* Disable default animations on mobile */
+            .features-grid.reveal.active .feature-card:nth-child(n) {
+                animation: none;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s;
+            }
+
+            /* Active States for Mobile Carousel */
+            .feature-card.mobile-active-top {
+                opacity: 1 !important;
+                pointer-events: auto;
+                transform: translate(30px, -150px);
+                /* Slightly right, top */
+            }
+
+            .feature-card.mobile-active-bottom {
+                opacity: 1 !important;
+                pointer-events: auto;
+                transform: translate(-30px, 150px);
+                /* Slightly left, bottom */
+            }
+
+            /* Swipe Animations */
+            @keyframes swipeOutRandom1 {
+                to {
+                    opacity: 0;
+                    transform: translate(60px, -600px) rotate(20deg);
+                }
+            }
+
+            @keyframes swipeOutRandom2 {
+                to {
+                    opacity: 0;
+                    transform: translate(-60px, -600px) rotate(-20deg);
+                }
+            }
+
+            @keyframes swipeInTop {
+                from {
+                    opacity: 0;
+                    transform: translate(40px, 500px) scale(0.8);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translate(30px, -150px) scale(1);
+                }
+            }
+
+            @keyframes swipeInBottom {
+                from {
+                    opacity: 0;
+                    transform: translate(-40px, 500px) scale(0.8);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translate(-30px, 150px) scale(1);
+                }
+            }
+
+            /* Mobile Scroll Dots */
+            .mobile-scroll-dots {
+                display: flex;
+                position: absolute;
+                bottom: 40px;
+                left: 50%;
+                transform: translateX(-50%);
+                gap: 10px;
+                z-index: 10;
+            }
+
+            .scroll-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background-color: rgba(45, 45, 45, 0.2);
+                transition: all 0.3s ease;
+            }
+
+            .scroll-dot.active {
+                background-color: var(--text-slate);
+                transform: scale(1.3);
+            }
+        }
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 1rem;
+            color: var(--accent-aqua);
+        }
+
+        /* Clean Promise Icons Override */
+        .promise-icon {
+            color: var(--accent-aqua);
+        }
+
+        /* Clean Promise Hover Override */
+        .promise-item {
+            border-radius: 8px;
+        }
+
+        .promise-item:hover {
+            background-color: var(--accent-aqua);
+            color: #000000;
+        }
+
+        .promise-item:hover .promise-icon {
+            filter: brightness(0) !important;
+        }
+
+        .promise-item:hover .promise-icon[alt="Zero Silicones"] {
+            filter: none !important;
+        }
+
+        .promise-item:hover h4 {
+            color: #000000;
+        }
+
+        /* Ingredients Table */
+        .ingredients-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        }
+
+        .ingredients-table th,
+        .ingredients-table td {
+            padding: 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .ingredients-table th {
+            background-color: rgba(168, 218, 220, 0.1);
+            font-family: var(--font-serif);
+            font-weight: 600;
+        }
+
+        /* Ingredients Table Animation */
+        .ingredients-table tbody tr {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .ingredients-table tbody tr.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* How to Use */
+        .usage-steps {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 2rem;
+            text-align: center;
+        }
+
+        .usage-step {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            border-radius: 50%;
+            background-color: var(--accent-aqua);
+            color: #fff;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        /* Purchase Section */
+        .purchase-bar {
+            background: #fff;
+            padding: 3rem 0;
+            text-align: center;
+            border-top: 1px solid #eee;
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .foam-hero {
+                align-items: flex-start;
+                /* Align top to avoid header overlap */
+                padding-top: 140px;
+                /* Push content down below header */
+                padding-left: 0;
+                height: auto;
+                /* Allow content to grow */
+                min-height: 100vh;
+            }
+
+            .foam-hero-content {
+                padding: 1.5rem 1.5rem 3rem 1.5rem;
+                text-align: left;
+            }
+
+            .foam-hero h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        /* Sidebar Customization for Foam Page */
+        #desktop-sidebar {
+            background-color: #F0F8FA;
+            /* Slight blue tint */
+            border-right: 1px solid rgba(168, 218, 220, 0.2);
+        }
+
+        /* Override Gold Accents in Sidebar */
+        #desktop-sidebar .profile-icon {
+            background-color: rgba(168, 218, 220, 0.2);
+            color: var(--text-slate);
+        }
+
+        #desktop-sidebar .sidebar-menu a:hover,
+        #desktop-sidebar .sidebar-menu a.active {
+            background-color: rgba(168, 218, 220, 0.15);
+            color: var(--text-slate);
+        }
+
+        #desktop-sidebar .sidebar-menu a.active::before {
+            background-color: var(--accent-aqua);
+        }
+
+        #sidebar-login-btn {
+            border-color: var(--accent-aqua) !important;
+            color: var(--text-slate) !important;
+        }
+
+        #sidebar-login-btn:hover {
+            background-color: var(--accent-aqua);
+            border-color: var(--accent-aqua);
+            color: #fff !important;
+        }
+
+        /* Cart Drawer Customization for Foam Page */
+        #cart-drawer {
+            background-color: #F0F8FA;
+        }
+
+        /* Scroll Progress Bar Customization for Foam Page */
+        #scroll-progress {
+            background: var(--accent-aqua);
+        }
+
+        /* Custom Buttons for Foam Page */
+        #sidebar-my-account-btn {
+            border-color: var(--accent-aqua) !important;
+            color: var(--text-slate) !important;
+        }
+
+        #sidebar-my-account-btn:hover {
+            background-color: var(--accent-aqua) !important;
+            color: #fff !important;
+        }
+
+        /* Checkout Button in Cart Drawer */
+        #cart-drawer .checkout-btn {
+            background-color: var(--accent-aqua);
+            border-color: var(--accent-aqua);
+            color: #000;
+        }
+
+        #cart-drawer .checkout-btn:hover {
+            background-color: var(--accent-aqua-dark);
+            border-color: var(--accent-aqua-dark);
+            box-shadow: 0 0 15px rgba(168, 218, 220, 0.5);
+            color: #fff;
+        }
+
+        .luminous-purity-section {
+            background-image: url('5AAEB232-D641-49B1-83AB-1CD86ADC05FC (2).webp');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        /* Mobile fallback for parallax to prevent zoom/scroll issues */
+        @media (max-width: 1024px),
+        (hover: none) {
+            .luminous-purity-section {
+                background-attachment: scroll;
+            }
+        }
+
+        .foam-ritual-section {
+            background-image: url('IMG_3399.webp');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            position: relative;
+        }
+
+        @media (max-width: 1024px),
+        (hover: none) {
+            .foam-ritual-section {
+                background-attachment: scroll;
+            }
+        }
+
+        .section-title {
+            font-weight: 700;
+            color: #000000;
+        }
+
+        /* Ritual Steps Animation & Contrast */
+        .usage-steps .usage-step.reveal {
+            transition: all 1s ease-out;
+        }
+
+        .usage-steps .usage-step:nth-child(1) {
+            transition-delay: 0.1s;
+        }
+
+        .usage-steps .usage-step:nth-child(2) {
+            transition-delay: 0.3s;
+        }
+
+        .usage-steps .usage-step:nth-child(3) {
+            transition-delay: 0.5s;
+        }
+
+        .usage-step h4 {
+            color: #000000;
+            font-weight: 700;
+        }
+
+        .usage-step p {
+            color: #111111;
+            font-weight: 500;
+        }
+    </style>
+    <!-- Dynamic SEO Injection -->
+    <script type="module" src="seo.js"></script>
+    <meta name="view-transition" content="same-origin">
+</head>
+
+<body>
+    <!-- Desktop Sidebar -->
+    <aside id="desktop-sidebar">
+        <button class="sidebar-close-btn">&times;</button>
+        <div class="sidebar-header">
+            <div class="profile-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" style="width: 30px; height: 30px;">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+            <span id="sidebar-user-name">Guest</span>
+            <button id="sidebar-login-btn">Login</button>
+        </div>
+        <nav class="sidebar-menu">
+            <a href="index.html">Shop</a>
+            <a href="#contact">Contact</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <button id="sidebar-logout-btn" style="display: none;">Logout</button>
+        </div>
+    </aside>
+    <div class="sidebar-overlay"></div>
+
+    <div id="scroll-progress"></div>
+
+
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="nav-container">
+            <div class="hamburger"><span></span><span></span><span></span></div>
+            <ul class="nav-links">
+                <li><a href="index.html">Shop</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+                <li><a href="#" id="login-btn"><svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg><span class="login-text">Login</span></a></li>
+                <li class="nav-search-item">
+                    <div class="search-container"><input type="text" id="navbar-search-input" class="search-input"
+                            placeholder="Search..."><button id="search-toggle-btn" aria-label="Search"><svg
+                                class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg></button></div>
+                </li>
+                <li><a href="#" id="cart-toggle"><svg class="nav-icon" viewBox="0 0 24 24">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg><span id="cart-count-badge">0</span></a></li>
+            </ul>
+            <a href="index.html" class="logo">DODCH</a>
+        </div>
+    </nav>
+
+    <!-- SVG Filter for Gooey Effect -->
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" version="1.1"
+        xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <filter id="goo">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
+                    result="goo" />
+                <feBlend in="SourceGraphic" in2="goo" />
+            </filter>
+        </defs>
+    </svg>
+
+    <main>
+        <!-- 1. Hero Section -->
+        <section class="foam-hero">
+            <video muted playsinline class="foam-hero-video" poster="https://dodch.com/IMG_3352.webp">
+                <source src="foam cleanser.mp4" type="video/mp4">
+            </video>
+            <div class="foam-hero-bg"></div>
+            <div class="foam-hero-content">
+                <h1>DODCH Foaming Cleanser</h1>
+                <p>A gentle yet powerful daily cleanser with exfoliating hydrating and soothing effects.</p>
+                <a href="product.html?id=foaming-cleanser" class="cta-button aqua">CLAIM YOUR BOTTLE</a>
+            </div>
+        </section>
+
+        <!-- Clean Promise Section -->
+        <section id="clean-promise" class="section-padding bg-white">
+            <div class="container">
+                <div class="grid-4">
+                    <div class="promise-item reveal">
+                        <img loading="lazy" src="3637527.webp" alt="Zero Sulfates" class="promise-icon"
+                            style="object-fit: contain; filter: invert(76%) sepia(33%) saturate(733%) hue-rotate(358deg) brightness(91%) contrast(88%);">
+                        <h4>Zero Sulfates</h4>
+                        <p>No harsh stripping agents.</p>
+                    </div>
+                    <div class="promise-item reveal">
+                        <img loading="lazy" src="12564536.webp" alt="Zero Silicones" class="promise-icon" style="object-fit: contain;">
+                        <h4>Zero Parabens</h4>
+                        <p>Preserved with care for your long-term health.</p>
+                    </div>
+                    <div class="promise-item reveal">
+                        <img loading="lazy" src="paraben-free.webp" alt="Zero Parabens" class="promise-icon"
+                            style="object-fit: contain; filter: invert(76%) sepia(33%) saturate(733%) hue-rotate(358deg) brightness(91%) contrast(88%);">
+                        <h4>Cruelty-Free</h4>
+                        <p>Never tested on animals.</p>
+                    </div>
+                    <div class="promise-item reveal">
+                        <img loading="lazy" src="cruelty-free-fill-1xtbf51vi6hrb91218rib.webp" alt="Cruelty-Free" class="promise-icon"
+                            style="object-fit: contain; filter: invert(76%) sepia(33%) saturate(733%) hue-rotate(358deg) brightness(91%) contrast(88%);">
+                        <h4>Cruelty-Free</h4>
+                        <p>Never tested on animals.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Product Features -->
+        <section class="section-padding luminous-purity-section">
+            <div class="container">
+                <h2 class="section-title reveal">Luminous Purity</h2>
+                <div class="features-grid reveal">
+                    <div class="feature-card">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 12a4 4 0 0 1 8 0"></path>
+                        </svg>
+                        <h3>Deep Pore Cleansing</h3>
+                        <p>SCI + Betaine gently lift away dirt and excess oil, leaving pores refreshed and clean.</p>
+                    </div>
+                    <div class="feature-card">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                        </svg>
+                        <h3>Dual Exfoliation</h3>
+                        <p>Lactic Acid (AHA) & Salicylic Acid (BHA) work together to unclog pores and refine skin
+                            texture.</p>
+                    </div>
+                    <div class="feature-card">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        <h3>Hydrate & Soothe</h3>
+                        <p>Glycerin, Panthenol, and Allantoin instantly nourish and calm skin, preventing dryness or
+                            irritation.</p>
+                    </div>
+                    <div class="feature-card">
+                        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M17.5 19c0-1.7-1.3-3-3-3h-5c-1.7 0-3 1.3-3 3"></path>
+                            <path d="M12 16v-8"></path>
+                            <path d="M8 8l4-4 4 4"></path>
+                        </svg>
+                        <h3>Premium Foam</h3>
+                        <p>PEG-7 Glyceryl Cocoate ensures a silky, luxurious foam that glides effortlessly on the skin.
+                        </p>
+                    </div>
+                </div>
+                <div class="mobile-scroll-dots">
+                    <div class="scroll-dot active"></div>
+                    <div class="scroll-dot"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Ingredients -->
+        <section class="section-padding bg-white">
+            <div class="container reveal">
+                <h2 class="section-title">The Architecture of Clean</h2>
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table class="ingredients-table">
+                        <thead>
+                            <tr>
+                                <th>Ingredient</th>
+                                <th>Function</th>
+                                <th>Benefit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>SCI + Betaine</td>
+                                <td>Surfactants</td>
+                                <td>Cleans pores & creates creamy foam</td>
+                            </tr>
+                            <tr>
+                                <td>Lactic Acid</td>
+                                <td>AHA</td>
+                                <td>Gentle surface exfoliation</td>
+                            </tr>
+                            <tr>
+                                <td>Salicylic Acid</td>
+                                <td>BHA</td>
+                                <td>Unclogs pores, reduces blackheads</td>
+                            </tr>
+                            <tr>
+                                <td>Glycerin</td>
+                                <td>Humectant</td>
+                                <td>Hydrates skin instantly</td>
+                            </tr>
+                            <tr>
+                                <td>Panthenol</td>
+                                <td>Soothing agent</td>
+                                <td>Reduces irritation, supports barrier</td>
+                            </tr>
+                            <tr>
+                                <td>Allantoin</td>
+                                <td>Soothing & comfort</td>
+                                <td>Calms sensitive skin</td>
+                            </tr>
+                            <tr>
+                                <td>PEG-7 Glyceryl Cocoate</td>
+                                <td>Glide & foam stability</td>
+                                <td>Silky, luxurious texture</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. How to Use -->
+        <section class="section-padding foam-ritual-section">
+            <div style="position: absolute; inset: 0; background: rgba(255,255,255,0.85);"></div>
+            <div class="container" style="position: relative; z-index: 1;">
+                <h2 class="section-title reveal">The Ritual</h2>
+                <div class="usage-steps">
+                    <div class="usage-step reveal">
+                        <span class="step-number">1</span>
+                        <h4>Pump & Lather</h4>
+                        <p>Dispense a small amount into damp hands and create a rich foam.</p>
+                    </div>
+                    <div class="usage-step reveal">
+                        <span class="step-number">2</span>
+                        <h4>Massage & Cleanse</h4>
+                        <p>Gently massage onto face, focusing on T-zone and pores.</p>
+                    </div>
+                    <div class="usage-step reveal">
+                        <span class="step-number">3</span>
+                        <h4>Rinse Thoroughly</h4>
+                        <p>Enjoy soft, hydrated, refreshed skin.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Purchase Section -->
+        <section id="purchase" class="purchase-bar reveal">
+            <div class="container">
+                <h2 style="margin-bottom: 1rem;">DODCH Foaming Cleanser</h2>
+                <p style="font-size: 1.5rem; margin-bottom: 2rem; color: var(--accent-gold);">45.00 TND</p>
+                <a href="product.html?id=foaming-cleanser" class="cta-button aqua">CLAIM YOUR BOTTLE</a>
+            </div>
+        </section>
+
+        <!-- 6. Brand Story -->
+        <section class="section-padding bg-white">
+            <div class="container reveal" style="text-align: center; max-width: 800px;">
+                <h3 style="font-family: var(--font-serif); margin-bottom: 1rem;">Luminous Purity</h3>
+                <p>We believe cleansing should be more than just removal—it should be a restoration. Our Foaming
+                    Cleanser bridges the gap between deep purification and barrier support, ensuring your skin starts
+                    and ends the day in perfect balance.</p>
+            </div>
+        </section>
+        <!-- 7. Reviews Section -->
+        <section id="reviews" class="section-padding bg-white">
+            <div class="container" style="max-width: 800px; margin: 0 auto;">
+                <h2 class="section-title text-center reveal">Real Experiences</h2>
+
+                <!-- NEW: Write Review Button Container -->
+                <div style="text-align: center; margin-bottom: 3rem;" class="reveal">
+                    <button id="write-review-toggle-btn" class="cta-button ineligible">Write a Review</button>
+                </div>
+
+                <!-- Review Modal Overlay -->
+                <div id="review-modal" class="review-modal-overlay">
+                    <div class="review-modal-content">
+                        <button class="close-modal" id="close-review-modal">&times;</button>
+                        <h3 style="margin-bottom: 1.5rem; color: #000; font-family: var(--font-serif);">Share Your
+                            Experience</h3>
+
+                        <!-- The Form -->
+                        <form id="product-review-form">
+                            <div class="form-group" style="margin-bottom: 1.2rem;">
+                                <label for="review-rating"
+                                    style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Rating</label>
+                                <select id="review-rating" required
+                                    style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;">
+                                    <option value="" disabled selected>Select a rating</option>
+                                    <option value="5">★★★★★ - Excellent</option>
+                                    <option value="4">★★★★☆ - Very Good</option>
+                                    <option value="3">★★★☆☆ - Average</option>
+                                    <option value="2">★★☆☆☆ - Below Average</option>
+                                    <option value="1">★☆☆☆☆ - Poor</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 1.5rem;">
+                                <label for="review-text"
+                                    style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Your Review</label>
+                                <textarea id="review-text" rows="5" required
+                                    style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;"
+                                    placeholder="Tell us what you think about this product..."></textarea>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 1.8rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Photos
+                                    (Optional, max 2)</label>
+                                <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <label class="cta-button"
+                                        style="padding: 0.6rem 1.2rem; font-size: 0.85rem; background: #f0f0f0; color: #333; border: 1px dashed #ccc; cursor: pointer; display: inline-block;">
+                                        Add Photos
+                                        <input type="file" id="review-images" accept="image/*" multiple
+                                            style="display: none;">
+                                    </label>
+                                    <div id="image-preview-container" style="display: flex; gap: 0.5rem;"></div>
+                                </div>
+                            </div>
+                            <button type="submit" class="cta-button eligible" style="width: 100%; text-align: center;"
+                                id="submit-review-btn">Submit Review</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Dynamic Reviews Container -->
+                <div id="product-reviews-container" class="reviews-list reveal">
+                    <p class="text-center" style="color: #666; font-style: italic;">Loading reviews...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer></footer>
+
+    <!-- Cart Drawer -->
+    <div id="cart-overlay"></div>
+    <div id="cart-drawer">
+        <div class="cart-header">
+            <h3>Your Cart</h3>
+            <button id="close-cart-btn" class="close-btn">&times;</button>
+        </div>
+        <div class="cart-body" id="cart-items-container">
+            <div class="cart-empty">
+                <p>Your cart is empty.</p>
+            </div>
+        </div>
+        <div class="cart-footer">
+            <div class="subtotal-row"><strong>Subtotal</strong><span id="cart-subtotal">$0.00</span></div>
+            <a href="checkout.html" class="cta-button checkout-btn">Proceed to Checkout</a>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script><script type="module" src="script.js?v=5"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const table = document.querySelector('.ingredients-table');
+            if (!table) return;
+
+            const rows = table.querySelectorAll('tbody tr');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        rows.forEach((row, index) => {
+                            setTimeout(() => {
+                                row.classList.add('visible');
+                            }, index * 100); // 100ms staggered delay
+                        });
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            observer.observe(table);
+        });
+
+        window.addEventListener('load', () => {
+            const video = document.querySelector('.foam-hero-video');
+            const content = document.querySelector('.foam-hero-content');
+
+            if (video) {
+                video.play().catch(e => console.log("Autoplay prevented", e));
+                video.addEventListener('timeupdate', () => {
+                    // Start blurring 2.5s before end to sync with CSS transition
+                    if (video.duration - video.currentTime <= 2.5) {
+                        video.classList.add('blurred');
+                    }
+                });
+            }
+            if (content) {
+                content.classList.add('active');
+            }
+
+            // Mobile Bubble Scroll Logic (Sticky Section)
+            if (window.innerWidth <= 768) {
+                const section = document.querySelector('.luminous-purity-section');
+                const cards = document.querySelectorAll('.feature-card');
+                let currentGroup = 0;
+                let isAnimating = false;
+
+                // Initialize
+                function initMobileBubbles() {
+                    cards.forEach(c => {
+                        c.style.opacity = '0';
+                        c.classList.remove('mobile-active-top', 'mobile-active-bottom');
+                    });
+                    // Show first group initially
+                    if (cards[0]) { cards[0].style.opacity = '1'; cards[0].classList.add('mobile-active-top'); }
+                    if (cards[1]) { cards[1].style.opacity = '1'; cards[1].classList.add('mobile-active-bottom'); }
+                }
+
+                initMobileBubbles();
+
+                // Scroll Handler
+                window.addEventListener('scroll', () => {
+                    if (!section) return;
+
+                    const rect = section.getBoundingClientRect();
+                    const viewportHeight = window.innerHeight;
+                    const scrollableDistance = section.offsetHeight - viewportHeight;
+                    const scrolled = -rect.top;
+
+                    // Calculate progress (0 to 1)
+                    let progress = 0;
+                    if (scrolled > 0) {
+                        progress = Math.min(1, scrolled / scrollableDistance);
+                    }
+
+                    // Determine target group based on scroll progress
+                    // 0.0 - 0.45: Group 0
+                    // 0.55 - 1.0: Group 1
+                    let targetGroup = currentGroup;
+                    if (progress < 0.45) targetGroup = 0;
+                    else if (progress > 0.55) targetGroup = 1;
+
+                    if (targetGroup !== currentGroup && !isAnimating) {
+                        isAnimating = true;
+
+                        // Update dots
+                        const dots = document.querySelectorAll('.scroll-dot');
+                        dots.forEach((d, i) => d.classList.toggle('active', i === targetGroup));
+
+                        const c1 = cards[currentGroup * 2];
+                        const c2 = cards[currentGroup * 2 + 1];
+
+                        if (c1) c1.style.animation = `swipeOutRandom${Math.random() > 0.5 ? 1 : 2} 0.6s forwards ease-in`;
+                        if (c2) c2.style.animation = `swipeOutRandom${Math.random() > 0.5 ? 1 : 2} 0.6s forwards ease-in`;
+
+                        currentGroup = targetGroup;
+                        const n1 = cards[currentGroup * 2];
+                        const n2 = cards[currentGroup * 2 + 1];
+
+                        setTimeout(() => {
+                            if (c1) { c1.classList.remove('mobile-active-top'); c1.style.animation = ''; c1.style.opacity = '0'; }
+                            if (c2) { c2.classList.remove('mobile-active-bottom'); c2.style.animation = ''; c2.style.opacity = '0'; }
+
+                            if (n1) { n1.style.opacity = '1'; n1.style.animation = 'swipeInTop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards'; }
+                            if (n2) { n2.style.opacity = '1'; n2.style.animation = 'swipeInBottom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards'; }
+
+                            setTimeout(() => {
+                                if (n1) { n1.classList.add('mobile-active-top'); n1.style.animation = ''; }
+                                if (n2) { n2.classList.add('mobile-active-bottom'); n2.style.animation = ''; }
+                                isAnimating = false;
+                            }, 800);
+                        }, 400);
+                    }
+                });
+            }
+
+            // Performance: Disable SVG filters when bubbles are out of viewport
+            const featuresGrid = document.querySelector('.features-grid');
+            if (featuresGrid) {
+                const filterObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        // Toggle class based on visibility
+                        // Using a small margin so filters turn on just before entering screen
+                        featuresGrid.classList.toggle('filters-off', !entry.isIntersecting);
+                    });
+                }, { rootMargin: '200px' });
+                filterObserver.observe(featuresGrid);
+            }
+        });
+    </script>
+
+</body>
+
+</html>
+

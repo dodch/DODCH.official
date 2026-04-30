@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | DODCH</title>
+    <link rel="icon" href="IMG_3352.webp?v=4" type="image/webp" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="IMG_3355.webp?v=4" type="image/webp" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" href="IMG_3355.webp?v=4">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=4">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .drop-zone {
+            width: 100%;
+            height: 120px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            color: #666;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background: #f9f9f9;
+        }
+        .drop-zone.dragover { border-color: #D4AF37; background-color: rgba(212, 175, 55, 0.1); color: #D4AF37; }
+        .drop-zone-input { display: none; }
+        .drop-zone-prompt { pointer-events: none; font-size: 0.9rem; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+    <meta name="view-transition" content="same-origin">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav id="navbar" class="scrolled">
+        <div class="nav-container">
+            <div class="hamburger">
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" style="color: var(--text-charcoal);">Shop</a></li>
+                <li><a href="index.html#contact" style="color: var(--text-charcoal);">Contact</a></li>
+                <li><a href="#" id="login-btn" style="color: var(--text-charcoal);">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="login-text">Login</span>
+                </a></li>
+                <li class="nav-search-item">
+                    <div class="search-container">
+                        <input type="text" id="navbar-search-input" class="search-input" placeholder="Search...">
+                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                    </div>
+                </li>
+                <li><a href="#" id="cart-toggle" style="color: var(--text-charcoal);">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    <span id="cart-count-badge">0</span>
+                </a></li>
+            </ul>
+            <a href="index.html" class="logo">DODCH</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="admin-container">
+            <header class="admin-header reveal">
+                <h1>Admin Dashboard</h1>
+                <p>Manage orders and product inventory.</p>
+            </header>
+
+            <div class="admin-stats-row reveal">
+                <div class="admin-stat-card">
+                    <h3>Total Revenue (All Time)</h3>
+                    <p id="total-revenue-display">Loading...</p>
+                </div>
+                <div class="admin-stat-card">
+                    <h3>Total Orders</h3>
+                    <p id="total-orders-display">Loading...</p>
+                </div>
+            </div>
+
+            <section class="admin-section reveal" id="admin-chart-section" style="margin-bottom: 3rem;">
+                <h2>Revenue Overview (Last 30 Days)</h2>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </section>
+
+            <div class="admin-tabs reveal">
+                <button class="admin-tab-btn active" data-tab="orders">Orders</button>
+                <button class="admin-tab-btn" data-tab="inventory">Inventory</button>
+                <button class="admin-tab-btn" data-tab="messages">Messages <span id="unread-messages-badge" class="badge" style="display:none; background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; margin-left: 5px; vertical-align: top;">0</span></button>
+                <button class="admin-tab-btn" data-tab="push">Push Notifications</button>
+            </div>
+
+            <div class="admin-content-wrapper">
+                <section id="tab-orders" class="tab-pane active admin-section">
+                    <div class="admin-controls">
+                        <input type="text" id="admin-order-search" class="admin-search-input" placeholder="Search orders...">
+                        <select id="admin-filter-status" class="admin-select">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="In Delivery">In Delivery</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        <select id="admin-sort-date" class="admin-select">
+                            <option value="desc">Newest First</option>
+                            <option value="asc">Oldest First</option>
+                        </select>
+                        <button id="admin-export-btn" class="admin-btn">Export CSV</button>
+                    </div>
+                    <div id="admin-orders-list" class="admin-list">Loading orders...</div>
+                </section>
+
+                <section id="tab-inventory" class="tab-pane admin-section">
+                    <h2>Inventory Management</h2>
+                    <button id="admin-add-product-btn" class="admin-btn" style="margin-bottom: 1.5rem; background-color: #2ecc71; border-color: #2ecc71;">Add New Product</button>
+                    <div id="admin-products-list" class="admin-list">Loading products...</div>
+                </section>
+
+                <section id="tab-messages" class="tab-pane admin-section">
+                    <h2>Customer Messages</h2>
+                    <div id="admin-messages-list" class="admin-list" style="display: flex; flex-direction: column; gap: 1rem;">Loading messages...</div>
+                </section>
+
+                <section id="tab-push" class="tab-pane admin-section">
+                    <h2>Send Push Notification</h2>
+                    <p style="margin-bottom: 2rem; color: #666;">Broadcast a message to all subscribed customers.</p>
+                    
+                    <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid #eaeaea; margin-bottom: 2rem;">
+                        <h3 style="margin-bottom: 1rem; font-family: var(--font-heading); color: var(--text-charcoal);">1. Setup Credentials (Secure)</h3>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Paste your Firebase Service Account JSON here to securely authorize sending. This is only stored locally on this device.</p>
+                        <textarea id="push-credentials-input" class="admin-search-input" rows="4" placeholder='{"type": "service_account", "project_id": "dodch-96b15", ...}' style="font-family: monospace; font-size: 0.8rem;"></textarea>
+                        <button id="save-push-creds-btn" class="admin-btn" style="margin-top: 10px; background-color: #2c3e50; border-color: #2c3e50;">Save Credentials to Browser</button>
+                        <span id="push-creds-status" style="margin-left: 10px; font-size: 0.9rem; font-weight: 500;"></span>
+                    </div>
+
+                    <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid #eaeaea;">
+                        <h3 style="margin-bottom: 1rem; font-family: var(--font-heading); color: var(--text-charcoal);">2. Compose Message</h3>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Title</label>
+                            <input type="text" id="push-title" class="admin-search-input" placeholder="e.g., Back in Stock: Face Serum!">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Message Body</label>
+                            <textarea id="push-body" class="admin-search-input" rows="3" placeholder="Get 20% off today only using code LUMI20..."></textarea>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Target URL (Optional)</label>
+                            <input type="text" id="push-url" class="admin-search-input" placeholder="e.g., /face-serum.html">
+                            <span style="font-size: 0.8rem; color: #888;">Where should users be taken when they click the notification? (Default: Homepage)</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Image URL (Optional)</label>
+                            <input type="text" id="push-image" class="admin-search-input" placeholder="https://your-site.com/IMG_3399.webp">
+                        </div>
+                        <button id="send-push-btn" class="admin-btn" style="background-color: #2ecc71; border-color: #2ecc71; font-size: 1.1rem; padding: 12px 24px; width: 100%;">🚀 Blast Notification</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <div id="add-product-modal" class="confirm-overlay" style="display: none; align-items: flex-start; padding-top: 5vh; overflow-y: auto;">
+        <div class="confirm-box" style="max-width: 600px; width: 90%; margin-bottom: 5vh;">
+            <h3 class="confirm-title" id="product-modal-title">Add New Product</h3>
+            <form id="add-product-form" style="text-align: left;">
+                <input type="hidden" id="product-id-input">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="new-prod-name" style="display: block; margin-bottom: 5px; font-weight: 500;">Product Name</label>
+                    <input type="text" id="new-prod-name" class="admin-search-input" placeholder="e.g., Glass Glow Shampoo" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="new-prod-subtitle" style="display: block; margin-bottom: 5px; font-weight: 500;">Subtitle</label>
+                    <input type="text" id="new-prod-subtitle" class="admin-search-input" placeholder="e.g., The Elixir of 10,000 Seeds" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="new-prod-desc" style="display: block; margin-bottom: 5px; font-weight: 500;">Description</label>
+                    <textarea id="new-prod-desc" class="admin-search-input" rows="4" placeholder="Product description..." required></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="new-prod-image-file" style="display: block; margin-bottom: 5px; font-weight: 500;">Product Image</label>
+                    <div id="drop-zone" class="drop-zone">
+                        <span class="drop-zone-prompt">Drop file here or click to upload</span>
+                        <input type="file" id="new-prod-image-file" class="drop-zone-input" accept="image/*">
+                    </div>
+                    <input type="hidden" id="new-prod-image-url">
+                    <div id="image-preview-container" style="margin-top: 10px; display: none;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img loading="lazy" id="image-preview" src="" alt="Preview" style="max-width: 100px; max-height: 100px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;">
+                            <button type="button" id="remove-image-btn" class="admin-btn" style="padding: 5px 10px; font-size: 0.8rem; background-color: #e74c3c; border-color: #e74c3c;">Remove Image</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <h4 style="margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">Sizes & Pricing</h4>
+                <div id="new-prod-sizes-container">
+                    <!-- Dynamic size inputs will go here -->
+                </div>
+                <button type="button" id="add-size-btn" class="admin-btn" style="margin-top: 10px; background-color: #3498db; border-color: #3498db;">Add Size</button>
+                
+                <div class="confirm-actions" style="margin-top: 2rem;">
+                    <button type="button" id="cancel-product-edit" class="confirm-btn cancel">Cancel</button>
+                    <button type="submit" class="confirm-btn confirm">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer></footer>
+    <div id="cart-overlay"></div>
+    <div id="cart-drawer"><div class="cart-header"><h3>Your Cart</h3><button id="close-cart-btn" class="close-btn">&times;</button></div><div class="cart-body" id="cart-items-container"></div><div class="cart-footer"><div class="subtotal-row"><strong>Subtotal</strong><span id="cart-subtotal">$0.00</span></div><a href="checkout.html" class="cta-button checkout-btn">Proceed to Checkout</a></div></div>
+    <!-- Admin Push Script handles jose locally -->
+    <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script><script type="module" src="script.js?v=5"></script>
+    <script type="module" src="admin-push.js"></script>
+</body>
+</html>
+

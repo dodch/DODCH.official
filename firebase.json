@@ -16,8 +16,16 @@
   },
   "hosting": {
     "public": "dist",
+    "cleanUrls": true,
     "ignore": [
       "**/.*"
+    ],
+    "redirects": [
+      {
+        "source": "/public/:path*",
+        "destination": "/:path",
+        "type": 301
+      }
     ],
     "headers": [
       {
