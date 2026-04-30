@@ -34,7 +34,6 @@
 
 html {
     scroll-behavior: smooth;
-    overscroll-behavior-y: none;
 }
 
 body {
@@ -7131,9 +7130,13 @@ button[type="submit"]:hover,
     }
 
     /* --- Unified Search UI Fix --- */
+    #navbar.search-active {
+        z-index: 200005 !important;
+    }
+
     #navbar.search-active .search-container {
         position: relative;
-        z-index: 200001 !important;
+        z-index: 200006 !important;
     }
 
     #navbar.search-active .search-input {
