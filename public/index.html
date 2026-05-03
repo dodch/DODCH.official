@@ -9,24 +9,10 @@
     <link rel="icon" href="IMG_3355.webp?v=3" type="image/webp" media="(prefers-color-scheme: dark)">
     <link rel="canonical" href="https://dodch.com/" />
     
-    <!-- Multi-language targeting (Tunisia: Arabic + French + English) -->
-    <link rel="alternate" hreflang="en" href="https://dodch.com/" />
-    <link rel="alternate" hreflang="fr" href="https://dodch.com/" />
-    <link rel="alternate" hreflang="ar" href="https://dodch.com/" />
-    <link rel="alternate" hreflang="x-default" href="https://dodch.com/" />
+    <!-- Essential Meta Tags -->
+    <meta name="description" content="Elevate your beauty ritual with DODCH. Premium, sulfate-free, and organic cosmetics hand-poured in Tunisia. Experience the golden standard of Mediterranean care.">
     
-    <!-- iOS / Safari integration -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="DODCH">
-    <link rel="apple-touch-icon" href="IMG_3352.webp">
-    
-    <!-- Locale for social platforms -->
-    <meta property="og:locale" content="en_US">
-    <meta property="og:locale:alternate" content="fr_TN">
-    <meta property="og:locale:alternate" content="ar_TN">
-    
-    <!-- Social Media Meta Tags (Quick Links & Previews) -->
+    <!-- Open Graph Tags -->
     <meta property="og:title" content="DODCH | Luxury Mediterranean Hair & Skincare Official Store">
     <meta property="og:description" content="Elevate your beauty ritual with DODCH. Premium, sulfate-free, and organic cosmetics hand-poured in Tunisia. Experience the golden standard of Mediterranean care.">
     <meta property="og:image" content="https://dodch.com/IMG_3352.webp">
@@ -34,63 +20,41 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="DODCH Luxury Cosmetics">
     
+    <!-- Twitter Card Tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="DODCH | Luxury Hair & Skincare">
     <meta name="twitter:description" content="Pure Innovation. Extreme Quality. Luxury Mediterranean cosmetics.">
     <meta name="twitter:image" content="https://dodch.com/IMG_3352.webp">
 
-    <link rel="stylesheet" href="styles.css">
-    <script type="module" src="seo.js" defer></script>
+    <!-- Favicons & Manifest -->
+    <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
+    <link rel="manifest" href="manifest.json">
     
-    <!-- Structured Data: Organization & WebSite -->
+    <!-- Structured Data: Brand Identity -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "DODCH",
       "alternateName": "DODCH Luxury Cosmetics",
-      "legalName": "DODCH Official",
       "url": "https://dodch.com",
       "logo": "https://dodch.com/IMG_3352.webp",
-      "description": "DODCH is a premium Mediterranean hair and skincare brand based in Tunisia, specializing in luxury formulas like Glass Glow Shampoo and Prickly Pear Seed Oil treatments. Not to be confused with automotive brands.",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Tunis",
-        "addressCountry": "TN"
-      },
+      "description": "DODCH is a premium Mediterranean hair and skincare brand based in Tunisia, specializing in luxury formulas like Glass Glow Shampoo and Prickly Pear Seed Oil treatments.",
       "sameAs": [
         "https://www.instagram.com/dodch.official/",
         "https://www.facebook.com/dodch.official",
         "https://www.tiktok.com/@dodch.official"
-      ],
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "telephone": "+216-XX-XXX-XXX",
-        "contactType": "customer service",
-        "areaServed": "TN",
-        "availableLanguage": ["Arabic", "French", "English"]
-      }
+      ]
     }
     </script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "DODCH",
-      "url": "https://dodch.com",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://dodch.com/index.html?search={search_term_string}",
-        "query-input": "required name=search_term_string"
-      }
-    }
-    </script>
+
+    <!-- Structured Data: Shop Grid (ItemList) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "ItemList",
       "name": "DODCH Collection",
-      "description": "Premium Mediterranean Hair & Skincare",
+      "description": "Premium Mediterranean Hair & Skincare Grid",
       "url": "https://dodch.com/",
       "itemListElement": [
         {
@@ -132,33 +96,15 @@
     }
     </script>
 
-    <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
-    <link rel="manifest" href="manifest.json">
-    <!-- Critical Preconnects: Eliminates connection latency for key origins -->
+    <!-- Preconnect & Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://dodch-96b15.firebaseapp.com" crossorigin>
-    <link rel="preconnect" href="https://firebase.googleapis.com" crossorigin>
-    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://www.google.com" crossorigin>
-    <link rel="preconnect" href="https://google.com" crossorigin>
-
-    <!-- Non-render-blocking Google Fonts (font-display=swap prevents invisible text) -->
-    <link rel="preload" as="style"
-        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
-        onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
     <noscript>
-        <link rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap">
     </noscript>
 
     <link rel="stylesheet" href="styles.min.css?v=1">
-
-    <!-- NOTE: reCAPTCHA is loaded automatically by Firebase App Check (ReCaptchaV3Provider). -->
-    <!-- Loading it manually here would cause it to load 5x and waste 1.8MB of bandwidth. -->
-
-    <!-- Dynamic SEO Injection -->
-    <script type="module" src="seo.js" defer></script>
     <meta name="view-transition" content="same-origin">
 </head>
 
