@@ -1,4 +1,4 @@
-﻿// Universal Image WebP Fallback Fix
+// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -777,21 +777,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                let targetUrl = product.storyUrl || `product.html?id=${id}`;
-                let linkAttributes = `href="${targetUrl}"`;
-
-                let badgeHTML = '';
-                if (product.isPermanentlyUnavailable) {
-                    badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">UNAVAILABLE</span>';
-                } else if (product.outOfStock) {
-                    badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">OUT OF STOCK</span>';
-                } else if (hasDiscount && discountPercentage > 0) {
-                    badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1;">-${discountPercentage}%</span>`;
-                }
-                let imgStyle = product.style || '';
-                if (product.outOfStock) {
-                    imgStyle += ' opacity: 0.55; filter: grayscale(60%); transition: all 0.3s ease;';
-                }
+                // We make the whole card a quick-view trigger
+                let linkAttributes = `href="#" class="quick-view-btn" 
+                    data-id="${id}" 
+                    data-title="${product.name}" 
+                    data-price="${displayPrice}" 
+                    data-img="${product.image}" 
+                    data-style="${product.style || ''}" 
+                    data-desc="${product.description}"`;
 
                 return `
                     <div class="product-card reveal" style="--anim-delay: ${staggerDelay};">
@@ -799,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="product-image-wrapper" style="${product.outOfStock ? 'background-color: #f0f0f0;' : ''}">
                                 ${badgeHTML}
                                 <img loading="lazy" src="${product.image}" alt="${product.name}" class="product-card-img" style="${imgStyle}">
-                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice}" data-img="${product.image}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
+                                <div class="quick-view-overlay"><span>Quick View</span></div>
                             </div>
                             <div class="product-card-info" style="${product.outOfStock ? 'opacity: 0.7;' : ''}">
                                 <h3 class="product-card-title">${product.name}</h3>
@@ -3672,99 +3665,131 @@ The DODCH Team`;
         const qvLearnMore = document.getElementById('qv-learn-more');
 
         let currentProduct = {};
+
+        window.openQuickView = (id) => {
+            const product = productCatalog[id];
+            if (!product) return;
+
+            if (product.isPermanentlyUnavailable) {
+                window.showToast('This product is no longer available.', 'error');
+                return;
+            }
+
+            window.triggerHaptic('quickview');
+            
+            const title = product.name;
+            const price = product.price;
+            const img = product.image;
+            const desc = product.description;
+            const style = product.style;
+
+            currentProduct = { id, title, price, img, desc };
+            document.body.style.overflow = 'hidden';
+
+            qvImage.src = img;
+            qvImage.style = style || '';
+            qvTitle.textContent = title;
+            qvDesc.textContent = desc;
+
+            if (qvLearnMore) {
+                qvLearnMore.href = product.storyUrl || `product.html?id=${id}`;
+            }
+
+            const sizeOptionsContainer = modal.querySelector('.size-options');
+            const sizeSelector = modal.querySelector('.size-selector');
+            sizeOptionsContainer.innerHTML = ''; // Clear previous
+
+            if (product.sizes && product.sizes.length > 0) {
+                sizeSelector.style.display = 'block';
+                const prices = product.sizes.map(s => parseFloat(s.price));
+                const minPrice = Math.min(...prices);
+                const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
+
+                const baseSize = product.sizes[minIndex];
+                if (baseSize.originalPrice) {
+                    qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${baseSize.originalPrice} TND</span> ${baseSize.price} TND`;
+                } else {
+                    qvPrice.textContent = `${baseSize.price} TND`;
+                }
+
+                product.sizes.forEach((sizeObj, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'size-btn';
+                    if (index === minIndex) {
+                        btn.classList.add('active');
+                        if (!product.outOfStock) {
+                            if (sizeObj.outOfStock) {
+                                qvAddToCart.disabled = true;
+                                qvAddToCart.querySelector('span').textContent = "Out of Stock";
+                                qvAddToCart.style.backgroundColor = "#ccc";
+                            } else {
+                                qvAddToCart.disabled = false;
+                                qvAddToCart.querySelector('span').textContent = "Add to Cart";
+                                qvAddToCart.style.backgroundColor = "";
+                            }
+                        }
+                    }
+                    btn.dataset.size = sizeObj.label;
+                    btn.dataset.price = sizeObj.price;
+                    btn.textContent = sizeObj.label;
+
+                    btn.addEventListener('click', () => {
+                        window.triggerHaptic('light');
+                        sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        if (sizeObj.originalPrice) {
+                            qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
+                        } else {
+                            qvPrice.textContent = `${sizeObj.price} TND`;
+                        }
+
+                        if (!product.outOfStock) {
+                            if (sizeObj.outOfStock) {
+                                qvAddToCart.disabled = true;
+                                qvAddToCart.querySelector('span').textContent = "Out of Stock";
+                                qvAddToCart.style.backgroundColor = "#ccc";
+                            } else {
+                                qvAddToCart.disabled = false;
+                                qvAddToCart.querySelector('span').textContent = "Add to Cart";
+                                qvAddToCart.style.backgroundColor = "";
+                            }
+                        }
+                    });
+
+                    if (sizeObj.outOfStock && !product.outOfStock) {
+                        btn.style.textDecoration = "line-through";
+                        btn.style.opacity = "0.6";
+                    }
+
+                    sizeOptionsContainer.appendChild(btn);
+                });
+            } else {
+                sizeSelector.style.display = 'none';
+                qvPrice.textContent = `${price} TND`;
+                if (product.outOfStock) {
+                    qvAddToCart.disabled = true;
+                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
+                    qvAddToCart.style.backgroundColor = "#ccc";
+                } else {
+                    qvAddToCart.disabled = false;
+                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
+                    qvAddToCart.style.backgroundColor = "";
+                }
+            }
+
+            modal.classList.add('active');
+            if (qvOverlay) qvOverlay.classList.add('active');
+        };
+
         document.body.addEventListener('click', (e) => {
-            if (e.target.classList.contains('quick-view-btn')) {
-                window.triggerHaptic('quickview');
-                const btn = e.target;
+            const quickViewBtn = e.target.closest('.quick-view-btn');
+            if (quickViewBtn) {
                 e.preventDefault();
                 e.stopPropagation();
-
-                const id = btn.dataset.id;
-                const product = productCatalog[id];
-
-                if (product && product.isPermanentlyUnavailable) {
-                    window.showToast('This product is no longer available.', 'error');
-                    return;
-                }
-
-                const title = product ? product.name : btn.dataset.title;
-                const price = product ? product.price : btn.dataset.price;
-                const img = product ? product.image : btn.dataset.img;
-                const desc = product ? product.description : btn.dataset.desc;
-                const style = product ? product.style : btn.dataset.style;
-
-                currentProduct = { id, title, price, img, desc };
-                document.body.style.overflow = 'hidden';
-
-                qvImage.src = img;
-                qvImage.style = style || '';
-                qvTitle.textContent = title;
-                qvDesc.textContent = desc;
-
-                if (qvLearnMore) {
-                    qvLearnMore.href = (product && product.storyUrl) ? product.storyUrl : `product.html?id=${id}`;
-                }
-                const sizeOptionsContainer = modal.querySelector('.size-options');
-                const sizeSelector = modal.querySelector('.size-selector');
-                sizeOptionsContainer.innerHTML = ''; // Clear previous
-
-                if (product && product.sizes && product.sizes.length > 0) {
-                    sizeSelector.style.display = 'block';
-                    const prices = product.sizes.map(s => parseFloat(s.price));
-                    const minPrice = Math.min(...prices);
-                    const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
-
-                    product.sizes.forEach((sizeObj, index) => {
-                        const btn = document.createElement('button');
-                        btn.className = 'size-btn';
-                        if (index === minIndex) {
-                            btn.classList.add('active'); // Default to lowest
-                            if (!product.outOfStock) {
-                                if (sizeObj.outOfStock) {
-                                    qvAddToCart.disabled = true;
-                                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
-                                    qvAddToCart.style.backgroundColor = "#ccc";
-                                } else {
-                                    qvAddToCart.disabled = false;
-                                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
-                                    qvAddToCart.style.backgroundColor = "";
-                                }
-                            }
-                        }
-                        btn.dataset.size = sizeObj.label;
-                        btn.dataset.price = sizeObj.price;
-                        btn.textContent = sizeObj.label;
-
-                        btn.addEventListener('click', () => {
-                            window.triggerHaptic('light');
-                            sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
-                            if (sizeObj.originalPrice) {
-                                qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
-                            } else {
-                                qvPrice.textContent = `${sizeObj.price} TND`;
-                            }
-
-                            if (!product.outOfStock) {
-                                if (sizeObj.outOfStock) {
-                                    qvAddToCart.disabled = true;
-                                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
-                                    qvAddToCart.style.backgroundColor = "#ccc";
-                                } else {
-                                    qvAddToCart.disabled = false;
-                                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
-                                    qvAddToCart.style.backgroundColor = "";
-                                }
-                            }
-                        });
-
-                        if (sizeObj.outOfStock && !product.outOfStock) {
-                            btn.style.textDecoration = "line-through";
-                            btn.style.opacity = "0.6";
-                        }
-
-                        sizeOptionsContainer.appendChild(btn);
-                    });
+                const id = quickViewBtn.dataset.id;
+                window.openQuickView(id);
+            }
+        });
                     const initialSize = product.sizes[minIndex];
                     if (initialSize.originalPrice) {
                         qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND`;
@@ -3908,19 +3933,17 @@ The DODCH Team`;
 
             productsHtml += `
                 <div class="product-card reveal" ${product.outOfStock ? 'style="opacity: 0.8;"' : ''}>
-                    <a href="product.html?id=${id}">
+                    <a href="#" class="quick-view-btn" 
+                        data-id="${id}" 
+                        data-title="${product.name}" 
+                        data-price="${displayPrice}" 
+                        data-img="${product.image || 'https://via.placeholder.com/300'}" 
+                        data-style="${product.style || ''}"
+                        data-desc="${product.description || ''}">
                         <div class="product-image-wrapper">
                             ${badgeHTML}
                             <img loading="lazy" src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
-                            <button class="quick-view-btn" 
-                                data-id="${id}" 
-                                data-title="${product.name}" 
-                                data-price="${displayPrice}" 
-                                data-img="${product.image || 'https://via.placeholder.com/300'}" 
-                                data-style="${product.style || ''}"
-                                data-desc="${product.description || ''}">
-                                Quick View
-                            </button>
+                            <div class="quick-view-overlay"><span>Quick View</span></div>
                         </div>
                         <div class="product-card-info">
                             <h3 class="product-card-title">${product.name}</h3>
@@ -5356,10 +5379,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 div.querySelector(".search-result-title").innerHTML = item.name.replace(regex, "<strong>$1</strong>");
             }
 
+            div.classList.add("quick-view-btn");
+            div.dataset.id = res.id;
+            div.dataset.title = item.name;
+            div.dataset.price = minPrice.toFixed(2);
+            div.dataset.img = imgUrl;
+            div.dataset.desc = item.description || "";
+
             div.addEventListener("mousedown", (e) => {
                 e.preventDefault();
                 window.dodchSearchEngine.addToHistory(query);
-                window.location.href = item.storyUrl || `product.html?id=${res.id}`;
+                if (window.openQuickView) {
+                    window.openQuickView(res.id);
+                }
             });
 
             div.addEventListener("mouseenter", () => {
