@@ -40,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build Next.js
+      - name: Build site
         run: npm run build
 
       - name: Setup Pages
@@ -48,29 +48,20 @@ jobs:
 
       - name: Prepare Deployment Directory
         run: |
-          mkdir -p deploy
-          # 1. Deploy Next.js output first
-          if [ -d "out" ]; then cp -r out/* deploy/; fi
-          
-          # 2. Deploy root-level static files (catch all images, icons, and videos)
-          # We use a robust find command to copy all top-level files except hidden ones or package files
-          find . -maxdepth 1 -type f ! -name ".*" ! -name "package*" ! -name "tsconfig.json" ! -name "next.config.mjs" ! -name "postcss.config.js" -exec cp {} deploy/ \;
-          
-          # 3. Deploy important folders
-          if [ -d "images" ]; then cp -r images deploy/; fi
-          if [ -d "assets" ]; then cp -r assets deploy/; fi
-          if [ -d "HairTypes" ]; then cp -r HairTypes deploy/; fi
-          if [ -d "components" ]; then cp -r components deploy/; fi
-          
-          # 4. Ensure .nojekyll exists
-          touch deploy/.nojekyll
+          # dist/ is built from public/ by build.js (minified JS/CSS + all assets)
+          # Copy any root-level assets not present in public/ into dist/
+          if [ -d "HairTypes" ]; then cp -r HairTypes dist/; fi
+          if [ -f "Clinical_Observation.mp3" ] && [ ! -f "dist/Clinical_Observation.mp3" ]; then
+            cp Clinical_Observation.mp3 dist/
+          fi
+
           # Ensure .nojekyll exists so _next folder isn't ignored by GitHub Pages
-          touch deploy/.nojekyll
+          touch dist/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './deploy'
+          path: './dist'
 
       - name: Deploy to GitHub Pages
         id: deployment
