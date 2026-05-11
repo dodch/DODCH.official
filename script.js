@@ -731,7 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
     productCatalog = { ...defaultProductCatalog };
     let shopTransitionTimeout;
 
-    const initShopPage = (animate = false, loading = false) => {
+    function initShopPage(animate = false, loading = false) {
         if (document.querySelector('.product-detail-container')) return;
 
         const shopLayout = document.querySelector('.shop-layout');
@@ -931,10 +931,16 @@ document.addEventListener('DOMContentLoaded', () => {
             renderContent();
         }
     };
-    const loadProductCatalog = async () => {
+    async function loadProductCatalog() {
         try {
             console.log("📡 Syncing real-time prices & stock from Firestore...");
-            const querySnapshot = await getDocs(collection(db, "products"));
+            // Add a 5 second timeout to prevent infinite hanging if App Check blocks localhost
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 5000));
+            const querySnapshot = await Promise.race([
+                getDocs(collection(db, "products")),
+                timeoutPromise
+            ]);
+            
             if (!querySnapshot.empty) {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
@@ -976,9 +982,35 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const newPriceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${updatedDisplayPrice} TND</span>`;
                                 priceTargets.forEach(target => {
                                     target.innerHTML = newPriceHTML;
-                                    // Also update Quick View buttons if they exist
-                                    const qvBtn = target.closest('.product-card')?.querySelector('.quick-view-btn');
-                                    if (qvBtn) qvBtn.dataset.price = updatedDisplayPrice;
+                                    
+                                    const card = target.closest('.product-card');
+                                    if (card) {
+                                        // Update/Add Discount Badge
+                                        const imgWrapper = card.querySelector('.product-image-wrapper');
+                                        if (imgWrapper) {
+                                            // Clear any existing badges first
+                                            const existingBadges = imgWrapper.querySelectorAll('.product-badge');
+                                            existingBadges.forEach(b => b.remove());
+
+                                            if (productCatalog[productId].isPermanentlyUnavailable) {
+                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">UNAVAILABLE</span>');
+                                            } else if (productCatalog[productId].outOfStock) {
+                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">OUT OF STOCK</span>');
+                                            } else if (hasDiscount) {
+                                                const prices = data.sizes.map(s => parseFloat(s.price));
+                                                const baseSize = data.sizes.find(s => parseFloat(s.price) === Math.min(...prices)) || data.sizes[0];
+                                                const discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
+                                                if (discountPercentage > 0) {
+                                                    const badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1;">-${discountPercentage}%</span>`;
+                                                    imgWrapper.insertAdjacentHTML('afterbegin', badgeHTML);
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Update Quick View button data
+                                        const qvBtn = card.querySelector('.quick-view-btn');
+                                        if (qvBtn) qvBtn.dataset.price = updatedDisplayPrice;
+                                    }
                                 });
                             }
                         }
@@ -1021,16 +1053,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 // RE-INITIALIZE DYNAMIC ELEMENTS (No full refresh, just update prices/stock)
                 console.log("✅ Real-time data synced. Refreshing UI.");
                 if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
-                
-                // Re-run minimal init to refresh prices/stock in shop grid or product page
-                if (document.querySelector('.shop-grid')) renderContent();
-                if (document.querySelector('.product-info')) initProductPage();
             }
             if (typeof window.refreshAdminProducts === 'function') {
                 window.refreshAdminProducts();
             }
         } catch (error) {
             console.error("Error syncing with Firestore:", error);
+        } finally {
+            // FINAL SWEEP: If any shimmers remain (e.g. Firebase returned an empty cache due to offline/AppCheck block),
+            // replace them so the user isn't stuck looking at loading animations forever.
+            document.querySelectorAll('.price-shimmer').forEach(el => {
+                const parent = el.closest('.product-card-price') || el.closest('#product-price');
+                if (parent) parent.innerHTML = '<span style="color: var(--text-charcoal); font-size: 0.85em; opacity: 0.6;">Price Unavailable</span>';
+            });
         }
     };
 
@@ -1576,7 +1611,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- DYNAMIC PRODUCT PAGE LOGIC ---
-    const initProductPage = () => {
+    function initProductPage() {
         const productDetailContainer = document.querySelector('.product-detail-container');
         if (!productDetailContainer) return; // Not on product page
         const urlParams = new URLSearchParams(window.location.search);
@@ -1730,7 +1765,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initShopPage();
     renderSidebarMenu();
     if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
-    loadRelatedProducts();
 
     loadProductCatalog();
     const sidebarUserName = document.getElementById('sidebar-user-name');
@@ -2412,7 +2446,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     initBreadcrumbs();
-    const initSmartFooter = () => {
+    function initSmartFooter() {
         const footer = document.querySelector('footer');
         if (footer) {
             if (!document.getElementById('contact')) {
@@ -2516,7 +2550,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSmartFooter();
 
     // --- Sidebar Menu Rendering ---
-    const renderSidebarMenu = (loading = false) => {
+    function renderSidebarMenu(loading = false) {
         const sidebarMenu = document.querySelector('.sidebar-menu');
         if (!sidebarMenu) return;
 
