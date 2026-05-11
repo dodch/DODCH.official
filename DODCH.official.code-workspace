@@ -1,11 +1,18 @@
 {
 	"folders": [
 		{
-			"path": "."
+			"name": "DODCH.official",
+			"path": ".."
 		},
 		{
-			"path": "../../Downloads/ffffff-ezgif-125a95ab8122ba31-webp-jpg"
+			"name": "favicon_io",
+			"path": "../../../Downloads/favicon_io"
+		},
+		{
+			"path": "../../../Downloads/ffffff-ezgif-125a95ab8122ba31-webp-jpg"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "DODCH.official"
+	}
 }

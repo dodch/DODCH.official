@@ -138,4 +138,32 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(updateArrows, 100);
         window.addEventListener('resize', updateArrows);
     }
+    // 6. Subtle Parallax Effect
+    const parallaxElements = document.querySelectorAll('.parallax-el');
+    if (parallaxElements.length > 0) {
+        let isTicking = false;
+        window.addEventListener('scroll', () => {
+            if (!isTicking) {
+                window.requestAnimationFrame(() => {
+                    parallaxElements.forEach(el => {
+                        const speed = parseFloat(el.getAttribute('data-speed')) || 0.05;
+                        const rect = el.getBoundingClientRect();
+                        const windowHeight = window.innerHeight;
+                        
+                        // Only animate if in viewport
+                        if (rect.top < windowHeight && rect.bottom > 0) {
+                            const elementCenter = rect.top + rect.height / 2;
+                            const viewportCenter = windowHeight / 2;
+                            const distance = viewportCenter - elementCenter;
+                            
+                            const translateY = distance * speed;
+                            el.style.transform = `translateY(${translateY}px)`;
+                        }
+                    });
+                    isTicking = false;
+                });
+                isTicking = true;
+            }
+        }, { passive: true });
+    }
 });

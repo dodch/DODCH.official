@@ -195,11 +195,22 @@ exports.createOrder = functions.region("europe-west1").https.onCall(async (data,
     const productDoc = await db.collection('products').doc(item.productId).get();
     if (!productDoc.exists) throw new functions.https.HttpsError('not-found', 'Product not found.');
     const productData = productDoc.data();
+    
+    // --- SECURITY: VERIFY STOCK ---
+    if (productData.outOfStock === true) {
+      throw new functions.https.HttpsError('failed-precondition', `The product "${productData.name}" is currently out of stock.`);
+    }
+
     let price = parseFloat(productData.price);
 
     if (productData.sizes && Array.isArray(productData.sizes) && productData.sizes.length > 0) {
       const sizeObj = productData.sizes.find(s => s.label === item.size);
-      if (sizeObj) price = parseFloat(sizeObj.price);
+      if (sizeObj) {
+        if (sizeObj.outOfStock === true) {
+          throw new functions.https.HttpsError('failed-precondition', `The ${item.size} size of "${productData.name}" is currently out of stock.`);
+        }
+        price = parseFloat(sizeObj.price);
+      }
     }
 
     calculatedTotal += price * item.quantity;

@@ -289,7 +289,7 @@
             <div class="hero-overlay"></div>
             <div class="hero-content reveal">
                 <span class="hero-pre-title">TREATMENT MASTERPIECE</span>
-                <h1>Silk-smooth, strong, and hydrated hair — anytime, for every type.</h1>
+                <h1 class="parallax-el" data-speed="0.03">Silk-smooth, strong, and hydrated hair — anytime, for every type.</h1>
                 <p class="sub-headline">Discover the dual-use power of Pro-Vitamin B5 and Hydrolyzed Silk.</p>
                 <div class="hero-cta-group">
                     <a href="#hair-type-selector" class="cta-button">Discover Your Hair Type Benefits</a>
@@ -322,11 +322,112 @@
             </div>
         </section>
 
+        <!-- Product Details Accordion -->
+        <section class="section-padding bg-white" style="padding-top: 0;">
+            <div class="product-details-accordion reveal">
+                <!-- INCI -->
+                <div class="accordion-item">
+                    <button class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                        <span>INCI (Full Ingredients)</span>
+                        <svg class="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <svg class="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-inner">
+                            Aqua (Water), Cetearyl Alcohol, Behentrimonium Methosulfate (BTMS), Hydrolyzed Silk Protein, Panthenol (Pro-Vitamin B5), Glycerin, Argania Spinosa (Argan) Kernel Oil, Butyrospermum Parkii (Shea) Butter, Cetrimonium Chloride, Phenoxyethanol, Ethylhexylglycerin, Fragrance/Parfum.
+                        </div>
+                    </div>
+                </div>
+                <!-- Performance -->
+                <div class="accordion-item">
+                    <button class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                        <span>Product Performance</span>
+                        <svg class="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <svg class="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-inner performance-bars">
+                            <div class="perf-item">
+                                <div class="perf-header">
+                                    <span class="perf-label">Gentleness</span>
+                                    <span class="perf-value">Ultra Mild</span>
+                                </div>
+                                <div class="perf-levels">
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                </div>
+                            </div>
+                            <div class="perf-item">
+                                <div class="perf-header">
+                                    <span class="perf-label">Hydration</span>
+                                    <span class="perf-value">Intense</span>
+                                </div>
+                                <div class="perf-levels">
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                </div>
+                            </div>
+                            <div class="perf-item">
+                                <div class="perf-header">
+                                    <span class="perf-label">Damage Repair</span>
+                                    <span class="perf-value">High</span>
+                                </div>
+                                <div class="perf-levels">
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step"></div>
+                                </div>
+                            </div>
+                            <div class="perf-item">
+                                <div class="perf-header">
+                                    <span class="perf-label">Shine / Gloss</span>
+                                    <span class="perf-value">Mirror Shine</span>
+                                </div>
+                                <div class="perf-levels">
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Ratings -->
+                <div class="accordion-item">
+                    <button class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                        <div class="ratings-dynamic-header" style="display: flex; align-items: center; gap: 1rem;">
+                            <span>Ratings & Reviews</span>
+                            <div class="stars-display" style="color: var(--accent-gold); font-size: 1.2rem; letter-spacing: 2px;"></div>
+                            <span class="count-display" style="color: #666; font-size: 0.9rem;">Loading...</span>
+                        </div>
+                        <svg class="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <svg class="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-inner">
+                            <div style="text-align: center; margin-bottom: 2rem;">
+                                <button id="write-review-toggle-btn" class="cta-button ineligible">Write a Review</button>
+                            </div>
+                            <div id="product-reviews-container">
+                                <!-- Reviews will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Product Overview Section -->
         <section id="product-overview" class="section-padding bg-white">
             <div class="container text-center">
                 <div class="overview-grid reveal">
-                    <div class="overview-image img-frame reveal">
+                    <div class="overview-image img-frame reveal parallax-el" data-speed="0.08">
                         <img loading="lazy" src="IMG_3256.webp" alt="DODCH Pro-V Silk Therapy Hair Mask - Luxury Deep Conditioning Treatment Tunisia" class="img-frame-img">
                     </div>
                     <div class="overview-text">
@@ -338,7 +439,7 @@
                         </p>
                         <div class="benefit-icons">
                             <div class="benefit-item">
-                                <div class="icon-circle">
+                                <div class="icon-box">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
                                     </svg>
@@ -346,35 +447,136 @@
                                 <span>Perfect Slip</span>
                             </div>
                             <div class="benefit-item">
-                                <div class="icon-circle">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                    </svg>
+                                <div class="icon-box">
+                                    <img src="InternalHairStrength.png" alt="Internal Hair Strength Icon" style="transform: scale(2.0) translateX(-5%);">
                                 </div>
                                 <span>Internal Strength</span>
                             </div>
                             <div class="benefit-item">
-                                <div class="icon-circle">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
-                                    </svg>
+                                <div class="icon-box">
+                                    <img src="DeepHydration.png" alt="Deep Hydration Icon" style="transform: scale(1.6);">
                                 </div>
                                 <span>Deep Hydration</span>
                             </div>
                             <div class="benefit-item">
-                                <div class="icon-circle">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                        <path
-                                            d="M20.42 4.58a5 5 0 0 1 0 7.07l-7.07 7.07a5 5 0 0 1-7.07 0 5 5 0 0 1 0-7.07l7.07-7.07a5 5 0 0 1 7.07 0z">
-                                        </path>
-                                        <line x1="12" y1="12" x2="15" y2="15"></line>
-                                    </svg>
+                                <div class="icon-box">
+                                    <div style="font-family: var(--font-serif); font-size: 4rem; font-weight: 700; color: #333; line-height: 1; display: flex; align-items: center; justify-content: center; letter-spacing: -2px;">
+                                        2<span style="font-size: 1.5rem; color: var(--accent-gold); margin: 0 3px; font-weight: 400; text-transform: lowercase;">in</span>1
+                                    </div>
                                 </div>
                                 <span>Dual-Use</span>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- The Phenomenon Section -->
+        <section id="phenomenon" class="section-padding bg-cream">
+            <div class="container">
+                <div class="overview-grid reveal" style="align-items: center; gap: 6rem;">
+                    <div class="overview-text" style="text-align: left;">
+                        <h2 class="section-title" style="font-size: 2.2rem; line-height: 1.2;">The DODCH Phenomenon: Dramatic Reflection & The Ethereal Liquid Glass Revolution</h2>
+                        <p class="description" style="margin-bottom: 3rem; line-height: 1.9; font-size: 1.1rem; color: #444;">
+                            Prepare for a total visual transformation. The <strong>DODCH</strong> treatment isn't just a mask; it is a high-performance intervention designed to drape your hair in an <strong>iridescent, liquid-glass veil</strong>. We have engineered the ultimate sensory contradiction: a <strong>blinding, dramatic gloss</strong> that feels as light and airy as a <strong>Weightless Feather Cloud</strong>.
+                        </p>
+                        
+                        <h3 style="font-family: var(--font-serif); font-size: 1.8rem; margin-bottom: 2rem; color: var(--accent-gold);">The Architecture of Infinite Shine</h3>
+                        <ul style="list-style: none; padding-left: 0; text-align: left; margin-bottom: 0; line-height: 1.8; color: #555;">
+                            <li style="margin-bottom: 2rem; padding-left: 1.5rem; position: relative; border-left: 2px solid rgba(212, 175, 55, 0.4);">
+                                <strong style="color: #222; font-size: 1.05rem;">Dramatic Light Refraction:</strong> Our formula utilizes a sophisticated molecular smoothing system that resurfaces every individual strand. By filling in microscopic flaws, it creates a perfectly uniform plane that acts like a mirror, reflecting light with <strong>blinding, crystalline intensity</strong>.
+                            </li>
+                            <li style="margin-bottom: 2rem; padding-left: 1.5rem; position: relative; border-left: 2px solid rgba(212, 175, 55, 0.4);">
+                                <strong style="color: #222; font-size: 1.05rem;">The Liquid Glass Seal:</strong> We employ a precise pH-locking mechanism that induces immediate cuticle contraction. This creates a high-definition, "liquid" finish that mimics the fluid movement and <strong>hyper-glossy sheen</strong> of molten glass.
+                            </li>
+                            <li style="margin-bottom: 0; padding-left: 1.5rem; position: relative; border-left: 2px solid rgba(212, 175, 55, 0.4);">
+                                <strong style="color: #222; font-size: 1.05rem;">Anti-Dulling Mineral Defense:</strong> Dullness is the enemy of drama. Our specialized clarifying agents strip away the invisible environmental buildup and mineral deposits that sabotage your hair’s natural brilliance, revealing an <strong>unapologetic, raw luminosity</strong>.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="overview-image img-frame reveal parallax-el" data-speed="-0.06" style="order: -1;">
+                        <img loading="lazy" src="1777590156c4d2.png" alt="The DODCH Phenomenon - Liquid Glass Hair" class="img-frame-img" style="border-radius: 12px; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feather Cloud Section -->
+        <section id="feather-cloud" class="section-padding" style="position: relative; overflow: hidden; background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%); color: #fff;">
+            <!-- Subtle feather SVG background decoration -->
+            <svg class="parallax-el" data-speed="0.1" style="position: absolute; top: -10%; right: -5%; width: 50%; opacity: 0.03; pointer-events: none; transform: rotate(15deg);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
+                <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+                <line x1="16" y1="8" x2="2" y2="22"></line>
+                <line x1="17.5" y1="15" x2="9" y2="15"></line>
+            </svg>
+            <div class="container text-center reveal" style="position: relative; z-index: 2;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold, #C5A059)" stroke-width="1.5" style="width: 48px; height: 48px; margin-bottom: 1rem;">
+                    <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+                    <line x1="16" y1="8" x2="2" y2="22"></line>
+                    <line x1="17.5" y1="15" x2="9" y2="15"></line>
+                </svg>
+                <h2 class="section-title parallax-el" data-speed="0.04" style="color: #fff;">The Feather Cloud: Weightless Softness & Defiant Volume</h2>
+                
+                <div class="grid-3 grid-reveal reveal" style="margin-top: 3rem; text-align: left; gap: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
+                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">Ethereal Suppleness</h4>
+                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">Experience the "Feather Cloud" effect—a texture so plush and light it feels weightless to the touch. While the surface reflects a <strong>shattering gloss</strong>, the interior remains soft, bouncy, and incredibly resilient.</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
+                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">Gravity-Defying Fluidity</h4>
+                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">Unlike heavy, waxy treatments that weigh hair down, <strong>DODCH</strong> provides a high-performance, frictionless glide. Your hair maintains <strong>dramatic movement</strong> and airy volume, flowing like silk with every turn.</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
+                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">The Invisible Shield</h4>
+                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">A microscopically thin protective veil seals in hydration while repelling environmental stressors. This ensures your <strong>dramatic hair shine</strong> remains crisp, aligned, and frizz-free from morning until night.</p>
+                    </div>
+                </div>
+
+                <div class="parallax-el" data-speed="0.02" style="margin-top: 3rem; background: linear-gradient(135deg, rgba(197, 160, 89, 0.1) 0%, rgba(197, 160, 89, 0.02) 100%); border: 1px solid rgba(197, 160, 89, 0.3); padding: 2.5rem; border-radius: 12px; text-align: left; max-width: 900px; margin-left: auto; margin-right: auto; position: relative;">
+                    <div style="position: absolute; top: -15px; left: 30px; background: #1A1A1A; padding: 0 15px; color: var(--accent-gold, #C5A059); font-family: var(--font-serif); font-weight: 600; font-style: italic; font-size: 1.1rem; border: 1px solid rgba(197, 160, 89, 0.3); border-radius: 20px;">The Leave-In Experience</div>
+                    <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin-bottom: 1rem; color: #fff;">Zero-Grease. Instant Melt. Professional Results.</h3>
+                    <p style="font-size: 1rem; line-height: 1.7; color: #e0e0e0; margin-bottom: 0;">
+                        When applied as a leave-in therapy, the DODCH formula undergoes a rapid micro-dispersion process. It <strong>melts instantly</strong> into the hair fiber and dries as if it were never there, leaving absolutely <strong>no greasy residue or heavy coating</strong>. You receive the full transformative power and professional, salon-quality repair of an intensive mask, wrapped in a weightless finish that simply makes your hair feel incredibly healthy, soft, and alive.
+                    </p>
+                </div>
+
+                <div style="margin-top: 4rem;">
+                    <h3 style="font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 2rem; color: #fff;">The DODCH Transformation Profile</h3>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; max-width: 800px; margin: 0 auto; border-collapse: collapse; text-align: left; background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; min-width: 500px;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); font-family: var(--font-serif); color: var(--accent-gold, #C5A059); font-size: 1.1rem; width: 40%; font-weight: 600;">The Aesthetic</th>
+                                    <th style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); font-family: var(--font-serif); color: var(--accent-gold, #C5A059); font-size: 1.1rem; font-weight: 600;">The Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="transition: background 0.3s ease;">
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0;"><strong>Visual Impact</strong></td>
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;"><strong>Dramatic, High-Definition Gloss</strong></td>
+                                </tr>
+                                <tr style="transition: background 0.3s ease; background: rgba(0,0,0,0.2);">
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0;"><strong>Texture Identity</strong></td>
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;"><strong>Feather Cloud Softness</strong></td>
+                                </tr>
+                                <tr style="transition: background 0.3s ease;">
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0;"><strong>Movement</strong></td>
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;"><strong>Fluid, Weightless, and Infinite</strong></td>
+                                </tr>
+                                <tr style="transition: background 0.3s ease; background: rgba(0,0,0,0.2);">
+                                    <td style="padding: 1.5rem; color: #e0e0e0;"><strong>Surface Finish</strong></td>
+                                    <td style="padding: 1.5rem; color: #fff;"><strong>Crystalline Liquid Glass Seal</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <p style="margin-top: 3rem; font-size: 1.2rem; max-width: 700px; margin-left: auto; margin-right: auto; font-family: var(--font-serif); font-style: italic; color: var(--accent-gold, #C5A059);">
+                    <strong>One application. Absolute brilliance.</strong><br>
+                    Lock in the <strong>DODCH</strong> "Liquid Glass" finish and experience hair that doesn't just catch the light—it commands it.
+                </p>
             </div>
         </section>
 
@@ -512,27 +714,24 @@
             <div class="container">
                 <h2 class="section-title text-center reveal">The Architecture of Silk</h2>
                 <div class="ingredient-grid reveal">
-                    <div class="ingredient-card">
+                    <div class="ingredient-card parallax-el" data-speed="0.04">
                         <div class="ing-header">
-                            <span class="ing-percentage">6%</span>
                             <h3>BTMS</h3>
                         </div>
                         <p>A plant-derived, eco-friendly conditioning agent that provides unparalleled detangling and a
                             silky sensory feel without buildup.</p>
                         <span class="ing-label">Conditioning</span>
                     </div>
-                    <div class="ingredient-card">
+                    <div class="ingredient-card parallax-el" data-speed="-0.02">
                         <div class="ing-header">
-                            <span class="ing-percentage">2%</span>
                             <h3>Hydrolyzed Silk</h3>
                         </div>
                         <p>Natural silk proteins that form a breathable shield on the hair cuticle, reflecting light for
                             mirror-like shine and smooth texture.</p>
                         <span class="ing-label">Strengthening</span>
                     </div>
-                    <div class="ingredient-card">
+                    <div class="ingredient-card parallax-el" data-speed="0.06">
                         <div class="ing-header">
-                            <span class="ing-percentage">2%</span>
                             <h3>Pro-Vitamin B5</h3>
                         </div>
                         <p>Also known as Panthenol, it penetrates deep into the hair shaft to bind moisture, increasing
@@ -541,9 +740,7 @@
                     </div>
                 </div>
                 <div class="customization-note reveal">
-                    <p><strong>Founder's Note:</strong> This formula is customizable. Feel free to mix with a few drops
-                        of our Pure Prickly Pear Seed Oil for extra sealing on coily textures, or scalp actives for
-                        targeted care.</p>
+                    <p><strong>Founder's Note:</strong> For the most dramatic Liquid Glass reflection, apply a pea-sized amount to towel-dried hair rather than soaking wet strands. This ensures the protective shield bonds directly to the fiber without being diluted by excess water, locking in that signature Feather Cloud bounce.</p>
                 </div>
             </div>
         </section>
@@ -554,7 +751,7 @@
                 <h2 class="section-title text-center reveal">The Ritual of Choice</h2>
                 <div class="ritual-dual-grid reveal">
                     <div class="ritual-option">
-                        <div class="ritual-image">
+                        <div class="ritual-image parallax-el" data-speed="0.05">
                             <!-- Visual for rinse-off -->
                             <img loading="lazy" src="IMG_3257.webp" alt="Applying DODCH Silk Hair Mask as a rinse-off intensive treatment">
                         </div>
@@ -570,7 +767,7 @@
                         </div>
                     </div>
                     <div class="ritual-option">
-                        <div class="ritual-image img-frame">
+                        <div class="ritual-image img-frame parallax-el" data-speed="-0.05">
                             <!-- Visual for leave-in -->
                             <img loading="lazy" src="IMG_3256.webp" alt="Applying DODCH Silk Hair Mask as a leave-in protection serum" class="img-frame-img">
                         </div>
@@ -604,70 +801,43 @@
                     <span>Biodegradable</span>
                     <span>Safe for Color-Treated Hair</span>
                 </div>
-            </div>
-        </section>
-        <!-- Reviews Section -->
-        <section id="reviews" class="section-padding bg-cream">
-            <div class="container" style="max-width: 800px; margin: 0 auto;">
-                <h2 class="section-title text-center reveal">Real Experiences</h2>
+                  <!-- Review Modal Overlay -->
+        <div id="review-modal" class="review-modal-overlay">
+            <div class="review-modal-content">
+                <button class="close-modal" id="close-review-modal">&times;</button>
+                <h3 style="margin-bottom: 1.5rem; color: #000; font-family: var(--font-serif);">Share Your Experience</h3>
 
-                <!-- NEW: Write Review Button Container -->
-                <div style="text-align: center; margin-bottom: 3rem;" class="reveal">
-                    <button id="write-review-toggle-btn" class="cta-button ineligible">Write a Review</button>
-                </div>
-
-                <!-- Review Modal Overlay -->
-                <div id="review-modal" class="review-modal-overlay">
-                    <div class="review-modal-content">
-                        <button class="close-modal" id="close-review-modal">&times;</button>
-                        <h3 style="margin-bottom: 1.5rem; color: #000; font-family: var(--font-serif);">Share Your
-                            Experience</h3>
-
-                        <!-- The Form -->
-                        <form id="product-review-form">
-                            <div class="form-group" style="margin-bottom: 1.2rem;">
-                                <label for="review-rating"
-                                    style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Rating</label>
-                                <select id="review-rating" required
-                                    style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;">
-                                    <option value="" disabled selected>Select a rating</option>
-                                    <option value="5">★★★★★ - Excellent</option>
-                                    <option value="4">★★★★☆ - Very Good</option>
-                                    <option value="3">★★★☆☆ - Average</option>
-                                    <option value="2">★★☆☆☆ - Below Average</option>
-                                    <option value="1">★☆☆☆☆ - Poor</option>
-                                </select>
-                            </div>
-                            <div class="form-group" style="margin-bottom: 1.5rem;">
-                                <label for="review-text"
-                                    style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Your Review</label>
-                                <textarea id="review-text" rows="5" required
-                                    style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;"
-                                    placeholder="Tell us what you think about this product..."></textarea>
-                            </div>
-                            <div class="form-group" style="margin-bottom: 1.8rem;">
-                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Photos
-                                    (Optional, max 2)</label>
-                                <div style="display: flex; gap: 1rem; align-items: flex-start;">
-                                    <label class="cta-button"
-                                        style="padding: 0.6rem 1.2rem; font-size: 0.85rem; background: #f0f0f0; color: #333; border: 1px dashed #ccc; cursor: pointer; display: inline-block;">
-                                        Add Photos
-                                        <input type="file" id="review-images" accept="image/*" multiple
-                                            style="display: none;">
-                                    </label>
-                                    <div id="image-preview-container" style="display: flex; gap: 0.5rem;"></div>
-                                </div>
-                            </div>
-                            <button type="submit" class="cta-button eligible" style="width: 100%; text-align: center;"
-                                id="submit-review-btn">Submit Review</button>
-                        </form>
+                <!-- The Form -->
+                <form id="product-review-form">
+                    <div class="form-group" style="margin-bottom: 1.2rem;">
+                        <label for="review-rating" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Rating</label>
+                        <select id="review-rating" required style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;">
+                            <option value="" disabled selected>Select a rating</option>
+                            <option value="5">★★★★★ - Excellent</option>
+                            <option value="4">★★★★☆ - Very Good</option>
+                            <option value="3">★★★☆☆ - Average</option>
+                            <option value="2">★★☆☆☆ - Below Average</option>
+                            <option value="1">★☆☆☆☆ - Poor</option>
+                        </select>
                     </div>
-                </div>
-
-                <!-- Dynamic Reviews Container -->
-                <div id="product-reviews-container" class="reviews-list reveal">
-                    <p class="text-center" style="color: #666; font-style: italic;">Loading reviews...</p>
-                </div>
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label for="review-text" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Your Review</label>
+                        <textarea id="review-text" rows="5" required style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;" placeholder="Tell us what you think about this product..."></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.8rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Photos (Optional, max 2)</label>
+                        <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                            <label class="cta-button" style="padding: 0.6rem 1.2rem; font-size: 0.85rem; background: #f0f0f0; color: #333; border: 1px dashed #ccc; cursor: pointer; display: inline-block;">
+                                Add Photos
+                                <input type="file" id="review-images" accept="image/*" multiple style="display: none;">
+                            </label>
+                            <div id="image-preview-container" style="display: flex; gap: 0.5rem;"></div>
+                        </div>
+                    </div>
+                    <button type="submit" class="cta-button eligible" style="width: 100%; text-align: center;" id="submit-review-btn">Submit Review</button>
+                </form>
+            </div>
+        </div>
             </div>
         </section>
     </main>
@@ -703,4 +873,3 @@
 </body>
 
 </html>
-

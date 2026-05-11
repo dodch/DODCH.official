@@ -12,6 +12,9 @@
     <meta name="keywords"
         content="Face Serum, Hyaluronic Acid Serum, Facial Remedies, Hydrating Serum, Anti-aging, DODCH, Skincare">
     <link rel="canonical" href="https://dodch.com/face-serum.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Advanced HA Face Serum | DODCH Skincare" />
+    <meta name="twitter:image" content="https://dodch.com/IMG_3407.webp" />
 
     <!-- Product Schema -->
     <script type="application/ld+json">
@@ -19,19 +22,90 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "Advanced HA Serum",
-      "image": "https://dodch.com/IMG_3407.webp",
-      "description": "A concentrated Hyaluronic Acid serum that penetrates deep layers for instant plumping and long-lasting hydration.",
+      "alternateName": ["Hyaluronic Acid Radiance Serum", "Deep Hydration Face Serum", "Mediterranean Glow Elixir"],
+      "image": [
+        "https://dodch.com/IMG_3407.webp",
+        "https://dodch.com/IMG_3408.webp"
+      ],
+      "description": "Concentrated Hyaluronic Acid serum for deep multi-layer hydration, instant plumping, and radiant Mediterranean skin. Engineered to treat fine lines, dryness, and dullness for all skin types.",
+      "sku": "DODCH-HAS-002",
+      "mpn": "DODCH-HAS-002",
       "brand": {
         "@type": "Brand",
-        "name": "DODCH"
+        "name": "DODCH",
+        "logo": "https://dodch.com/IMG_3352.webp"
       },
+      "color": "Clear Crystal",
+      "material": "High-Molecular Weight Hyaluronic Acid, Organic Botanical Extracts",
+      "audience": {
+        "@type": "PeopleAudience",
+        "suggestedGender": "unisex",
+        "audienceType": "People seeking anti-aging, hydration, or radiant skin"
+      },
+      "category": "Beauty > Skin Care > Face Serums > Hyaluronic Acid Serum",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "18"
+      },
+      "review": [
+        {
+          "@type": "Review",
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": "5",
+            "bestRating": "5"
+          },
+          "author": {
+            "@type": "Person",
+            "name": "Mariem L."
+          },
+          "reviewBody": "My skin feels so hydrated and plump. I love the texture!"
+        }
+      ],
       "offers": {
         "@type": "Offer",
         "url": "https://dodch.com/face-serum.html",
         "priceCurrency": "TND",
         "price": "89.00",
+        "priceValidUntil": "2026-12-31",
         "availability": "https://schema.org/InStock",
-        "itemCondition": "https://schema.org/NewCondition"
+        "itemCondition": "https://schema.org/NewCondition",
+        "hasMerchantReturnPolicy": {
+          "@type": "MerchantReturnPolicy",
+          "applicableCountry": "TN",
+          "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+          "merchantReturnDays": 14,
+          "returnMethod": "https://schema.org/ReturnByMail",
+          "returnFees": "https://schema.org/FreeReturn"
+        },
+        "shippingDetails": {
+          "@type": "OfferShippingDetails",
+          "shippingRate": {
+            "@type": "MonetaryAmount",
+            "value": 7.00,
+            "currency": "TND"
+          },
+          "deliveryTime": {
+            "@type": "ShippingDeliveryTime",
+            "handlingTime": {
+              "@type": "QuantitativeValue",
+              "minValue": 0,
+              "maxValue": 1,
+              "unitCode": "DAY"
+            },
+            "transitTime": {
+              "@type": "QuantitativeValue",
+              "minValue": 1,
+              "maxValue": 3,
+              "unitCode": "DAY"
+            }
+          },
+          "shippingDestination": {
+            "@type": "DefinedRegion",
+            "addressCountry": "TN"
+          }
+        }
       }
     }
     </script>
@@ -47,7 +121,48 @@
         rel="stylesheet">
 
     <!-- Base styles and Serum specific styles -->
-    <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": "How to Apply DODCH Advanced HA Serum for Maximum Hydration",
+      "description": "Follow these simple steps to ensure deep penetration of Hyaluronic Acid and achieve a plump, radiant Mediterranean glow.",
+      "image": "https://dodch.com/IMG_3407.webp",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "Cleanse Skin",
+          "text": "Start with a clean, slightly damp face using DODCH Foaming Cleanser.",
+          "url": "https://dodch.com/face-serum.html#step1"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Apply Serum",
+          "text": "Dispense 2-3 drops of Advanced HA Serum onto your fingertips.",
+          "url": "https://dodch.com/face-serum.html#step2"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Massage & Press",
+          "text": "Gently massage into the skin and press with your palms to aid absorption into deep layers.",
+          "url": "https://dodch.com/face-serum.html#step3"
+        }
+      ],
+      "totalTime": "PT3M",
+      "supply": [
+        {
+          "@type": "HowToSupply",
+          "name": "Clean, damp skin"
+        }
+      ],
+      "tool": [
+        {
+          "@type": "HowToTool",
+          "name": "Advanced HA Serum"
+        }
+      ]
+    }
+    </script>
     <link rel="stylesheet" href="face-serum.css">
     <!-- Dynamic SEO Injection -->
     <script type="module" src="seo.js"></script>
@@ -213,7 +328,143 @@
         </section>
 
         <!-- Spacer / Transition to Footer -->
-        <section class="serum-footer-spacer">
+        <section class="serum-footer-spacer section-padding bg-cream" style="position: relative; z-index: 10;">
+            <!-- Product Details Accordion -->
+            <div class="product-details-accordion reveal">
+                <!-- INCI -->
+                <div class="accordion-item">
+                    <button class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                        <span>INCI (Full Ingredients)</span>
+                        <svg class="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <svg class="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-inner">
+                            Opuntia Ficus-Indica (Prickly Pear) Seed Oil, Hyaluronic Acid, Glycerin, Rosa Damascena Flower Water, Tocopherol (Vitamin E), Citrus Aurantium (Neroli) Essential Oil, Benzyl Alcohol, Dehydroacetic Acid.
+                        </div>
+                    </div>
+                </div>
+                <!-- Performance -->
+                <div class="accordion-item">
+                    <button class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                        <span>Product Performance</span>
+                        <svg class="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <svg class="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-inner performance-bars">
+                            <div class="perf-item">
+                                <div class="perf-header">
+                                    <span class="perf-label">Hydration</span>
+                                    <span class="perf-value">Intense</span>
+                                </div>
+                                <div class="perf-levels">
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                </div>
+                            </div>
+                            <div class="perf-item">
+                                <div class="perf-header">
+                                    <span class="perf-label">Gentleness</span>
+                                    <span class="perf-value">Ultra Mild</span>
+                                </div>
+                                <div class="perf-levels">
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                </div>
+                            </div>
+                            <div class="perf-item">
+                                <div class="perf-header">
+                                    <span class="perf-label">Plumping</span>
+                                    <span class="perf-value">High</span>
+                                </div>
+                                <div class="perf-levels">
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step"></div>
+                                </div>
+                            </div>
+                            <div class="perf-item">
+                                <div class="perf-header">
+                                    <span class="perf-label">Radiance</span>
+                                    <span class="perf-value">Luminous</span>
+                                </div>
+                                <div class="perf-levels">
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                    <div class="level-step active"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Ratings -->
+                <div class="accordion-item">
+                    <button class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                        <div class="ratings-dynamic-header" style="display: flex; align-items: center; gap: 1rem;">
+                            <span>Ratings & Reviews</span>
+                            <div class="stars-display" style="color: var(--accent-gold); font-size: 1.2rem; letter-spacing: 2px;"></div>
+                            <span class="count-display" style="color: #666; font-size: 0.9rem;">Loading...</span>
+                        </div>
+                        <svg class="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <svg class="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="accordion-inner">
+                            <div style="text-align: center; margin-bottom: 2rem;">
+                                <button id="write-review-toggle-btn" class="cta-button ineligible">Write a Review</button>
+                            </div>
+                            <div id="product-reviews-container">
+                                <!-- Reviews will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Modal Overlay -->
+            <div id="review-modal" class="review-modal-overlay">
+                <div class="review-modal-content">
+                    <button class="close-modal" id="close-review-modal">&times;</button>
+                    <h3 style="margin-bottom: 1.5rem; color: #000; font-family: var(--font-serif);">Share Your Experience</h3>
+
+                    <!-- The Form -->
+                    <form id="product-review-form">
+                        <div class="form-group" style="margin-bottom: 1.2rem;">
+                            <label for="review-rating" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Rating</label>
+                            <select id="review-rating" required style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;">
+                                <option value="" disabled selected>Select a rating</option>
+                                <option value="5">★★★★★ - Excellent</option>
+                                <option value="4">★★★★☆ - Very Good</option>
+                                <option value="3">★★★☆☆ - Average</option>
+                                <option value="2">★★☆☆☆ - Below Average</option>
+                                <option value="1">★☆☆☆☆ - Poor</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="review-text" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Your Review</label>
+                            <textarea id="review-text" rows="5" required style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;" placeholder="Tell us what you think about this product..."></textarea>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.8rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Photos (Optional, max 2)</label>
+                            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                                <label class="cta-button" style="padding: 0.6rem 1.2rem; font-size: 0.85rem; background: #f0f0f0; color: #333; border: 1px dashed #ccc; cursor: pointer; display: inline-block;">
+                                    Add Photos
+                                    <input type="file" id="review-images" accept="image/*" multiple style="display: none;">
+                                </label>
+                                <div id="image-preview-container" style="display: flex; gap: 0.5rem;"></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="cta-button eligible" style="width: 100%; text-align: center;" id="submit-review-btn">Submit Review</button>
+                    </form>
+                </div>
+            </div>
         </section>
 
     </main>
@@ -253,3 +504,4 @@
 </body>
 
 </html>
+

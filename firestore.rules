@@ -17,8 +17,13 @@ service cloud.firestore {
       return num is number && num >= 0;
     }
 
-    // Products: Public Read, Admin Write
+    // Products & Overrides: Public Read, Admin Write
     match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /product_overrides/{slug} {
       allow read: if true;
       allow write: if isAdmin();
     }
@@ -28,14 +33,8 @@ service cloud.firestore {
     // - Read: Admin can read all. Users can read only their own.
     // - Update: Finalized security logic
     match /orders/{orderId} {
-      allow create: if request.appCheck != null 
-                   && request.resource.data.status == 'Pending'
-                   && isValidString(request.resource.data.shipping.fullName, 2, 100)
-                   && request.resource.data.total == (request.resource.data.subtotal + request.resource.data.shippingFee)
-                   && (
-                      (request.resource.data.subtotal >= 100 && request.resource.data.shippingFee == 0) ||
-                      (request.resource.data.subtotal < 100 && request.resource.data.shippingFee == 7)
-                   );
+      // SECURITY: Client-side creation is blocked. Orders must be processed via the createOrder Cloud Function.
+      allow create: if isAdmin();
         
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       
@@ -86,8 +85,7 @@ service cloud.firestore {
     
     // Public Submissions (Newsletter & Contact Form)
     match /newsletter/{document=**} {
-      allow create: if request.appCheck != null 
-                    && isValidString(request.resource.data.email, 5, 100);
+      allow create: if true && isValidString(request.resource.data.email, 5, 100);
       allow read, update, delete: if isAdmin();
     }
     
@@ -114,8 +112,7 @@ service cloud.firestore {
     // --- ROCK-SOLID MESSAGES (Signature ID Deduplication) ---
     match /messages/{messageId} {
       // Rule: Allows 'create' only if the document name (Signature ID) does NOT already exist.
-      // App Check provides bot protection on the Spark (Free) plan.
-      allow create: if request.appCheck != null 
+      allow create: if true 
         && isValidString(request.resource.data.name, 2, 100)
         && isValidString(request.resource.data.email, 5, 100)
         && isValidString(request.resource.data.message, 1, 2000)

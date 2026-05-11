@@ -1,14 +1,42 @@
 /**
  * DODCH Build Script
- * Minifies JS and CSS from public/ → dist/ for deployment.
+ * Minifies JS and CSS from Root → dist/ for deployment.
  * Run: node build.js
  */
 const esbuild = require('esbuild');
 const fs = require('fs');
 const path = require('path');
 
-const SRC = './public';
+const SRC = '.';
 const OUT = './dist';
+
+// Files/folders to ignore during asset copy and minification
+const IGNORE_LIST = [
+    'node_modules',
+    '.git',
+    '.github',
+    '.firebase',
+    '.next',
+    'dist',
+    'app',
+    'functions',
+    'public', // Just in case it's recreated
+    'package.json',
+    'package-lock.json',
+    'tsconfig.json',
+    'next.config.mjs',
+    'firebase.json',
+    'firestore.rules',
+    'firestore.indexes.json',
+    'build.js',
+    'postcss.config.js',
+    'tailwind.config.ts',
+    'next-env.d.ts',
+    'llms.txt',
+    'llms-full.txt',
+    'DODCH.official.code-workspace',
+    'scratch'
+];
 
 // ─── 1. Clean + recreate dist/ ─────────────────────────────────────────────
 if (fs.existsSync(OUT)) fs.rmSync(OUT, { recursive: true });
@@ -17,6 +45,9 @@ fs.mkdirSync(OUT, { recursive: true });
 // ─── 2. Copy all non-JS/CSS assets (HTML, images, video, json, etc.) ───────
 function copyAssets(srcDir, outDir) {
     for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+        if (IGNORE_LIST.includes(entry.name)) continue;
+        if (entry.name.startsWith('.')) continue;
+
         const srcPath = path.join(srcDir, entry.name);
         const outPath = path.join(outDir, entry.name);
 
@@ -38,13 +69,13 @@ copyAssets(SRC, OUT);
 
 // ─── 3. Minify all JS files ─────────────────────────────────────────────────
 const jsFiles = fs.readdirSync(SRC)
-    .filter(f => f.endsWith('.js'))
+    .filter(f => f.endsWith('.js') && !IGNORE_LIST.includes(f))
     .map(f => path.join(SRC, f));
 
 console.log(`⚡ Minifying ${jsFiles.length} JS files...`);
 
 (async () => {
-    // Minify each JS file individually (they are ES modules with CDN imports)
+    // Minify each JS file individually
     for (const file of jsFiles) {
         const outFile = path.join(OUT, path.basename(file));
         try {
@@ -52,17 +83,16 @@ console.log(`⚡ Minifying ${jsFiles.length} JS files...`);
                 entryPoints: [file],
                 outfile: outFile,
                 minify: true,
-                bundle: false,        // Don't bundle — scripts use CDN imports
+                bundle: false,
                 format: 'esm',
                 target: ['es2020'],
                 logLevel: 'warning',
             });
             const src = fs.statSync(file).size;
             const out = fs.statSync(outFile).size;
-            const saved = (((src - out) / src) * 100).toFixed(1);
+            const saved = src > 0 ? (((src - out) / src) * 100).toFixed(1) : 0;
             console.log(`  ✓ ${path.basename(file)}: ${(src/1024).toFixed(1)} KiB → ${(out/1024).toFixed(1)} KiB (−${saved}%)`);
         } catch (err) {
-            // If esbuild fails (e.g. mixed module syntax), copy as-is
             console.warn(`  ⚠ ${path.basename(file)}: minification skipped (${err.message.split('\n')[0]})`);
             fs.copyFileSync(file, outFile);
         }
@@ -70,7 +100,7 @@ console.log(`⚡ Minifying ${jsFiles.length} JS files...`);
 
     // ─── 4. Minify CSS ──────────────────────────────────────────────────────
     const cssFiles = fs.readdirSync(SRC)
-        .filter(f => f.endsWith('.css'))
+        .filter(f => f.endsWith('.css') && !IGNORE_LIST.includes(f))
         .map(f => path.join(SRC, f));
 
     console.log(`🎨 Minifying ${cssFiles.length} CSS files...`);
@@ -87,7 +117,7 @@ console.log(`⚡ Minifying ${jsFiles.length} JS files...`);
             });
             const src = fs.statSync(file).size;
             const out = fs.statSync(outFile).size;
-            const saved = (((src - out) / src) * 100).toFixed(1);
+            const saved = src > 0 ? (((src - out) / src) * 100).toFixed(1) : 0;
             console.log(`  ✓ ${path.basename(file)}: ${(src/1024).toFixed(1)} KiB → ${(out/1024).toFixed(1)} KiB (−${saved}%)`);
         } catch (err) {
             console.warn(`  ⚠ ${path.basename(file)}: minification skipped`);

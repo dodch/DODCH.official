@@ -21,6 +21,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstati
 import { getMessaging, getToken as getMessagingToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { WebHaptics } from 'https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/+esm';
+// import "./admin-edit.js"; // Moved to bottom
 
 const haptics = new WebHaptics({ debug: true });
 window.triggerHaptic = (type = 'light') => {
@@ -97,8 +98,8 @@ const auth = getAuth(app);
 const db = initializeFirestore(app, {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 });
+const functions = getFunctions(app, "europe-west1");
 const storage = getStorage(app);
-const functions = getFunctions(app, 'europe-west1');
 const provider = new GoogleAuthProvider();
 
 let messaging = null;
@@ -777,14 +778,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // We make the whole card a quick-view trigger
-                let linkAttributes = `href="#" class="quick-view-btn" 
-                    data-id="${id}" 
-                    data-title="${product.name}" 
-                    data-price="${displayPrice}" 
-                    data-img="${product.image}" 
-                    data-style="${product.style || ''}" 
-                    data-desc="${product.description}"`;
+                let targetUrl = product.storyUrl || `product.html?id=${id}`;
+                let linkAttributes = `href="${targetUrl}"`;
+
+                let badgeHTML = '';
+                if (product.isPermanentlyUnavailable) {
+                    badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">UNAVAILABLE</span>';
+                } else if (product.outOfStock) {
+                    badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">OUT OF STOCK</span>';
+                } else if (hasDiscount && discountPercentage > 0) {
+                    badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1;">-${discountPercentage}%</span>`;
+                }
+                let imgStyle = product.style || '';
+                if (product.outOfStock) {
+                    imgStyle += ' opacity: 0.55; filter: grayscale(60%); transition: all 0.3s ease;';
+                }
 
                 return `
                     <div class="product-card reveal" style="--anim-delay: ${staggerDelay};">
@@ -792,7 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="product-image-wrapper" style="${product.outOfStock ? 'background-color: #f0f0f0;' : ''}">
                                 ${badgeHTML}
                                 <img loading="lazy" src="${product.image}" alt="${product.name}" class="product-card-img" style="${imgStyle}">
-                                <div class="quick-view-overlay"><span>Quick View</span></div>
+                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice}" data-img="${product.image}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
                             </div>
                             <div class="product-card-info" style="${product.outOfStock ? 'opacity: 0.7;' : ''}">
                                 <h3 class="product-card-title">${product.name}</h3>
@@ -928,48 +936,57 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const loadProductCatalog = async () => {
+        // --- HYBRID LOADING: INITIALIZE WITH LOCAL DATA FIRST FOR INSTANT SPEED ---
+        console.log("⚡ Hybrid Loading: Initializing UI with local catalog fallback...");
+        initProductPage();
+        initShopPage();
+        renderSidebarMenu();
+        if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
+        loadRelatedProducts();
+
         try {
-            console.log("Loading catalog from Firestore...");
+            console.log("📡 Syncing real-time prices & stock from Firestore...");
             const querySnapshot = await getDocs(collection(db, "products"));
             if (!querySnapshot.empty) {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    if (data.image && typeof data.image === 'string') {
-                        data.image = data.image.replace(/\.(png|jpg|jpeg)$/i, '.webp');
-                    }
                     const productId = doc.id;
+                    
                     if (data.deleted) {
                         delete productCatalog[productId];
-                        return;
-                    }
-                    if (productCatalog[productId]) {
-                        const preservedCat = productCatalog[productId].category;
-                        const preservedSub = productCatalog[productId].subCategory;
-
-                        productCatalog[productId] = { ...productCatalog[productId], ...data };
-                        if (productId === 'dodchmellow-pro-v' || productId === 'silk-therapy-mask') {
-                            productCatalog[productId].category = preservedCat;
-                            productCatalog[productId].subCategory = preservedSub;
+                    } else if (productCatalog[productId]) {
+                        // HYBRID SYNC: Only update volatile data (prices/stock) from Firestore.
+                        // Local code (script.js) remains the source of truth for Order, Name, Description, Image, etc.
+                        productCatalog[productId].price = data.price || productCatalog[productId].price;
+                        productCatalog[productId].originalPrice = data.originalPrice;
+                        productCatalog[productId].outOfStock = data.outOfStock || false;
+                        productCatalog[productId].isPermanentlyUnavailable = data.isPermanentlyUnavailable || false;
+                        
+                        if (data.sizes) {
+                            productCatalog[productId].sizes = data.sizes;
                         }
                     } else {
+                        // If it's a completely new product from database not in local code, add it
                         productCatalog[productId] = data;
                     }
                 });
+                
+                // RE-INITIALIZE DYNAMIC ELEMENTS (No full refresh, just update prices/stock)
+                console.log("✅ Real-time data synced. Refreshing UI.");
+                if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
+                
+                // Re-run minimal init to refresh prices/stock in shop grid or product page
+                if (document.querySelector('.shop-grid')) renderContent();
+                if (document.querySelector('.product-info')) initProductPage();
             }
-            initProductPage();
-            initShopPage();
-            renderSidebarMenu();
-            if (window.dodchSearchEngine) {
-                window.dodchSearchEngine.init(productCatalog);
-            }
-            loadRelatedProducts();
             if (typeof window.refreshAdminProducts === 'function') {
                 window.refreshAdminProducts();
             }
         } catch (error) {
-            console.error("Error loading product catalog:", error);
+            console.error("Error syncing with Firestore:", error);
         }
     };
+
     const CART_VERSION = 6; // Increment to force reset and clear stale/buggy data
     let cart = JSON.parse(localStorage.getItem('dodch_cart')) || [];
     const storedVersion = parseInt(localStorage.getItem('dodch_cart_version') || '0');
@@ -2133,8 +2150,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         status: 'Pending',
                         userId: currentUser ? currentUser.uid : 'guest'
                     };
-                    const docRef = await addDoc(collection(db, 'orders'), orderData);
-                    const orderId = docRef.id;
+                    // --- SECURITY: USE CLOUD FUNCTION FOR SECURE ORDER CREATION ---
+                    const createOrderFn = httpsCallable(functions, 'createOrder');
+                    const result = await createOrderFn(orderData);
+                    const orderId = result.data.orderId;
+                    const finalOrderReference = result.data.orderReference || orderReference;
 
                     clearTimeout(operationTimeout);
                     console.log("Order placed successfully with ID: ", orderId);
@@ -2172,7 +2192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="text-align: center; padding: 2rem 0; animation: fadeIn 0.5s ease;">
                                     <svg style="width: 60px; height: 60px; color: var(--accent-gold); margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                     <h2 style="border: none; margin-bottom: 0.5rem;">Order Confirmed</h2>
-                                    <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${orderReference} has been received.</p>
+                                    <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${finalOrderReference} has been received.</p>
                                     ${guestMessage}
                                     <a href="index.html" class="cta-button cta-button-secondary" style="margin-top: 2rem; display: inline-block; width: auto; font-size: 0.85rem;">Return Home</a>
                                 </div>
@@ -3665,131 +3685,99 @@ The DODCH Team`;
         const qvLearnMore = document.getElementById('qv-learn-more');
 
         let currentProduct = {};
-
-        window.openQuickView = (id) => {
-            const product = productCatalog[id];
-            if (!product) return;
-
-            if (product.isPermanentlyUnavailable) {
-                window.showToast('This product is no longer available.', 'error');
-                return;
-            }
-
-            window.triggerHaptic('quickview');
-            
-            const title = product.name;
-            const price = product.price;
-            const img = product.image;
-            const desc = product.description;
-            const style = product.style;
-
-            currentProduct = { id, title, price, img, desc };
-            document.body.style.overflow = 'hidden';
-
-            qvImage.src = img;
-            qvImage.style = style || '';
-            qvTitle.textContent = title;
-            qvDesc.textContent = desc;
-
-            if (qvLearnMore) {
-                qvLearnMore.href = product.storyUrl || `product.html?id=${id}`;
-            }
-
-            const sizeOptionsContainer = modal.querySelector('.size-options');
-            const sizeSelector = modal.querySelector('.size-selector');
-            sizeOptionsContainer.innerHTML = ''; // Clear previous
-
-            if (product.sizes && product.sizes.length > 0) {
-                sizeSelector.style.display = 'block';
-                const prices = product.sizes.map(s => parseFloat(s.price));
-                const minPrice = Math.min(...prices);
-                const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
-
-                const baseSize = product.sizes[minIndex];
-                if (baseSize.originalPrice) {
-                    qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${baseSize.originalPrice} TND</span> ${baseSize.price} TND`;
-                } else {
-                    qvPrice.textContent = `${baseSize.price} TND`;
-                }
-
-                product.sizes.forEach((sizeObj, index) => {
-                    const btn = document.createElement('button');
-                    btn.className = 'size-btn';
-                    if (index === minIndex) {
-                        btn.classList.add('active');
-                        if (!product.outOfStock) {
-                            if (sizeObj.outOfStock) {
-                                qvAddToCart.disabled = true;
-                                qvAddToCart.querySelector('span').textContent = "Out of Stock";
-                                qvAddToCart.style.backgroundColor = "#ccc";
-                            } else {
-                                qvAddToCart.disabled = false;
-                                qvAddToCart.querySelector('span').textContent = "Add to Cart";
-                                qvAddToCart.style.backgroundColor = "";
-                            }
-                        }
-                    }
-                    btn.dataset.size = sizeObj.label;
-                    btn.dataset.price = sizeObj.price;
-                    btn.textContent = sizeObj.label;
-
-                    btn.addEventListener('click', () => {
-                        window.triggerHaptic('light');
-                        sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        if (sizeObj.originalPrice) {
-                            qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
-                        } else {
-                            qvPrice.textContent = `${sizeObj.price} TND`;
-                        }
-
-                        if (!product.outOfStock) {
-                            if (sizeObj.outOfStock) {
-                                qvAddToCart.disabled = true;
-                                qvAddToCart.querySelector('span').textContent = "Out of Stock";
-                                qvAddToCart.style.backgroundColor = "#ccc";
-                            } else {
-                                qvAddToCart.disabled = false;
-                                qvAddToCart.querySelector('span').textContent = "Add to Cart";
-                                qvAddToCart.style.backgroundColor = "";
-                            }
-                        }
-                    });
-
-                    if (sizeObj.outOfStock && !product.outOfStock) {
-                        btn.style.textDecoration = "line-through";
-                        btn.style.opacity = "0.6";
-                    }
-
-                    sizeOptionsContainer.appendChild(btn);
-                });
-            } else {
-                sizeSelector.style.display = 'none';
-                qvPrice.textContent = `${price} TND`;
-                if (product.outOfStock) {
-                    qvAddToCart.disabled = true;
-                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
-                    qvAddToCart.style.backgroundColor = "#ccc";
-                } else {
-                    qvAddToCart.disabled = false;
-                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
-                    qvAddToCart.style.backgroundColor = "";
-                }
-            }
-
-            modal.classList.add('active');
-            if (qvOverlay) qvOverlay.classList.add('active');
-        };
-
         document.body.addEventListener('click', (e) => {
-            const quickViewBtn = e.target.closest('.quick-view-btn');
-            if (quickViewBtn) {
+            if (e.target.classList.contains('quick-view-btn')) {
+                window.triggerHaptic('quickview');
+                const btn = e.target;
                 e.preventDefault();
                 e.stopPropagation();
-                const id = quickViewBtn.dataset.id;
-                window.openQuickView(id);
-            }
-        });
+
+                const id = btn.dataset.id;
+                const product = productCatalog[id];
+
+                if (product && product.isPermanentlyUnavailable) {
+                    window.showToast('This product is no longer available.', 'error');
+                    return;
+                }
+
+                const title = product ? product.name : btn.dataset.title;
+                const price = product ? product.price : btn.dataset.price;
+                const img = product ? product.image : btn.dataset.img;
+                const desc = product ? product.description : btn.dataset.desc;
+                const style = product ? product.style : btn.dataset.style;
+
+                currentProduct = { id, title, price, img, desc };
+                document.body.style.overflow = 'hidden';
+
+                qvImage.src = img;
+                qvImage.style = style || '';
+                qvTitle.textContent = title;
+                qvDesc.textContent = desc;
+
+                if (qvLearnMore) {
+                    qvLearnMore.href = (product && product.storyUrl) ? product.storyUrl : `product.html?id=${id}`;
+                }
+                const sizeOptionsContainer = modal.querySelector('.size-options');
+                const sizeSelector = modal.querySelector('.size-selector');
+                sizeOptionsContainer.innerHTML = ''; // Clear previous
+
+                if (product && product.sizes && product.sizes.length > 0) {
+                    sizeSelector.style.display = 'block';
+                    const prices = product.sizes.map(s => parseFloat(s.price));
+                    const minPrice = Math.min(...prices);
+                    const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
+
+                    product.sizes.forEach((sizeObj, index) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'size-btn';
+                        if (index === minIndex) {
+                            btn.classList.add('active'); // Default to lowest
+                            if (!product.outOfStock) {
+                                if (sizeObj.outOfStock) {
+                                    qvAddToCart.disabled = true;
+                                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
+                                    qvAddToCart.style.backgroundColor = "#ccc";
+                                } else {
+                                    qvAddToCart.disabled = false;
+                                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
+                                    qvAddToCart.style.backgroundColor = "";
+                                }
+                            }
+                        }
+                        btn.dataset.size = sizeObj.label;
+                        btn.dataset.price = sizeObj.price;
+                        btn.textContent = sizeObj.label;
+
+                        btn.addEventListener('click', () => {
+                            window.triggerHaptic('light');
+                            sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            if (sizeObj.originalPrice) {
+                                qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
+                            } else {
+                                qvPrice.textContent = `${sizeObj.price} TND`;
+                            }
+
+                            if (!product.outOfStock) {
+                                if (sizeObj.outOfStock) {
+                                    qvAddToCart.disabled = true;
+                                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
+                                    qvAddToCart.style.backgroundColor = "#ccc";
+                                } else {
+                                    qvAddToCart.disabled = false;
+                                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
+                                    qvAddToCart.style.backgroundColor = "";
+                                }
+                            }
+                        });
+
+                        if (sizeObj.outOfStock && !product.outOfStock) {
+                            btn.style.textDecoration = "line-through";
+                            btn.style.opacity = "0.6";
+                        }
+
+                        sizeOptionsContainer.appendChild(btn);
+                    });
                     const initialSize = product.sizes[minIndex];
                     if (initialSize.originalPrice) {
                         qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND`;
@@ -3933,17 +3921,19 @@ The DODCH Team`;
 
             productsHtml += `
                 <div class="product-card reveal" ${product.outOfStock ? 'style="opacity: 0.8;"' : ''}>
-                    <a href="#" class="quick-view-btn" 
-                        data-id="${id}" 
-                        data-title="${product.name}" 
-                        data-price="${displayPrice}" 
-                        data-img="${product.image || 'https://via.placeholder.com/300'}" 
-                        data-style="${product.style || ''}"
-                        data-desc="${product.description || ''}">
+                    <a href="product.html?id=${id}">
                         <div class="product-image-wrapper">
                             ${badgeHTML}
                             <img loading="lazy" src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
-                            <div class="quick-view-overlay"><span>Quick View</span></div>
+                            <button class="quick-view-btn" 
+                                data-id="${id}" 
+                                data-title="${product.name}" 
+                                data-price="${displayPrice}" 
+                                data-img="${product.image || 'https://via.placeholder.com/300'}" 
+                                data-style="${product.style || ''}"
+                                data-desc="${product.description || ''}">
+                                Quick View
+                            </button>
                         </div>
                         <div class="product-card-info">
                             <h3 class="product-card-title">${product.name}</h3>
@@ -4377,9 +4367,33 @@ const initProductReviews = () => {
                 return timeB - timeA;
             });
             renderReviews(reviews);
+            updateDynamicRatings(reviews);
         } catch (error) {
             console.error("Error fetching reviews:", error);
             reviewsContainer.innerHTML = '<p class="text-center" style="color: red;">Failed to load reviews.</p>';
+        }
+    };
+
+    const updateDynamicRatings = (reviews) => {
+        const ratingHeader = document.querySelector('.ratings-dynamic-header');
+        if (!ratingHeader) return;
+
+        const count = reviews.length;
+        const totalStars = reviews.reduce((acc, r) => acc + r.rating, 0);
+        const average = count > 0 ? (totalStars / count).toFixed(1) : 0;
+
+        const starsContainer = ratingHeader.querySelector('.stars-display');
+        const countDisplay = ratingHeader.querySelector('.count-display');
+
+        if (starsContainer) {
+            const starsHtml = Array(5).fill(0).map((_, i) => 
+                `<span style="color: ${i < Math.round(average) ? '#F5A623' : '#e0e0e0'};">★</span>`
+            ).join('');
+            starsContainer.innerHTML = starsHtml;
+        }
+
+        if (countDisplay) {
+            countDisplay.textContent = `(${average} / ${count} Reviews)`;
         }
     };
 
@@ -4892,16 +4906,40 @@ const initAccountTabs = () => {
         });
     });
 };
+const initializePerformanceBars = () => {
+    const getLevelColor = (level) => {
+        const colorScale = ["#B8995E", "#8EA35E", "#5DA35E", "#2E7D32"];
+        return colorScale[level - 1] || "#B8995E";
+    };
+
+    const perfItems = document.querySelectorAll('.perf-item');
+    perfItems.forEach(item => {
+        const steps = item.querySelectorAll('.level-step');
+        const activeSteps = item.querySelectorAll('.level-step.active').length;
+        const valueEl = item.querySelector('.perf-value');
+        
+        if (activeSteps > 0) {
+            const color = getLevelColor(activeSteps);
+            steps.forEach((step, i) => {
+                if (i < activeSteps) step.style.background = color;
+            });
+            if (valueEl) valueEl.style.color = color;
+        }
+    });
+};
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initProductReviews();
         initGlobalReviewPrompt();
         initAccountTabs();
+        initializePerformanceBars();
     });
 } else {
     initProductReviews();
     initGlobalReviewPrompt();
     initAccountTabs();
+    initializePerformanceBars();
 }
 
 const SEARCH_SYNONYMS = {
@@ -5379,19 +5417,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 div.querySelector(".search-result-title").innerHTML = item.name.replace(regex, "<strong>$1</strong>");
             }
 
-            div.classList.add("quick-view-btn");
-            div.dataset.id = res.id;
-            div.dataset.title = item.name;
-            div.dataset.price = minPrice.toFixed(2);
-            div.dataset.img = imgUrl;
-            div.dataset.desc = item.description || "";
-
             div.addEventListener("mousedown", (e) => {
                 e.preventDefault();
                 window.dodchSearchEngine.addToHistory(query);
-                if (window.openQuickView) {
-                    window.openQuickView(res.id);
-                }
+                window.location.href = item.storyUrl || `product.html?id=${res.id}`;
             });
 
             div.addEventListener("mouseenter", () => {
@@ -6151,3 +6180,5 @@ if (initialSearch) {
 
 MotionBlurEngine.init();
 window.addEventListener('load', initPushNotifications);
+
+import "./admin-edit.js";

@@ -1,0 +1,498 @@
+/* --- Variables & Reset --- */
+:root {
+    --bg-cream: #FDFBF7;
+    --card-white: #FFFFFF;
+    --text-charcoal: #2D2D2D;
+    --accent-gold: #C5A059;
+    --font-serif: 'Playfair Display', serif;
+    --font-sans: 'Montserrat', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--bg-cream);
+    color: var(--text-charcoal);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* --- Typography --- */
+h1, h2, h3, h4 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+}
+
+h1 {
+    font-size: 2.2rem; /* Mobile default */
+    line-height: 1.2;
+    margin-bottom: 1rem;
+}
+
+p {
+    font-size: 1rem;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+}
+
+/* --- Navigation --- */
+nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    transition: background-color 0.4s ease;
+    padding: 1.5rem 0;
+}
+
+nav.scrolled {
+    background-color: var(--bg-cream);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 1rem 0;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+}
+
+.logo {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    font-weight: 600;
+    color: var(--text-charcoal);
+}
+
+.nav-links {
+    display: none; /* Hidden on mobile by default */
+}
+
+.nav-links li {
+    display: inline-block;
+    margin-left: 2rem;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-charcoal);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* --- Hero Section --- */
+#hero {
+    height: 100vh;
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--bg-cream); /* Light text for overlay */
+    
+    /* IMAGE HANDLING */
+    background-image: url('IMG_32442.jpg'); 
+    background-size: cover;
+    background-position: 70% center; /* Mobile focal point */
+    background-repeat: no-repeat;
+}
+
+/* Fallback if image fails or while loading */
+#hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--text-charcoal);
+    z-index: -2;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.2); /* 20% opacity overlay */
+    z-index: 1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 0 1.5rem;
+    max-width: 800px;
+}
+
+.hero-content h1 {
+    color: #FFFFFF; /* Ensure readability on image */
+}
+
+.sub-headline {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    margin-bottom: 2.5rem;
+    color: #F0F0F0;
+    letter-spacing: 1px;
+}
+
+/* --- CTA Button --- */
+.cta-button {
+    display: inline-block;
+    background-color: var(--accent-gold);
+    color: #FFFFFF;
+    padding: 1rem 2rem;
+    text-decoration: none;
+    font-weight: 500;
+    letter-spacing: 1px;
+    border-radius: 2px; /* Sharp edges */
+    transition: all 0.3s ease;
+    width: 80%; /* Mobile touch target */
+    max-width: 350px;
+}
+
+.cta-button:hover {
+    background-color: #b08d4b;
+    box-shadow: 0 4px 15px rgba(197, 160, 89, 0.4); /* Gold shadow */
+    transform: translateY(-2px);
+}
+
+/* --- Layout Utilities --- */
+.section-padding {
+    padding: 5rem 1.5rem;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.bg-white {
+    background-color: var(--card-white);
+}
+
+/* --- Three Pillars Grid --- */
+.grid-3 {
+    display: grid;
+    grid-template-columns: 1fr; /* Stacked on mobile */
+    gap: 3rem;
+    text-align: center;
+}
+
+.pillar-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-charcoal);
+}
+
+/* --- Experience Section --- */
+.section-title {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 3rem;
+}
+
+.experience-list p {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* --- Founder's Note --- */
+.founders-note {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.2rem;
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 2rem auto;
+    color: var(--text-charcoal);
+}
+
+.batch-info {
+    text-align: center;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent-gold);
+}
+
+/* --- Footer --- */
+footer {
+    background-color: #252525; /* Slightly darker than charcoal */
+    color: #FFFFFF;
+    padding: 4rem 1.5rem 2rem;
+    font-size: 0.9rem;
+}
+
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+    margin-bottom: 3rem;
+}
+
+.brand-col h4 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--accent-gold);
+}
+
+.legal-col h5 {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+}
+
+.inci-text {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin-bottom: 1rem;
+    font-family: monospace; /* Technical feel */
+}
+
+.disclaimer {
+    font-size: 0.75rem;
+    font-style: italic;
+    opacity: 0.6;
+}
+
+.copyright {
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 2rem;
+    font-size: 0.8rem;
+    opacity: 0.5;
+}
+
+/* --- Animations --- */
+.reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 1.2s ease-out;
+}
+
+.reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* --- Desktop Media Queries (Min-width: 768px) --- */
+@media (min-width: 768px) {
+    h1 {
+        font-size: 4rem; /* Large scale for desktop */
+    }
+
+    .sub-headline {
+        font-size: 1.1rem;
+    }
+
+    .nav-links {
+        display: block;
+    }
+
+    .hamburger {
+        display: none;
+    }
+
+    #hero {
+        background-position: center center; /* Center on desktop */
+    }
+
+    .cta-button {
+        width: auto; /* Natural width on desktop */
+    }
+
+    .grid-3 {
+        grid-template-columns: repeat(3, 1fr); /* 3 Columns */
+    }
+
+    .footer-content {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .legal-col {
+        max-width: 50%;
+        text-align: right;
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // 1. Sticky Navbar Effect
+    const navbar = document.getElementById('navbar');
+    
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+            navbar.classList.add('scrolled');
+        } else {
+            navbar.classList.remove('scrolled');
+        }
+    });
+
+    // 2. Scroll Reveal Animation
+    const revealElements = document.querySelectorAll('.reveal');
+
+    const revealOnScroll = () => {
+        const windowHeight = window.innerHeight;
+        const elementVisible = 100; // Distance from bottom before revealing
+
+        revealElements.forEach((element) => {
+            const elementTop = element.getBoundingClientRect().top;
+
+            if (elementTop < windowHeight - elementVisible) {
+                element.classList.add('active');
+            }
+        });
+    };
+
+    window.addEventListener('scroll', revealOnScroll);
+    
+    // Trigger once on load to show hero content immediately
+    revealOnScroll();
+
+    // 3. Mobile Menu Toggle (Simple implementation)
+    const hamburger = document.querySelector('.hamburger');
+    const navLinks = document.querySelector('.nav-links');
+
+    if(hamburger) {
+        hamburger.addEventListener('click', () => {
+            // Toggle display for demo purposes
+            if (navLinks.style.display === 'block') {
+                navLinks.style.display = 'none';
+            } else {
+                navLinks.style.display = 'block';
+                navLinks.style.position = 'absolute';
+                navLinks.style.top = '70px';
+                navLinks.style.right = '0';
+                navLinks.style.backgroundColor = '#FDFBF7';
+                navLinks.style.width = '100%';
+                navLinks.style.textAlign = 'center';
+                navLinks.style.padding = '2rem';
+                navLinks.style.boxShadow = '0 5px 10px rgba(0,0,0,0.1)';
+            }
+        });
+    }
+});
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DODCH | The Golden Standard of Mediterranean Hair</title>
+    
+    <!-- Google Fonts: Playfair Display (Serif) & Montserrat (Sans-Serif) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="nav-container">
+            <div class="logo">DODCH</div>
+            <ul class="nav-links">
+                <li><a href="#shop">Shop</a></li>
+                <li><a href="#story">Our Story</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header id="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content reveal">
+            <h1>The Golden Standard of Mediterranean Hair.</h1>
+            <p class="sub-headline">Experience the "Solar-Floral" journey. Hand-crafted in Tunisia with rare Prickly Pear Seed Oil and a bespoke blend of Néroli and Tropical Vanilla.</p>
+            <a href="#shop" class="cta-button">CLAIM YOUR BOTTLE — BATCH #001</a>
+        </div>
+    </header>
+
+    <!-- Three Pillars Section -->
+    <section id="pillars" class="section-padding">
+        <div class="container">
+            <div class="grid-3">
+                <!-- Column 1 -->
+                <div class="pillar-card reveal">
+                    <h3>The Marshmallow Foam</h3>
+                    <p>Powered by pure Sodium Cocoyl Isethionate (SCI). Experience a dense, cloud-like lather that cleanses deeply without stripping, respecting your hair’s natural pH of 5.5.</p>
+                </div>
+                <!-- Column 2 -->
+                <div class="pillar-card reveal">
+                    <h3>Desert Liquid Gold</h3>
+                    <p>Infused with premium Prickly Pear Seed Oil. This "dry oil" treasure provides an immediate glass-like shine and deep cuticle repair without leaving a greasy residue.</p>
+                </div>
+                <!-- Column 3 -->
+                <div class="pillar-card reveal">
+                    <h3>The Scent Journey</h3>
+                    <p>A sophisticated "Solar-Floral" signature. The scent opens with the fresh, clean notes of Tunisian Orange Blossom (Néroli) and settles into a warm, lingering heart of Tropical Vanilla and Coconut.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- The First Try Experience -->
+    <section id="experience" class="section-padding bg-white">
+        <div class="container reveal">
+            <h2 class="section-title">The First Try Experience</h2>
+            <div class="experience-list">
+                <p><strong>The Texture:</strong> The first thing you'll notice is the Pearlescent Texture—a thick, shimmering cream.</p>
+                <p><strong>The Bloom:</strong> As the hot water hits, the Orange Blossom 'blooms' in your shower.</p>
+                <p><strong>The Aftermath:</strong> Post-wash, feel the 'Slip'—your fingers will glide through your hair with ease.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Founder's Note -->
+    <section id="story" class="section-padding">
+        <div class="container reveal">
+            <blockquote class="founders-note">
+                "DODCH was born from a desire to merge Tunisian heritage with modern science. Every bottle in Batch #001 is pH-balanced and hand-poured with the same precision as a fine perfume. We don't just wash hair; we treat it like the treasure it is."
+            </blockquote>
+            <p class="batch-info">Batch #001 — Limited to 15 Bottles</p>
+        </div>
+    </section>
+
+    <!-- Footer / Legal -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="brand-col">
+                    <h4>DODCH</h4>
+                    <p>Hand-poured in Tunisia following strict artisanal Batch Records.</p>
+                </div>
+                <div class="legal-col">
+                    <h5>INCI Ingredients</h5>
+                    <p class="inci-text">Sodium Cocoyl Isethionate, Aqua, Prickly Pear Seed Oil, Hydrolyzed Keratin, Panthenol, Lanette 16, Parfum (Bespoke Blend).</p>
+                    <p class="disclaimer">This product enhances, moisturizes, and beautifies. It does not claim to cure or prevent medical conditions.</p>
+                </div>
+            </div>
+            <div class="copyright">
+                &copy; 2024 DODCH. All Rights Reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
