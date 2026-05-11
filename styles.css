@@ -1753,6 +1753,20 @@ footer {
     }
 }
 
+@keyframes blurFadeIn {
+    0% {
+        opacity: 0;
+        filter: blur(5px);
+        transform: translateY(5px);
+    }
+
+    100% {
+        opacity: 1;
+        filter: blur(0px);
+        transform: translateY(0);
+    }
+}
+
 /* --- Desktop Media Queries (Min-width: 768px) --- */
 @media (min-width: 768px) {
     h1 {
@@ -3433,6 +3447,7 @@ footer {
     max-height: 0;
     overflow: hidden;
     opacity: 0;
+    visibility: hidden;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     width: 100%;
     display: flex;
@@ -3449,6 +3464,7 @@ footer {
 .sidebar-menu-group.active>.sidebar-submenu {
     max-height: 2000px;
     opacity: 1;
+    visibility: visible;
     margin-top: 0.1rem;
     padding-bottom: 0.5rem;
 }

@@ -772,11 +772,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let badgeHTML = '';
                 if (product.isPermanentlyUnavailable) {
-                    badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">UNAVAILABLE</span>';
+                    badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>';
                 } else if (product.outOfStock) {
-                    badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">OUT OF STOCK</span>';
+                    badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>';
                 } else if (hasDiscount && discountPercentage > 0) {
-                    badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1;">-${discountPercentage}%</span>`;
+                    badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
                 }
                 let imgStyle = product.style || '';
                 if (product.outOfStock) {
@@ -932,10 +932,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     async function loadProductCatalog() {
+        let syncError = null;
         try {
             console.log("📡 Syncing real-time prices & stock from Firestore...");
-            // Add a 5 second timeout to prevent infinite hanging if App Check blocks localhost
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 5000));
+            // Add a 30 second timeout to allow prices to load on slower connections
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 30000));
             const querySnapshot = await Promise.race([
                 getDocs(collection(db, "products")),
                 timeoutPromise
@@ -993,15 +994,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                             existingBadges.forEach(b => b.remove());
 
                                             if (productCatalog[productId].isPermanentlyUnavailable) {
-                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">UNAVAILABLE</span>');
+                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>');
                                             } else if (productCatalog[productId].outOfStock) {
-                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">OUT OF STOCK</span>');
+                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>');
                                             } else if (hasDiscount) {
                                                 const prices = data.sizes.map(s => parseFloat(s.price));
                                                 const baseSize = data.sizes.find(s => parseFloat(s.price) === Math.min(...prices)) || data.sizes[0];
                                                 const discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
                                                 if (discountPercentage > 0) {
-                                                    const badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1;">-${discountPercentage}%</span>`;
+                                                    const badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
                                                     imgWrapper.insertAdjacentHTML('afterbegin', badgeHTML);
                                                 }
                                             }
@@ -1058,14 +1059,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.refreshAdminProducts();
             }
         } catch (error) {
+            syncError = error;
             console.error("Error syncing with Firestore:", error);
         } finally {
-            // FINAL SWEEP: If any shimmers remain (e.g. Firebase returned an empty cache due to offline/AppCheck block),
-            // replace them so the user isn't stuck looking at loading animations forever.
-            document.querySelectorAll('.price-shimmer').forEach(el => {
-                const parent = el.closest('.product-card-price') || el.closest('#product-price');
-                if (parent) parent.innerHTML = '<span style="color: var(--text-charcoal); font-size: 0.85em; opacity: 0.6;">Price Unavailable</span>';
-            });
+            // FINAL SWEEP: Only replace shimmers if Firestore completely failed (not on timeout)
+            // If timeout occurs, prices will eventually load from local cache
+            if (syncError && syncError.message === "Firestore sync timeout") {
+                console.warn("⏱️ Firestore sync timed out, but prices are loading from cache. Check back in a moment.");
+            } else if (syncError) {
+                // Only mark prices unavailable if there's a real error (not a timeout)
+                document.querySelectorAll('.price-shimmer').forEach(el => {
+                    const parent = el.closest('.product-card-price') || el.closest('#product-price');
+                    if (parent) parent.innerHTML = '<span style="color: var(--text-charcoal); font-size: 0.85em; opacity: 0.6;">Price will load shortly...</span>';
+                });
+            }
         }
     };
 
