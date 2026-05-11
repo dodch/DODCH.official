@@ -660,13 +660,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- PRODUCT CATALOG (Single Source of Truth) ---
     const defaultProductCatalog = {
-
         'glass-glow-shampoo': {
             name: "Glass Glow Shampoo",
             category: "hair-care",
             subCategory: "shampoo",
             subtitle: "The Elixir of 10,000 Seeds",
-            price: "35.00",
+            price: null,
             image: "IMG_3357.webp",
             description: "THIS PRODUCT IS NO LONGER AVAILABLE. Experience the legacy of our original Glass Glow formula. While this specific treatment has been retired from our permanent collection, its spirit lives on in our newer innovations.",
             style: "",
@@ -674,33 +673,27 @@ document.addEventListener('DOMContentLoaded', () => {
             orderIndex: 0,
             outOfStock: true,
             isPermanentlyUnavailable: true,
-            sizes: [
-                { label: '50ml', price: '35.00' },
-                { label: '100ml', price: '65.00' },
-                { label: '250ml', price: '140.00' }
-            ]
+            sizes: []
         },
         'dodchmellow-pro-v': {
             name: "DODCHmellow",
             category: "hair-care",
             subCategory: "shampoo",
             subtitle: "The Marshmallow Cloud Shampoo",
-            price: "24.50",
+            price: null,
             image: "IMG_3490.webp",
             description: "Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5. Fragrance: Néroli-Sucre.",
             style: "",
             storyUrl: "dodchmellow-pro-v.html",
             orderIndex: 1,
-            sizes: [
-                { label: '250ml', price: '24.50' }
-            ]
+            sizes: []
         },
         'foaming-cleanser': {
             name: "DODCH Foaming Cleanser",
             category: "face-care",
             subCategory: "cleansers",
             subtitle: "Luminous Purity",
-            price: "32.00",
+            price: null,
             image: "IMG_3352.webp",
             description: "A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",
             style: "filter: brightness(1.05);",
@@ -713,30 +706,26 @@ document.addEventListener('DOMContentLoaded', () => {
             category: "hair-care",
             subCategory: ["masks", "conditioners", "leave-in"],
             subtitle: "Deep Repair & Glass Shine",
-            price: "45.00",
+            price: null,
             image: "F188A04D-4AA7-4D98-9EEB-14861B10D468.webp",
             description: "Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",
             style: "",
             storyUrl: "silk-mask.html",
             orderIndex: 2,
-            sizes: [
-                { label: '250ml', price: '45.00' }
-            ]
+            sizes: []
         },
         'advanced-ha-serum': {
             name: "Advanced HA Serum",
             category: "face-care",
             subCategory: "serums",
             subtitle: "Radiance & Deep Hydration",
-            price: "89.00",
+            price: null,
             image: "IMG_3407.webp",
             description: "A concentrated Hyaluronic Acid serum that penetrates deep layers for instant plumping and long-lasting hydration.",
             style: "",
             storyUrl: "face-serum.html",
             orderIndex: 4,
-            sizes: [
-                { label: '30ml', price: '89.00' }
-            ]
+            sizes: []
         }
     };
     productCatalog = { ...defaultProductCatalog };
@@ -794,17 +783,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     imgStyle += ' opacity: 0.55; filter: grayscale(60%); transition: all 0.3s ease;';
                 }
 
+                let priceHTML = '';
+                if (displayPrice) {
+                    priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
+                } else {
+                    priceHTML = `<span class="price-shimmer"></span>`;
+                }
+
                 return `
-                    <div class="product-card reveal" style="--anim-delay: ${staggerDelay};">
+                    <div class="product-card reveal" style="--anim-delay: ${staggerDelay};" data-product-id="${id}">
                         <a ${linkAttributes}>
                             <div class="product-image-wrapper" style="${product.outOfStock ? 'background-color: #f0f0f0;' : ''}">
                                 ${badgeHTML}
                                 <img loading="lazy" src="${product.image}" alt="${product.name}" class="product-card-img" style="${imgStyle}">
-                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice}" data-img="${product.image}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
+                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${product.image}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
                             </div>
                             <div class="product-card-info" style="${product.outOfStock ? 'opacity: 0.7;' : ''}">
                                 <h3 class="product-card-title">${product.name}</h3>
-                                <p class="product-card-price">${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span></p>
+                                <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
                             </div>
                         </a>
                     </div>`;
@@ -936,14 +932,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const loadProductCatalog = async () => {
-        // --- HYBRID LOADING: INITIALIZE WITH LOCAL DATA FIRST FOR INSTANT SPEED ---
-        console.log("⚡ Hybrid Loading: Initializing UI with local catalog fallback...");
-        initProductPage();
-        initShopPage();
-        renderSidebarMenu();
-        if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
-        loadRelatedProducts();
-
         try {
             console.log("📡 Syncing real-time prices & stock from Firestore...");
             const querySnapshot = await getDocs(collection(db, "products"));
@@ -964,6 +952,65 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         if (data.sizes) {
                             productCatalog[productId].sizes = data.sizes;
+                        }
+
+                        // Target specific price elements in the DOM to avoid full re-render
+                        const priceTargets = document.querySelectorAll(`[data-price-target="${productId}"]`);
+                        if (priceTargets.length > 0) {
+                            let updatedDisplayPrice = productCatalog[productId].price;
+                            let originalPriceDisplay = '';
+                            let hasDiscount = false;
+
+                            if (data.sizes && data.sizes.length > 0) {
+                                const prices = data.sizes.map(s => parseFloat(s.price));
+                                const baseSize = data.sizes.find(s => parseFloat(s.price) === Math.min(...prices)) || data.sizes[0];
+                                updatedDisplayPrice = parseFloat(baseSize.price).toFixed(2);
+                                
+                                if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
+                                    hasDiscount = true;
+                                    originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
+                                }
+                            }
+
+                            if (updatedDisplayPrice) {
+                                const newPriceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${updatedDisplayPrice} TND</span>`;
+                                priceTargets.forEach(target => {
+                                    target.innerHTML = newPriceHTML;
+                                    // Also update Quick View buttons if they exist
+                                    const qvBtn = target.closest('.product-card')?.querySelector('.quick-view-btn');
+                                    if (qvBtn) qvBtn.dataset.price = updatedDisplayPrice;
+                                });
+                            }
+                        }
+
+                        // Also update individual product page elements if active
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const activeId = urlParams.get('id');
+                        if (activeId === productId) {
+                            const detailPriceEl = document.getElementById('product-price');
+                            if (detailPriceEl && !productCatalog[productId].outOfStock) {
+                                let updatedDisplayPrice = productCatalog[productId].price;
+                                let originalPriceDisplay = '';
+
+                                if (data.sizes && data.sizes.length > 0) {
+                                    const prices = data.sizes.map(s => parseFloat(s.price));
+                                    const baseSize = data.sizes.find(s => parseFloat(s.price) === Math.min(...prices)) || data.sizes[0];
+                                    updatedDisplayPrice = parseFloat(baseSize.price).toFixed(2);
+                                    
+                                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
+                                        originalPriceDisplay = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span> `;
+                                    }
+                                }
+                                
+                                if (updatedDisplayPrice) {
+                                    detailPriceEl.innerHTML = `${originalPriceDisplay}${updatedDisplayPrice} TND`;
+                                    // Re-init sizes if they are missing
+                                    const sizeContainer = document.querySelector('.size-options');
+                                    if (sizeContainer && sizeContainer.children.length === 0) {
+                                        initProductPage(); 
+                                    }
+                                }
+                            }
                         }
                     } else {
                         // If it's a completely new product from database not in local code, add it
@@ -1555,15 +1602,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (titleEl) titleEl.textContent = product.name;
         if (subtitleEl) subtitleEl.textContent = product.subtitle;
-        let displayPrice = product.price;
-        if (product.sizes && product.sizes.length > 0) {
-            const prices = product.sizes.map(s => parseFloat(s.price));
-            displayPrice = Math.min(...prices).toFixed(2);
-        }
-        if (priceEl) priceEl.textContent = `${displayPrice} TND`;
-        if (product.outOfStock) {
-            if (priceEl) priceEl.textContent = "Out of Stock";
-            if (priceEl) priceEl.style.color = "#ff4d4d";
+        if (priceEl) {
+            if (product.outOfStock) {
+                priceEl.textContent = "Out of Stock";
+                priceEl.style.color = "#ff4d4d";
+            } else if (displayPrice) {
+                priceEl.textContent = `${displayPrice} TND`;
+                priceEl.style.color = "";
+            } else {
+                priceEl.innerHTML = `<span class="price-shimmer" style="width: 100px; height: 1.5em;"></span>`;
+            }
         }
 
         if (descEl) descEl.textContent = product.description;
@@ -1679,8 +1727,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     initProductPage();
-    // Initialize shop page with skeletons while data loads
-    initShopPage(false, true);
+    initShopPage();
+    renderSidebarMenu();
+    if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
+    loadRelatedProducts();
+
     loadProductCatalog();
     const sidebarUserName = document.getElementById('sidebar-user-name');
     const sidebarLoginBtn = document.getElementById('sidebar-login-btn');

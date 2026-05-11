@@ -193,13 +193,34 @@ p {
     z-index: 11000 !important;
 }
 
-#navbar .nav-links li {
-    transition: all 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+#navbar.search-active .logo {
+    transform: translateX(-50%) scale(0.8);
+}
+
+/* --- Price Shimmer Effect --- */
+.price-shimmer {
+    display: inline-block;
+    width: 60px;
+    height: 1.2em;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 4px;
+    vertical-align: middle;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 #navbar.search-active .logo {
     opacity: 0;
     visibility: hidden;
+}
+
+#navbar .nav-links li {
+    transition: all 0.3s cubic-bezier(0.2, 1, 0.3, 1);
 }
 
 .hamburger {
