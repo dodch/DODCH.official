@@ -104,6 +104,13 @@
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap">
     </noscript>
 
+    <!-- CRITICAL: Prevent Flash of Unstyled Content (FOUC).
+         Hides the body immediately (before styles.css loads) and reveals
+         it only once JS marks the page as ready. -->
+    <style>
+      body { visibility: hidden; }
+      body.page-ready { visibility: visible; }
+    </style>
     <link rel="stylesheet" href="styles.css?v=1">
     <meta name="view-transition" content="same-origin">
 </head>

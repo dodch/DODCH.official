@@ -118,6 +118,8 @@ const escapeHTML = (str) => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    // FIX: Reveal the body now that CSS is guaranteed to be applied (prevents FOUC).
+    document.body.classList.add('page-ready');
     const initialHash = window.location.hash;
 
     window.showToast = (message, type = 'info', duration = 4000) => {
