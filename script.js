@@ -676,6 +676,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- LOCAL INVENTORY ORDER ---
+    // Change the order of this array to reorder products in the shop grid
+    const LOCAL_INVENTORY = [
+        'dodchmellow-pro-v',
+        'silk-therapy-mask',
+        'foaming-cleanser',
+        'advanced-ha-serum',
+        'glass-glow-shampoo'
+    ];
+
     // --- PRODUCT CATALOG (Single Source of Truth) ---
     const defaultProductCatalog = {
         'glass-glow-shampoo': {
@@ -699,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: "shampoo",
             subtitle: "The Marshmallow Cloud Shampoo",
             price: null,
-            image: "IMG_3490.webp",
+            image: "IMG_3816.webp",
             description: "Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5. Fragrance: Néroli-Sucre.",
             style: "",
             storyUrl: "dodchmellow-pro-v.html",
@@ -712,7 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: "cleansers",
             subtitle: "Luminous Purity",
             price: null,
-            image: "IMG_3352.webp",
+            image: "IMG_4241.webp",
             description: "A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",
             style: "filter: brightness(1.05);",
             storyUrl: "face-foam.html",
@@ -760,9 +770,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!shopLayout) return;
 
         const renderContent = () => {
-            const sortedCatalog = Object.entries(productCatalog).sort(([, a], [, b]) => {
-                const orderDiff = (a.orderIndex || 0) - (b.orderIndex || 0);
-                if (orderDiff !== 0) return orderDiff;
+            const sortedCatalog = Object.entries(productCatalog).sort(([idA, a], [idB, b]) => {
+                const indexA = LOCAL_INVENTORY.indexOf(idA);
+                const indexB = LOCAL_INVENTORY.indexOf(idB);
+                
+                // If both are in inventory, sort by inventory order
+                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                // If only A is in inventory, A comes first
+                if (indexA !== -1) return -1;
+                // If only B is in inventory, B comes first
+                if (indexB !== -1) return 1;
+                
+                // Fallback to alphabetical sort if neither are in inventory
                 return a.name.localeCompare(b.name);
             });
             const urlParams = new URLSearchParams(window.location.search);
