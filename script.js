@@ -406,6 +406,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
         const links = sidebar.querySelectorAll('a');
         links.forEach(link => link.addEventListener('click', closeSidebar));
+
+        // Ensure logo click also resets state and closes sidebar
+        const logo = document.querySelector('.logo');
+        if (logo) {
+            logo.addEventListener('click', (e) => {
+                const isHomePage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '';
+                if (isHomePage) {
+                    e.preventDefault();
+                    window.history.pushState({}, '', 'index.html');
+                    if (typeof initShopPage === 'function') initShopPage(true);
+                    if (typeof updateSidebarActiveState === 'function') updateSidebarActiveState();
+                    closeSidebar();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        }
     }
     const sliderContainer = document.querySelector('.testimonial-slider-container');
     if (sliderContainer) {
@@ -735,6 +751,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initShopPage(animate = false, loading = false) {
         if (document.querySelector('.product-detail-container')) return;
+        
+        // Reset UI state: scroll to top and close sidebar for a fresh section view
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (typeof closeSidebar === 'function') closeSidebar();
 
         const shopLayout = document.querySelector('.shop-layout');
         if (!shopLayout) return;
@@ -772,16 +792,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 let targetUrl = product.storyUrl || `product.html?id=${id}`;
                 let linkAttributes = `href="${targetUrl}"`;
 
+                const isActuallyOOS = product.sizes && product.sizes.length > 0 
+                    ? product.sizes.every(s => s.outOfStock) 
+                    : product.outOfStock;
+
                 let badgeHTML = '';
                 if (product.isPermanentlyUnavailable) {
                     badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>';
-                } else if (product.outOfStock) {
+                } else if (isActuallyOOS) {
                     badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>';
                 } else if (hasDiscount && discountPercentage > 0) {
                     badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
                 }
                 let imgStyle = product.style || '';
-                if (product.outOfStock) {
+                if (isActuallyOOS) {
                     imgStyle += ' opacity: 0.55; filter: grayscale(60%); transition: all 0.3s ease;';
                 }
 
@@ -795,12 +819,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                     <div class="product-card reveal" style="--anim-delay: ${staggerDelay};" data-product-id="${id}">
                         <a ${linkAttributes}>
-                            <div class="product-image-wrapper" style="${product.outOfStock ? 'background-color: #f0f0f0;' : ''}">
+                            <div class="product-image-wrapper" style="${isActuallyOOS ? 'background-color: #f0f0f0;' : ''}">
                                 ${badgeHTML}
                                 <img loading="lazy" src="${product.image}" alt="${product.name}" class="product-card-img" style="${imgStyle}">
                                 <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${product.image}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
                             </div>
-                            <div class="product-card-info" style="${product.outOfStock ? 'opacity: 0.7;' : ''}">
+                            <div class="product-card-info" style="${isActuallyOOS ? 'opacity: 0.7;' : ''}">
                                 <h3 class="product-card-title">${product.name}</h3>
                                 <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
                             </div>
@@ -943,25 +967,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 getDocs(collection(db, "products")),
                 timeoutPromise
             ]);
-            
+
             if (!querySnapshot.empty) {
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     const productId = doc.id;
-                    
+
                     if (data.deleted) {
                         delete productCatalog[productId];
                     } else if (productCatalog[productId]) {
-                        // HYBRID SYNC: Only update volatile data (prices/stock) from Firestore.
+                        // HYBRID SYNC: Database (Firestore) is the source of truth for Price, Stock, and Sizes.
                         // Local code (script.js) remains the source of truth for Order, Name, Description, Image, etc.
-                        productCatalog[productId].price = data.price || productCatalog[productId].price;
-                        productCatalog[productId].originalPrice = data.originalPrice;
-                        productCatalog[productId].outOfStock = data.outOfStock || false;
-                        productCatalog[productId].isPermanentlyUnavailable = data.isPermanentlyUnavailable || false;
-                        
-                        if (data.sizes) {
-                            productCatalog[productId].sizes = data.sizes;
-                        }
+                        productCatalog[productId].price = data.price || null;
+                        productCatalog[productId].originalPrice = data.originalPrice || null;
+                        productCatalog[productId].outOfStock = data.outOfStock === true;
+                        productCatalog[productId].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
+
+                        // CRITICAL: Overwrite sizes. If Firestore has no sizes, clear the local sizes to use single price logic.
+                        productCatalog[productId].sizes = data.sizes || [];
 
                         // Target specific price elements in the DOM to avoid full re-render
                         const priceTargets = document.querySelectorAll(`[data-price-target="${productId}"]`);
@@ -970,14 +993,24 @@ document.addEventListener('DOMContentLoaded', () => {
                             let originalPriceDisplay = '';
                             let hasDiscount = false;
 
-                            if (data.sizes && data.sizes.length > 0) {
-                                const prices = data.sizes.map(s => parseFloat(s.price));
-                                const baseSize = data.sizes.find(s => parseFloat(s.price) === Math.min(...prices)) || data.sizes[0];
-                                updatedDisplayPrice = parseFloat(baseSize.price).toFixed(2);
-                                
-                                if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
-                                    hasDiscount = true;
-                                    originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
+                            if (data.sizes) {
+                                let sizesArray = [];
+                                if (Array.isArray(data.sizes)) {
+                                    sizesArray = data.sizes;
+                                } else {
+                                    // Convert object { "250ml": 42.99 } to array for frontend
+                                    sizesArray = Object.entries(data.sizes).map(([label, price]) => ({ label, price }));
+                                }
+
+                                if (sizesArray.length > 0) {
+                                    const prices = sizesArray.map(s => parseFloat(s.price));
+                                    const baseSize = sizesArray.find(s => parseFloat(s.price) === Math.min(...prices)) || sizesArray[0];
+                                    updatedDisplayPrice = parseFloat(baseSize.price).toFixed(2);
+
+                                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
+                                        hasDiscount = true;
+                                        originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
+                                    }
                                 }
                             }
 
@@ -985,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const newPriceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${updatedDisplayPrice} TND</span>`;
                                 priceTargets.forEach(target => {
                                     target.innerHTML = newPriceHTML;
-                                    
+
                                     const card = target.closest('.product-card');
                                     if (card) {
                                         // Update/Add Discount Badge
@@ -995,9 +1028,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                             const existingBadges = imgWrapper.querySelectorAll('.product-badge');
                                             existingBadges.forEach(b => b.remove());
 
+                                            const isActuallyOOS = data.sizes && data.sizes.length > 0 
+                                                ? data.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true') 
+                                                : (productCatalog[productId].outOfStock === true || String(productCatalog[productId].outOfStock).toLowerCase() === 'true');
+
                                             if (productCatalog[productId].isPermanentlyUnavailable) {
                                                 imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>');
-                                            } else if (productCatalog[productId].outOfStock) {
+                                            } else if (isActuallyOOS) {
                                                 imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>');
                                             } else if (hasDiscount) {
                                                 const prices = data.sizes.map(s => parseFloat(s.price));
@@ -1009,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 }
                                             }
                                         }
-                                        
+
                                         // Update Quick View button data
                                         const qvBtn = card.querySelector('.quick-view-btn');
                                         if (qvBtn) qvBtn.dataset.price = updatedDisplayPrice;
@@ -1020,39 +1057,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // Also update individual product page elements if active
                         const urlParams = new URLSearchParams(window.location.search);
-                        const activeId = urlParams.get('id');
-                        if (activeId === productId) {
-                            const detailPriceEl = document.getElementById('product-price');
-                            if (detailPriceEl && !productCatalog[productId].outOfStock) {
-                                let updatedDisplayPrice = productCatalog[productId].price;
-                                let originalPriceDisplay = '';
+                        const activeIdParam = urlParams.get('id');
+                        const currentFilename = window.location.pathname.split('/').pop();
+                        const isThisProductPage = activeIdParam === productId ||
+                            productCatalog[productId]?.storyUrl === currentFilename;
 
-                                if (data.sizes && data.sizes.length > 0) {
-                                    const prices = data.sizes.map(s => parseFloat(s.price));
-                                    const baseSize = data.sizes.find(s => parseFloat(s.price) === Math.min(...prices)) || data.sizes[0];
-                                    updatedDisplayPrice = parseFloat(baseSize.price).toFixed(2);
-                                    
-                                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
-                                        originalPriceDisplay = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span> `;
-                                    }
-                                }
-                                
-                                if (updatedDisplayPrice) {
-                                    detailPriceEl.innerHTML = `${originalPriceDisplay}${updatedDisplayPrice} TND`;
-                                    // Re-init sizes if they are missing
-                                    const sizeContainer = document.querySelector('.size-options');
-                                    if (sizeContainer && sizeContainer.children.length === 0) {
-                                        initProductPage(); 
-                                    }
-                                }
-                            }
+                        if (isThisProductPage) {
+                            // Always re-run initProductPage after Firestore sync on a product detail page
+                            // This replaces shimmers with real prices and size buttons
+                            initProductPage();
                         }
                     } else {
                         // If it's a completely new product from database not in local code, add it
+                        if (data.sizes && !Array.isArray(data.sizes)) {
+                            data.sizes = Object.entries(data.sizes).map(([label, price]) => ({ label, price }));
+                        }
                         productCatalog[productId] = data;
                     }
                 });
-                
+
                 // RE-INITIALIZE DYNAMIC ELEMENTS (No full refresh, just update prices/stock)
                 console.log("✅ Real-time data synced. Refreshing UI.");
                 if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
@@ -1625,7 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!productDetailContainer) return; // Not on product page
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
-        const product = productCatalog[productId] || productCatalog['glass-glow-shampoo'];
+        const product = productCatalog[productId] || Object.values(productCatalog).find(p => p.storyUrl === window.location.pathname.split('/').pop()) || productCatalog['glass-glow-shampoo'];
         let titleEl = document.getElementById('product-title');
         if (!titleEl) {
             const info = document.querySelector('.product-info');
@@ -1646,15 +1669,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (titleEl) titleEl.textContent = product.name;
         if (subtitleEl) subtitleEl.textContent = product.subtitle;
+
+        // Price: show shimmer until Firestore provides data
         if (priceEl) {
-            if (product.outOfStock) {
-                priceEl.textContent = "Out of Stock";
-                priceEl.style.color = "#ff4d4d";
-            } else if (displayPrice) {
-                priceEl.textContent = `${displayPrice} TND`;
+            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
+            const priceVal = product.price ? `${product.price} TND` : '';
+            if (isActuallyOOS) {
+                priceEl.innerHTML = `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span> <span style="opacity: 0.7;">${priceVal}</span>`;
+            } else if (product.price) {
+                priceEl.textContent = priceVal;
                 priceEl.style.color = "";
             } else {
-                priceEl.innerHTML = `<span class="price-shimmer" style="width: 100px; height: 1.5em;"></span>`;
+                // No price yet — Firestore hasn't synced. Show shimmer.
+                priceEl.innerHTML = `<span class="price-shimmer" style="width: 110px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>`;
             }
         }
 
@@ -1665,109 +1695,128 @@ document.addEventListener('DOMContentLoaded', () => {
             if (product.style) imgEl.style = product.style;
         }
         if (addToCartBtn) {
-            addToCartBtn.dataset.productId = productId || 'glass-glow-shampoo';
+            addToCartBtn.dataset.productId = productId || Object.keys(productCatalog).find(k => productCatalog[k] === product) || '';
         }
         document.title = `${product.name} | DODCH`;
-        const sizeOptionsContainer = productDetailContainer.querySelector('.size-options');
-        if (sizeOptionsContainer && product.sizes) {
-            sizeOptionsContainer.innerHTML = ''; // Clear existing hardcoded buttons
 
-            if (product.sizes.length > 0) {
-                const selector = productDetailContainer.querySelector('.size-selector');
-                if (selector) selector.style.display = 'block';
-                const prices = product.sizes.map(s => parseFloat(s.price));
-                const minPrice = Math.min(...prices);
-                const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
+        const sizeOptionsContainer = productDetailContainer.querySelector('.size-options');
+        const sizeSelector = productDetailContainer.querySelector('.size-selector');
+
+        if (sizeOptionsContainer) {
+            sizeOptionsContainer.innerHTML = '';
+
+            if (product.sizes && product.sizes.length > 0) {
+                // Firestore data is loaded — render real size buttons
+                if (sizeSelector) sizeSelector.style.display = 'block';
+
+                const sortedSizes = product.sizes.map((s, i) => ({ ...s, i })).sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+                const firstInStock = sortedSizes.find(s => !s.outOfStock);
+                const minIndex = firstInStock ? firstInStock.i : sortedSizes[0].i;
 
                 product.sizes.forEach((sizeObj, index) => {
                     const btn = document.createElement('button');
                     btn.className = 'size-btn';
-                    if (index === minIndex) {
-                        btn.classList.add('active');
-                        if (priceEl) {
-                            if (sizeObj.originalPrice) {
-                                priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND <span style="background: #d4af37; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; vertical-align: middle; margin-left: 8px;">ONLINE OFFER</span>`;
-                            } else {
-                                priceEl.textContent = `${sizeObj.price} TND`;
-                            }
-                        }
-                        const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
-                        if (addToCartBtn && !product.outOfStock) {
-                            if (sizeObj.outOfStock) {
-                                addToCartBtn.disabled = true;
-                                addToCartBtn.textContent = "Out of Stock";
-                                addToCartBtn.style.backgroundColor = "#ccc";
-                            } else {
-                                addToCartBtn.disabled = false;
-                                addToCartBtn.textContent = "Add to Cart";
-                                addToCartBtn.style.backgroundColor = "";
-                            }
-                        }
-                    }
                     btn.dataset.size = sizeObj.label;
                     btn.dataset.price = sizeObj.price;
                     btn.textContent = sizeObj.label;
+
+                    if (index === minIndex) {
+                        btn.classList.add('active');
+                        if (priceEl) {
+                            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                            const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
+                            const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+                            
+                            if (sizeObj.originalPrice) {
+                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span style="background: #d4af37; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; vertical-align: middle; margin-left: 8px;">ONLINE OFFER</span>`;
+                            } else {
+                                priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
+                                priceEl.style.color = "";
+                            }
+                        }
+                        const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
+                        const isActuallyOOS = product.sizes && product.sizes.length > 0
+                            ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                            : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                        if (atcBtn && !isActuallyOOS) {
+                            const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                            atcBtn.disabled = sizeObj.outOfStock === true;
+                            atcBtn.innerHTML = sizeObj.outOfStock ? "Out of Stock" : cartIcon + "Add to Cart";
+                            atcBtn.style.backgroundColor = sizeObj.outOfStock ? "#ccc" : "";
+                            atcBtn.style.opacity = sizeObj.outOfStock ? "0.5" : "";
+                        }
+                    }
+
                     btn.addEventListener('click', () => {
                         sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
                         if (priceEl) {
+                            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                            const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
+                            const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+
                             if (sizeObj.originalPrice) {
-                                priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND <span style="background: #d4af37; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; vertical-align: middle; margin-left: 8px;">ONLINE OFFER</span>`;
+                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span style="background: #d4af37; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; vertical-align: middle; margin-left: 8px;">ONLINE OFFER</span>`;
                             } else {
-                                priceEl.textContent = `${sizeObj.price} TND`;
+                                priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
+                                priceEl.style.color = "";
                             }
                         }
-                        const addToCartBtn = document.querySelector('.product-info .add-to-cart-btn');
-                        if (addToCartBtn && !product.outOfStock) {
-                            if (sizeObj.outOfStock) {
-                                addToCartBtn.disabled = true;
-                                addToCartBtn.textContent = "Out of Stock";
-                                addToCartBtn.style.backgroundColor = "#ccc";
-                            } else {
-                                addToCartBtn.disabled = false;
-                                addToCartBtn.textContent = "Add to Cart";
-                                addToCartBtn.style.backgroundColor = "";
-                            }
+                        const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
+                        const isActuallyOOS = product.sizes && product.sizes.length > 0
+                            ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                            : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                        if (atcBtn && !isActuallyOOS) {
+                            const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                            atcBtn.disabled = sizeObj.outOfStock === true;
+                            atcBtn.innerHTML = sizeObj.outOfStock ? "Out of Stock" : cartIcon + "Add to Cart";
+                            atcBtn.style.backgroundColor = sizeObj.outOfStock ? "#ccc" : "";
+                            atcBtn.style.opacity = sizeObj.outOfStock ? "0.5" : "";
                         }
                     });
 
-                    if (product.outOfStock) {
-                        btn.disabled = true;
-                        btn.style.opacity = "0.5";
-                    } else if (sizeObj.outOfStock) {
+                    if (sizeObj.outOfStock) {
                         btn.style.textDecoration = "line-through";
                         btn.style.opacity = "0.6";
                     }
 
                     sizeOptionsContainer.appendChild(btn);
                 });
+
+            } else if (!product.isPermanentlyUnavailable && !product.outOfStock) {
+                // No sizes yet — Firestore hasn't responded. Show shimmer placeholders.
+                if (sizeSelector) sizeSelector.style.display = 'block';
+                sizeOptionsContainer.innerHTML = `
+                    <span class="price-shimmer" style="width: 70px; height: 38px; border-radius: 8px; display: inline-block;"></span>
+                    <span class="price-shimmer" style="width: 70px; height: 38px; border-radius: 8px; display: inline-block; margin-left: 10px;"></span>
+                `;
+                // Disable Add to Cart until sizes load
+                if (addToCartBtn) {
+                    addToCartBtn.disabled = true;
+                    addToCartBtn.style.opacity = "0.5";
+                }
             } else {
-                const selector = productDetailContainer.querySelector('.size-selector');
-                if (selector) selector.style.display = 'none';
+                if (sizeSelector) sizeSelector.style.display = 'none';
             }
         }
         const existingStoryBtn = document.getElementById('product-story-link');
         if (existingStoryBtn) existingStoryBtn.remove();
-        if (product.outOfStock && addToCartBtn) {
-            addToCartBtn.disabled = true;
-            addToCartBtn.innerText = "Out of Stock";
-            addToCartBtn.style.backgroundColor = "#ccc";
-        }
+        // The Add to Cart button state is already managed by the size selection logic above.
 
         if (addToCartBtn && product.storyUrl) {
             const storyBtn = document.createElement('a');
-
             storyBtn.id = 'product-story-link';
             storyBtn.href = product.storyUrl;
             storyBtn.textContent = 'Learn More';
-            storyBtn.style.display = 'block';
-            storyBtn.style.textAlign = 'center';
-            storyBtn.style.marginTop = '1rem';
-            storyBtn.style.textDecoration = 'underline';
-            storyBtn.style.color = 'var(--text-charcoal)';
-            storyBtn.style.fontSize = '0.85rem';
+            storyBtn.className = 'qv-view-details-btn';
+            storyBtn.style.marginBottom = '1rem';
+            storyBtn.style.display = 'block'; // Ensure it takes full width if qv-view-details-btn uses inline-block
 
-            addToCartBtn.after(storyBtn);
+            addToCartBtn.before(storyBtn);
         }
     };
     initProductPage();
@@ -2228,27 +2277,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     const finalTotal = calculatedSubtotal + shippingFee;
 
                     const orderData = {
-                        orderReference,
-                        items,
+                        orderReference: orderReference,
+                        items: items,
                         shipping: {
-                            email: document.getElementById('checkout-email').value.trim(),
-                            fullName: document.getElementById('checkout-name').value,
-                            address: document.getElementById('checkout-address').value,
-                            city: document.getElementById('checkout-city').value,
-                            postalCode: document.getElementById('checkout-postal-code').value
+                            email: email,
+                            fullName: name,
+                            phone: phone,
+                            address: address,
+                            city: city,
+                            postalCode: postalCode
                         },
                         subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
                         shippingFee: shippingFee,
                         total: parseFloat(finalTotal.toFixed(2)),
-                        timestamp: serverTimestamp(),
                         status: 'Pending',
-                        userId: currentUser ? currentUser.uid : 'guest'
+                        userId: currentUser ? currentUser.uid : 'guest',
+                        timestamp: serverTimestamp()
                     };
-                    // --- SECURITY: USE CLOUD FUNCTION FOR SECURE ORDER CREATION ---
-                    const createOrderFn = httpsCallable(functions, 'createOrder');
-                    const result = await createOrderFn(orderData);
-                    const orderId = result.data.orderId;
-                    const finalOrderReference = result.data.orderReference || orderReference;
+                    // --- DIRECT FIRESTORE SAVE (Spark Plan Support) ---
+                    const docRef = await addDoc(collection(db, "orders"), orderData);
+                    const orderId = docRef.id;
+                    const finalOrderReference = orderReference;
+                    // --- END DIRECT SAVE ---
 
                     clearTimeout(operationTimeout);
                     console.log("Order placed successfully with ID: ", orderId);
@@ -2414,7 +2464,7 @@ document.addEventListener('DOMContentLoaded', () => {
             crumbs.push({ name: "Shop", url: "index.html" });
             const urlParams = new URLSearchParams(window.location.search);
             const productId = urlParams.get('id');
-            const product = productCatalog[productId] || productCatalog['glass-glow-shampoo'];
+            const product = productCatalog[productId] || Object.values(productCatalog).find(p => p.storyUrl === window.location.pathname.split('/').pop()) || productCatalog['glass-glow-shampoo'];
             currentName = product ? product.name : "Product";
         }
 
@@ -2483,7 +2533,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <form id="main-contact-form">
                                         <!-- Honeypot Field (Hidden) -->
                                         <div style="position: absolute; left: -9999px;">
-                                            <input type="text" name="website" tabindex="-1" autocomplete="off">
+                                            <input type="text" name="__hp_website" tabindex="-1" autocomplete="off">
                                         </div>
                                         <div class="form-group">
                                             <input type="text" id="contact-name" placeholder="Your Name" required>
@@ -2726,7 +2776,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    renderSidebarMenu(true);
+    renderSidebarMenu(false);
     const updateSidebarActiveState = () => {
         const currentUrl = new URL(window.location.href);
         const isBaseHomePage = (currentUrl.pathname.endsWith('/') || currentUrl.pathname.endsWith('/index.html')) && currentUrl.search === '';
@@ -2957,24 +3007,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const addSizeInputRow = (size = { label: '', price: '', originalPrice: '' }) => {
             const sizeRow = document.createElement('div');
-            sizeRow.className = 'product-size-row';
-            sizeRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+            sizeRow.className = 'size-input-row';
             sizeRow.innerHTML = `
-                <input type="text" class="size-label-input admin-search-input" placeholder="Size (e.g., 50ml)" value="${size.label}" required style="flex: 2;">
-                <input type="number" step="0.01" class="size-price-input admin-search-input" placeholder="Price" value="${size.price}" required style="flex: 1;">
-                <input type="number" step="0.01" class="size-original-price-input admin-search-input" placeholder="Old Price (Opt)" value="${size.originalPrice || ''}" style="flex: 1;">
-                <button type="button" class="remove-size-btn" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+                <div class="form-group" style="margin: 0;">
+                    <label style="display:none;">Size</label>
+                    <input type="text" class="size-label-input modern-input" placeholder="Size (e.g., 50ml)" value="${size.label}" required>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label style="display:none;">Price</label>
+                    <input type="number" step="0.01" class="size-price-input modern-input" placeholder="Price" value="${size.price}" required>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label style="display:none;">Old Price</label>
+                    <input type="number" step="0.01" class="size-original-price-input modern-input" placeholder="Old Price" value="${size.originalPrice || ''}">
+                </div>
+                <button type="button" class="remove-size-btn remove-btn" style="position: relative; top: 0; right: 0; width: 32px; height: 32px; background: #ffebee; color: #c62828;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             `;
             if (sizesContainer) sizesContainer.appendChild(sizeRow);
             sizeRow.querySelector('.remove-size-btn').addEventListener('click', () => sizeRow.remove());
         };
+
+        const closeModalTopBtn = document.getElementById('close-modal-top-btn');
+        if (closeModalTopBtn) closeModalTopBtn.addEventListener('click', closeProductModal);
 
         if (addSizeBtn) addSizeBtn.addEventListener('click', () => addSizeInputRow());
 
         if (addProductForm) {
             addProductForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const submitBtn = addProductForm.querySelector('button[type="submit"]');
+                const submitBtn = document.querySelector('button[type="submit"][form="add-product-form"]');
                 submitBtn.disabled = true;
                 const spinner = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 18px; height: 18px; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>';
                 submitBtn.innerHTML = `${spinner} Saving...`;
@@ -3022,7 +3085,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                const sizes = Array.from(sizesContainer.querySelectorAll('.product-size-row')).map(row => ({
+                const sizes = Array.from(sizesContainer.querySelectorAll('.size-input-row')).map(row => ({
                     label: row.querySelector('.size-label-input').value,
                     price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
                     originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
@@ -3058,7 +3121,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // --- Step 3: Save to Firestore ---
                 submitBtn.innerHTML = `${spinner} Saving Product...`;
-                try { await setDoc(doc(db, "products", newId), newProduct); productCatalog[newId] = newProduct; loadAdminProducts(); closeProductModal(); window.showToast(isEdit ? "Product updated successfully!" : "Product added successfully!", "success"); } catch (error) { console.error("Error saving product:", error); window.showToast("Failed to save product.", "error"); } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; }
+                try {
+                    const cleanedProduct = JSON.parse(JSON.stringify(newProduct));
+                    await setDoc(doc(db, "products", newId), cleanedProduct);
+                    productCatalog[newId] = cleanedProduct;
+                    loadAdminProducts();
+                    closeProductModal();
+                    window.showToast(isEdit ? "Product updated successfully!" : "Product added successfully!", "success");
+                } catch (error) {
+                    console.error("Error saving product:", error);
+                    window.showToast("Failed to save product.", "error");
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Save Product';
+                }
             });
         }
         const pageSize = 10;
@@ -3158,24 +3234,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         const el = document.createElement('div');
                         el.className = 'admin-order-card';
-                        el.style.borderLeft = msg.status === 'unread' ? '4px solid #D4AF37' : '1px solid #eee';
-                        el.style.backgroundColor = msg.status === 'unread' ? '#fffdf7' : '#fff';
+                        if (msg.status === 'unread') el.classList.add('admin-unread-msg');
 
                         el.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                                <div>
-                                    <h3 style="margin: 0; font-size: 1.1rem; ${msg.status === 'unread' ? 'font-weight: 700;' : 'font-weight: 500;'}">${safeName}</h3>
-                                    <p style="margin: 0; font-size: 0.9rem; color: #666;"><a href="mailto:${safeEmail}" style="color: inherit;">${safeEmail}</a></p>
-                                </div>
-                                <span style="font-size: 0.8rem; color: #999;">${dateStr}</span>
+                            <div class="admin-order-header">
+                                <strong>${safeName}</strong>
+                                <span>${dateStr}</span>
                             </div>
-                            <p style="margin-bottom: 1.5rem; line-height: 1.5; white-space: pre-wrap; font-size: 0.95rem; color: var(--text-charcoal);">${safeMessage}</p>
-                            <div style="display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #eee; padding-top: 1rem;">
-                                <a href="${mailtoLink}" class="admin-btn" style="background-color: transparent; border: 1px solid #3498db; color: #3498db; text-decoration: none; padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center;">Reply</a>
-                                ${msg.status === 'unread' ? '<button class="admin-btn mark-read-btn" data-id="' + msgId + '" style="background-color: transparent; border: 1px solid #333; color: #333;">Mark as Read</button>' : ''}
-                                <button class="admin-btn delete-msg-btn" data-id="${msgId}" style="background-color: transparent; border: 1px solid #e74c3c; color: #e74c3c;">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                </button>
+                            <div class="admin-order-details">
+                                <p><strong>Email:</strong> <a href="mailto:${safeEmail}" style="color: inherit;">${safeEmail}</a></p>
+                                <div style="margin-top: 1rem; line-height: 1.6; color: var(--text-charcoal); font-size: 0.95rem; white-space: pre-wrap;">${safeMessage}</div>
+                            </div>
+                            <div class="admin-order-actions" style="margin-top: 1.5rem; border-top: 1px solid #f8f8f8; padding-top: 1rem;">
+                                <div style="display: flex; gap: 0.5rem; width: 100%;">
+                                    <a href="${mailtoLink}" class="admin-btn btn-edit" style="text-decoration: none;">Reply</a>
+                                    ${msg.status === 'unread' ? '<button class="admin-btn btn-save mark-read-btn" data-id="' + msgId + '">Mark Read</button>' : ''}
+                                    <button class="admin-btn btn-delete delete-msg-btn" data-id="${msgId}">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                </div>
                             </div>
                         `;
                         adminMessagesList.appendChild(el);
@@ -3187,33 +3264,38 @@ document.addEventListener('DOMContentLoaded', () => {
                         badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
                     }
 
-                    document.querySelectorAll('.mark-read-btn').forEach(btn => {
-                        btn.addEventListener('click', async (e) => {
-                            try {
-                                const id = e.currentTarget.dataset.id;
-                                await updateDoc(doc(db, 'messages', id), { status: 'read' });
-                            } catch (err) {
-                                console.error(err);
-                                window.showToast("Error updating message", "error");
-                            }
-                        });
-                    });
+                    // --- Unified Event Delegation for Messages ---
+                    if (!adminMessagesList.dataset.listenersAttached) {
+                        adminMessagesList.addEventListener('click', async (e) => {
+                            const markBtn = e.target.closest('.mark-read-btn');
+                            const deleteBtn = e.target.closest('.delete-msg-btn');
 
-                    document.querySelectorAll('.delete-msg-btn').forEach(btn => {
-                        btn.addEventListener('click', async (e) => {
-                            if (confirm("Are you sure you want to delete this message?")) {
+                            if (markBtn) {
                                 try {
-                                    const id = e.currentTarget.dataset.id;
-                                    await deleteDoc(doc(db, 'messages', id));
-                                    window.showToast("Message deleted", "success");
+                                    const id = markBtn.dataset.id;
+                                    await updateDoc(doc(db, 'messages', id), { status: 'read' });
+                                    window.showToast("Message marked as read", "success");
                                 } catch (err) {
                                     console.error(err);
-                                    window.showToast("Error deleting message", "error");
+                                    window.showToast(`Error updating message: ${err.code || err.message}`, "error");
+                                }
+                            }
+
+                            if (deleteBtn) {
+                                if (confirm("Are you sure you want to delete this message?")) {
+                                    try {
+                                        const id = deleteBtn.dataset.id;
+                                        await deleteDoc(doc(db, 'messages', id));
+                                        window.showToast("Message deleted", "success");
+                                    } catch (err) {
+                                        console.error(err);
+                                        window.showToast("Error deleting message", "error");
+                                    }
                                 }
                             }
                         });
-                    });
-
+                        adminMessagesList.dataset.listenersAttached = 'true';
+                    }
                 }, (error) => {
                     console.error("Error fetching messages:", error);
                     adminMessagesList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied or Error loading messages.</p>';
@@ -3276,17 +3358,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span>${date}</span>
                         </div>
                         <div class="admin-order-details">
-                            <p><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)} (${escapeHTML(order.shipping?.email)})</p>
+                            <p><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)}</p>
+                            <p><strong>Email:</strong> ${escapeHTML(order.shipping?.email)}</p>
                             <p><strong>Address:</strong> ${escapeHTML(order.shipping?.address)}, ${escapeHTML(order.shipping?.city)}</p>
-                            <p><strong>Total:</strong> ${order.total} TND</p>
+                            <p><strong>Total:</strong> <span style="color: var(--accent-gold); font-weight: 700;">${order.total} TND</span></p>
                             <div class="admin-order-items">
-                                ${order.items.map(i => `<div>${i.quantity}x ${escapeHTML(i.name)} (${escapeHTML(i.size)})</div>`).join('')}
+                                ${order.items.map(i => `<div>• ${i.quantity}x ${escapeHTML(i.name)} (${escapeHTML(i.size)})</div>`).join('')}
                             </div>
                         </div>
                         <div class="admin-order-actions">
                             <span class="status-badge status-${status.toLowerCase().replace(/\s/g, '-')}">${status}</span>
                             <select class="admin-status-select" data-id="${order.id}">
-                                <option value="" disabled selected>Change Status</option>
+                                <option value="" disabled selected>Update Status</option>
                                 <option value="Confirmed">Confirmed</option>
                                 <option value="In Delivery">In Delivery</option>
                                 <option value="Delivered">Delivered</option>
@@ -3430,34 +3513,50 @@ The DODCH Team`;
             }
         };
 
-        const loadAdminProducts = () => {
-            if (!document.getElementById('admin-sync-btn')) {
-                const syncBtn = document.createElement('button');
-                syncBtn.id = 'admin-sync-btn';
-                syncBtn.className = 'admin-btn btn-save';
-                syncBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg> Sync Catalog`;
-                syncBtn.style.marginBottom = '20px';
-                syncBtn.style.width = 'auto';
-                syncBtn.style.flex = 'none';
+        const loadAdminProducts = async () => {
+            if (!adminProductsList) return;
+            adminProductsList.innerHTML = '<p style="color:#888; padding: 1rem;">Loading inventory from Firestore...</p>';
 
-                syncBtn.addEventListener('click', async () => {
-                    if (await window.showConfirm("Overwrite Firestore products with local catalog data?", "Sync Catalog")) {
-                        try {
-                            const promises = Object.entries(productCatalog).map(([id, data]) => {
-                                return setDoc(doc(db, "products", id), data, { merge: true });
-                            });
-                            await Promise.all(promises);
-                            window.showToast("Catalog synced to Firestore!", "success");
-                        } catch (e) {
-                            console.error(e);
-                            window.showToast("Sync failed: " + e.message, "error");
-                        }
+            // Always fetch fresh data from Firestore before rendering
+            try {
+                const snapshot = await getDocs(collection(db, "products"));
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const id = docSnap.id;
+                    if (data.deleted) {
+                        delete productCatalog[id];
+                        return;
+                    }
+                    if (productCatalog[id]) {
+                        // Overwrite volatile fields from Firestore
+                        productCatalog[id].price = data.price || null;
+                        productCatalog[id].originalPrice = data.originalPrice || null;
+                        productCatalog[id].outOfStock = data.outOfStock === true;
+                        productCatalog[id].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
+                        productCatalog[id].sizes = data.sizes || [];
+                    } else {
+                        // Product exists only in Firestore (added via admin), add to local catalog
+                        productCatalog[id] = {
+                            name: data.name || id,
+                            subtitle: data.subtitle || '',
+                            description: data.description || '',
+                            image: data.image || '',
+                            price: data.price || null,
+                            sizes: data.sizes || [],
+                            outOfStock: data.outOfStock === true,
+                            isPermanentlyUnavailable: data.isPermanentlyUnavailable === true,
+                            orderIndex: data.orderIndex || 99,
+                            style: data.style || '',
+                            storyUrl: data.storyUrl || null,
+                            category: data.category || 'uncategorized',
+                            subCategory: data.subCategory || ''
+                        };
                     }
                 });
-
-                if (adminProductsList.parentElement) {
-                    adminProductsList.parentElement.insertBefore(syncBtn, adminProductsList);
-                }
+            } catch (e) {
+                console.error("Failed to fetch products from Firestore:", e);
+                adminProductsList.innerHTML = `<p style="color: #ff4d4d;">Error loading inventory: ${e.message}</p>`;
+                return;
             }
 
             adminProductsList.innerHTML = '';
@@ -3472,20 +3571,29 @@ The DODCH Team`;
                 el.className = 'admin-product-card';
                 let priceInputsHTML = '';
                 if (product.sizes && product.sizes.length > 0) {
+                    priceInputsHTML = '<div class="price-inputs-container">';
                     product.sizes.forEach((size, index) => {
                         priceInputsHTML += `
-                            <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
-                                <span style="font-size: 0.9rem; color: #555;">${size.label}</span>
-                                <div style="display: flex; align-items: center; gap: 5px;">
-                                    <input type="number" class="admin-size-price-input" data-index="${index}" value="${parseFloat(size.price)}" placeholder="Price" style="width: 70px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
-                                    <input type="number" class="admin-size-original-price-input" data-index="${index}" value="${size.originalPrice ? parseFloat(size.originalPrice) : ''}" placeholder="Old Price" style="width: 70px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
-                                    <label title="Mark this size as Out of Stock" style="font-size: 0.8rem; display: flex; align-items: center; cursor: pointer;"><input type="checkbox" class="admin-size-stock-check" data-index="${index}" ${size.outOfStock ? 'checked' : ''}> OOS</label>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 5px;">
+                                <span style="font-size: 0.8rem; color: #666; flex: 1;">${size.label}</span>
+                                <div style="display: flex; align-items: center; gap: 5px; flex: 3;">
+                                    <input type="number" class="admin-size-price-input" data-index="${index}" value="${parseFloat(size.price)}" placeholder="Price" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <input type="number" class="admin-size-original-price-input" data-index="${index}" value="${size.originalPrice ? parseFloat(size.originalPrice) : ''}" placeholder="Old" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-size-stock-check" data-index="${index}" ${size.outOfStock ? 'checked' : ''}> OOS</label>
                                 </div>
                             </div>
                         `;
                     });
+                    priceInputsHTML += '</div>';
                 } else {
-                    priceInputsHTML = `<label>Price (TND): <input type="number" class="admin-price-input" value="${parseFloat(product.price)}" style="width: 100px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></label>`;
+                    priceInputsHTML = `
+                        <div class="price-inputs-container">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 0.85rem; color: #666; flex: 1;">Price (TND)</span>
+                                <input type="number" class="admin-price-input" value="${parseFloat(product.price)}" style="flex: 2; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-single-stock-check" ${product.outOfStock ? 'checked' : ''}> OOS</label>
+                            </div>
+                        </div>`;
                 }
 
                 const isFirst = index === 0;
@@ -3500,24 +3608,21 @@ The DODCH Team`;
                         </div>
                         <div class="admin-move-controls">
                             <button class="btn-move up admin-move-btn" data-id="${id}" ${isFirst ? 'disabled' : ''}>
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
                             </button>
                             <button class="btn-move down admin-move-btn" data-id="${id}" ${isLast ? 'disabled' : ''}>
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
                             </button>
                         </div>
                     </div>
                     <div class="admin-product-controls">
-                        <div class="price-inputs-container">
-                            ${priceInputsHTML}
-                        </div>
-                        <label class="stock-label"><input type="checkbox" class="admin-stock-check" data-id="${id}" ${product.outOfStock ? 'checked' : ''}> Out of Stock</label>
+                        ${priceInputsHTML}
                         <div class="admin-actions-row">
                             <button class="admin-btn btn-edit admin-edit-prod-btn" data-id="${id}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 Edit
                             </button>
-                            <button class="admin-btn btn-save admin-save-prod-btn" data-id="${id}">
+                            <button class="admin-btn btn-save admin-save-prod-btn" data-id="${id}" disabled>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                                 Save
                             </button>
@@ -3529,6 +3634,45 @@ The DODCH Team`;
                     </div>
                 `;
                 adminProductsList.appendChild(el);
+
+                // --- Change Detection Logic ---
+                const saveBtn = el.querySelector('.admin-save-prod-btn');
+                const inputs = el.querySelectorAll('input');
+
+                const checkChanges = () => {
+                    let hasChanged = false;
+
+                    // Check Prices & Size-specific Stock
+
+                    // Check Prices & Size-specific Stock
+                    if (product.sizes && product.sizes.length > 0) {
+                        const sizeRows = el.querySelectorAll('.price-inputs-container > div');
+                        sizeRows.forEach((row, idx) => {
+                            const pInput = row.querySelector('.admin-size-price-input');
+                            const opInput = row.querySelector('.admin-size-original-price-input');
+                            const sCheck = row.querySelector('.admin-size-stock-check');
+
+                            const original = product.sizes[idx];
+                            if (parseFloat(pInput.value).toFixed(2) !== parseFloat(original.price).toFixed(2)) hasChanged = true;
+                            const currentOp = opInput.value ? parseFloat(opInput.value).toFixed(2) : null;
+                            const originalOp = original.originalPrice ? parseFloat(original.originalPrice).toFixed(2) : null;
+                            if (currentOp !== originalOp) hasChanged = true;
+                            if (sCheck.checked !== (original.outOfStock === true)) hasChanged = true;
+                        });
+                    } else {
+                        const pInput = el.querySelector('.admin-price-input');
+                        const sCheck = el.querySelector('.admin-single-stock-check');
+                        if (pInput && parseFloat(pInput.value).toFixed(2) !== parseFloat(product.price).toFixed(2)) hasChanged = true;
+                        if (sCheck && sCheck.checked !== (product.outOfStock === true)) hasChanged = true;
+                    }
+
+                    saveBtn.disabled = !hasChanged;
+                };
+
+                inputs.forEach(input => {
+                    input.addEventListener('input', checkChanges);
+                    input.addEventListener('change', checkChanges);
+                });
             });
 
             document.querySelectorAll('.admin-edit-prod-btn').forEach(btn => {
@@ -3566,10 +3710,13 @@ The DODCH Team`;
                 btn.addEventListener('click', async (e) => {
                     const id = e.currentTarget.dataset.id;
                     const card = e.currentTarget.closest('.admin-product-card');
-                    const outOfStock = card.querySelector('.admin-stock-check').checked;
+                    const saveBtn = e.currentTarget;
+
+                    saveBtn.disabled = true;
+                    const originalHTML = saveBtn.innerHTML;
+                    saveBtn.innerHTML = 'Saving...';
 
                     try {
-                        productCatalog[id].outOfStock = outOfStock;
                         const sizeInputs = card.querySelectorAll('.admin-size-price-input');
                         if (sizeInputs.length > 0) {
                             sizeInputs.forEach(input => {
@@ -3590,15 +3737,24 @@ The DODCH Team`;
                             productCatalog[id].price = Math.min(...prices).toFixed(2);
                         } else {
                             const priceInput = card.querySelector('.admin-price-input');
+                            const stockCheck = card.querySelector('.admin-single-stock-check');
                             if (priceInput) {
                                 productCatalog[id].price = parseFloat(priceInput.value).toFixed(2);
                             }
+                            if (stockCheck) {
+                                productCatalog[id].outOfStock = stockCheck.checked;
+                            }
                         }
-                        await setDoc(doc(db, "products", id), productCatalog[id], { merge: true });
+                        const cleanedData = JSON.parse(JSON.stringify(productCatalog[id]));
+                        await setDoc(doc(db, "products", id), cleanedData, { merge: true });
                         window.showToast("Product updated", "success");
+                        saveBtn.innerHTML = originalHTML;
+                        // Button stays disabled because data now matches catalog
                     } catch (err) {
                         console.error(err);
                         window.showToast("Failed to update product", "error");
+                        saveBtn.innerHTML = originalHTML;
+                        saveBtn.disabled = false;
                     }
                 });
             });
@@ -3746,7 +3902,17 @@ The DODCH Team`;
                         <p id="qv-price" class="qv-product-price"></p>
                         <p id="qv-desc" class="qv-product-desc"></p>
                         
-                        <a id="qv-learn-more" href="#" class="qv-view-details-btn">View Full Details</a>
+                        <div class="qv-button-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem;">
+                            <a id="qv-learn-more" href="#" class="qv-view-details-btn" style="flex: 1; margin: 0;">View Full Details</a>
+                            <a id="qv-expand-page" href="#" class="qv-expand-btn" title="Open Product Page">
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="expand-svg">
+                                    <g class="arrow-tr"><polyline points="15 3 21 3 21 9"></polyline><line x1="21" y1="3" x2="14" y2="10"></line></g>
+                                    <g class="arrow-bl"><polyline points="9 21 3 21 3 15"></polyline><line x1="3" y1="21" x2="10" y2="14"></line></g>
+                                    <g class="arrow-br"><polyline points="21 15 21 21 15 21"></polyline><line x1="21" y1="21" x2="14" y2="14"></line></g>
+                                    <g class="arrow-tl"><polyline points="3 9 3 3 9 3"></polyline><line x1="3" y1="3" x2="10" y2="10"></line></g>
+                                </svg>
+                            </a>
+                        </div>
                         
                         <div class="size-selector" style="margin-bottom: 2rem;">
                             <span class="size-label" style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.8rem; display: block; text-transform: uppercase; letter-spacing: 1px;">Select Size</span>
@@ -3756,8 +3922,7 @@ The DODCH Team`;
                         </div>
 
                         <button id="qv-add-to-cart" class="qv-add-to-cart-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                            <span>Add to Cart</span>
+                            <span><img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">Add to Cart</span>
                         </button>
 
                     </div>
@@ -3777,6 +3942,7 @@ The DODCH Team`;
         const qvDesc = document.getElementById('qv-desc');
         const qvAddToCart = document.getElementById('qv-add-to-cart');
         const qvLearnMore = document.getElementById('qv-learn-more');
+        const qvExpandPage = document.getElementById('qv-expand-page');
 
         let currentProduct = {};
         document.body.addEventListener('click', (e) => {
@@ -3810,6 +3976,7 @@ The DODCH Team`;
 
                 if (qvLearnMore) {
                     qvLearnMore.href = (product && product.storyUrl) ? product.storyUrl : `product.html?id=${id}`;
+                    if (qvExpandPage) qvExpandPage.href = `product.html?id=${id}`;
                 }
                 const sizeOptionsContainer = modal.querySelector('.size-options');
                 const sizeSelector = modal.querySelector('.size-selector');
@@ -3817,23 +3984,28 @@ The DODCH Team`;
 
                 if (product && product.sizes && product.sizes.length > 0) {
                     sizeSelector.style.display = 'block';
-                    const prices = product.sizes.map(s => parseFloat(s.price));
-                    const minPrice = Math.min(...prices);
-                    const minIndex = product.sizes.findIndex(s => parseFloat(s.price) === minPrice);
+                    const sortedSizes = product.sizes.map((s, i) => ({ ...s, i })).sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+                    const firstInStock = sortedSizes.find(s => !s.outOfStock);
+                    const minIndex = firstInStock ? firstInStock.i : sortedSizes[0].i;
 
                     product.sizes.forEach((sizeObj, index) => {
                         const btn = document.createElement('button');
                         btn.className = 'size-btn';
+                        const isActuallyOOS = product.sizes && product.sizes.length > 0
+                            ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                            : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
                         if (index === minIndex) {
                             btn.classList.add('active'); // Default to lowest
-                            if (!product.outOfStock) {
+                            if (!isActuallyOOS) {
                                 if (sizeObj.outOfStock) {
                                     qvAddToCart.disabled = true;
                                     qvAddToCart.querySelector('span').textContent = "Out of Stock";
                                     qvAddToCart.style.backgroundColor = "#ccc";
                                 } else {
                                     qvAddToCart.disabled = false;
-                                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
+                                    const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                                    qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
                                     qvAddToCart.style.backgroundColor = "";
                                 }
                             }
@@ -3852,20 +4024,25 @@ The DODCH Team`;
                                 qvPrice.textContent = `${sizeObj.price} TND`;
                             }
 
-                            if (!product.outOfStock) {
+                            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
+                            if (!isActuallyOOS) {
                                 if (sizeObj.outOfStock) {
                                     qvAddToCart.disabled = true;
                                     qvAddToCart.querySelector('span').textContent = "Out of Stock";
                                     qvAddToCart.style.backgroundColor = "#ccc";
                                 } else {
                                     qvAddToCart.disabled = false;
-                                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
+                                    const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                                    qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
                                     qvAddToCart.style.backgroundColor = "";
                                 }
                             }
                         });
 
-                        if (sizeObj.outOfStock && !product.outOfStock) {
+                        if (sizeObj.outOfStock) {
                             btn.style.textDecoration = "line-through";
                             btn.style.opacity = "0.6";
                         }
@@ -3882,14 +4059,19 @@ The DODCH Team`;
                     sizeSelector.style.display = 'none';
                     qvPrice.textContent = `${price} TND`;
                 }
-                if (product && product.outOfStock) { // Global override
+                const isActuallyOOS = product.sizes && product.sizes.length > 0
+                    ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                    : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
+                if (product && isActuallyOOS) { // Global override
                     qvAddToCart.disabled = true;
                     qvAddToCart.querySelector('span').textContent = "Out of Stock";
                     qvAddToCart.style.backgroundColor = "#ccc";
                     qvAddToCart.style.cursor = "not-allowed";
                 } else {
                     qvAddToCart.disabled = false;
-                    qvAddToCart.querySelector('span').textContent = "Add to Cart";
+                    const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                    qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
                     qvAddToCart.style.backgroundColor = "";
                     qvAddToCart.style.cursor = "pointer";
                 }
@@ -3981,14 +4163,42 @@ The DODCH Team`;
         if (!currentId || !productCatalog[currentId]) {
             currentId = 'glass-glow-shampoo';
         }
+        const currentProduct = productCatalog[currentId];
         const allProductIds = Object.keys(productCatalog);
-        const relatedIds = allProductIds
-            .filter(id => id !== currentId)
-            .sort(() => 0.5 - Math.random()) // Shuffle the array
-            .slice(0, 4); // Take the first 4 from the shuffled array
+        
+        const getProductType = (id, prod) => {
+            const lowerId = id.toLowerCase();
+            const lowerName = (prod && prod.name) ? prod.name.toLowerCase() : '';
+            const lowerSubtitle = (prod && prod.subtitle) ? prod.subtitle.toLowerCase() : '';
+            const lowerCategory = (prod && prod.category) ? prod.category.toLowerCase() : '';
+            
+            // Hair Keywords (Matching 'hair-care' sidebar section)
+            if (lowerCategory.includes('hair') || lowerId.includes('shampoo') || lowerId.includes('mask') || lowerId.includes('hair') || lowerId.includes('silk') || 
+                lowerName.includes('shampoo') || lowerName.includes('mask') || lowerName.includes('hair') ||
+                lowerSubtitle.includes('hair') || lowerSubtitle.includes('scalp')) return 'hair-care';
+                
+            // Face Keywords (Matching 'face-care' sidebar section)
+            if (lowerCategory.includes('face') || lowerCategory.includes('skin') || lowerId.includes('foam') || lowerId.includes('serum') || lowerId.includes('face') || lowerId.includes('cleanser') || lowerId.includes('mellow') ||
+                lowerName.includes('serum') || lowerName.includes('cleanser') || lowerName.includes('face') || lowerName.includes('mellow') ||
+                lowerSubtitle.includes('face') || lowerSubtitle.includes('skin')) return 'face-care';
+            
+            if (lowerCategory.includes('set') || lowerCategory.includes('bundle') || lowerId.includes('set') || lowerName.includes('set')) return 'sets';
+                
+            return 'general';
+        };
+
+        const currentType = getProductType(currentId, currentProduct);
+        const allRelated = allProductIds.filter(id => id !== currentId && productCatalog[id]);
+        
+        // STRICT filtering: Only find products of the EXACT same type
+        let relatedIds = allRelated.filter(id => getProductType(id, productCatalog[id]) === currentType);
+        
+        // Shuffle and limit to 4
+        relatedIds.sort(() => 0.5 - Math.random());
+        relatedIds = relatedIds.slice(0, 4);
 
         if (relatedIds.length === 0) {
-            if (container) container.style.display = 'none'; // Hide if no related products
+            if (container) container.style.display = 'none';
             return;
         } else {
             if (container) container.style.display = 'block';
@@ -3997,24 +4207,30 @@ The DODCH Team`;
         let productsHtml = '';
         relatedIds.forEach(id => {
             const product = productCatalog[id];
-            if (!product) return; // Safety check
-            let displayPrice = product.price;
+            if (!product) return;
+            let displayPrice = product.price || "0.00";
             let hasDiscount = false;
             if (product.sizes && product.sizes.length > 0) {
-                const prices = product.sizes.map(s => parseFloat(s.price));
-                displayPrice = Math.min(...prices).toFixed(2);
+                const prices = product.sizes.map(s => parseFloat(s.price)).filter(p => !isNaN(p));
+                if (prices.length > 0) {
+                    displayPrice = Math.min(...prices).toFixed(2);
+                }
                 hasDiscount = product.sizes.some(s => s.originalPrice && parseFloat(s.originalPrice) > parseFloat(s.price));
             }
 
+            const isActuallyOOS = product.sizes && product.sizes.length > 0 
+                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true') 
+                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
             let badgeHTML = '';
-            if (product.outOfStock) {
+            if (isActuallyOOS) {
                 badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #2D2D2D; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px;">OUT OF STOCK</span>';
             } else if (hasDiscount) {
                 badgeHTML = '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px;">ONLINE OFFER</span>';
             }
 
             productsHtml += `
-                <div class="product-card reveal" ${product.outOfStock ? 'style="opacity: 0.8;"' : ''}>
+                <div class="product-card reveal" ${isActuallyOOS ? 'style="opacity: 0.8;"' : ''}>
                     <a href="product.html?id=${id}">
                         <div class="product-image-wrapper">
                             ${badgeHTML}
@@ -4043,11 +4259,52 @@ The DODCH Team`;
         container.innerHTML = `
             <div class="container">
                 <h2 class="section-title reveal active">${sectionTitle}</h2>
-                <div class="shop-grid">
-                    ${productsHtml}
+                <div class="related-products-wrapper">
+                    <button class="scroll-arrow prev" id="rel-prev"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+                    <div class="shop-grid related-products-grid">
+                        ${productsHtml}
+                    </div>
+                    <button class="scroll-arrow next" id="rel-next"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
                 </div>
             </div>
         `;
+
+        setTimeout(() => {
+            const grid = container.querySelector('.related-products-grid');
+            const btnPrev = container.querySelector('#rel-prev');
+            const btnNext = container.querySelector('#rel-next');
+            
+            if (grid && btnPrev && btnNext) {
+                const wrapper = container.querySelector('.related-products-wrapper');
+                
+                btnPrev.addEventListener('click', () => {
+                    grid.scrollBy({ left: -300, behavior: 'smooth' });
+                });
+                btnNext.addEventListener('click', () => {
+                    grid.scrollBy({ left: 300, behavior: 'smooth' });
+                });
+
+                const updateScrollUI = () => {
+                    const isStart = grid.scrollLeft <= 10;
+                    const isEnd = grid.scrollLeft + grid.clientWidth >= grid.scrollWidth - 10;
+                    
+                    // Toggle arrows
+                    btnPrev.style.opacity = isStart ? '0.3' : '1';
+                    btnPrev.style.pointerEvents = isStart ? 'none' : 'auto';
+                    btnNext.style.opacity = isEnd ? '0.3' : '1';
+                    btnNext.style.pointerEvents = isEnd ? 'none' : 'auto';
+
+                    // Toggle vignette fades
+                    if (wrapper) {
+                        wrapper.classList.toggle('show-left-fade', !isStart);
+                        wrapper.classList.toggle('show-right-fade', !isEnd);
+                    }
+                };
+
+                grid.addEventListener('scroll', updateScrollUI);
+                updateScrollUI();
+            }
+        }, 0);
         setTimeout(() => {
             const newReveals = container.querySelectorAll('.reveal');
             newReveals.forEach(el => el.classList.add('active'));
@@ -4100,11 +4357,14 @@ The DODCH Team`;
         });
     }
     window.addEventListener('popstate', () => {
+        if (typeof closeSidebar === 'function') closeSidebar();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
         if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname === '') {
             initShopPage(true);
-            updateSidebarActiveState();
-            initBreadcrumbs();
-            updateMainPageSEO();
+            if (typeof updateSidebarActiveState === 'function') updateSidebarActiveState();
+            if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
+            if (typeof updateMainPageSEO === 'function') updateMainPageSEO();
             if (window.dodchSEO) window.dodchSEO.runSEO();
         }
     });
@@ -4480,7 +4740,7 @@ const initProductReviews = () => {
         const countDisplay = ratingHeader.querySelector('.count-display');
 
         if (starsContainer) {
-            const starsHtml = Array(5).fill(0).map((_, i) => 
+            const starsHtml = Array(5).fill(0).map((_, i) =>
                 `<span style="color: ${i < Math.round(average) ? '#F5A623' : '#e0e0e0'};">★</span>`
             ).join('');
             starsContainer.innerHTML = starsHtml;
@@ -5011,7 +5271,7 @@ const initializePerformanceBars = () => {
         const steps = item.querySelectorAll('.level-step');
         const activeSteps = item.querySelectorAll('.level-step.active').length;
         const valueEl = item.querySelector('.perf-value');
-        
+
         if (activeSteps > 0) {
             const color = getLevelColor(activeSteps);
             steps.forEach((step, i) => {
@@ -5556,7 +5816,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span style="width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 0.6s infinite 0.2s alternate;"></span>
                     <span style="width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 0.6s infinite 0.4s alternate;"></span>
                 </div>
-                <div style="font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; opacity: 0.7;">AI Thinking...</div>
+                <div style="font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; opacity: 0.7;">Thinking...</div>
             </div>
         `;
 
@@ -5676,7 +5936,7 @@ document.addEventListener('submit', async (e) => {
         if (window.showToast) window.showToast(`Please wait ${waitSec}s before sending another message.`, "error");
         return;
     }
-    const honeypot = form.querySelector('input[name="website"]');
+    const honeypot = form.querySelector('input[name="__hp_website"]');
     if (honeypot && honeypot.value) {
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -5693,7 +5953,7 @@ document.addEventListener('submit', async (e) => {
         submitBtn.disabled = true;
     }
 
-    const nameInput = form.querySelector('input[type="text"]:not([name="website"])');
+    const nameInput = form.querySelector('input[type="text"]:not([name="__hp_website"])');
     const emailInput = form.querySelector('input[type="email"]');
     const messageInput = form.querySelector('textarea');
 
@@ -5759,24 +6019,14 @@ document.addEventListener('submit', async (e) => {
     // --- END SMART VALIDATION ---
 
     try {
-        // --- Rock-Solid Signature ID Calculation ---
-        const normalizedContent = `${name}${email}${message}`
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, '');
-
-        const signatureId = btoa(unescape(encodeURIComponent(normalizedContent)))
-            .replace(/[/+=]/g, '_')
-            .slice(0, 100);
-
         // Direct Firestore write (Spark-compatible)
-        // App Check will automatically verify the reCAPTCHA token internally.
-        await setDoc(doc(db, "messages", signatureId), {
+        // Using addDoc to ensure every message is stored uniquely
+        await addDoc(collection(db, "messages"), {
             name,
             email,
             message,
             status: 'unread',
-            createdAt: serverTimestamp(),
-            signatureId
+            createdAt: serverTimestamp()
         });
 
         localStorage.setItem('dodch_last_contact_ts', Date.now());
@@ -6073,50 +6323,187 @@ async function initPushNotifications() {
     }
 }
 
-// --- Shipping Info Logic ---
+// --- Shipping Profiles Logic ---
 async function initShippingInfo(user) {
     if (!user) return;
 
+    const profilesPanel = document.getElementById('shipping-profiles-panel');
     const profileForm = document.getElementById('profile-shipping-form');
-    const checkoutForm = document.querySelector('.checkout-form form');
+    const saveProfileRow = document.getElementById('save-profile-row');
+
+    // Helper: fill checkout form from a profile object
+    const fillFormFromProfile = (profile) => {
+        const fields = {
+            'checkout-email': profile.email,
+            'checkout-name': profile.fullName,
+            'checkout-phone': profile.phone,
+            'checkout-address': profile.address,
+            'checkout-city': profile.city,
+            'checkout-postal-code': profile.postalCode
+        };
+        for (const [id, val] of Object.entries(fields)) {
+            const el = document.getElementById(id);
+            if (el && val !== undefined) el.value = val;
+        }
+    };
+
+    // Helper: render the profiles panel
+    const renderProfilesPanel = (profiles, selectedIndex) => {
+        if (!profilesPanel) return;
+
+        if (profiles.length === 0) {
+            profilesPanel.style.display = 'none';
+            if (saveProfileRow) saveProfileRow.style.display = 'flex';
+            return;
+        }
+
+        profilesPanel.style.display = 'block';
+        if (saveProfileRow) saveProfileRow.style.display = 'none'; // shown dynamically below
+
+        const profileCards = profiles.map((p, i) => `
+            <div class="shipping-profile-card ${i === selectedIndex ? 'selected' : ''}" 
+                 data-index="${i}" 
+                 onclick="window.selectShippingProfile(${i})"
+                 style="cursor:pointer;">
+                <div class="profile-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                </div>
+                <div class="profile-card-info">
+                    <div class="profile-card-name">${p.label || p.fullName}</div>
+                    <div class="profile-card-detail">${p.address}, ${p.city}</div>
+                    <div class="profile-card-detail">${p.phone}</div>
+                </div>
+                ${i === selectedIndex ? `<div class="profile-card-check">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </div>` : ''}
+            </div>
+        `).join('');
+
+        profilesPanel.innerHTML = `
+            <div class="profiles-panel-header">
+                <span class="profiles-panel-title">Saved Addresses</span>
+                <button id="add-new-profile-btn" class="add-profile-btn" onclick="window.toggleNewProfileForm()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Address
+                </button>
+            </div>
+            <div class="shipping-profiles-list">
+                ${profileCards}
+            </div>
+            <div id="new-profile-form-wrapper" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.06);">
+                <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.75rem;">Fill in details and place your order — it will be saved automatically.</p>
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <input type="text" id="new-profile-label" placeholder='Profile name (e.g. "Home", "Work")' style="width:100%; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-family: inherit; font-size: 0.9rem;">
+                </div>
+            </div>
+        `;
+
+        // When "New Address" is toggled, show the form and unhide the save checkbox
+        window.toggleNewProfileForm = () => {
+            const wrapper = document.getElementById('new-profile-form-wrapper');
+            const btn = document.getElementById('add-new-profile-btn');
+            const isShowing = wrapper.style.display !== 'none';
+            wrapper.style.display = isShowing ? 'none' : 'block';
+            if (saveProfileRow) saveProfileRow.style.display = isShowing ? 'none' : 'flex';
+            btn.textContent = isShowing ? '+ New Address' : '✕ Cancel';
+            btn.innerHTML = isShowing
+                ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Address`
+                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel`;
+            if (!isShowing) {
+                // Clear form for new profile entry
+                ['checkout-email','checkout-name','checkout-phone','checkout-address','checkout-postal-code'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                const city = document.getElementById('checkout-city');
+                if (city) city.value = '';
+                // Deselect all cards
+                document.querySelectorAll('.shipping-profile-card').forEach(c => c.classList.remove('selected'));
+            }
+        };
+    };
+
     try {
         const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists() && userDoc.data().shippingInfo) {
-            const info = userDoc.data().shippingInfo;
-            console.log("Loading shipping info into UI...", info);
-            if (profileForm) {
-                const pEmail = document.getElementById('profile-shipping-email');
-                const pName = document.getElementById('profile-shipping-name');
-                const pPhone = document.getElementById('profile-shipping-phone');
-                const pAddress = document.getElementById('profile-shipping-address');
-                const pCity = document.getElementById('profile-shipping-city');
-                const pPostal = document.getElementById('profile-shipping-postal');
+        let profiles = [];
+        let selectedIndex = 0;
 
-                if (pEmail) pEmail.value = info.email || '';
-                if (pName) pName.value = info.fullName || '';
-                if (pPhone) pPhone.value = info.phone || '';
-                if (pAddress) pAddress.value = info.address || '';
-                if (pCity) pCity.value = info.city || '';
-                if (pPostal) pPostal.value = info.postalCode || '';
-            }
-            if (checkoutForm) {
-                const fields = {
-                    'checkout-email': info.email,
-                    'checkout-name': info.fullName,
-                    'checkout-phone': info.phone,
-                    'checkout-address': info.address,
-                    'checkout-city': info.city,
-                    'checkout-postal-code': info.postalCode
-                };
-                for (const [id, val] of Object.entries(fields)) {
-                    const el = document.getElementById(id);
-                    if (el && !el.value && val) el.value = val;
-                }
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            // Support both new array format and old single-object format
+            if (Array.isArray(data.shippingProfiles) && data.shippingProfiles.length > 0) {
+                profiles = data.shippingProfiles;
+                selectedIndex = typeof data.lastSelectedProfile === 'number' ? data.lastSelectedProfile : 0;
+            } else if (data.shippingInfo) {
+                // Migrate old single profile to array format
+                profiles = [{ label: 'Default', ...data.shippingInfo }];
+                selectedIndex = 0;
             }
         }
+
+        // Store profiles on window so selectShippingProfile can access them
+        window._dodchShippingProfiles = profiles;
+        window._dodchSelectedProfileIndex = selectedIndex;
+        window._dodchCurrentUser = user;
+
+        // Define the profile selector function
+        window.selectShippingProfile = async (index) => {
+            window._dodchSelectedProfileIndex = index;
+            const profile = window._dodchShippingProfiles[index];
+            fillFormFromProfile(profile);
+            // Update card selection visually
+            document.querySelectorAll('.shipping-profile-card').forEach((card, i) => {
+                card.classList.toggle('selected', i === index);
+                const checkDiv = card.querySelector('.profile-card-check');
+                if (i === index && !checkDiv) {
+                    card.innerHTML += `<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+                } else if (i !== index && checkDiv) {
+                    checkDiv.remove();
+                }
+            });
+            // Persist last selected profile index
+            try {
+                await setDoc(doc(db, "users", user.uid), { lastSelectedProfile: index }, { merge: true });
+            } catch (e) { /* non-critical */ }
+            // Close "new profile" form if open
+            const wrapper = document.getElementById('new-profile-form-wrapper');
+            if (wrapper && wrapper.style.display !== 'none') window.toggleNewProfileForm();
+        };
+
+        // Render the profiles panel
+        renderProfilesPanel(profiles, selectedIndex);
+
+        // Auto-fill the form with the selected profile
+        if (profiles.length > 0) {
+            fillFormFromProfile(profiles[selectedIndex]);
+        }
+
+        // Fill profile page form (My Account) if present
+        if (profileForm && profiles.length > 0) {
+            const p = profiles[selectedIndex] || profiles[0];
+            const pEmail = document.getElementById('profile-shipping-email');
+            const pName = document.getElementById('profile-shipping-name');
+            const pPhone = document.getElementById('profile-shipping-phone');
+            const pAddress = document.getElementById('profile-shipping-address');
+            const pCity = document.getElementById('profile-shipping-city');
+            const pPostal = document.getElementById('profile-shipping-postal');
+            if (pEmail) pEmail.value = p.email || '';
+            if (pName) pName.value = p.fullName || '';
+            if (pPhone) pPhone.value = p.phone || '';
+            if (pAddress) pAddress.value = p.address || '';
+            if (pCity) pCity.value = p.city || '';
+            if (pPostal) pPostal.value = p.postalCode || '';
+        }
     } catch (err) {
-        console.error("Error loading shipping info:", err);
+        console.error("Error loading shipping profiles:", err);
     }
+
+    // Profile page form submit handler
     if (profileForm) {
         if (profileForm.dataset.listener) return;
         profileForm.dataset.listener = "true";
@@ -6125,11 +6512,11 @@ async function initShippingInfo(user) {
             e.preventDefault();
             const submitBtn = profileForm.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerText;
-
             submitBtn.innerText = "Saving...";
             submitBtn.disabled = true;
 
-            const shippingInfo = {
+            const newProfile = {
+                label: 'Default',
                 email: document.getElementById('profile-shipping-email').value.trim(),
                 fullName: document.getElementById('profile-shipping-name').value.trim(),
                 phone: document.getElementById('profile-shipping-phone').value.trim(),
@@ -6140,7 +6527,9 @@ async function initShippingInfo(user) {
             };
 
             try {
-                await setDoc(doc(db, "users", user.uid), { shippingInfo }, { merge: true });
+                const profiles = window._dodchShippingProfiles || [];
+                profiles[0] = newProfile; // Update the first/default profile
+                await setDoc(doc(db, "users", user.uid), { shippingProfiles: profiles, shippingInfo: newProfile }, { merge: true });
                 window.showToast("Shipping details saved successfully!", "success");
             } catch (err) {
                 console.error("Error saving shipping info:", err);
@@ -6152,35 +6541,56 @@ async function initShippingInfo(user) {
         });
     }
 }
+
 window.saveShippingFromCheckout = async function (userId) {
     if (!userId || userId === 'guest') return;
     const checkbox = document.getElementById('save-shipping-info');
     if (!checkbox || !checkbox.checked) return;
 
     try {
-        const shippingInfo = {
+        const labelInput = document.getElementById('new-profile-label');
+        const newProfile = {
+            label: (labelInput && labelInput.value.trim()) || 'Address',
             email: document.getElementById('checkout-email').value.trim(),
             fullName: document.getElementById('checkout-name').value.trim(),
             phone: document.getElementById('checkout-phone').value.trim(),
             address: document.getElementById('checkout-address').value.trim(),
             city: document.getElementById('checkout-city').value,
             postalCode: document.getElementById('checkout-postal-code').value.trim(),
-            updatedAt: serverTimestamp()
+            savedAt: new Date().toISOString()
         };
 
-        console.log("Attempting to sync shipping info to Firestore for:", userId);
-        await setDoc(doc(db, "users", userId), { shippingInfo }, { merge: true });
-        console.log("Shipping info synced successfully.");
+        // Load existing profiles
+        let profiles = window._dodchShippingProfiles ? [...window._dodchShippingProfiles] : [];
+
+        // Check if this phone already exists — update in place instead of duplicating
+        const existingIdx = profiles.findIndex(p => p.phone === newProfile.phone);
+        if (existingIdx >= 0) {
+            profiles[existingIdx] = { ...profiles[existingIdx], ...newProfile };
+        } else {
+            profiles.push(newProfile);
+            // Cap at 5 profiles; remove the oldest (index 0) if over limit
+            if (profiles.length > 5) profiles.shift();
+        }
+
+        const newSelectedIndex = existingIdx >= 0 ? existingIdx : profiles.length - 1;
+
+        await setDoc(doc(db, "users", userId), {
+            shippingProfiles: profiles,
+            shippingInfo: newProfile, // Keep legacy field in sync
+            lastSelectedProfile: newSelectedIndex
+        }, { merge: true });
+
+        window._dodchShippingProfiles = profiles;
+        window._dodchSelectedProfileIndex = newSelectedIndex;
+
         if (window.showToast) window.showToast("Address saved to your profile! ✨", "success");
     } catch (err) {
         console.error("Firestore Save Error:", err);
-        if (err.code === 'permission-denied') {
-            if (window.showToast) window.showToast("Save Failed: Database permission denied.", "error");
-        } else {
-            if (window.showToast) window.showToast(`Save Error: ${err.message}`, "error");
-        }
+        if (window.showToast) window.showToast(`Save Error: ${err.message}`, "error");
     }
 };
+
 document.addEventListener('DOMContentLoaded', () => {
     const prefetchedUrls = new Set();
 

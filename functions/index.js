@@ -48,131 +48,78 @@ exports.sendOrderConfirmationEmail = functions.region("europe-west1").firestore
       const apiKey = functions.config().resend ? functions.config().resend.apikey : null;
       if (!apiKey) {
         functions.logger.error("Resend API key is missing.");
-        return null;
+        return;
       }
-      const resend = new Resend(apiKey);
 
+      const resend = new Resend(apiKey);
       try {
         await resend.emails.send({
-          from: 'DODCH <order@dodch.com>',
+          from: "DODCH Cosmetics <orders@dodch.com>",
           to: [orderData.shipping.email],
-          subject: `Your DODCH Order Confirmation (#${orderData.id.slice(0, 8).toUpperCase()})`,
+          subject: `Order Confirmation #${orderData.orderReference || orderData.id.slice(0, 8)}`,
           html: getEmailHtml(orderData),
         });
+        functions.logger.log("Confirmation email sent to:", orderData.shipping.email);
       } catch (error) {
-        functions.logger.error("Error sending email:", error);
+        functions.logger.error("Failed to send email:", error);
       }
-
-      return null;
     });
 
 /**
- * Shared Rate Limiter Logic
+ * Handles newsletter subscription
  */
-async function checkRateLimit(ip, db, type = "contact") {
-  const sanitizedIp = String(ip).replace(/[^a-zA-Z0-9]/g, "_");
-  const rateLimitRef = db.collection("rateLimits").doc(`${type}_${sanitizedIp}`);
-  const docSnap = await rateLimitRef.get();
-  const now = Date.now();
-  const COOLDOWN = 120000; // 2 minutes
-
-  if (docSnap.exists) {
-    const rateData = docSnap.data();
-    const lastTimestamp = rateData.timestamp;
-    const lastTimestampMillis = (typeof lastTimestamp === 'number') ? lastTimestamp : (lastTimestamp.toMillis ? lastTimestamp.toMillis() : 0);
-    const violationCount = rateData.violationCount || 0;
-
-    if (violationCount >= 5) {
-      return { status: 'blocked', ref: rateLimitRef };
-    }
-
-    if (now - lastTimestampMillis < COOLDOWN) {
-      await rateLimitRef.update({ violationCount: admin.firestore.FieldValue.increment(1) });
-      return { status: 'rate-limited', ref: rateLimitRef };
-    }
+exports.subscribeNewsletter = functions.region("europe-west1").https.onCall(async (data, context) => {
+  const email = data.email;
+  if (!email || !email.includes("@")) {
+    throw new functions.https.HttpsError("invalid-argument", "Invalid email.");
   }
-  return { status: 'ok', ref: rateLimitRef };
-}
+
+  const db = admin.firestore();
+  await db.collection("subscribers").doc(email).set({
+    email,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { success: true };
+});
 
 /**
- * Handles contact form submissions
+ * Handles contact form messages
  */
 exports.submitContactMessage = functions.region("europe-west1").https.onCall(async (data, context) => {
   if (!context.app) {
     throw new functions.https.HttpsError("failed-precondition", "App Check required.");
   }
 
-  // 1. Strict Validation
-  if (!data.name || data.name.length > 100 || !data.email || data.email.length > 150 || !data.message || data.message.length > 2000) {
-    throw new functions.https.HttpsError("invalid-argument", "Invalid input.");
+  const { name, email, message } = data;
+  if (!name || !email || !message) {
+    throw new functions.https.HttpsError("invalid-argument", "Missing fields.");
   }
 
-  // 2. reCAPTCHA Verification
-  const recaptchaSecret = functions.config().recaptcha ? functions.config().recaptcha.secret : null;
-  if (!recaptchaSecret) {
-    throw new functions.https.HttpsError("internal", "Security misconfiguration.");
-  }
-
-  const verifyResponse = await fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${data.recaptchaToken}`, { method: "POST" });
-  const verifyData = await verifyResponse.json();
-  if (!verifyData.success || verifyData.score < 0.5) {
-    throw new functions.https.HttpsError("permission-denied", "Security check failed.");
-  }
-
-  // 3. Rate Limiting
   const db = admin.firestore();
-  const clientIp = context.rawRequest ? (context.rawRequest.ip || context.rawRequest.headers["x-forwarded-for"] || context.rawRequest.connection.remoteAddress) : "unknown_ip";
-  const limit = await checkRateLimit(clientIp, db, "contact");
-
-  if (limit.status === 'blocked') {
-    await new Promise(r => setTimeout(r, 1000));
-    return { success: true, stealth: true };
+  
+  // Anti-spam check
+  const clientIp = context.rawRequest ? (context.rawRequest.ip || context.rawRequest.headers["x-forwarded-for"] || "unknown") : "unknown";
+  const limitRef = db.collection("system").doc("limits").collection("messages").doc(clientIp.replace(/\./g, "_"));
+  const limit = await limitRef.get();
+  
+  if (limit.exists()) {
+    const lastMsg = limit.data().timestamp;
+    if (Date.now() - lastMsg < 60000) {
+      throw new functions.https.HttpsError("resource-exhausted", "Too many messages. Wait 1 minute.");
+    }
   }
-  if (limit.status === 'rate-limited') {
-    throw new functions.https.HttpsError("resource-exhausted", "Please wait before sending another message.");
-  }
 
-  // 4. Save
   await db.collection("messages").add({
-    name: data.name,
-    email: data.email,
-    message: data.message,
-    status: "unread",
+    name,
+    email,
+    message,
+    status: 'unread',
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     ip: clientIp
   });
 
-  await limit.ref.set({ timestamp: Date.now(), violationCount: 0 });
-  return { success: true };
-});
-
-/**
- * Handles newsletter subscriptions
- */
-exports.subscribeNewsletter = functions.region("europe-west1").https.onCall(async (data, context) => {
-  if (!context.app) {
-    throw new functions.https.HttpsError("failed-precondition", "App Check required.");
-  }
-
-  if (!data.email || data.email.length > 150) {
-    throw new functions.https.HttpsError("invalid-argument", "Invalid email.");
-  }
-
-  const db = admin.firestore();
-  const clientIp = context.rawRequest ? (context.rawRequest.ip || context.rawRequest.headers["x-forwarded-for"] || context.rawRequest.connection.remoteAddress) : "unknown_ip";
-  const limit = await checkRateLimit(clientIp, db, "newsletter");
-
-  if (limit.status !== 'ok') {
-    throw new functions.https.HttpsError("resource-exhausted", "Too many attempts.");
-  }
-
-  await db.collection("newsletter").add({
-    email: data.email,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    ip: clientIp
-  });
-
-  await limit.ref.set({ timestamp: Date.now(), violationCount: 0 });
+  await limitRef.set({ timestamp: Date.now() });
   return { success: true };
 });
 
@@ -180,61 +127,109 @@ exports.subscribeNewsletter = functions.region("europe-west1").https.onCall(asyn
  * Creates an order
  */
 exports.createOrder = functions.region("europe-west1").https.onCall(async (data, context) => {
-  const db = admin.firestore();
-  const items = data.items;
-  const shipping = data.shipping;
+  try {
+    const db = admin.firestore();
+    const items = data.items;
+    const shipping = data.shipping;
 
-  if (!items || !Array.isArray(items) || items.length === 0 || !shipping) {
-    throw new functions.https.HttpsError('invalid-argument', 'Invalid order data.');
-  }
-
-  let calculatedTotal = 0;
-  const verifiedItems = [];
-
-  for (const item of items) {
-    const productDoc = await db.collection('products').doc(item.productId).get();
-    if (!productDoc.exists) throw new functions.https.HttpsError('not-found', 'Product not found.');
-    const productData = productDoc.data();
-    
-    // --- SECURITY: VERIFY STOCK ---
-    if (productData.outOfStock === true) {
-      throw new functions.https.HttpsError('failed-precondition', `The product "${productData.name}" is currently out of stock.`);
+    if (!items || !Array.isArray(items) || items.length === 0 || !shipping) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid order data.');
     }
 
-    let price = parseFloat(productData.price);
+    // Validate shipping info
+    if (!shipping.email || !shipping.fullName || !shipping.address || !shipping.city) {
+      throw new functions.https.HttpsError('invalid-argument', 'Incomplete shipping information.');
+    }
 
-    if (productData.sizes && Array.isArray(productData.sizes) && productData.sizes.length > 0) {
-      const sizeObj = productData.sizes.find(s => s.label === item.size);
-      if (sizeObj) {
-        if (sizeObj.outOfStock === true) {
-          throw new functions.https.HttpsError('failed-precondition', `The ${item.size} size of "${productData.name}" is currently out of stock.`);
-        }
-        price = parseFloat(sizeObj.price);
+    let calculatedTotal = 0;
+    const verifiedItems = [];
+
+    // Process items - verify prices against Firebase prices collection
+    for (const item of items) {
+      const pid = item.productId || item.id;
+      if (!pid) {
+        throw new functions.https.HttpsError('invalid-argument', `Missing product ID for item: ${item.name}`);
       }
+
+      const quantity = parseInt(item.quantity) || 1;
+      let verifiedPrice = parseFloat(item.price);
+      
+      // Look up price from Firebase if available
+      try {
+        let priceDoc = await db.collection('prices').doc(pid).get();
+        if (!priceDoc.exists) {
+          priceDoc = await db.collection('products').doc(pid).get();
+        }
+
+        if (priceDoc.exists) {
+          const priceData = priceDoc.data();
+          let authoritativePrice = verifiedPrice;
+          
+          if (item.size && priceData.sizes && !Array.isArray(priceData.sizes) && priceData.sizes[item.size]) {
+            authoritativePrice = parseFloat(priceData.sizes[item.size]);
+          } 
+          else if (item.size && priceData.sizes && Array.isArray(priceData.sizes)) {
+            const sizeObj = priceData.sizes.find(s => s.label === item.size);
+            if (sizeObj && sizeObj.price) authoritativePrice = parseFloat(sizeObj.price);
+          }
+          else if (priceData.price) {
+            authoritativePrice = parseFloat(priceData.price);
+          }
+          else if (priceData.basePrice) {
+            authoritativePrice = parseFloat(priceData.basePrice);
+          }
+          
+          verifiedPrice = authoritativePrice;
+        }
+      } catch (err) {
+        functions.logger.warn(`Could not verify price for ${pid}:`, err);
+      }
+      
+      if (verifiedPrice <= 0 || verifiedPrice > 1000) {
+        throw new functions.https.HttpsError('out-of-range', `Price for ${item.name} is out of range.`);
+      }
+
+      calculatedTotal += verifiedPrice * quantity;
+      verifiedItems.push({
+        ...item,
+        price: verifiedPrice.toFixed(2),
+        productId: pid,
+        quantity: quantity,
+        subtotal: parseFloat((verifiedPrice * quantity).toFixed(2))
+      });
     }
 
-    calculatedTotal += price * item.quantity;
-    verifiedItems.push({ ...item, price: price.toFixed(2) });
+    const shippingFee = parseFloat(data.shippingFee) || 7;
+    const finalTotal = parseFloat((calculatedTotal + shippingFee).toFixed(2));
+
+    const orderReference = data.orderReference || ('ORD-' + Date.now().toString(36).toUpperCase());
+    
+    const orderData = {
+      orderReference,
+      items: verifiedItems,
+      shipping,
+      subtotal: parseFloat(calculatedTotal.toFixed(2)),
+      shippingFee,
+      total: finalTotal,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      status: 'Pending',
+      userId: context.auth ? context.auth.uid : 'guest',
+      ip: context.rawRequest ? (context.rawRequest.ip || context.rawRequest.headers["x-forwarded-for"] || 'unknown') : 'unknown'
+    };
+
+    const docRef = await db.collection("orders").add(orderData);
+
+    return {
+      success: true,
+      orderId: docRef.id,
+      orderReference: orderReference,
+      total: finalTotal
+    };
+  } catch (error) {
+    functions.logger.error("Error in createOrder:", error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError('internal', error.message || 'Unknown error occurred');
   }
-
-  const SHIPPING_FEE = 7;
-  const FREE_SHIPPING_THRESHOLD = 100;
-  const shippingFee = calculatedTotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-  const finalTotal = calculatedTotal + shippingFee;
-
-  const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase();
-  const orderData = {
-    orderReference,
-    items: verifiedItems,
-    shipping,
-    subtotal: parseFloat(calculatedTotal.toFixed(2)),
-    shippingFee,
-    total: parseFloat(finalTotal.toFixed(2)),
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    status: 'Pending',
-    userId: context.auth ? context.auth.uid : 'guest'
-  };
-
-  const docRef = await db.collection('orders').add(orderData);
-  return { orderId: docRef.id, orderReference, total: orderData.total };
 });

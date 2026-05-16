@@ -95,7 +95,11 @@
             <!-- Left Column: Shipping Info -->
             <div class="checkout-form reveal">
                 <h2>Shipping Information</h2>
-                <form>
+                
+                <!-- Shipping Profiles Panel (populated by JS for logged-in users) -->
+                <div id="shipping-profiles-panel" style="display:none; margin-bottom: 1.5rem;"></div>
+                
+                <form id="checkout-shipping-form">
                     <div class="form-group">
                         <label>Email Address</label>
                         <input type="email" id="checkout-email" placeholder="nom@exemple.tn" required>
@@ -148,9 +152,9 @@
                         <input type="text" id="checkout-postal-code" placeholder="Code Postal (e.g. 1000)" required>
                     </div>
                     
-                    <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
-                        <input type="checkbox" id="save-shipping-info" style="width: auto;">
-                        <label for="save-shipping-info" style="margin-bottom: 0;">Save delivery info to my profile</label>
+                    <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;" id="save-profile-row">
+                        <input type="checkbox" id="save-shipping-info" style="width: auto;" checked>
+                        <label for="save-shipping-info" style="margin-bottom: 0;">Save as a shipping profile</label>
                     </div>
                 </form>
             </div>
