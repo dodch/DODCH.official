@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: "shampoo",
             subtitle: "The Marshmallow Cloud Shampoo",
             price: null,
-            image: "IMG_3816.webp",
+            image: "IMG_4243.webp",
             description: "Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5. Fragrance: Néroli-Sucre.",
             style: "",
             storyUrl: "dodchmellow-pro-v.html",
@@ -5043,7 +5043,7 @@ const initUserReviewsHistory = async (user) => {
                 } else if (review.productId === 'dodchmellow-pro-v') {
                     productName = 'DODCHmellow Pro-V';
                     productLink = 'dodchmellow-pro-v.html';
-                    productImg = productCatalog['dodchmellow-pro-v']?.image || 'IMG_3490.webp';
+                    productImg = productCatalog['dodchmellow-pro-v']?.image || 'IMG_4243.webp';
                 } else if (review.productId === 'foaming-cleanser') {
                     productName = 'Advanced Face Foam';
                     productLink = 'face-foam.html';
