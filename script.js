@@ -117,6 +117,27 @@ const escapeHTML = (str) => {
     );
 };
 
+const getProductImages = (product) => {
+    if (!product) return [];
+    if (Array.isArray(product.images) && product.images.length > 0) return product.images;
+    if (product.image) return [product.image];
+    return [];
+};
+
+const getProductPrimaryImage = (product) => {
+    const images = getProductImages(product);
+    return images.length > 0 ? images[0] : '';
+};
+
+const fileToDataUrl = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     // FIX: Reveal the body now that CSS is guaranteed to be applied (prevents FOUC).
     document.body.classList.add('page-ready');
@@ -840,8 +861,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <a ${linkAttributes}>
                             <div class="product-image-wrapper" style="${isActuallyOOS ? 'background-color: #f0f0f0;' : ''}">
                                 ${badgeHTML}
-                                <img loading="lazy" src="${product.image}" alt="${product.name}" class="product-card-img" style="${imgStyle}">
-                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${product.image}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
+                                <img loading="lazy" src="${getProductPrimaryImage(product)}" alt="${product.name}" class="product-card-img" style="${imgStyle}">
+                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${getProductPrimaryImage(product)}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
                             </div>
                             <div class="product-card-info" style="${isActuallyOOS ? 'opacity: 0.7;' : ''}">
                                 <h3 class="product-card-title">${product.name}</h3>
@@ -995,12 +1016,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.deleted) {
                         delete productCatalog[productId];
                     } else if (productCatalog[productId]) {
-                        // HYBRID SYNC: Database (Firestore) is the source of truth for Price, Stock, and Sizes.
-                        // Local code (script.js) remains the source of truth for Order, Name, Description, Image, etc.
+                        // HYBRID SYNC: Database (Firestore) is the source of truth for Price, Stock, Sizes, and admin-approved image paths.
+                        // Local code (script.js) remains the source of truth for Order, Name, Description, and other static metadata.
                         productCatalog[productId].price = data.price || null;
                         productCatalog[productId].originalPrice = data.originalPrice || null;
                         productCatalog[productId].outOfStock = data.outOfStock === true;
                         productCatalog[productId].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
+
+                        if (data.image) {
+                            productCatalog[productId].image = data.image;
+                        }
+                        if (Array.isArray(data.images) && data.images.length > 0) {
+                            productCatalog[productId].images = data.images;
+                        } else if (data.image && !productCatalog[productId].images) {
+                            productCatalog[productId].images = [data.image];
+                        }
 
                         // CRITICAL: Overwrite sizes. If Firestore has no sizes, clear the local sizes to use single price logic.
                         productCatalog[productId].sizes = data.sizes || [];
@@ -1498,6 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const newItemId = `${product.name}-${size}`;
         const existingItem = cart.find(item => item.id === newItemId);
+        const productImage = getProductPrimaryImage(product);
 
         if (existingItem) {
             existingItem.quantity++;
@@ -1508,7 +1539,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: product.name,
                 size: size,
                 price: `${parseFloat(price).toFixed(2)} TND`,
-                image: product.image,
+                image: productImage,
                 quantity: 1
             });
         }
@@ -1662,6 +1693,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- DYNAMIC PRODUCT PAGE LOGIC ---
+    let autoProductImageInterval = null;
+
     function initProductPage() {
         const productDetailContainer = document.querySelector('.product-detail-container');
         if (!productDetailContainer) return; // Not on product page
@@ -1709,10 +1742,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (descEl) descEl.textContent = product.description;
 
+        const productImages = getProductImages(product);
+        const primaryImage = productImages[0] || '';
         if (imgEl) {
-            imgEl.src = product.image;
+            imgEl.src = primaryImage;
             if (product.style) imgEl.style = product.style;
         }
+
+        const thumbnailsContainer = document.getElementById('product-thumbnails');
+        if (thumbnailsContainer) {
+            thumbnailsContainer.innerHTML = '';
+            productImages.forEach((imageSrc, index) => {
+                const thumb = document.createElement('button');
+                thumb.type = 'button';
+                thumb.className = 'product-thumbnail-btn' + (index === 0 ? ' active' : '');
+                thumb.innerHTML = `<img src="${imageSrc}" alt="Thumbnail ${index + 1}">`;
+                thumb.addEventListener('click', () => {
+                    if (imgEl && imgEl.src !== imageSrc) {
+                        imgEl.classList.add('switching');
+                        setTimeout(() => {
+                            imgEl.src = imageSrc;
+                            imgEl.classList.remove('switching');
+                        }, 260);
+                    }
+                    thumbnailsContainer.querySelectorAll('.product-thumbnail-btn').forEach(btn => btn.classList.remove('active'));
+                    thumb.classList.add('active');
+                    if (autoProductImageInterval) {
+                        clearInterval(autoProductImageInterval);
+                        autoProductImageInterval = setInterval(switchProductImage, 4500);
+                    }
+                });
+                thumbnailsContainer.appendChild(thumb);
+            });
+
+            const switchProductImage = () => {
+                const activeBtn = thumbnailsContainer.querySelector('.product-thumbnail-btn.active');
+                const buttons = Array.from(thumbnailsContainer.querySelectorAll('.product-thumbnail-btn'));
+                const currentIndex = buttons.indexOf(activeBtn);
+                const nextIndex = currentIndex < buttons.length - 1 ? currentIndex + 1 : 0;
+                const nextBtn = buttons[nextIndex];
+                if (nextBtn) {
+                    const nextImage = nextBtn.querySelector('img')?.src;
+                    if (imgEl && nextImage && imgEl.src !== nextImage) {
+                        imgEl.classList.add('switching');
+                        setTimeout(() => {
+                            imgEl.src = nextImage;
+                            imgEl.classList.remove('switching');
+                        }, 260);
+                    }
+                    buttons.forEach(btn => btn.classList.remove('active'));
+                    nextBtn.classList.add('active');
+                }
+            };
+
+            if (autoProductImageInterval) clearInterval(autoProductImageInterval);
+            if (productImages.length > 1) {
+                autoProductImageInterval = setInterval(switchProductImage, 4500);
+            }
+        }
+
         if (addToCartBtn) {
             addToCartBtn.dataset.productId = productId || Object.keys(productCatalog).find(k => productCatalog[k] === product) || '';
         }
@@ -1749,7 +1837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
                             
                             if (sizeObj.originalPrice) {
-                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span style="background: #d4af37; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; vertical-align: middle; margin-left: 8px;">ONLINE OFFER</span>`;
+                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span class="offer-badge">ONLINE OFFER</span>`;
                             } else {
                                 priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
                                 priceEl.style.color = "";
@@ -1779,7 +1867,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
 
                             if (sizeObj.originalPrice) {
-                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span style="background: #d4af37; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; vertical-align: middle; margin-left: 8px;">ONLINE OFFER</span>`;
+                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span class="offer-badge">ONLINE OFFER</span>`;
                             } else {
                                 priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
                                 priceEl.style.color = "";
@@ -2932,57 +3020,69 @@ document.addEventListener('DOMContentLoaded', () => {
         const addProductForm = document.getElementById('add-product-form');
         const addSizeBtn = document.getElementById('add-size-btn');
         const sizesContainer = document.getElementById('new-prod-sizes-container');
-        const imageFileInput = document.getElementById('new-prod-image-file');
-        const dropZone = document.getElementById('drop-zone');
-        const imageUrlInput = document.getElementById('new-prod-image-url');
-        const imagePreviewContainer = document.getElementById('image-preview-container');
-        const imagePreview = document.getElementById('image-preview');
-        const removeImageBtn = document.getElementById('remove-image-btn');
+        const imagePathInput = document.getElementById('new-prod-image-paths');
+        const imagePreviewGallery = document.getElementById('image-preview-gallery');
 
-        if (imageFileInput) {
-            imageFileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    imagePreview.src = URL.createObjectURL(file);
-                    imagePreviewContainer.style.display = 'block';
-                    const prompt = dropZone.querySelector('.drop-zone-prompt');
-                    if (prompt) prompt.textContent = file.name;
-                }
+        const parseImagePaths = (raw) => {
+            if (!raw) return [];
+            return raw
+                .split(/\r?\n|,\s*/)
+                .map(path => path.trim())
+                .filter(path => path.length > 0);
+        };
+
+        const renderImagePreviews = () => {
+            if (!imagePreviewGallery || !imagePathInput) return;
+            const paths = parseImagePaths(imagePathInput.value);
+            imagePreviewGallery.innerHTML = '';
+
+            if (paths.length === 0) {
+                imagePreviewGallery.style.display = 'none';
+                return;
+            }
+
+            imagePreviewGallery.style.display = 'flex';
+            paths.forEach((path, index) => {
+                const item = document.createElement('div');
+                item.className = 'image-preview-item';
+                item.style.position = 'relative';
+                item.style.marginRight = '0.75rem';
+                item.style.marginBottom = '0.75rem';
+                item.style.maxWidth = '110px';
+                item.style.border = '1px solid #e0e0e0';
+                item.style.borderRadius = '12px';
+                item.style.overflow = 'hidden';
+                item.style.background = '#fff';
+
+                const img = document.createElement('img');
+                img.loading = 'lazy';
+                img.src = path;
+                img.alt = `Preview ${index + 1}`;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.display = 'block';
+                item.appendChild(img);
+
+                imagePreviewGallery.appendChild(item);
             });
+        };
+
+        const addImagePathBtn = document.getElementById('add-image-path-btn');
+
+        if (imagePathInput) {
+            imagePathInput.addEventListener('input', renderImagePreviews);
         }
-
-        if (removeImageBtn) {
-            removeImageBtn.addEventListener('click', () => {
-                if (imageFileInput) imageFileInput.value = '';
-                if (imageUrlInput) imageUrlInput.value = '';
-                if (imagePreview) imagePreview.src = '';
-                if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
-
-                const prompt = dropZone ? dropZone.querySelector('.drop-zone-prompt') : null;
-                if (prompt) prompt.textContent = 'Drop file here or click to upload';
-            });
-        }
-
-        if (dropZone && imageFileInput) {
-            dropZone.addEventListener('click', () => imageFileInput.click());
-
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-
-            ['dragleave', 'dragend'].forEach(type => {
-                dropZone.addEventListener(type, () => dropZone.classList.remove('dragover'));
-            });
-
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-
-                if (e.dataTransfer.files.length) {
-                    imageFileInput.files = e.dataTransfer.files;
-                    imageFileInput.dispatchEvent(new Event('change'));
+        if (addImagePathBtn && imagePathInput) {
+            addImagePathBtn.addEventListener('click', () => {
+                if (!imagePathInput.value.trim()) {
+                    imagePathInput.value = '';
+                } else if (!imagePathInput.value.endsWith('\n')) {
+                    imagePathInput.value += '\n';
                 }
+                imagePathInput.value += '';
+                imagePathInput.focus();
+                renderImagePreviews();
             });
         }
 
@@ -3002,12 +3102,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (sizesContainer) sizesContainer.innerHTML = '';
                     const productIdInput = document.getElementById('product-id-input');
                     if (productIdInput) productIdInput.value = '';
-                    if (imageFileInput) imageFileInput.value = '';
-                    if (imageUrlInput) imageUrlInput.value = '';
-                    if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
-                    if (imagePreview) imagePreview.src = '';
-                    const prompt = dropZone ? dropZone.querySelector('.drop-zone-prompt') : null;
-                    if (prompt) prompt.textContent = 'Drop file here or click to upload';
+                    if (imagePathInput) imagePathInput.value = '';
+                    renderImagePreviews();
                 }, 300);
             }
         };
@@ -3061,28 +3157,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const spinner = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 18px; height: 18px; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>';
                 submitBtn.innerHTML = `${spinner} Saving...`;
 
-                // --- Step 1: Handle Image Upload & Get URL ---
-                let finalImageUrl = imageUrlInput.value;
-                const file = imageFileInput.files[0];
-
-                if (file) {
-                    submitBtn.innerHTML = `${spinner} Uploading Image...`;
-                    try {
-                        const idForPath = document.getElementById('product-id-input').value || document.getElementById('new-prod-name').value.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
-                        const storageRef = ref(storage, `products/${idForPath}_${Date.now()}_${file.name}`);
-                        await uploadBytes(storageRef, file);
-                        finalImageUrl = await getDownloadURL(storageRef);
-                    } catch (uploadError) {
-                        console.error("Image upload failed:", uploadError);
-                        window.showToast("Image upload failed. Check browser console for CORS errors.", "error");
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Save Product';
-                        return;
-                    }
-                }
-
-                if (!finalImageUrl) {
-                    window.showToast("Please provide an image for the product.", "error");
+                // --- Step 1: Read local image paths ---
+                const imagePaths = imagePathInput ? parseImagePaths(imagePathInput.value) : [];
+                if (imagePaths.length === 0) {
+                    window.showToast("Please provide at least one local image path for the product.", "error");
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Save Product';
                     return;
@@ -3125,12 +3203,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     orderIndex = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 0;
                 }
 
-                // --- Step 2: Construct Product Object with Final Image URL ---
+                // --- Step 2: Construct Product Object with Final Image URLs ---
                 const newProduct = {
                     name,
                     subtitle: document.getElementById('new-prod-subtitle').value.trim(),
                     description: document.getElementById('new-prod-desc').value.trim(),
-                    image: finalImageUrl,
+                    image: imagePaths[0],
+                    images: imagePaths,
                     sizes,
                     price: Math.min(...sizes.map(s => parseFloat(s.price))).toFixed(2),
                     outOfStock: isEdit ? (existingProduct.outOfStock || false) : false,
@@ -3553,6 +3632,8 @@ The DODCH Team`;
                         productCatalog[id].outOfStock = data.outOfStock === true;
                         productCatalog[id].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
                         productCatalog[id].sizes = data.sizes || [];
+                        productCatalog[id].image = data.image || '';
+                        productCatalog[id].images = data.images || [];
                     } else {
                         // Product exists only in Firestore (added via admin), add to local catalog
                         productCatalog[id] = {
@@ -3560,6 +3641,7 @@ The DODCH Team`;
                             subtitle: data.subtitle || '',
                             description: data.description || '',
                             image: data.image || '',
+                            images: data.images || [],
                             price: data.price || null,
                             sizes: data.sizes || [],
                             outOfStock: data.outOfStock === true,
@@ -3620,7 +3702,7 @@ The DODCH Team`;
 
                 el.innerHTML = `
                     <div class="admin-product-info">
-                        <img src="${product.image}" alt="${product.name}">
+                        <img src="${getProductPrimaryImage(product)}" alt="${product.name}">
                         <div class="admin-product-details">
                             <h4>${product.name}</h4>
                             <p>${product.subtitle}</p>
@@ -3707,10 +3789,12 @@ The DODCH Team`;
                     document.getElementById('new-prod-subtitle').value = product.subtitle || '';
                     document.getElementById('new-prod-desc').value = product.description || '';
 
-                    if (imageUrlInput) imageUrlInput.value = product.image || '';
-                    if (imagePreview && product.image) {
-                        imagePreview.src = product.image;
-                        imagePreviewContainer.style.display = 'block';
+                    if (imagePathInput) {
+                        const paths = product.images && Array.isArray(product.images) && product.images.length > 0
+                            ? product.images
+                            : (product.image ? [product.image] : []);
+                        imagePathInput.value = paths.join('\n');
+                        renderImagePreviews();
                     }
 
                     const modalTitle = document.getElementById('product-modal-title');
@@ -3914,6 +3998,7 @@ The DODCH Team`;
 
                     <div class="qv-image-container">
                         <img id="qv-image" src="" alt="Product Image" class="qv-modal-image">
+                        <div id="qv-thumbnails" class="qv-thumbnails"></div>
                     </div>
                     <div class="qv-modal-info">
                         <span class="brand-tag" style="text-transform: uppercase; letter-spacing: 3px; font-size: 0.75rem; color: var(--accent-gold); margin-bottom: 0.5rem; display: block; font-weight: 600;">DODCH</span>
@@ -3981,17 +4066,35 @@ The DODCH Team`;
 
                 const title = product ? product.name : btn.dataset.title;
                 const price = product ? product.price : btn.dataset.price;
-                const img = product ? product.image : btn.dataset.img;
                 const desc = product ? product.description : btn.dataset.desc;
                 const style = product ? product.style : btn.dataset.style;
+                const productImages = product ? getProductImages(product) : [btn.dataset.img];
+                const qvPrimaryImage = productImages[0] || '';
 
-                currentProduct = { id, title, price, img, desc };
+                currentProduct = { id, title, price, img: qvPrimaryImage, desc };
                 document.body.style.overflow = 'hidden';
 
-                qvImage.src = img;
+                qvImage.src = qvPrimaryImage;
                 qvImage.style = style || '';
                 qvTitle.textContent = title;
                 qvDesc.textContent = desc;
+
+                const qvThumbnails = document.getElementById('qv-thumbnails');
+                if (qvThumbnails) {
+                    qvThumbnails.innerHTML = '';
+                    productImages.forEach((imageSrc, index) => {
+                        const thumbBtn = document.createElement('button');
+                        thumbBtn.type = 'button';
+                        thumbBtn.className = 'qv-thumbnail-btn' + (index === 0 ? ' active' : '');
+                        thumbBtn.innerHTML = `<img src="${imageSrc}" alt="Thumbnail ${index + 1}">`;
+                        thumbBtn.addEventListener('click', () => {
+                            qvImage.src = imageSrc;
+                            qvThumbnails.querySelectorAll('.qv-thumbnail-btn').forEach(b => b.classList.remove('active'));
+                            thumbBtn.classList.add('active');
+                        });
+                        qvThumbnails.appendChild(thumbBtn);
+                    });
+                }
 
                 if (qvLearnMore) {
                     qvLearnMore.href = (product && product.storyUrl) ? product.storyUrl : `product.html?id=${id}`;
@@ -4253,12 +4356,12 @@ The DODCH Team`;
                     <a href="product.html?id=${id}">
                         <div class="product-image-wrapper">
                             ${badgeHTML}
-                            <img loading="lazy" src="${product.image || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
+                            <img loading="lazy" src="${getProductPrimaryImage(product) || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
                             <button class="quick-view-btn" 
                                 data-id="${id}" 
                                 data-title="${product.name}" 
                                 data-price="${displayPrice}" 
-                                data-img="${product.image || 'https://via.placeholder.com/300'}" 
+                                data-img="${getProductPrimaryImage(product) || 'https://via.placeholder.com/300'}" 
                                 data-style="${product.style || ''}"
                                 data-desc="${product.description || ''}">
                                 Quick View
