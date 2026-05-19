@@ -17,6 +17,7 @@
     --card-white: #FFFFFF;
     --text-charcoal: #2D2D2D;
     --accent-gold: #D4AF37;
+    --accent-offer: #C85A43; /* Elegant terracotta brand offer color */
     --font-serif: 'Playfair Display', serif;
     --font-sans: 'Montserrat', sans-serif;
 }
@@ -2399,7 +2400,7 @@ footer {
     white-space: nowrap;
     align-items: center;
     justify-content: center;
-    background: #d4af37;
+    background: var(--accent-offer);
     color: #fff;
     padding: 0.45rem 0.85rem;
     border-radius: 999px;

@@ -27,6 +27,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroCanvas = document.getElementById('hero-canvas');
 
     if (heroVideo && heroCanvas) {
+        const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+            heroVideo.loop = true;
+            heroVideo.style.opacity = '0.8';
+            heroCanvas.style.display = 'none';
+            heroVideo.play().catch(e => console.log('Autoplay prevented:', e));
+            return;
+        }
+
         const ctx = heroCanvas.getContext('2d');
 
         // --- Config ---

@@ -95,9 +95,16 @@ getToken(appCheck)
 
 const auth = getAuth(app);
 // Intelligent Caching: Enable persistent local cache so products load instantly on repeat visits
-const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-});
+let db;
+try {
+    db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+    console.info("⚡ Firestore: persistent local cache enabled.");
+} catch (e) {
+    console.warn("⚠️ Firestore: persistent local cache failed to initialize, falling back to standard memory cache:", e);
+    db = getFirestore(app);
+}
 const functions = getFunctions(app, "europe-west1");
 const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
@@ -119,9 +126,20 @@ const escapeHTML = (str) => {
 
 const getProductImages = (product) => {
     if (!product) return [];
-    if (Array.isArray(product.images) && product.images.length > 0) return product.images;
-    if (product.image) return [product.image];
-    return [];
+    let images = [];
+    if (Array.isArray(product.images) && product.images.length > 0) {
+        images = [...product.images];
+    } else if (product.image) {
+        images = [product.image];
+    } else {
+        return [];
+    }
+    return images.map(img => {
+        if (img && typeof img === 'string' && !img.startsWith('http') && !img.startsWith('data:')) {
+            return window.location.origin + '/' + img.replace(/^\/+/, '');
+        }
+        return img;
+    });
 };
 
 const getProductPrimaryImage = (product) => {
@@ -782,7 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initShopPage(animate = false, loading = false) {
         if (document.querySelector('.product-detail-container')) return;
-        
+
         // Reset UI state: scroll to top and close sidebar for a fresh section view
         window.scrollTo({ top: 0, behavior: 'smooth' });
         if (typeof closeSidebar === 'function') closeSidebar();
@@ -794,14 +812,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const sortedCatalog = Object.entries(productCatalog).sort(([idA, a], [idB, b]) => {
                 const indexA = LOCAL_INVENTORY.indexOf(idA);
                 const indexB = LOCAL_INVENTORY.indexOf(idB);
-                
+
                 // If both are in inventory, sort by inventory order
                 if (indexA !== -1 && indexB !== -1) return indexA - indexB;
                 // If only A is in inventory, A comes first
                 if (indexA !== -1) return -1;
                 // If only B is in inventory, B comes first
                 if (indexB !== -1) return 1;
-                
+
                 // Fallback to alphabetical sort if neither are in inventory
                 return a.name.localeCompare(b.name);
             });
@@ -832,8 +850,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 let targetUrl = product.storyUrl || `product.html?id=${id}`;
                 let linkAttributes = `href="${targetUrl}"`;
 
-                const isActuallyOOS = product.sizes && product.sizes.length > 0 
-                    ? product.sizes.every(s => s.outOfStock) 
+                const isActuallyOOS = product.sizes && product.sizes.length > 0
+                    ? product.sizes.every(s => s.outOfStock)
                     : product.outOfStock;
 
                 let badgeHTML = '';
@@ -1064,6 +1082,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
 
                             if (updatedDisplayPrice) {
+                                // Sync JSON-LD structured data for Google Merchant Center
+                                const schemas = document.querySelectorAll('script[type="application/ld+json"]');
+                                schemas.forEach(schema => {
+                                    try {
+                                        let schemaData = JSON.parse(schema.textContent);
+                                        if (schemaData['@type'] === 'Product' && schemaData.offers && schemaData.offers['@type'] === 'Offer') {
+                                            // Ensure we update the schema if it matches the current page's product
+                                            if (window.location.pathname.includes(productId) || Object.keys(productCatalog).length === 1) {
+                                                schemaData.offers.price = String(updatedDisplayPrice);
+                                                schema.textContent = JSON.stringify(schemaData, null, 2);
+                                            }
+                                        }
+                                    } catch (e) {}
+                                });
+
                                 const newPriceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${updatedDisplayPrice} TND</span>`;
                                 priceTargets.forEach(target => {
                                     target.innerHTML = newPriceHTML;
@@ -1077,8 +1110,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                             const existingBadges = imgWrapper.querySelectorAll('.product-badge');
                                             existingBadges.forEach(b => b.remove());
 
-                                            const isActuallyOOS = data.sizes && data.sizes.length > 0 
-                                                ? data.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true') 
+                                            const isActuallyOOS = data.sizes && data.sizes.length > 0
+                                                ? data.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                                                 : (productCatalog[productId].outOfStock === true || String(productCatalog[productId].outOfStock).toLowerCase() === 'true');
 
                                             if (productCatalog[productId].isPermanentlyUnavailable) {
@@ -1520,6 +1553,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sizeObj = product.sizes.find(s => s.label === size);
                 if (sizeObj) {
                     price = sizeObj.price;
+                } else {
+                    size = product.sizes[0].label;
+                    price = product.sizes[0].price;
                 }
             }
         } else {
@@ -1630,7 +1666,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 let size = "Standard";
-                let price = "0.00";
                 const sizeBtnsInContainer = container ? container.querySelectorAll('.size-btn') : [];
 
                 if (sizeBtnsInContainer.length > 0) {
@@ -1643,17 +1678,66 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                     size = activeSizeBtn.dataset.size;
-                    price = activeSizeBtn.dataset.price;
-                } else {
-                    const priceEl = container ? container.querySelector('.product-price, .price, #product-price') : null;
-                    if (priceEl) {
-                        price = priceEl.textContent.replace(/[^0-9.]/g, '');
-                    } else if (clickedBtn.dataset.price) {
-                        price = clickedBtn.dataset.price;
+                }
+
+                let productId = clickedBtn.dataset.productId || clickedBtn.dataset.id;
+                let matchedProduct = productCatalog[productId] || Object.values(productCatalog).find(p => p.name.toLowerCase() === productName.toLowerCase());
+                let price = "0.00";
+
+                if (matchedProduct) {
+                    if (matchedProduct.sizes && matchedProduct.sizes.length > 0) {
+                        const matchedSize = matchedProduct.sizes.find(s => s.label === size);
+                        if (matchedSize) {
+                            price = matchedSize.price;
+                        } else {
+                            if (sizeBtnsInContainer.length > 0) {
+                                let activeSizeBtn = Array.from(sizeBtnsInContainer)
+                                    .filter(b => b.classList.contains('active'))
+                                    .find(b => !b.closest('.qv-modal-content'));
+                                if (activeSizeBtn) {
+                                    price = activeSizeBtn.dataset.price;
+                                }
+                            } else {
+                                price = matchedProduct.sizes[0].price;
+                                size = matchedProduct.sizes[0].label;
+                            }
+                        }
+                    } else if (matchedProduct.price) {
+                        price = matchedProduct.price;
                     }
                 }
-                let imageSrc = clickedBtn.dataset.img || '';
 
+                // If price is still null/0/unset, check fallbacks to DOM and datasets
+                if (!price || price === "0.00" || price === "0" || parseFloat(price) === 0) {
+                    if (sizeBtnsInContainer.length > 0) {
+                        let activeSizeBtn = Array.from(sizeBtnsInContainer)
+                            .filter(b => b.classList.contains('active'))
+                            .find(b => !b.closest('.qv-modal-content'));
+                        if (activeSizeBtn) {
+                            price = activeSizeBtn.dataset.price;
+                        }
+                    } else {
+                        const priceEl = container ? container.querySelector('.product-price, .price, #product-price') : null;
+                        if (priceEl) {
+                            price = priceEl.textContent.replace(/[^0-9.]/g, '');
+                        } else if (clickedBtn.dataset.price) {
+                            price = clickedBtn.dataset.price;
+                        }
+                    }
+                }
+
+
+
+                let imageSrc = '';
+                if (matchedProduct) {
+                    imageSrc = getProductPrimaryImage(matchedProduct);
+                }
+                if (!imageSrc) {
+                    imageSrc = clickedBtn.dataset.img || '';
+                    if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
+                        imageSrc = window.location.origin + '/' + imageSrc.replace(/^\/+/, '');
+                    }
+                }
                 if (!imageSrc) {
                     const imgEl = container ? container.querySelector('img.product-image, img') : null;
                     if (imgEl) {
@@ -1835,7 +1919,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
                             const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
                             const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
-                            
+
                             if (sizeObj.originalPrice) {
                                 priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span class="offer-badge">ONLINE OFFER</span>`;
                             } else {
@@ -2202,6 +2286,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const order = allOrders.find(o => o.id === orderId);
                                 if (order && order.items) {
                                     order.items.forEach(item => {
+                                        if (item.image && typeof item.image === 'string' && !item.image.startsWith('http') && !item.image.startsWith('data:')) {
+                                            item.image = window.location.origin + '/' + item.image.replace(/^\/+/, '');
+                                        }
                                         const existingItem = cart.find(c => c.id === item.id);
                                         if (existingItem) existingItem.quantity += item.quantity;
                                         else cart.push({ ...item });
@@ -4287,34 +4374,34 @@ The DODCH Team`;
         }
         const currentProduct = productCatalog[currentId];
         const allProductIds = Object.keys(productCatalog);
-        
+
         const getProductType = (id, prod) => {
             const lowerId = id.toLowerCase();
             const lowerName = (prod && prod.name) ? prod.name.toLowerCase() : '';
             const lowerSubtitle = (prod && prod.subtitle) ? prod.subtitle.toLowerCase() : '';
             const lowerCategory = (prod && prod.category) ? prod.category.toLowerCase() : '';
-            
+
             // Hair Keywords (Matching 'hair-care' sidebar section)
-            if (lowerCategory.includes('hair') || lowerId.includes('shampoo') || lowerId.includes('mask') || lowerId.includes('hair') || lowerId.includes('silk') || 
+            if (lowerCategory.includes('hair') || lowerId.includes('shampoo') || lowerId.includes('mask') || lowerId.includes('hair') || lowerId.includes('silk') ||
                 lowerName.includes('shampoo') || lowerName.includes('mask') || lowerName.includes('hair') ||
                 lowerSubtitle.includes('hair') || lowerSubtitle.includes('scalp')) return 'hair-care';
-                
+
             // Face Keywords (Matching 'face-care' sidebar section)
             if (lowerCategory.includes('face') || lowerCategory.includes('skin') || lowerId.includes('foam') || lowerId.includes('serum') || lowerId.includes('face') || lowerId.includes('cleanser') || lowerId.includes('mellow') ||
                 lowerName.includes('serum') || lowerName.includes('cleanser') || lowerName.includes('face') || lowerName.includes('mellow') ||
                 lowerSubtitle.includes('face') || lowerSubtitle.includes('skin')) return 'face-care';
-            
+
             if (lowerCategory.includes('set') || lowerCategory.includes('bundle') || lowerId.includes('set') || lowerName.includes('set')) return 'sets';
-                
+
             return 'general';
         };
 
         const currentType = getProductType(currentId, currentProduct);
         const allRelated = allProductIds.filter(id => id !== currentId && productCatalog[id]);
-        
+
         // STRICT filtering: Only find products of the EXACT same type
         let relatedIds = allRelated.filter(id => getProductType(id, productCatalog[id]) === currentType);
-        
+
         // Shuffle and limit to 4
         relatedIds.sort(() => 0.5 - Math.random());
         relatedIds = relatedIds.slice(0, 4);
@@ -4330,29 +4417,48 @@ The DODCH Team`;
         relatedIds.forEach(id => {
             const product = productCatalog[id];
             if (!product) return;
-            let displayPrice = product.price || "0.00";
+            let displayPrice = product.price;
+            let originalPriceDisplay = '';
             let hasDiscount = false;
+            let discountPercentage = 0;
+
             if (product.sizes && product.sizes.length > 0) {
                 const prices = product.sizes.map(s => parseFloat(s.price)).filter(p => !isNaN(p));
                 if (prices.length > 0) {
-                    displayPrice = Math.min(...prices).toFixed(2);
+                    const basePriceIndex = product.sizes.findIndex(s => parseFloat(s.price) === Math.min(...prices));
+                    const baseSize = product.sizes[basePriceIndex] || product.sizes[0];
+                    displayPrice = parseFloat(baseSize.price).toFixed(2);
+
+                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
+                        hasDiscount = true;
+                        discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
+                        originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
+                    }
                 }
-                hasDiscount = product.sizes.some(s => s.originalPrice && parseFloat(s.originalPrice) > parseFloat(s.price));
             }
 
-            const isActuallyOOS = product.sizes && product.sizes.length > 0 
-                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true') 
+            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                 : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
 
             let badgeHTML = '';
-            if (isActuallyOOS) {
-                badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #2D2D2D; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px;">OUT OF STOCK</span>';
-            } else if (hasDiscount) {
-                badgeHTML = '<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px;">ONLINE OFFER</span>';
+            if (product.isPermanentlyUnavailable) {
+                badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>';
+            } else if (isActuallyOOS) {
+                badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>';
+            } else if (hasDiscount && discountPercentage > 0) {
+                badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
+            }
+
+            let priceHTML = '';
+            if (displayPrice) {
+                priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
+            } else {
+                priceHTML = `<span class="price-shimmer"></span>`;
             }
 
             productsHtml += `
-                <div class="product-card reveal" ${isActuallyOOS ? 'style="opacity: 0.8;"' : ''}>
+                <div class="product-card reveal" ${isActuallyOOS ? 'style="opacity: 0.8;"' : ''} data-product-id="${id}">
                     <a href="product.html?id=${id}">
                         <div class="product-image-wrapper">
                             ${badgeHTML}
@@ -4360,7 +4466,7 @@ The DODCH Team`;
                             <button class="quick-view-btn" 
                                 data-id="${id}" 
                                 data-title="${product.name}" 
-                                data-price="${displayPrice}" 
+                                data-price="${displayPrice || ''}" 
                                 data-img="${getProductPrimaryImage(product) || 'https://via.placeholder.com/300'}" 
                                 data-style="${product.style || ''}"
                                 data-desc="${product.description || ''}">
@@ -4369,7 +4475,7 @@ The DODCH Team`;
                         </div>
                         <div class="product-card-info">
                             <h3 class="product-card-title">${product.name}</h3>
-                            <p class="product-card-price">${displayPrice} TND</p>
+                            <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
                         </div>
                     </a>
                 </div>
@@ -4395,10 +4501,10 @@ The DODCH Team`;
             const grid = container.querySelector('.related-products-grid');
             const btnPrev = container.querySelector('#rel-prev');
             const btnNext = container.querySelector('#rel-next');
-            
+
             if (grid && btnPrev && btnNext) {
                 const wrapper = container.querySelector('.related-products-wrapper');
-                
+
                 btnPrev.addEventListener('click', () => {
                     grid.scrollBy({ left: -300, behavior: 'smooth' });
                 });
@@ -4409,7 +4515,7 @@ The DODCH Team`;
                 const updateScrollUI = () => {
                     const isStart = grid.scrollLeft <= 10;
                     const isEnd = grid.scrollLeft + grid.clientWidth >= grid.scrollWidth - 10;
-                    
+
                     // Toggle arrows
                     btnPrev.style.opacity = isStart ? '0.3' : '1';
                     btnPrev.style.pointerEvents = isStart ? 'none' : 'auto';
@@ -4870,6 +4976,24 @@ const initProductReviews = () => {
 
         if (countDisplay) {
             countDisplay.textContent = `(${average} / ${count} Reviews)`;
+        }
+
+        // Sync JSON-LD structured data for Google Search & Merchant Center
+        if (count > 0) {
+            const schemas = document.querySelectorAll('script[type="application/ld+json"]');
+            schemas.forEach(schema => {
+                try {
+                    let schemaData = JSON.parse(schema.textContent);
+                    if (schemaData['@type'] === 'Product') {
+                        schemaData.aggregateRating = {
+                            "@type": "AggregateRating",
+                            "ratingValue": String(average),
+                            "reviewCount": String(count)
+                        };
+                        schema.textContent = JSON.stringify(schemaData, null, 2);
+                    }
+                } catch (e) {}
+            });
         }
     };
 
@@ -6538,7 +6662,7 @@ async function initShippingInfo(user) {
                 : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel`;
             if (!isShowing) {
                 // Clear form for new profile entry
-                ['checkout-email','checkout-name','checkout-phone','checkout-address','checkout-postal-code'].forEach(id => {
+                ['checkout-email', 'checkout-name', 'checkout-phone', 'checkout-address', 'checkout-postal-code'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });

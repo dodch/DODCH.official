@@ -280,6 +280,17 @@ section.active#sec-d2 .glass-text { transform: translate3d(0, 0, 0); }
     .logo-big { font-size: 25vw; }
     .manifesto-grid { grid-template-columns: 1fr; }
     .statement { font-size: 1.6rem; }
+    
+    /* Fix Card Mobile Overlap */
+    .right { margin-left: 0; }
+    .left { margin-right: 0; }
+    .glass-text { 
+        padding: 30px 20px; 
+        max-width: 100%; 
+        width: 100%;
+        margin: 0 auto;
+    }
+    .identity-section { padding: 0 5%; }
 }
 
 /* ============================================

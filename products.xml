@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+  <channel>
+    <title>DODCH Products</title>
+    <link>https://dodch.com</link>
+    <description>DODCH Product Data Feed</description>
+    
+    <item>
+      <g:id>DODCH-DMW-005</g:id>
+      <g:title>DODCHmellow Cloud Shampoo</g:title>
+      <g:description>Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free shampoo with Silk-Polymer infusion and pH 5.5. Designed for ultra-gentle cleaning with a premium Néroli-Sucre fragrance.</g:description>
+      <g:link>https://dodch.com/dodchmellow-pro-v.html</g:link>
+      <g:image_link>https://dodch.com/IMG_4243.webp</g:image_link>
+      <g:brand>DODCH</g:brand>
+      <g:condition>new</g:condition>
+      <g:availability>in_stock</g:availability>
+      <g:price>24.50 TND</g:price>
+    </item>
+    <item>
+      <g:id>DODCH-FOAM-001</g:id>
+      <g:title>DODCH Foaming Cleanser</g:title>
+      <g:description>A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol &amp; Glycerin, and soothing Allantoin for pure, luminous skin.</g:description>
+      <g:link>https://dodch.com/face-foam.html</g:link>
+      <g:image_link>https://dodch.com/IMG_4241.webp</g:image_link>
+      <g:brand>DODCH</g:brand>
+      <g:condition>new</g:condition>
+      <g:availability>in_stock</g:availability>
+      <g:price>32.00 TND</g:price>
+    </item>
+    <item>
+      <g:id>DODCH-HAS-002</g:id>
+      <g:title>Advanced HA Serum</g:title>
+      <g:description>Concentrated Hyaluronic Acid serum for deep multi-layer hydration, instant plumping, and radiant Mediterranean skin. Engineered to treat fine lines, dryness, and dullness for all skin types.</g:description>
+      <g:link>https://dodch.com/face-serum.html</g:link>
+      <g:image_link>https://dodch.com/IMG_3407.webp</g:image_link>
+      <g:brand>DODCH</g:brand>
+      <g:condition>new</g:condition>
+      <g:availability>in_stock</g:availability>
+      <g:price>89.00 TND</g:price>
+    </item>
+    <item>
+      <g:id>DODCH-STM-004</g:id>
+      <g:title>Pro-V Silk Therapy Mask</g:title>
+      <g:description>Intensive hair repair mask infused with Hydrolyzed Silk and Pro-Vitamin B5. Designed to restore strength, add mirror-like shine, and provide deep hydration. Mediterranean luxury for silky, frizz-free hair results.</g:description>
+      <g:link>https://dodch.com/silk-mask.html</g:link>
+      <g:image_link>https://dodch.com/F188A04D-4AA7-4D98-9EEB-14861B10D468.webp</g:image_link>
+      <g:brand>DODCH</g:brand>
+      <g:condition>new</g:condition>
+      <g:availability>in_stock</g:availability>
+      <g:price>45.00 TND</g:price>
+    </item>
+  </channel>
+</rss>

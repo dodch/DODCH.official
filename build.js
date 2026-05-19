@@ -38,6 +38,10 @@ const IGNORE_LIST = [
     'scratch'
 ];
 
+// ─── 0. Generate Google Merchant Feed ───────────────────────────────────────
+console.log('📦 Generating Google Merchant feed...');
+require('child_process').execSync('node generate-feed.js', { stdio: 'inherit' });
+
 // ─── 1. Clean + recreate dist/ ─────────────────────────────────────────────
 if (fs.existsSync(OUT)) fs.rmSync(OUT, { recursive: true });
 fs.mkdirSync(OUT, { recursive: true });

@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const totalFrames = 120;
+    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const totalFrames = isMobile ? 40 : 120;
     const images = [];
     let imagesLoaded = 0;
 
@@ -25,7 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Load all images ---
     for (let i = 0; i < totalFrames; i++) {
         const img = new Image();
-        img.src = `images/serum-frames/frame_${i.toString().padStart(3, '0')}.webp`;
+        const frameNumber = Math.min(119, Math.round(i * (119 / (totalFrames - 1))));
+        img.src = `images/serum-frames/frame_${frameNumber.toString().padStart(3, '0')}.webp`;
 
         img.onload = () => {
             imagesLoaded++;
