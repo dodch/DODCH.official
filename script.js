@@ -6838,35 +6838,7 @@ window.saveShippingFromCheckout = async function (userId) {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    const prefetchedUrls = new Set();
-
-    const prefetchUrl = (url) => {
-        if (prefetchedUrls.has(url)) return;
-        if (url.startsWith(window.location.origin) || !url.startsWith('http')) {
-            if (url.includes('.html')) {
-                const link = document.createElement('link');
-                link.rel = 'prefetch';
-                link.href = url;
-                link.as = 'document';
-                document.head.appendChild(link);
-                prefetchedUrls.add(url);
-                console.log('🚀 Prefetched background HTML:', url);
-            }
-        }
-    };
-    document.body.addEventListener('mouseover', (e) => {
-        const linkElem = e.target.closest('a');
-        if (linkElem && linkElem.href) {
-            prefetchUrl(linkElem.href);
-        }
-    }, { passive: true });
-
-    document.body.addEventListener('touchstart', (e) => {
-        const linkElem = e.target.closest('a');
-        if (linkElem && linkElem.href) {
-            prefetchUrl(linkElem.href);
-        }
-    }, { passive: true });
+    // Prefetching removed due to WKWebView (iOS in-app browser) script execution bugs.
 });
 
 window.addEventListener('load', initPushNotifications);

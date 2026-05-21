@@ -1,0 +1,1 @@
+const o=require("sharp"),a=require("path");async function r(){try{await o("IMG_3352.webp").flatten({background:"#ffffff"}).webp().toFile("favicon-black-on-white.webp"),console.log("\u2705 Created favicon-black-on-white.webp (Solid White Background)")}catch(e){console.error("Error generating favicon:",e)}}r();
