@@ -847,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                let targetUrl = product.storyUrl || `product.html?id=${id}`;
+                let targetUrl = `product.html?id=${id}`;
                 let linkAttributes = `href="${targetUrl}"`;
 
                 const isActuallyOOS = product.sizes && product.sizes.length > 0
@@ -1048,6 +1048,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             productCatalog[productId].images = data.images;
                         } else if (data.image && !productCatalog[productId].images) {
                             productCatalog[productId].images = [data.image];
+                        }
+
+                        // LIVE IMAGE SYNC: Update the rendered shop-grid card img src so changes
+                        // made in the admin inventory are immediately visible without a page reload.
+                        const newPrimaryImg = getProductPrimaryImage(productCatalog[productId]);
+                        if (newPrimaryImg) {
+                            const gridCard = document.querySelector(`.product-card[data-product-id="${productId}"]`);
+                            if (gridCard) {
+                                const cardImg = gridCard.querySelector('.product-card-img');
+                                if (cardImg && cardImg.src !== newPrimaryImg) {
+                                    cardImg.src = newPrimaryImg;
+                                }
+                                const qvBtn = gridCard.querySelector('.quick-view-btn');
+                                if (qvBtn) qvBtn.dataset.img = newPrimaryImg;
+                            }
                         }
 
                         // CRITICAL: Overwrite sizes. If Firestore has no sizes, clear the local sizes to use single price logic.
@@ -1650,6 +1665,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addToCartBtns.length > 0) {
         addToCartBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
+                const path = window.location.pathname;
+                const page = path.split("/").pop();
+                const isStoryPage = page.includes("face-foam.html") || page.includes("face-serum.html") || page.includes("silk-mask.html") || page.includes("dodchmellow-pro-v.html");
+                
+                if (isStoryPage) {
+                    e.preventDefault();
+                    let productId = 'dodchmellow-pro-v';
+                    if (page.includes('face-foam.html')) productId = 'foaming-cleanser';
+                    else if (page.includes('silk-mask.html')) productId = 'silk-therapy-mask';
+                    else if (page.includes('face-serum.html')) productId = 'advanced-ha-serum';
+                    
+                    window.location.href = `product.html?id=${productId}`;
+                    return;
+                }
+
                 const clickedBtn = e.currentTarget;
                 const container = findProductContainer(clickedBtn);
                 let productName = clickedBtn.dataset.title;

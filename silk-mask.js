@@ -26,29 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Buy Now Buttons (Integrate with the global cart from script.js)
-    // The script.js handles clicks on elements with specific IDs or logic.
-    // We add a custom listener for the silk-mask specific buy buttons if they aren't handled globally.
-    const buyButtons = document.querySelectorAll('.buy-now-btn');
-    buyButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (window.triggerHaptic) window.triggerHaptic('medium');
-            const productId = btn.getAttribute('data-id');
-            // Dispatch a custom event that script.js can listen to, or call a global function if available
-            // In script.js, the 'Add to cart' logic is often bound to .cta-button or specific classes.
-            // Let's trigger the click on the global cart logic if we can identify how it's bound.
-            // Usually, script.js listens for 'Add to Cart' text or specific IDs.
 
-            // If window.addToCart exists (defined in script.js), we can call it.
-            if (typeof window.addToCart === 'function') {
-                window.addToCart(productId);
-            } else {
-                // Fallback: If script.js doesn't expose it, we might need to simulate the detail page behavior
-                // but since this is a custom product page, we'll ensure script.js is compatible.
-                console.log(`Adding ${productId} to cart via silk-mask.js`);
-            }
-        });
-    });
 
     // 3. Scroll Reveal for custom sections if they aren't marked with .reveal
     // Actually, we've already added .reveal to most sections in the HTML.
