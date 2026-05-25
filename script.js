@@ -2633,6 +2633,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initBreadcrumbs = () => {
         const existing = document.querySelector('.breadcrumb-wrapper');
         if (existing) existing.remove();
+        document.body.classList.remove('has-breadcrumbs');
 
         const path = window.location.pathname;
         const page = path.split("/").pop();
