@@ -3015,6 +3015,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let maxScore = -1;
 
         document.querySelectorAll('.sidebar-menu a').forEach(link => {
+            const rawHref = link.getAttribute('href') || '';
+            // Skip pure in-page anchors (e.g. #contact) – they are scroll targets,
+            // not page routes, so they should never be marked as the active page link.
+            if (rawHref.startsWith('#')) return;
+
             const linkUrl = new URL(link.href, window.location.origin);
             let score = 0;
             if (linkUrl.pathname !== currentUrl.pathname) {
