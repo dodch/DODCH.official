@@ -17,23 +17,20 @@ jobs:
         with:
           node-version: 20
 
-      - name: 📦 Install Build Dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: 🔑 Install Firebase Admin SDK (for Firestore sync)
-        run: npm install firebase-admin --no-save
+      - name: 📦 Install only required build tools
+        run: npm install esbuild firebase-admin --no-save
 
       - name: 🔄 Sync prices from Firestore
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node sync-db.js
 
-      - name: 🏗️ Run build and regenerate feed
+      - name: 🏗️ Build and regenerate products.xml
         run: node build.js
 
       - name: 🚀 Install Firebase CLI and Deploy
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          npm install -g firebase-tools
+          npm install -g firebase-tools --quiet
           firebase deploy --only hosting --token "$FIREBASE_TOKEN" --non-interactive
