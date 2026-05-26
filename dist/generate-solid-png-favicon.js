@@ -1,1 +1,0 @@
-const o=require("sharp");async function r(){try{await o({create:{width:512,height:512,channels:4,background:{r:255,g:255,b:255,alpha:1}}}).composite([{input:"IMG_3352.webp",blend:"over"}]).png().toFile("favicon-solid-white.png"),console.log("\u2705 Created favicon-solid-white.png with a guaranteed solid white background.")}catch(e){console.error("Error:",e)}}r();

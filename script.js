@@ -1097,20 +1097,38 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
 
                             if (updatedDisplayPrice) {
-                                // Sync JSON-LD structured data for Google Merchant Center
-                                const schemas = document.querySelectorAll('script[type="application/ld+json"]');
-                                schemas.forEach(schema => {
-                                    try {
-                                        let schemaData = JSON.parse(schema.textContent);
-                                        if (schemaData['@type'] === 'Product' && schemaData.offers && schemaData.offers['@type'] === 'Offer') {
-                                            // Ensure we update the schema if it matches the current page's product
-                                            if (window.location.pathname.includes(productId) || Object.keys(productCatalog).length === 1) {
-                                                schemaData.offers.price = String(updatedDisplayPrice);
-                                                schema.textContent = JSON.stringify(schemaData, null, 2);
-                                            }
-                                        }
-                                    } catch (e) {}
-                                });
+                                 // Sync JSON-LD structured data and Meta Tags for Google Merchant Center / Facebook Pixel / Crawlers
+                                 const schemas = document.querySelectorAll('script[type="application/ld+json"]');
+                                 schemas.forEach(schema => {
+                                     try {
+                                         let schemaData = JSON.parse(schema.textContent);
+                                         if (schemaData['@type'] === 'Product' && schemaData.offers && schemaData.offers['@type'] === 'Offer') {
+                                             // Robust match: check if URL contains product ID, filename matches product's storyUrl, or query parameter id matches
+                                             const currentFilename = window.location.pathname.split('/').pop() || '';
+                                             const urlParams = new URLSearchParams(window.location.search);
+                                             const activeIdParam = urlParams.get('id');
+                                             const isMatchingProduct = window.location.pathname.includes(productId) ||
+                                                                       (productCatalog[productId] && productCatalog[productId].storyUrl === currentFilename) ||
+                                                                       activeIdParam === productId ||
+                                                                       Object.keys(productCatalog).length === 1;
+
+                                             if (isMatchingProduct) {
+                                                 schemaData.offers.price = String(updatedDisplayPrice);
+                                                 schema.textContent = JSON.stringify(schemaData, null, 2);
+
+                                                 // Also sync the OpenGraph & standard Meta Price tags live in the DOM!
+                                                 const ogPriceMeta = document.querySelector('meta[property="product:price:amount"]');
+                                                 if (ogPriceMeta) {
+                                                     ogPriceMeta.setAttribute('content', String(updatedDisplayPrice));
+                                                 }
+                                                 const priceMeta = document.querySelector('meta[name="price"]');
+                                                 if (priceMeta) {
+                                                     priceMeta.setAttribute('content', String(updatedDisplayPrice));
+                                                 }
+                                             }
+                                         }
+                                     } catch (e) {}
+                                 });
 
                                 const newPriceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${updatedDisplayPrice} TND</span>`;
                                 priceTargets.forEach(target => {

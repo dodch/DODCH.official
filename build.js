@@ -35,7 +35,14 @@ const IGNORE_LIST = [
     'llms.txt',
     'llms-full.txt',
     'DODCH.official.code-workspace',
-    'scratch'
+    'scratch',
+    'prices.json',
+    'generate-feed.js',
+    'generate-favicon.js',
+    'generate-solid-png-favicon.js',
+    'update-favicons.js',
+    'update-favicons-solid.js',
+    'apply-png-favicon.js'
 ];
 
 // ─── 0. Generate Google Merchant Feed ───────────────────────────────────────

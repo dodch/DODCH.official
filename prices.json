@@ -1,0 +1,27 @@
+{
+  "_comment": "Single source of truth for product prices. Update this file whenever you change prices in Firestore. Run 'node build.js' after updating to regenerate products.xml and keep feed in sync.",
+  "dodchmellow-pro-v": {
+    "sku": "DODCH-DMW-005",
+    "price": "24.50",
+    "currency": "TND",
+    "availability": "in_stock"
+  },
+  "foaming-cleanser": {
+    "sku": "DODCH-FOAM-001",
+    "price": "32.00",
+    "currency": "TND",
+    "availability": "in_stock"
+  },
+  "silk-therapy-mask": {
+    "sku": "DODCH-STM-004",
+    "price": "45.00",
+    "currency": "TND",
+    "availability": "in_stock"
+  },
+  "advanced-ha-serum": {
+    "sku": "DODCH-HAS-002",
+    "price": "89.00",
+    "currency": "TND",
+    "availability": "in_stock"
+  }
+}
