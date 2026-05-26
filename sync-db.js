@@ -28,13 +28,24 @@ const db = admin.firestore();
 
 async function run() {
     try {
-        console.log('🔄 Fetching live products from Firestore...');
-        const snapshot = await db.collection('products').get();
+        console.log('🔄 Fetching live database products...');
         
-        if (snapshot.empty) {
+        // Fetch both 'products' and 'prices' collections to match storefront logic
+        const [productsSnap, pricesSnap] = await Promise.all([
+            db.collection('products').get(),
+            db.collection('prices').get()
+        ]);
+
+        if (productsSnap.empty) {
             console.warn('⚠️ No products found in the "products" collection.');
             process.exit(0);
         }
+
+        // Build a lookup map of prices overrides
+        const priceOverrides = {};
+        pricesSnap.forEach(doc => {
+            priceOverrides[doc.id] = doc.data();
+        });
 
         // Load existing prices.json to merge custom configurations
         let existingPrices = {};
@@ -49,25 +60,48 @@ async function run() {
             "_comment": "Single source of truth for product prices. Automatically updated by GitHub Actions. Run 'node build.js' after manual changes."
         };
 
-        snapshot.forEach(doc => {
+        productsSnap.forEach(doc => {
             const data = doc.data();
             const id = doc.id;
             const existing = existingPrices[id] || {};
 
-            // Resolve standard price: default to base price or first size option
-            let priceValue = '0.00';
-            if (data.price) {
-                priceValue = data.price;
-            } else if (data.basePrice) {
-                priceValue = data.basePrice;
-            } else if (data.sizes) {
-                if (Array.isArray(data.sizes) && data.sizes[0] && data.sizes[0].price) {
-                    priceValue = data.sizes[0].price;
-                } else if (typeof data.sizes === 'object') {
-                    const firstSize = Object.values(data.sizes)[0];
-                    if (firstSize) priceValue = firstSize;
+            // ─── Authoritative Price Selection (Matches storefront logic) ───
+            let priceValue = '';
+            
+            // Check 'prices' override collection first
+            const priceData = priceOverrides[id];
+            if (priceData) {
+                if (priceData.basePrice) {
+                    priceValue = priceData.basePrice;
+                } else if (priceData.price) {
+                    priceValue = priceData.price;
+                } else if (priceData.sizes) {
+                    // Get lowest price from sizes if no basePrice is explicitly set
+                    if (typeof priceData.sizes === 'object') {
+                        const vals = Object.values(priceData.sizes).map(v => parseFloat(v)).filter(v => !isNaN(v));
+                        if (vals.length > 0) priceValue = Math.min(...vals).toFixed(2);
+                    }
                 }
             }
+
+            // Fallback to 'products' collection fields
+            if (!priceValue) {
+                if (data.price) {
+                    priceValue = data.price;
+                } else if (data.basePrice) {
+                    priceValue = data.basePrice;
+                } else if (data.sizes) {
+                    if (Array.isArray(data.sizes) && data.sizes[0] && data.sizes[0].price) {
+                        priceValue = data.sizes[0].price;
+                    } else if (typeof data.sizes === 'object') {
+                        const vals = Object.values(data.sizes).map(v => parseFloat(v)).filter(v => !isNaN(v));
+                        if (vals.length > 0) priceValue = Math.min(...vals).toFixed(2);
+                    }
+                }
+            }
+
+            // Default fallback
+            if (!priceValue) priceValue = '0.00';
 
             // Clean price string (e.g. remove " TND")
             if (typeof priceValue === 'string') {
