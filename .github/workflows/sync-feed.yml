@@ -1,0 +1,40 @@
+name: Sync Product Feed & Auto-Deploy
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Run automatically every day at 12:00 AM UTC
+  workflow_dispatch: # Allows you to trigger this workflow manually from GitHub Actions UI
+
+jobs:
+  sync-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: 📦 Install Build Dependencies
+        run: npm ci || npm install
+
+      - name: 🔑 Install Firebase Admin SDK (Temporary for sync)
+        run: npm install firebase-admin --no-save
+
+      - name: 🔄 Sync prices from Firestore
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node sync-db.js
+
+      - name: 🏗️ Run build and regenerate feed
+        run: node build.js
+
+      - name: 🚀 Deploy to Firebase Hosting
+        uses: w9jds/firebase-action@v2.2.0
+        with:
+          args: deploy --only hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

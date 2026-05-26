@@ -38,6 +38,7 @@ const IGNORE_LIST = [
     'scratch',
     'prices.json',
     'generate-feed.js',
+    'sync-db.js',
     'generate-favicon.js',
     'generate-solid-png-favicon.js',
     'update-favicons.js',
