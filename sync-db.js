@@ -36,14 +36,13 @@ async function run() {
             db.collection('prices').get()
         ]);
 
-        if (productsSnap.empty) {
-            console.warn('⚠️ No products found in the "products" collection.');
-            process.exit(0);
-        }
+        console.log(`🔍 Fetched ${productsSnap.size} documents from 'products' collection.`);
+        console.log(`🔍 Fetched ${pricesSnap.size} documents from 'prices' collection.`);
 
         // Build a lookup map of prices overrides
         const priceOverrides = {};
         pricesSnap.forEach(doc => {
+            console.log(`   [prices override db] Found doc ID: "${doc.id}" ->`, JSON.stringify(doc.data()));
             priceOverrides[doc.id] = doc.data();
         });
 
@@ -64,22 +63,32 @@ async function run() {
             const data = doc.data();
             const id = doc.id;
             const existing = existingPrices[id] || {};
+            
+            console.log(`\n🔎 Resolving price for product ID: "${id}"`);
+            console.log(`   - Raw product data:`, JSON.stringify(data));
 
             // ─── Authoritative Price Selection (Matches storefront logic) ───
             let priceValue = '';
+            let source = 'none';
             
             // Check 'prices' override collection first
             const priceData = priceOverrides[id];
             if (priceData) {
+                console.log(`   - Found price override entry:`, JSON.stringify(priceData));
                 if (priceData.basePrice) {
                     priceValue = priceData.basePrice;
+                    source = 'prices.basePrice';
                 } else if (priceData.price) {
                     priceValue = priceData.price;
+                    source = 'prices.price';
                 } else if (priceData.sizes) {
                     // Get lowest price from sizes if no basePrice is explicitly set
                     if (typeof priceData.sizes === 'object') {
                         const vals = Object.values(priceData.sizes).map(v => parseFloat(v)).filter(v => !isNaN(v));
-                        if (vals.length > 0) priceValue = Math.min(...vals).toFixed(2);
+                        if (vals.length > 0) {
+                            priceValue = Math.min(...vals).toFixed(2);
+                            source = 'prices.sizes.min';
+                        }
                     }
                 }
             }
@@ -88,20 +97,31 @@ async function run() {
             if (!priceValue) {
                 if (data.price) {
                     priceValue = data.price;
+                    source = 'products.price';
                 } else if (data.basePrice) {
                     priceValue = data.basePrice;
+                    source = 'products.basePrice';
                 } else if (data.sizes) {
                     if (Array.isArray(data.sizes) && data.sizes[0] && data.sizes[0].price) {
                         priceValue = data.sizes[0].price;
+                        source = 'products.sizes[0].price';
                     } else if (typeof data.sizes === 'object') {
                         const vals = Object.values(data.sizes).map(v => parseFloat(v)).filter(v => !isNaN(v));
-                        if (vals.length > 0) priceValue = Math.min(...vals).toFixed(2);
+                        if (vals.length > 0) {
+                            priceValue = Math.min(...vals).toFixed(2);
+                            source = 'products.sizes.min';
+                        }
                     }
                 }
             }
 
             // Default fallback
-            if (!priceValue) priceValue = '0.00';
+            if (!priceValue) {
+                priceValue = '0.00';
+                source = 'default_fallback';
+            }
+
+            console.log(`   => Resolved price: "${priceValue}" from source: [${source}]`);
 
             // Clean price string (e.g. remove " TND")
             if (typeof priceValue === 'string') {
@@ -128,7 +148,7 @@ async function run() {
             JSON.stringify(newPrices, null, 2),
             'utf-8'
         );
-        console.log('✅ prices.json synchronized successfully with live Firestore data.');
+        console.log('\n✅ prices.json synchronized successfully with live Firestore data.');
         
     } catch (err) {
         console.error('❌ Error synchronizing with Firestore:', err.message);
