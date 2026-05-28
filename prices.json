@@ -1,26 +1,32 @@
 {
-  "_comment": "Single source of truth for product prices. Update this file whenever you change prices in Firestore. Run 'node build.js' after updating to regenerate products.xml and keep feed in sync.",
+  "_comment": "Single source of truth for product prices. Automatically updated by GitHub Actions. Run 'node build.js' after manual changes.",
+  "advanced-ha-serum": {
+    "sku": "DODCH-HAS-002",
+    "price": "44.00",
+    "currency": "TND",
+    "availability": "out_of_stock"
+  },
   "dodchmellow-pro-v": {
     "sku": "DODCH-DMW-005",
-    "price": "24.50",
+    "price": "29.00",
     "currency": "TND",
     "availability": "in_stock"
   },
   "foaming-cleanser": {
     "sku": "DODCH-FOAM-001",
-    "price": "32.00",
+    "price": "16.00",
     "currency": "TND",
-    "availability": "in_stock"
+    "availability": "out_of_stock"
+  },
+  "glass-glow-shampoo": {
+    "sku": "DODCH-GLASS-GLOW-SHAMPOO",
+    "price": "24.00",
+    "currency": "TND",
+    "availability": "out_of_stock"
   },
   "silk-therapy-mask": {
     "sku": "DODCH-STM-004",
-    "price": "45.00",
-    "currency": "TND",
-    "availability": "in_stock"
-  },
-  "advanced-ha-serum": {
-    "sku": "DODCH-HAS-002",
-    "price": "89.00",
+    "price": "19.00",
     "currency": "TND",
     "availability": "in_stock"
   }

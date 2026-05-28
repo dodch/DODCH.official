@@ -13,7 +13,7 @@
       <g:brand>DODCH</g:brand>
       <g:condition>new</g:condition>
       <g:availability>in_stock</g:availability>
-      <g:price>24.50 TND</g:price>
+      <g:price>29.00 TND</g:price>
       <g:google_product_category>543615</g:google_product_category>
       <g:identifier_exists>false</g:identifier_exists>
     </item>
@@ -25,8 +25,8 @@
       <g:image_link>https://dodch.com/IMG_4241.webp</g:image_link>
       <g:brand>DODCH</g:brand>
       <g:condition>new</g:condition>
-      <g:availability>in_stock</g:availability>
-      <g:price>32.00 TND</g:price>
+      <g:availability>out_of_stock</g:availability>
+      <g:price>16.00 TND</g:price>
       <g:google_product_category>2548</g:google_product_category>
       <g:identifier_exists>false</g:identifier_exists>
     </item>
@@ -38,8 +38,8 @@
       <g:image_link>https://dodch.com/IMG_3407.webp</g:image_link>
       <g:brand>DODCH</g:brand>
       <g:condition>new</g:condition>
-      <g:availability>in_stock</g:availability>
-      <g:price>89.00 TND</g:price>
+      <g:availability>out_of_stock</g:availability>
+      <g:price>44.00 TND</g:price>
       <g:google_product_category>5220</g:google_product_category>
       <g:identifier_exists>false</g:identifier_exists>
     </item>
@@ -52,7 +52,7 @@
       <g:brand>DODCH</g:brand>
       <g:condition>new</g:condition>
       <g:availability>in_stock</g:availability>
-      <g:price>45.00 TND</g:price>
+      <g:price>19.00 TND</g:price>
       <g:google_product_category>543616</g:google_product_category>
       <g:identifier_exists>false</g:identifier_exists>
     </item>
