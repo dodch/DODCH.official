@@ -8,7 +8,10 @@ on:
 jobs:
   sync-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to push updated prices.json and products.xml back to the repository
     steps:
+
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
@@ -27,6 +30,15 @@ jobs:
 
       - name: 🏗️ Build and regenerate products.xml
         run: node build.js
+
+      - name: 💾 Commit and push updated feed back to GitHub (for GitHub Pages custom domain)
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add prices.json products.xml
+          git commit -m "chore: auto-sync database prices and update feed [skip ci]" || echo "No changes to commit"
+          git push origin main
+
 
       - name: 🚀 Authenticate and Deploy to Firebase Hosting
         env:
