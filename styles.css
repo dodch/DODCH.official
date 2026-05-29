@@ -16,11 +16,13 @@
     --bg-cream: #FDFBF7;
     --card-white: #FFFFFF;
     --text-charcoal: #2D2D2D;
-    --accent-gold: #D4AF37;
+    --accent-gold: #D4AF37;          /* Decorative gold — borders, backgrounds, icons */
+    --accent-gold-text: #866F00;     /* Accessible text gold — pure deep gold, no blue, ≥4.5:1 on white/cream (WCAG AA) */
     --accent-offer: #C85A43; /* Elegant terracotta brand offer color */
     --font-serif: 'Playfair Display', serif;
     --font-sans: 'Montserrat', sans-serif;
 }
+
 
 * {
     margin: 0;
@@ -168,7 +170,7 @@ p {
 }
 
 .logo:hover {
-    color: var(--accent-gold) !important;
+    color: var(--accent-gold-text) !important;
     transform: translateX(-50%) scale(1.05);
 }
 
@@ -580,7 +582,7 @@ p {
 .mobile-category-header {
     font-family: var(--font-serif);
     font-size: 0.9rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     margin-top: 1.5rem;
     margin-bottom: 1rem;
     text-transform: uppercase;
@@ -720,7 +722,7 @@ p {
 .cta-button {
     display: inline-block;
     background-color: transparent;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     padding: 0.8rem 1.5rem;
     text-decoration: none;
     font-weight: 500;
@@ -764,7 +766,7 @@ p {
 /* Secondary Button (Gold Text/Border) */
 .cta-button-secondary {
     background-color: transparent !important;
-    color: var(--accent-gold) !important;
+    color: var(--accent-gold-text) !important;
     border: 1px solid var(--accent-gold) !important;
 }
 
@@ -802,7 +804,7 @@ p {
     font-family: var(--font-serif);
     font-size: 1.8rem;
     margin-bottom: 1.5rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .masterpiece-intro p {
@@ -813,7 +815,7 @@ p {
 
 .counter {
     font-family: var(--font-serif);
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     font-style: italic;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
@@ -841,7 +843,7 @@ p {
 
 .pillar-icon {
     margin-bottom: 1.5rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     display: flex;
     justify-content: center;
 }
@@ -940,7 +942,7 @@ p {
 .promise-icon {
     width: 40px;
     height: 40px;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     margin-bottom: 1rem;
     transition: color 0.3s ease, filter 0.3s ease;
     will-change: transform;
@@ -1194,7 +1196,7 @@ p {
 }
 
 .testimonial-stars {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     margin-bottom: 1rem;
     display: flex;
     justify-content: center;
@@ -1348,7 +1350,7 @@ p {
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 2px;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .inline-icon {
@@ -1384,13 +1386,13 @@ footer {
 .brand-col h4 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold); /* Dark bg — use bright gold for contrast */
 }
 
 .newsletter-col h4 {
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold); /* Dark bg — use bright gold for contrast */
 }
 
 #newsletter-form {
@@ -1440,7 +1442,7 @@ footer {
 }
 
 .footer-link:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold); /* Dark footer bg — use bright gold */
     transform: translateX(5px);
 }
 
@@ -1449,7 +1451,7 @@ footer {
     position: relative;
     display: inline-block;
     font-weight: 600;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     background: linear-gradient(110deg,
             #b38728 0%,
             #fcf6ba 25%,
@@ -1594,7 +1596,7 @@ footer {
 }
 
 .action-card h4 {
-    color: var(--accent-gold);
+    color: var(--accent-gold); /* Dark card back bg — use bright gold */
     margin-bottom: 1rem;
     font-size: 1.2rem;
 }
@@ -1689,7 +1691,7 @@ footer {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     padding-top: 2rem;
     font-size: 0.8rem;
-    opacity: 0.5;
+    opacity: 0.75; /* Raised from 0.5 — effective contrast was ~2.0:1, now ~3.5:1 */
 }
 
 /* --- Animations --- */
@@ -1992,7 +1994,7 @@ footer {
 .filter-btn:hover,
 .filter-btn.active {
     opacity: 1;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     font-weight: 500;
 }
 
@@ -2395,7 +2397,7 @@ footer {
     align-items: center;
     gap: 0.75rem;
     font-size: 1.65rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     margin-bottom: 2rem;
     font-family: var(--font-sans);
     font-weight: 700;
@@ -2734,7 +2736,7 @@ footer {
 
 .qty-btn:hover {
     border-color: var(--accent-gold);
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .qty-display {
@@ -2856,7 +2858,7 @@ footer {
 .summary-row.total {
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     margin-top: 1rem;
 }
 
@@ -2899,7 +2901,7 @@ footer {
 .contact-info h3 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .contact-detail-item {
@@ -2933,7 +2935,7 @@ footer {
 }
 
 .social-icon:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     transform: translateY(-3px);
 }
 
@@ -2990,14 +2992,14 @@ footer {
 }
 
 .footer-socials .social-icon:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold); /* Dark footer bg — use bright gold */
     transform: translateY(-3px);
 }
 
 .footer-contact-btn {
     background-color: transparent;
     border: 1px solid var(--accent-gold);
-    color: var(--accent-gold);
+    color: var(--accent-gold); /* Dark footer bg — use bright gold */
     padding: 1rem 2.5rem;
     cursor: pointer;
     font-family: var(--font-sans);
@@ -3072,14 +3074,14 @@ footer {
 }
 
 .contact-popup-close:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .contact-popup-title {
     font-family: var(--font-serif);
     font-size: 2rem;
     margin-bottom: 0.5rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     text-align: center;
 }
 
@@ -3321,7 +3323,7 @@ footer {
 .qv-product-price {
     font-family: var(--font-sans);
     font-size: 1.3rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     margin-bottom: 1rem; /* Tightened from 1.5rem */
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -3566,7 +3568,7 @@ footer {
     align-items: center;
     justify-content: center;
     margin-bottom: 1rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 #sidebar-user-name {
@@ -3580,7 +3582,7 @@ footer {
     margin-top: 1rem;
     background: transparent;
     border: 1px solid var(--accent-gold);
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     padding: 0.5rem 1.5rem;
     cursor: pointer;
     text-transform: uppercase;
@@ -3629,7 +3631,7 @@ footer {
 
 .sidebar-menu a:hover span {
     transform: translateX(8px);
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .sidebar-icon {
@@ -3643,13 +3645,13 @@ footer {
 }
 
 .sidebar-menu a:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     background-color: rgba(212, 175, 55, 0.05);
     border-radius: 6px;
 }
 
 .sidebar-menu a.active {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     background-color: rgba(212, 175, 55, 0.1);
     border-radius: 6px;
     font-weight: 600;
@@ -3696,13 +3698,13 @@ footer {
 }
 
 .sidebar-menu-toggle:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     background-color: rgba(212, 175, 55, 0.03);
     border-radius: 8px;
 }
 
 .sidebar-menu-group.active>.sidebar-menu-toggle {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     font-weight: 600;
 }
 
@@ -3791,14 +3793,14 @@ footer {
 }
 
 .sidebar-submenu a:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     opacity: 1;
     background: transparent;
 }
 
 .sidebar-submenu a:hover {
     opacity: 1;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .sidebar-submenu .sidebar-menu-toggle {
@@ -4230,7 +4232,7 @@ footer {
 
 .status-pending {
     background-color: rgba(212, 175, 55, 0.15);
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .status-processing {
@@ -4740,20 +4742,20 @@ footer {
 }
 
 .breadcrumb a:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     opacity: 1;
 }
 
 .breadcrumb-separator {
     margin: 0 0.5rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     font-size: 0.7rem;
 }
 
 .breadcrumb-current {
     font-weight: 600;
     opacity: 1;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 body.has-breadcrumbs .page-header {
@@ -4868,7 +4870,7 @@ body.has-breadcrumbs .shop-layout {
 
 .admin-order-header span {
     font-size: 0.8rem;
-    color: #aaa;
+    color: #767676;
 }
 
 .admin-order-details p {
@@ -4995,7 +4997,7 @@ body.has-breadcrumbs .shop-layout {
 
 .admin-product-details p {
     font-size: 0.8rem;
-    color: #999;
+    color: #767676;
     margin: 0;
 }
 
@@ -5109,7 +5111,7 @@ body.has-breadcrumbs .shop-layout {
 .btn-move {
     background: #fff;
     border: 1px solid #f0f0f0;
-    color: #bbb;
+    color: #888;
     padding: 3px;
     border-radius: 5px;
     cursor: pointer;
@@ -5120,7 +5122,7 @@ body.has-breadcrumbs .shop-layout {
 }
 
 .btn-move:hover:not(:disabled) {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     border-color: var(--accent-gold);
 }
 
@@ -5177,7 +5179,7 @@ body.has-breadcrumbs .shop-layout {
 .admin-stat-card h3 {
     font-family: var(--font-sans);
     font-size: 0.75rem;
-    color: #999;
+    color: #767676;
     margin-bottom: 0.4rem;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -5489,7 +5491,7 @@ body.has-breadcrumbs .shop-layout {
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: #999;
+    color: #767676;
     transition: color 0.2s;
     line-height: 1;
 }
@@ -6160,7 +6162,7 @@ body.has-notification #login-btn::after {
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
-    color: #999;
+    color: #767676;
 }
 
 .account-select {
@@ -6308,7 +6310,7 @@ body.has-notification #login-btn::after {
 .brand-tag {
     font-size: 0.7rem;
     letter-spacing: 2px;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     font-weight: 700;
     text-transform: uppercase;
     display: block;
@@ -6519,7 +6521,7 @@ body.has-notification #login-btn::after {
 }
 
 .sidebar-menu a:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .sidebar-menu a svg,
@@ -6586,7 +6588,7 @@ body.has-notification #login-btn::after {
 }
 
 .sidebar-auth-btn:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     transform: translateX(5px);
 }
 
@@ -6709,7 +6711,7 @@ body.has-notification #login-btn::after {
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
-    color: #999;
+    color: #767676;
 }
 
 .account-select {
@@ -6857,7 +6859,7 @@ body.has-notification #login-btn::after {
 .brand-tag {
     font-size: 0.7rem;
     letter-spacing: 2px;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     font-weight: 700;
     text-transform: uppercase;
     display: block;
@@ -7068,7 +7070,7 @@ body.has-notification #login-btn::after {
 }
 
 .sidebar-menu a:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .sidebar-menu a svg,
@@ -7135,7 +7137,7 @@ body.has-notification #login-btn::after {
 }
 
 .sidebar-auth-btn:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     transform: translateX(5px);
 }
 
@@ -7393,7 +7395,7 @@ body.has-notification #login-btn::after {
 
 .history-pill:hover {
     background: #fdf8e6 !important;
-    color: var(--accent-gold) !important;
+    color: var(--accent-gold-text) !important;
     transform: translateY(-3px) scale(1.05);
     border-color: rgba(212, 175, 55, 0.3) !important;
     box-shadow: 0 10px 20px rgba(212, 175, 55, 0.1);
@@ -7443,7 +7445,7 @@ body.has-notification #login-btn::after {
 }
 
 .search-widget-title svg {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .search-widget-list {
@@ -7467,7 +7469,7 @@ body.has-notification #login-btn::after {
 }
 
 .search-widget-list li svg {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     flex-shrink: 0;
     opacity: 0.8;
 }
@@ -7718,7 +7720,7 @@ body.has-notification #login-btn::after {
 
 .ai-reasoning-text {
     font-size: 0.8rem;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     font-style: italic;
     margin-bottom: 6px;
     display: flex;
@@ -7732,7 +7734,7 @@ body.has-notification #login-btn::after {
 }
 
 .search-result-title strong {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     font-weight: 700;
 }
 
@@ -7745,7 +7747,7 @@ body.has-notification #login-btn::after {
 .search-no-results {
     padding: 20px;
     text-align: center;
-    color: #888;
+    color: #767676;
     font-style: italic;
     font-size: 0.9rem;
 }
@@ -7835,7 +7837,7 @@ body.has-notification #login-btn::after {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    color: var(--accent-gold) !important;
+    color: var(--accent-gold-text) !important;
     flex-shrink: 0 !important;
 }
 
@@ -7856,7 +7858,7 @@ body.has-notification #login-btn::after {
     font-size: 0.75rem !important;
     text-transform: uppercase !important;
     letter-spacing: 1px !important;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     /* REMOVED !important to allow hover color to apply */
     background: transparent !important;
     margin: 1.5rem auto 0 !important;
@@ -7940,7 +7942,7 @@ button[type="submit"]:hover,
     font-weight: 600 !important;
     text-transform: uppercase !important;
     letter-spacing: 1px !important;
-    color: var(--accent-gold) !important;
+    color: var(--accent-gold-text) !important;
     background: rgba(212, 175, 55, 0.03) !important;
     /* Subdued block for separation */
     padding: 12px 25px !important;
@@ -7998,7 +8000,7 @@ button[type="submit"]:hover,
 /* Simple hover effect for legibility */
 .sidebar-menu a:hover,
 .sidebar-menu-toggle:hover {
-    color: var(--accent-gold) !important;
+    color: var(--accent-gold-text) !important;
     background: rgba(212, 175, 55, 0.02) !important;
 }
 
@@ -8011,7 +8013,7 @@ button[type="submit"]:hover,
 /* Interaction States */
 .sidebar-menu-toggle:hover,
 .sidebar-menu a:hover {
-    color: var(--accent-gold) !important;
+    color: var(--accent-gold-text) !important;
     opacity: 1 !important;
 }
 
@@ -8134,7 +8136,7 @@ button[type="submit"]:hover,
 }
 
 .accordion-header:hover {
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
 }
 
 .accordion-header svg {
@@ -8204,7 +8206,7 @@ button[type="submit"]:hover,
 .perf-value {
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     text-transform: capitalize;
 }
 
@@ -8303,7 +8305,7 @@ button[type="submit"]:hover,
 }
 
 .review-date {
-    color: #999;
+    color: #767676;
     font-size: 0.8rem;
 }
 
@@ -8367,7 +8369,7 @@ button[type="submit"]:hover,
 
 .load-more-btn:hover {
     border-color: var(--accent-gold);
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
@@ -8379,7 +8381,7 @@ button[type="submit"]:hover,
 
 .review-delete-btn-modern {
     background: #fff;
-    color: #999;
+    color: #767676;
     border: 1px solid #eee;
     padding: 6px 12px;
     border-radius: 20px;
@@ -8515,7 +8517,7 @@ button[type="submit"]:hover,
 .product-details-accordion { max-width: 900px; margin: 4rem auto; border-top: 1px solid #EEE; }
 .accordion-item { border-bottom: 1px solid #EEE; overflow: hidden; }
 .accordion-header { width: 100%; padding: 2rem 0; display: flex; justify-content: space-between; align-items: center; background: none; border: none; cursor: pointer; font-family: var(--font-serif); font-size: 1.25rem; color: var(--text-charcoal); text-align: left; transition: color 0.3s ease; }
-.accordion-header:hover { color: var(--accent-gold); }
+.accordion-header:hover { color: var(--accent-gold-text); }
 .accordion-header .icon-plus, .accordion-header .icon-minus { width: 20px; height: 20px; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 .accordion-header .icon-minus { display: none; }
 .accordion-item.active .icon-plus { display: none; }
@@ -8527,7 +8529,7 @@ button[type="submit"]:hover,
 @media (max-width: 768px) { .performance-bars { grid-template-columns: 1fr; gap: 2rem; } }
 .perf-item { display: flex; flex-direction: column; gap: 0.8rem; }
 .perf-header { display: flex; justify-content: space-between; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
-.perf-label { color: #999; }
+.perf-label { color: #767676; }
 .perf-value { color: var(--text-charcoal); }
 .perf-levels { display: flex; gap: 6px; height: 6px; }
 .level-step { flex: 1; background: #EAEAEA; border-radius: 2px; transition: background 0.6s ease; }
@@ -8552,7 +8554,7 @@ button[type="submit"]:hover,
     font-weight: 600;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: #999;
+    color: #767676;
 }
 
 .add-profile-btn {
@@ -8616,7 +8618,7 @@ button[type="submit"]:hover,
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--accent-gold);
+    color: var(--accent-gold-text);
     flex-shrink: 0;
 }
 

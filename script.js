@@ -869,7 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let priceHTML = '';
                 if (displayPrice) {
-                    priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
+                    priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
                 } else {
                     priceHTML = `<span class="price-shimmer"></span>`;
                 }
@@ -1130,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                      } catch (e) {}
                                  });
 
-                                const newPriceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${updatedDisplayPrice} TND</span>`;
+                                const newPriceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${updatedDisplayPrice} TND</span>`;
                                 priceTargets.forEach(target => {
                                     target.innerHTML = newPriceHTML;
 
@@ -1358,7 +1358,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.auth-header p').textContent = isSignUp ? "Join the inner circle." : "Sign in to access your account.";
         document.querySelector('.auth-btn').textContent = isSignUp ? "Sign Up" : "Sign In";
         toggleAuthMode.textContent = isSignUp ? "Sign In" : "Sign Up";
-        toggleAuthMode.parentElement.innerHTML = isSignUp ? `Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign In</a>` : `Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold);">Sign Up</a>`;
+        toggleAuthMode.parentElement.innerHTML = isSignUp ? `Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign In</a>` : `Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign Up</a>`;
         document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
             location.reload();
         });
@@ -2136,7 +2136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     myAccountBtn.style.marginTop = '1rem';
                     myAccountBtn.style.background = 'transparent';
                     myAccountBtn.style.border = '1px solid var(--accent-gold)';
-                    myAccountBtn.style.color = 'var(--accent-gold)';
+                    myAccountBtn.style.color = 'var(--accent-gold-text)';
                     myAccountBtn.style.padding = '0.5rem 1.5rem';
                     myAccountBtn.style.cursor = 'pointer';
                     myAccountBtn.style.textTransform = 'uppercase';
@@ -2153,7 +2153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     myAccountBtn.addEventListener('mouseleave', () => {
                         myAccountBtn.style.backgroundColor = 'transparent';
-                        myAccountBtn.style.color = 'var(--accent-gold)';
+                        myAccountBtn.style.color = 'var(--accent-gold-text)';
                     });
 
                     sidebarUserName.after(myAccountBtn);
@@ -2313,7 +2313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             ${cancelButtonHtml}
                                             ${reviewButtonHtml}
                                         </div>
-                                        <span style="color: var(--accent-gold);">${orderTotal}</span>
+                                        <span style="color: var(--accent-gold-text);">${orderTotal}</span>
                                     </div>
                                 `;
                                 ordersList.appendChild(orderCard);
@@ -2576,7 +2576,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             orderSummary.innerHTML = `
                                 <div style="text-align: center; padding: 2rem 0; animation: fadeIn 0.5s ease;">
-                                    <svg style="width: 60px; height: 60px; color: var(--accent-gold); margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <svg style="width: 60px; height: 60px; color: var(--accent-gold-text); margin-bottom: 1rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                     <h2 style="border: none; margin-bottom: 0.5rem;">Order Confirmed</h2>
                                     <p style="font-size: 0.95rem; opacity: 0.8;">Thank you for choosing DODCH. Your order #${finalOrderReference} has been received.</p>
                                     ${guestMessage}
@@ -2762,7 +2762,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     
                                     <div class="contact-detail-item">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                                        <a href="mailto:contact@dodch.com" style="color: inherit; text-decoration: none; transition: color 0.3s ease;" onmouseover="this.style.color='var(--accent-gold)'" onmouseout="this.style.color='inherit'">contact@dodch.com</a>
+                                        <a href="mailto:contact@dodch.com" style="color: inherit; text-decoration: none; transition: color 0.3s ease;" onmouseover="this.style.color='var(--accent-gold-text)'" onmouseout="this.style.color='inherit'">contact@dodch.com</a>
                                     </div>
                                     
                                     <div class="social-links">
@@ -3033,6 +3033,12 @@ document.addEventListener('DOMContentLoaded', () => {
         let maxScore = -1;
 
         document.querySelectorAll('.sidebar-menu a').forEach(link => {
+            // Skip pure hash anchors (e.g. #contact) — they are in-page section links,
+            // not page navigation links, and their resolved pathname always matches the
+            // current page, causing them to incorrectly appear as "active".
+            const rawHref = link.getAttribute('href') || '';
+            if (rawHref.startsWith('#')) return;
+
             const linkUrl = new URL(link.href, window.location.origin);
             let score = 0;
             if (linkUrl.pathname !== currentUrl.pathname) {
@@ -3595,7 +3601,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)}</p>
                             <p><strong>Email:</strong> ${escapeHTML(order.shipping?.email)}</p>
                             <p><strong>Address:</strong> ${escapeHTML(order.shipping?.address)}, ${escapeHTML(order.shipping?.city)}</p>
-                            <p><strong>Total:</strong> <span style="color: var(--accent-gold); font-weight: 700;">${order.total} TND</span></p>
+                            <p><strong>Total:</strong> <span style="color: var(--accent-gold-text); font-weight: 700;">${order.total} TND</span></p>
                             <div class="admin-order-items">
                                 ${order.items.map(i => `<div>• ${i.quantity}x ${escapeHTML(i.name)} (${escapeHTML(i.size)})</div>`).join('')}
                             </div>
@@ -4137,7 +4143,7 @@ The DODCH Team`;
                         <div id="qv-thumbnails" class="qv-thumbnails"></div>
                     </div>
                     <div class="qv-modal-info">
-                        <span class="brand-tag" style="text-transform: uppercase; letter-spacing: 3px; font-size: 0.75rem; color: var(--accent-gold); margin-bottom: 0.5rem; display: block; font-weight: 600;">DODCH</span>
+                        <span class="brand-tag" style="text-transform: uppercase; letter-spacing: 3px; font-size: 0.75rem; color: var(--accent-gold-text); margin-bottom: 0.5rem; display: block; font-weight: 600;">DODCH</span>
                         <h2 id="qv-title" class="qv-product-title"></h2>
                         <p id="qv-price" class="qv-product-price"></p>
                         <p id="qv-desc" class="qv-product-desc"></p>
@@ -4501,7 +4507,7 @@ The DODCH Team`;
 
             let priceHTML = '';
             if (displayPrice) {
-                priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
+                priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
             } else {
                 priceHTML = `<span class="price-shimmer"></span>`;
             }
@@ -5988,7 +5994,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!query || query.length < 2) {
             const historyPart = history.length > 0 ? `
                 <div class="search-dashboard-section">
-                    <div class="search-widget-title" style="margin-bottom: 12px; font-size: 0.8rem; color: var(--accent-gold); font-weight: 800;">
+                    <div class="search-widget-title" style="margin-bottom: 12px; font-size: 0.8rem; color: var(--accent-gold-text); font-weight: 800;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         Recently Viewed
                     </div>
@@ -6006,7 +6012,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="search-dashboard" style="display: flex; flex-direction: column;">
                     ${historyPart}
                     <div class="search-trending-section">
-                        <div class="search-widget-title" style="margin-bottom: 15px; font-size: 0.8rem; color: var(--accent-gold); font-weight: 800;">
+                        <div class="search-widget-title" style="margin-bottom: 15px; font-size: 0.8rem; color: var(--accent-gold-text); font-weight: 800;">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                             Top Trending
                         </div>
@@ -6105,7 +6111,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         mainResultsDiv.innerHTML = `
-            <div style="padding: 2rem; text-align: center; color: var(--accent-gold);">
+            <div style="padding: 2rem; text-align: center; color: var(--accent-gold-text);">
                 <div class="ai-thinking-dots" style="display: flex; gap: 8px; justify-content: center; margin-bottom: 1rem;">
                     <span style="width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 0.6s infinite alternate;"></span>
                     <span style="width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 0.6s infinite 0.2s alternate;"></span>
