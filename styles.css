@@ -2279,10 +2279,13 @@ footer {
     border-radius: 24px;
     box-shadow: 0 28px 70px rgba(0, 0, 0, 0.06);
     position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 5;
 }
 
 .product-gallery img {
     width: 100%;
+    height: 100%;
     min-width: 0;
     display: block;
     object-fit: cover;
@@ -2377,14 +2380,6 @@ footer {
 @media (max-width: 768px) {
     .product-gallery {
         margin-bottom: -0.5rem;
-    }
-    .product-gallery img {
-        max-height: 400px;
-        width: auto;
-        max-width: 100%;
-        margin: 0 auto;
-        display: block;
-        object-fit: contain;
     }
 }
 
