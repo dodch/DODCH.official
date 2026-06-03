@@ -4749,7 +4749,7 @@ The DODCH Team`;
         };
 
         const currentType = getProductType(currentId, currentProduct);
-        const allRelated = allProductIds.filter(id => id !== currentId && productCatalog[id]);
+        const allRelated = allProductIds.filter(id => id !== currentId && productCatalog[id] && !productCatalog[id].isPermanentlyUnavailable);
 
         // STRICT filtering: Only find products of the EXACT same type
         let relatedIds = allRelated.filter(id => getProductType(id, productCatalog[id]) === currentType);
