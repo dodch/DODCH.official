@@ -96,11 +96,21 @@ getToken(appCheck)
 const auth = getAuth(app);
 // Intelligent Caching: Enable persistent local cache so products load instantly on repeat visits
 let db;
+const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isSafariWebKit = /WebKit/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+// Detect standalone mode (PWA/homescreen) or iOS WebKit which have buggy IndexedDB implementations for multi-tab locks
+const isBuggyIndexedDbEnvironment = isIos && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || isSafariWebKit);
+
 try {
-    db = initializeFirestore(app, {
-        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-    });
-    console.info("⚡ Firestore: persistent local cache enabled.");
+    if (isBuggyIndexedDbEnvironment) {
+        console.info("⚡ iOS WebKit/PWA detected. Using memory cache for Firestore to prevent loading loops.");
+        db = getFirestore(app);
+    } else {
+        db = initializeFirestore(app, {
+            localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+        });
+        console.info("⚡ Firestore: persistent local cache enabled.");
+    }
 } catch (e) {
     console.warn("⚠️ Firestore: persistent local cache failed to initialize, falling back to standard memory cache:", e);
     db = getFirestore(app);
@@ -747,7 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'silk-therapy-mask',
         'foaming-cleanser',
         'advanced-ha-serum',
-        'glass-glow-shampoo'
+        'retinol-night-cream'
     ];
 
     // --- PRODUCT CATALOG (Single Source of Truth) ---
@@ -782,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         'foaming-cleanser': {
             name: "DODCH Foaming Cleanser",
-            category: "face-care",
+            category: "skin-care",
             subCategory: "cleansers",
             subtitle: "Luminous Purity",
             price: null,
@@ -799,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: ["masks", "conditioners", "leave-in"],
             subtitle: "Deep Repair & Glass Shine",
             price: null,
-            image: "F188A04D-4AA7-4D98-9EEB-14861B10D468.webp",
+            image: "IMG_3811.webp",
             description: "Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",
             style: "",
             storyUrl: "silk-mask.html",
@@ -808,7 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         'advanced-ha-serum': {
             name: "Advanced HA Serum",
-            category: "face-care",
+            category: "skin-care",
             subCategory: "serums",
             subtitle: "Radiance & Deep Hydration",
             price: null,
@@ -818,10 +828,25 @@ document.addEventListener('DOMContentLoaded', () => {
             storyUrl: "face-serum.html",
             orderIndex: 4,
             sizes: []
+        },
+        'retinol-night-cream': {
+            name: "0.5 Retinol Night Cream",
+            category: "skin-care",
+            subCategory: "creams",
+            subtitle: "Youth Renewing Overnight Treatment",
+            price: null,
+            image: "IMG_3783.webp",
+            description: "A powerful overnight cream formulated with 0.5% active retinol to visibly reduce fine lines, refine skin texture, and promote a radiant, youthful complexion.",
+            style: "",
+            storyUrl: "retinol-night-cream.html",
+            orderIndex: 5,
+            sizes: []
         }
     };
     productCatalog = { ...defaultProductCatalog };
+    window.productCatalog = productCatalog;
     let shopTransitionTimeout;
+    let firestoreSynced = false;
 
     function initShopPage(animate = false, loading = false) {
         if (document.querySelector('.product-detail-container')) return;
@@ -908,7 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${getProductPrimaryImage(product)}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
                             </div>
                             <div class="product-card-info" style="${isActuallyOOS ? 'opacity: 0.7;' : ''}">
-                                <h3 class="product-card-title">${product.name}</h3>
+                                <h3 class="product-card-title" data-name-target="${id}">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
                                 <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
                             </div>
                         </a>
@@ -917,7 +942,7 @@ document.addEventListener('DOMContentLoaded', () => {
             shopLayout.innerHTML = '';
             const allSections = [
                 { id: 'hair-care', title: 'Hair Care' },
-                { id: 'face-care', title: 'Face Care' },
+                { id: 'skin-care', title: 'Skin Care' },
                 { id: 'sets', title: 'Sets & Bundles' }
             ];
             const subCatDisplay = {
@@ -927,6 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'leave-in': 'Leave-In Treatments',
                 'cleansers': 'Cleansers',
                 'serums': 'Serums',
+                'creams': 'Creams',
                 'sets': 'Sets'
             };
             let sectionsToShow = allSections;
@@ -976,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isSpecificSub) {
                 let hasProducts = false;
                 sectionsToShow.forEach(section => {
-                    const sectionProducts = sortedCatalog.filter(([, p]) => p.category === section.id);
+                    const sectionProducts = sortedCatalog.filter(([, p]) => p.category === section.id && !p.isPermanentlyUnavailable);
 
                     if (sectionProducts.length > 0) {
                         hasProducts = true;
@@ -1003,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const filteredProducts = sortedCatalog.filter(([, p]) => {
                     const matchesCat = !activeCat || activeCat === 'all' || p.category === activeCat;
                     const matchesSub = !activeSub || activeSub === 'all' || (Array.isArray(p.subCategory) ? p.subCategory.includes(activeSub) : p.subCategory === activeSub);
-                    return matchesCat && matchesSub;
+                    return matchesCat && matchesSub && !p.isPermanentlyUnavailable;
                 });
 
                 if (filteredProducts.length > 0) {
@@ -1059,12 +1085,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.deleted) {
                         delete productCatalog[productId];
                     } else if (productCatalog[productId]) {
-                        // HYBRID SYNC: Database (Firestore) is the source of truth for Price, Stock, Sizes, and admin-approved image paths.
-                        // Local code (script.js) remains the source of truth for Order, Name, Description, and other static metadata.
+                        // HYBRID SYNC: Database (Firestore) is the source of truth for Price, Stock, Sizes, name, subtitle, description, and admin-approved image paths.
+                        if (data.name) {
+                            productCatalog[productId].name = data.name;
+                        }
+                        if (data.subtitle) {
+                            productCatalog[productId].subtitle = data.subtitle;
+                        }
+                        if (data.description) {
+                            productCatalog[productId].description = data.description;
+                        }
                         productCatalog[productId].price = data.price || null;
                         productCatalog[productId].originalPrice = data.originalPrice || null;
                         productCatalog[productId].outOfStock = data.outOfStock === true;
                         productCatalog[productId].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
+
+                        // Target specific name elements in the DOM to avoid full re-render
+                        const nameTargets = document.querySelectorAll(`[data-name-target="${productId}"]`);
+                        nameTargets.forEach(target => {
+                            target.textContent = productCatalog[productId].name;
+                        });
 
                         if (data.image) {
                             productCatalog[productId].image = data.image;
@@ -1218,6 +1258,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // RE-INITIALIZE DYNAMIC ELEMENTS (No full refresh, just update prices/stock)
                 console.log("✅ Real-time data synced. Refreshing UI.");
+                firestoreSynced = true;
                 if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
             }
             if (typeof window.refreshAdminProducts === 'function') {
@@ -1227,6 +1268,25 @@ document.addEventListener('DOMContentLoaded', () => {
             syncError = error;
             console.error("Error syncing with Firestore:", error);
         } finally {
+            firestoreSynced = true;
+            // Reveal fallback names for cards if they are still shimmers
+            Object.keys(productCatalog).forEach(productId => {
+                const nameTargets = document.querySelectorAll(`[data-name-target="${productId}"]`);
+                nameTargets.forEach(target => {
+                    if (target.querySelector('.price-shimmer')) {
+                        target.textContent = productCatalog[productId].name;
+                    }
+                });
+            });
+            // Re-run initProductPage to resolve any product detail page shimmers to fallbacks
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeIdParam = urlParams.get('id');
+            const currentFilename = window.location.pathname.split('/').pop();
+            const activeProd = Object.keys(productCatalog).find(id => activeIdParam === id || productCatalog[id]?.storyUrl === currentFilename);
+            if (activeProd) {
+                initProductPage();
+            }
+
             // FINAL SWEEP: Only replace shimmers if Firestore completely failed (not on timeout)
             // If timeout occurs, prices will eventually load from local cache
             if (syncError && syncError.message === "Firestore sync timeout") {
@@ -1956,6 +2016,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DYNAMIC PRODUCT PAGE LOGIC ---
     let autoProductImageInterval = null;
 
+    function hasStandaloneStoryPage(product) {
+        if (!product || !product.storyUrl) return false;
+        const url = product.storyUrl.trim();
+        if (url === '' || url === '#' || url.includes('product.html')) return false;
+        return true;
+    }
+
     function initProductPage() {
         const productDetailContainer = document.querySelector('.product-detail-container');
         if (!productDetailContainer) return; // Not on product page
@@ -1980,8 +2047,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const productInfo = document.querySelector('.product-info');
         const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
 
-        if (titleEl) titleEl.textContent = product.name;
-        if (subtitleEl) subtitleEl.textContent = product.subtitle;
+        if (titleEl) {
+            if (firestoreSynced) {
+                titleEl.textContent = product.name;
+            } else {
+                titleEl.innerHTML = `<span class="price-shimmer" style="width: 250px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>`;
+            }
+        }
+        if (subtitleEl) {
+            if (firestoreSynced) {
+                subtitleEl.textContent = product.subtitle;
+            } else {
+                subtitleEl.innerHTML = `<span class="price-shimmer" style="width: 180px; height: 1.2em; display: inline-block; border-radius: 6px;"></span>`;
+            }
+        }
 
         // Price: show shimmer until Firestore provides data
         if (priceEl) {
@@ -2001,7 +2080,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (descEl) descEl.textContent = product.description;
+        if (descEl) {
+            if (firestoreSynced) {
+                descEl.textContent = product.description;
+            } else {
+                descEl.innerHTML = `
+                    <span class="price-shimmer" style="width: 100%; height: 1.2em; display: inline-block; border-radius: 4px; margin-bottom: 6px;"></span>
+                    <span class="price-shimmer" style="width: 90%; height: 1.2em; display: inline-block; border-radius: 4px; margin-bottom: 6px;"></span>
+                    <span class="price-shimmer" style="width: 75%; height: 1.2em; display: inline-block; border-radius: 4px;"></span>
+                `;
+            }
+        }
 
         const productImages = getProductImages(product);
         const primaryImage = productImages[0] || '';
@@ -2175,15 +2264,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (existingStoryBtn) existingStoryBtn.remove();
         // The Add to Cart button state is already managed by the size selection logic above.
 
-        if (addToCartBtn && product.storyUrl) {
+        if (addToCartBtn) {
             const storyBtn = document.createElement('a');
             storyBtn.id = 'product-story-link';
-            storyBtn.href = product.storyUrl;
-            storyBtn.textContent = 'Learn More';
+            storyBtn.textContent = 'View Full Details';
             storyBtn.className = 'qv-view-details-btn';
             storyBtn.style.marginBottom = '1rem';
             storyBtn.style.display = 'block'; // Ensure it takes full width if qv-view-details-btn uses inline-block
 
+            if (hasStandaloneStoryPage(product)) {
+                storyBtn.href = product.storyUrl;
+                storyBtn.style.pointerEvents = '';
+                storyBtn.style.opacity = '';
+                storyBtn.style.background = '';
+                storyBtn.style.color = '';
+                storyBtn.style.cursor = '';
+            } else {
+                storyBtn.href = '#';
+                storyBtn.style.pointerEvents = 'none';
+                storyBtn.style.opacity = '0.5';
+                storyBtn.style.background = '#ccc';
+                storyBtn.style.color = '#777';
+                storyBtn.style.cursor = 'not-allowed';
+            }
             addToCartBtn.before(storyBtn);
         }
     };
@@ -2798,13 +2901,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const sub = urlParams.get('sub');
 
             if (cat) {
-                const catNames = { 'hair-care': 'Hair Care', 'face-care': 'Face Care', 'sets': 'Sets & Bundles' };
+                const catNames = { 'hair-care': 'Hair Care', 'skin-care': 'Skin Care', 'sets': 'Sets & Bundles' };
                 crumbs.push({ name: "Shop", url: "index.html" });
                 currentName = catNames[cat] || cat;
 
                 if (sub && sub !== 'all') {
                     crumbs.push({ name: currentName, url: `index.html?cat=${cat}` });
-                    const subNames = { 'shampoo': 'Shampoo', 'conditioners': 'Conditioners', 'leave-in': 'Leave-in', 'masks': 'Masks', 'cleansers': 'Cleansers', 'serums': 'Serums' };
+                    const subNames = { 'shampoo': 'Shampoo', 'conditioners': 'Conditioners', 'leave-in': 'Leave-in', 'masks': 'Masks', 'cleansers': 'Cleansers', 'serums': 'Serums', 'creams': 'Creams' };
                     currentName = subNames[sub] || sub;
                 }
             } else {
@@ -3015,6 +3118,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         id: "hair-care",
                         type: "group",
                         children: [
+                            { label: "All Hair Care", link: "index.html?cat=hair-care", type: "link" },
                             { label: "Shampoo", link: "index.html?cat=hair-care&sub=shampoo", type: "link" },
                             { label: "Conditioners", link: "index.html?cat=hair-care&sub=conditioners", type: "link" },
                             { label: "Masks", link: "index.html?cat=hair-care&sub=masks", type: "link" },
@@ -3022,12 +3126,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         ]
                     },
                     {
-                        label: "Face Care",
-                        id: "face-care",
+                        label: "Skin Care",
+                        id: "skin-care",
                         type: "group",
                         children: [
-                            { label: "Cleansers", link: "index.html?cat=face-care&sub=cleansers", type: "link" },
-                            { label: "Serums", link: "index.html?cat=face-care&sub=serums", type: "link" }
+                            { label: "All Skin Care", link: "index.html?cat=skin-care", type: "link" },
+                            { label: "Cleansers", link: "index.html?cat=skin-care&sub=cleansers", type: "link" },
+                            { label: "Serums", link: "index.html?cat=skin-care&sub=serums", type: "link" },
+                            { label: "Creams", link: "index.html?cat=skin-care&sub=creams", type: "link" }
                         ]
                     },
                     { label: "Sets & Bundles", link: "index.html?cat=sets", type: "link" }
@@ -3141,8 +3247,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cat === 'hair-care') {
                 const hairGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="hair-care"]');
                 if (hairGroup) hairGroup.classList.add('active');
-            } else if (cat === 'face-care') {
-                const faceGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="face-care"]');
+            } else if (cat === 'skin-care') {
+                const faceGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="skin-care"]');
                 if (faceGroup) faceGroup.classList.add('active');
             }
         }
@@ -3476,6 +3582,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // --- Step 2: Construct Product Object with Final Image URLs ---
                 const newProduct = {
+                    ...existingProduct,
                     name,
                     subtitle: document.getElementById('new-prod-subtitle').value.trim(),
                     description: document.getElementById('new-prod-desc').value.trim(),
@@ -3494,6 +3601,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const cleanedProduct = JSON.parse(JSON.stringify(newProduct));
                     await setDoc(doc(db, "products", newId), cleanedProduct);
                     productCatalog[newId] = cleanedProduct;
+                    await syncCatalogLocally();
                     loadAdminProducts();
                     closeProductModal();
                     window.showToast(isEdit ? "Product updated successfully!" : "Product added successfully!", "success");
@@ -3882,6 +3990,47 @@ The DODCH Team`;
             }
         };
 
+        const syncCatalogLocally = async () => {
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                return;
+            }
+            try {
+                const localCatalog = {};
+                Object.keys(productCatalog).forEach(id => {
+                    const prod = productCatalog[id];
+                    localCatalog[id] = {
+                        name: prod.name || "",
+                        category: prod.category || "uncategorized",
+                        subCategory: prod.subCategory || "",
+                        subtitle: prod.subtitle || "",
+                        price: null,
+                        image: prod.image || "",
+                        images: prod.images || [],
+                        description: prod.description || "",
+                        style: prod.style || "",
+                        storyUrl: prod.storyUrl || `${id}.html`,
+                        orderIndex: prod.orderIndex || 0,
+                        outOfStock: prod.outOfStock || false,
+                        isPermanentlyUnavailable: prod.isPermanentlyUnavailable || false,
+                        sizes: []
+                    };
+                });
+                const response = await fetch('/api/sync-catalog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(localCatalog)
+                });
+                const resData = await response.json();
+                if (resData.success) {
+                    console.log("Local catalog sync complete.");
+                } else {
+                    console.error("Local sync API error:", resData.error);
+                }
+            } catch (err) {
+                console.error("Local catalog sync request failed:", err);
+            }
+        };
+
         const loadAdminProducts = async () => {
             if (!adminProductsList) return;
             adminProductsList.innerHTML = '<p style="color:#888; padding: 1rem;">Loading inventory from Firestore...</p>';
@@ -3897,7 +4046,10 @@ The DODCH Team`;
                         return;
                     }
                     if (productCatalog[id]) {
-                        // Overwrite volatile fields from Firestore
+                        // Overwrite fields from Firestore (including edited name, subtitle, description, etc.)
+                        if (data.name) productCatalog[id].name = data.name;
+                        if (data.subtitle) productCatalog[id].subtitle = data.subtitle;
+                        if (data.description) productCatalog[id].description = data.description;
                         productCatalog[id].price = data.price || null;
                         productCatalog[id].originalPrice = data.originalPrice || null;
                         productCatalog[id].outOfStock = data.outOfStock === true;
@@ -4148,6 +4300,7 @@ The DODCH Team`;
                             }
 
                             delete productCatalog[id];
+                            await syncCatalogLocally();
                             loadAdminProducts();
                             window.showToast("Product deleted successfully.", "success");
                         } catch (error) {
@@ -4181,6 +4334,7 @@ The DODCH Team`;
 
                         try {
                             await Promise.all(batchPromises);
+                            await syncCatalogLocally();
                             loadAdminProducts(); // Re-render admin list
                             initShopPage(); // Re-render shop page if visible
                         } catch (err) {
@@ -4368,7 +4522,21 @@ The DODCH Team`;
                 }
 
                 if (qvLearnMore) {
-                    qvLearnMore.href = (product && product.storyUrl) ? product.storyUrl : `product.html?id=${id}`;
+                    if (hasStandaloneStoryPage(product)) {
+                        qvLearnMore.href = product.storyUrl;
+                        qvLearnMore.style.pointerEvents = '';
+                        qvLearnMore.style.opacity = '';
+                        qvLearnMore.style.background = '';
+                        qvLearnMore.style.color = '';
+                        qvLearnMore.style.cursor = '';
+                    } else {
+                        qvLearnMore.href = '#';
+                        qvLearnMore.style.pointerEvents = 'none';
+                        qvLearnMore.style.opacity = '0.5';
+                        qvLearnMore.style.background = '#ccc';
+                        qvLearnMore.style.color = '#777';
+                        qvLearnMore.style.cursor = 'not-allowed';
+                    }
                     if (qvExpandPage) qvExpandPage.href = `product.html?id=${id}`;
                 }
                 const sizeOptionsContainer = modal.querySelector('.size-options');
@@ -4570,10 +4738,10 @@ The DODCH Team`;
                 lowerName.includes('shampoo') || lowerName.includes('mask') || lowerName.includes('hair') ||
                 lowerSubtitle.includes('hair') || lowerSubtitle.includes('scalp')) return 'hair-care';
 
-            // Face Keywords (Matching 'face-care' sidebar section)
+            // Face Keywords (Matching 'skin-care' sidebar section)
             if (lowerCategory.includes('face') || lowerCategory.includes('skin') || lowerId.includes('foam') || lowerId.includes('serum') || lowerId.includes('face') || lowerId.includes('cleanser') || lowerId.includes('mellow') ||
                 lowerName.includes('serum') || lowerName.includes('cleanser') || lowerName.includes('face') || lowerName.includes('mellow') ||
-                lowerSubtitle.includes('face') || lowerSubtitle.includes('skin')) return 'face-care';
+                lowerSubtitle.includes('face') || lowerSubtitle.includes('skin')) return 'skin-care';
 
             if (lowerCategory.includes('set') || lowerCategory.includes('bundle') || lowerId.includes('set') || lowerName.includes('set')) return 'sets';
 
@@ -4658,7 +4826,7 @@ The DODCH Team`;
                             </button>
                         </div>
                         <div class="product-card-info">
-                            <h3 class="product-card-title">${product.name}</h3>
+                            <h3 class="product-card-title" data-name-target="${id}">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
                             <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
                         </div>
                     </a>
@@ -5004,6 +5172,12 @@ const initProductReviews = () => {
     else if (path.includes('face-foam.html')) productId = 'foaming-cleanser';
     else if (path.includes('silk-mask.html')) productId = 'silk-therapy-mask';
     else if (path.includes('face-serum.html')) productId = 'advanced-ha-serum';
+    
+    if (!productId && path.includes('product.html')) {
+        const urlParams = new URLSearchParams(window.location.search);
+        productId = urlParams.get('id');
+    }
+    
     if (!productId) {
         const buyBtn = document.querySelector('.buy-now-btn, .cta-button[data-id]');
         if (buyBtn) productId = buyBtn.getAttribute('data-id');
@@ -5462,7 +5636,7 @@ const initUserReviewsHistory = async (user) => {
                 } else if (review.productId === 'silk-therapy-mask') {
                     productName = 'Silk Therapy Mask';
                     productLink = 'silk-mask.html';
-                    productImg = productCatalog['silk-therapy-mask']?.image || 'F188A04D-4AA7-4D98-9EEB-14861B10D468.webp';
+                    productImg = productCatalog['silk-therapy-mask']?.image || 'IMG_3811.webp';
                 } else if (productCatalog && productCatalog[review.productId]) {
                     const prod = productCatalog[review.productId];
                     productName = prod.name || 'Product';

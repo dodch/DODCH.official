@@ -25,10 +25,50 @@ function getLevelColor(level) {
     return colorScale[level - 1];
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+const DEFAULT_PERF_BARS = {
+    "hair-care": [
+        { label: "Gentleness", value: "Mild", level: 1 },
+        { label: "Hydration", value: "Light", level: 1 },
+        { label: "Damage Repair", value: "Basic", level: 1 },
+        { label: "Shine / Gloss", value: "Subtle", level: 1 }
+    ],
+    "skin-care": [
+        { label: "Gentleness", value: "Mild", level: 1 },
+        { label: "Hydration", value: "Light", level: 1 },
+        { label: "Pore Cleansing", value: "Gentle", level: 1 },
+        { label: "Exfoliation", value: "Surface", level: 1 }
+    ]
+};
+
+function getProductCategory(slug) {
+    if (window.productCatalog && window.productCatalog[slug]) {
+        return window.productCatalog[slug].category || "skin-care";
+    }
+    return "skin-care";
+}
+
+function initAdminEdit() {
+    if (!window.productCatalog || Object.keys(window.productCatalog).length === 0) {
+        setTimeout(initAdminEdit, 50);
+        return;
+    }
     const auth = getAuth();
     const db = getFirestore();
-    const slug = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    let slug = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    if (slug === 'product') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get('id');
+        if (id && window.productCatalog[id]) {
+            const prod = window.productCatalog[id];
+            if (prod.storyUrl) {
+                slug = prod.storyUrl.split('/').pop().replace('.html', '');
+            } else {
+                slug = id;
+            }
+        } else {
+            slug = id || 'index';
+        }
+    }
 
     // 1. Initialize Colors for hardcoded content
     initializeGlobalPerformanceColors();
@@ -42,7 +82,13 @@ document.addEventListener('DOMContentLoaded', () => {
             enableAdminEditing(db, slug);
         }
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAdminEdit);
+} else {
+    initAdminEdit();
+}
 
 function initializeGlobalPerformanceColors() {
     const perfItems = document.querySelectorAll('.perf-item');
@@ -74,47 +120,79 @@ function initializeGlobalPerformanceColors() {
     });
 }
 
+function createPerfItemElement(item) {
+    const perfItemEl = document.createElement('div');
+    perfItemEl.className = 'perf-item';
+    
+    const level = item.level || 1;
+    const color = getLevelColor(level);
+    
+    const labelUpper = item.label.toUpperCase();
+    const config = PERFORMANCE_CONFIG[labelUpper] || PERFORMANCE_CONFIG["DEFAULT"];
+    const valueText = config[level - 1] || item.value || "Mild";
+
+    perfItemEl.innerHTML = `
+        <div class="perf-header">
+            <span class="perf-label">${item.label}</span>
+            <span class="perf-value" style="color: ${color};">${valueText}</span>
+        </div>
+        <div class="perf-levels">
+            <div class="level-step ${level >= 1 ? 'active' : ''}" style="background: ${level >= 1 ? color : '#EAEAEA'};"></div>
+            <div class="level-step ${level >= 2 ? 'active' : ''}" style="background: ${level >= 2 ? color : '#EAEAEA'};"></div>
+            <div class="level-step ${level >= 3 ? 'active' : ''}" style="background: ${level >= 3 ? color : '#EAEAEA'};"></div>
+            <div class="level-step ${level >= 4 ? 'active' : ''}" style="background: ${level >= 4 ? color : '#EAEAEA'};"></div>
+        </div>
+    `;
+    return perfItemEl;
+}
+
 async function loadOverrides(db, slug) {
     try {
         const docRef = doc(db, "product_overrides", slug);
         const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            applyOverrides(data);
-        }
+        const data = docSnap.exists() ? docSnap.data() : {};
+        applyOverrides(data, slug);
     } catch (e) {
         console.error("Error loading overrides:", e);
     }
 }
 
-function applyOverrides(data) {
-    if (data.inci) {
-        const inciContainer = document.querySelector('.accordion-item:nth-child(1) .accordion-inner');
-        if (inciContainer) inciContainer.textContent = data.inci;
+function applyOverrides(data, slug) {
+    // 1. Populate INCI Ingredients
+    const inciContainer = document.querySelector('.accordion-item:nth-child(1) .accordion-inner');
+    if (inciContainer) {
+        if (data.inci) {
+            inciContainer.textContent = data.inci;
+        } else if (inciContainer.textContent.trim() === 'Loading...') {
+            inciContainer.textContent = "Ingredients list coming soon.";
+        }
     }
-    if (data.performance) {
-        const perfItems = document.querySelectorAll('.perf-item');
-        data.performance.forEach((override, index) => {
-            if (perfItems[index]) {
-                const label = perfItems[index].querySelector('.perf-label');
-                const value = perfItems[index].querySelector('.perf-value');
-                const steps = perfItems[index].querySelectorAll('.level-step');
 
-                if (label && override.label) label.textContent = override.label;
-                if (value && override.value) value.textContent = override.value;
-                if (steps && override.level !== undefined) {
-                    const color = getLevelColor(override.level);
-                    steps.forEach((step, i) => {
-                        const isActive = i < override.level;
-                        step.classList.toggle('active', isActive);
-                        step.style.background = isActive ? color : '#EAEAEA';
-                    });
-                    if (value) value.style.color = color;
-                }
-            }
-        });
+    // 2. Populate Performance Bars
+    const performanceBarsContainer = document.querySelector('.performance-bars');
+    if (performanceBarsContainer) {
+        const hasHardcodedItems = performanceBarsContainer.querySelectorAll('.perf-item').length > 0;
+
+        if (data.performance && data.performance.length > 0) {
+            // Firestore overrides exist: populate dynamically
+            performanceBarsContainer.innerHTML = '';
+            data.performance.forEach(item => {
+                performanceBarsContainer.appendChild(createPerfItemElement(item));
+            });
+        } else if (!hasHardcodedItems) {
+            // Container is empty and no override exists (e.g. generic product.html), use category defaults
+            const cat = getProductCategory(slug);
+            const defaults = DEFAULT_PERF_BARS[cat] || DEFAULT_PERF_BARS["skin-care"];
+            performanceBarsContainer.innerHTML = '';
+            defaults.forEach(item => {
+                performanceBarsContainer.appendChild(createPerfItemElement(item));
+            });
+        }
     }
+
+    // Initialize colors for all items (either newly created or hardcoded)
+    initializeGlobalPerformanceColors();
 }
 
 function enableAdminEditing(db, slug) {

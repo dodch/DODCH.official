@@ -144,6 +144,57 @@
                     <h3>Description</h3>
                     <p id="product-description-text"></p>
                 </div>
+
+                <div class="product-details-accordion reveal" style="margin-top: 2rem;">
+                    <!-- INCI -->
+                    <div class="accordion-item">
+                        <button class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                            <span>INCI (Full Ingredients)</span>
+                            <svg class="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <svg class="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="accordion-inner">
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Performance -->
+                    <div class="accordion-item">
+                        <button class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                            <span>Product Performance</span>
+                            <svg class="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <svg class="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="accordion-inner performance-bars">
+                                <!-- Dynamically populated -->
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Ratings -->
+                    <div class="accordion-item">
+                        <button class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                            <div class="ratings-dynamic-header" style="display: flex; align-items: center; gap: 1rem;">
+                                <span>Ratings & Reviews</span>
+                                <div class="stars-display" style="color: var(--accent-gold); font-size: 1.2rem; letter-spacing: 2px;"></div>
+                                <span class="count-display" style="color: #666; font-size: 0.9rem;">Loading...</span>
+                            </div>
+                            <svg class="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <svg class="icon-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="accordion-inner">
+                                <div style="text-align: center; margin-bottom: 2rem;">
+                                    <button id="write-review-toggle-btn" class="cta-button ineligible">Write a Review</button>
+                                </div>
+                                <div id="product-reviews-container">
+                                    <!-- Reviews will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
