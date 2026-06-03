@@ -24,6 +24,12 @@
     "currency": "TND",
     "availability": "out_of_stock"
   },
+  "retinol-night-cream": {
+    "sku": "DODCH-RETINOL-NIGHT-CREAM",
+    "price": "55.00",
+    "currency": "TND",
+    "availability": "in_stock"
+  },
   "silk-therapy-mask": {
     "sku": "DODCH-STM-004",
     "price": "19.00",
