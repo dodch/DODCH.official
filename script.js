@@ -81,15 +81,14 @@ const appCheck = initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider('6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy'),
     isTokenAutoRefreshEnabled: true
 });
-// Store the AppCheck token promise so we can await it before any Firestore call.
-// This prevents Firestore from firing before AppCheck is validated (the root cause of stuck shimmers).
-const appCheckReady = getToken(appCheck)
+// AppCheck initializes in background. The Firebase SDK automatically attaches
+// AppCheck tokens to every Firestore request internally — no manual await needed.
+getToken(appCheck)
     .then(() => {
-        console.log("🛡️ App Check: Connection Established successfully.");
+        console.log("🛡️ App Check: Token ready.");
     })
     .catch((err) => {
-        // Non-fatal: log but don't block. Firestore may still work if enforcement is off.
-        console.warn("⚠️ App Check: Token Exchange Failed.", err);
+        console.warn("⚠️ App Check: Token exchange failed.", err);
     });
 
 const auth = getAuth(app);
@@ -1068,12 +1067,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadProductCatalog() {
         let syncError = null;
         try {
-            console.log("📡 Waiting for AppCheck before syncing Firestore...");
-            // CRITICAL: Wait for AppCheck token to be ready before calling Firestore.
-            // Without this, Firestore fires before reCAPTCHA validates, causing permission
-            // errors that permanently freeze prices in the shimmer/loading state.
-            await appCheckReady;
-            console.log("📡 Syncing real-time prices & stock from Firestore...");
+            // Fire Firestore immediately — the Firebase SDK handles AppCheck token
+            // attachment internally for each request. No manual await needed.
+            // Persistent local cache means repeat visitors get data from disk instantly.
+            console.log("📡 Syncing prices & stock from Firestore...");
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 30000));
             const querySnapshot = await Promise.race([
                 getDocs(collection(db, "products")),
