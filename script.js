@@ -1066,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderContent();
         }
     };
-    async function loadProductCatalog() {
+    async function loadProductCatalog(retries = 3, delay = 1500) {
         let syncError = null;
         try {
             console.log("📡 Syncing real-time prices & stock from Firestore...");
@@ -1267,36 +1267,43 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             syncError = error;
             console.error("Error syncing with Firestore:", error);
-        } finally {
-            firestoreSynced = true;
-            // Reveal fallback names for cards if they are still shimmers
-            Object.keys(productCatalog).forEach(productId => {
-                const nameTargets = document.querySelectorAll(`[data-name-target="${productId}"]`);
-                nameTargets.forEach(target => {
-                    if (target.querySelector('.price-shimmer')) {
-                        target.textContent = productCatalog[productId].name;
-                    }
-                });
-            });
-            // Re-run initProductPage to resolve any product detail page shimmers to fallbacks
-            const urlParams = new URLSearchParams(window.location.search);
-            const activeIdParam = urlParams.get('id');
-            const currentFilename = window.location.pathname.split('/').pop();
-            const activeProd = Object.keys(productCatalog).find(id => activeIdParam === id || productCatalog[id]?.storyUrl === currentFilename);
-            if (activeProd) {
-                initProductPage();
+            if (retries > 0) {
+                console.warn(`🔄 Retrying Firestore sync in ${delay}ms... (${retries} retries left)`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return loadProductCatalog(retries - 1, delay * 2);
             }
-
-            // FINAL SWEEP: Only replace shimmers if Firestore completely failed (not on timeout)
-            // If timeout occurs, prices will eventually load from local cache
-            if (syncError && syncError.message === "Firestore sync timeout") {
-                console.warn("⏱️ Firestore sync timed out, but prices are loading from cache. Check back in a moment.");
-            } else if (syncError) {
-                // Only mark prices unavailable if there's a real error (not a timeout)
-                document.querySelectorAll('.price-shimmer').forEach(el => {
-                    const parent = el.closest('.product-card-price') || el.closest('#product-price');
-                    if (parent) parent.innerHTML = '<span style="color: var(--text-charcoal); font-size: 0.85em; opacity: 0.6;">Price will load shortly...</span>';
+        } finally {
+            if (!syncError || retries === 0) {
+                firestoreSynced = true;
+                // Reveal fallback names for cards if they are still shimmers
+                Object.keys(productCatalog).forEach(productId => {
+                    const nameTargets = document.querySelectorAll(`[data-name-target="${productId}"]`);
+                    nameTargets.forEach(target => {
+                        if (target.querySelector('.price-shimmer')) {
+                            target.textContent = productCatalog[productId].name;
+                        }
+                    });
                 });
+                // Re-run initProductPage to resolve any product detail page shimmers to fallbacks
+                const urlParams = new URLSearchParams(window.location.search);
+                const activeIdParam = urlParams.get('id');
+                const currentFilename = window.location.pathname.split('/').pop();
+                const activeProd = Object.keys(productCatalog).find(id => activeIdParam === id || productCatalog[id]?.storyUrl === currentFilename);
+                if (activeProd) {
+                    initProductPage();
+                }
+
+                // FINAL SWEEP: Only replace shimmers if Firestore completely failed (not on timeout)
+                // If timeout occurs, prices will eventually load from local cache
+                if (syncError && syncError.message === "Firestore sync timeout") {
+                    console.warn("⏱️ Firestore sync timed out, but prices are loading from cache. Check back in a moment.");
+                } else if (syncError) {
+                    // Only mark prices unavailable if there's a real error (not a timeout)
+                    document.querySelectorAll('.price-shimmer').forEach(el => {
+                        const parent = el.closest('.product-card-price') || el.closest('#product-price');
+                        if (parent) parent.innerHTML = '<span style="color: var(--text-charcoal); font-size: 0.85em; opacity: 0.6;">Price will load shortly...</span>';
+                    });
+                }
             }
         }
     };
