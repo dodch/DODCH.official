@@ -1069,6 +1069,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadProductCatalog() {
         let syncError = null;
         try {
+            if (typeof appCheckReady !== 'undefined') {
+                try {
+                    await appCheckReady;
+                } catch (err) {
+                    console.warn("⚠️ App Check: Proceeding with product sync without waiting further.", err);
+                }
+            }
             // No AppCheck wait needed — products are public read (allow read: if true in rules).
             // AppCheck is only required for sensitive writes (contact form, newsletter, reviews).
             // Firebase Console: App Check → Cloud Firestore must be "Monitoring" not "Enforced".
