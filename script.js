@@ -81,9 +81,10 @@ const appCheck = initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider('6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy'),
     isTokenAutoRefreshEnabled: true
 });
-// AppCheck initializes in background. The Firebase SDK automatically attaches
-// AppCheck tokens to every Firestore request internally — no manual await needed.
-getToken(appCheck)
+// Store the AppCheck token promise so we can race it before Firestore calls.
+// The SDK attaches tokens internally, but on first load the token may not be ready
+// in time — causing permission-denied errors from Firestore.
+const appCheckReady = getToken(appCheck)
     .then(() => {
         console.log("🛡️ App Check: Token ready.");
     })
@@ -1058,15 +1059,26 @@ document.addEventListener('DOMContentLoaded', () => {
             renderContent();
         }
     };
-    async function loadProductCatalog() {
+    async function loadProductCatalog(isRetry = false) {
         let syncError = null;
         try {
-            // Fire Firestore immediately — the Firebase SDK handles AppCheck token
-            // attachment internally for each request. No manual await needed.
-            // Persistent local cache means repeat visitors get data from disk instantly.
+            if (!isRetry) {
+                // First attempt: race AppCheck with a 5s timeout.
+                // This gives reCAPTCHA time to resolve on most connections,
+                // but won't block forever on slow ones.
+                console.log("📡 Waiting for AppCheck (max 5s)...");
+                await Promise.race([
+                    appCheckReady,
+                    new Promise(resolve => setTimeout(resolve, 5000))
+                ]);
+            } else {
+                // Retry: wait for full AppCheck with no timeout — this is our last chance
+                console.log("📡 Retry: waiting for full AppCheck...");
+                await appCheckReady;
+            }
+
             console.log("📡 Syncing prices & stock from Firestore...");
-            // 8s timeout — fast enough to catch private-tab hangs without feeling too slow on normal connections
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 8000));
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 15000));
             const querySnapshot = await Promise.race([
                 getDocs(collection(db, "products")),
                 timeoutPromise
@@ -1262,7 +1274,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             syncError = error;
             console.error("Error syncing with Firestore:", error);
+            // AUTO-RETRY: If this is the first attempt and we got a permission/auth error,
+            // AppCheck likely wasn't ready. Wait for full AppCheck and retry once.
+            if (!isRetry && error.message !== "Firestore sync timeout") {
+                console.warn("🔄 First attempt failed. Retrying after full AppCheck...");
+                // Call retry WITHOUT return — let this finally run but skip its cleanup
+                await loadProductCatalog(true);
+                return; // Skip the finally cleanup below since the retry handled it
+            }
         } finally {
+            // Skip cleanup if we already delegated to a retry above
+            if (syncError && !isRetry && syncError.message !== "Firestore sync timeout") return;
             firestoreSynced = true;
             // Reveal fallback names for cards if they are still shimmers
             Object.keys(productCatalog).forEach(productId => {
@@ -1282,16 +1304,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 initProductPage();
             }
 
-            // FINAL SWEEP: Only replace shimmers if Firestore completely failed (not on timeout)
-            // If timeout occurs, prices will eventually load from local cache
-            if (syncError && syncError.message === "Firestore sync timeout") {
-                console.warn("⏱️ Firestore sync timed out, but prices are loading from cache. Check back in a moment.");
-            } else if (syncError) {
-                // Only mark prices unavailable if there's a real error (not a timeout)
-                document.querySelectorAll('.price-shimmer').forEach(el => {
-                    const parent = el.closest('.product-card-price') || el.closest('#product-price');
-                    if (parent) parent.innerHTML = '<span style="color: var(--text-charcoal); font-size: 0.85em; opacity: 0.6;">Price unavailable</span>';
-                });
+            // On error: NEVER show "Price unavailable". Keep shimmers visible.
+            // On reload, the persistent cache will have data from a previous successful sync.
+            // This avoids showing misleading permanent error states on slow first loads.
+            if (syncError) {
+                console.warn("⏱️ Prices didn't load this time. Shimmers will stay until next reload.");
             }
         }
     };
