@@ -37,9 +37,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Orders: Created via Cloud Function only (not from client)
+    // Orders: 
+    // - Create: Allowed from frontend for Spark plan (no billing account needed). Protected by AppCheck.
+    // - Read: Admin can read all. Users can read only their own.
+    // - Update: Finalized security logic
     match /orders/{orderId} {
-      allow create: if isAdmin();
+      allow create: if isVerifiedApp()
+        && request.resource.data.status == 'Pending';
         
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       
