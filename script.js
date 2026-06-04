@@ -1059,24 +1059,12 @@ document.addEventListener('DOMContentLoaded', () => {
             renderContent();
         }
     };
-    async function loadProductCatalog(isRetry = false) {
+    async function loadProductCatalog() {
         let syncError = null;
         try {
-            if (!isRetry) {
-                // First attempt: race AppCheck with a 5s timeout.
-                // This gives reCAPTCHA time to resolve on most connections,
-                // but won't block forever on slow ones.
-                console.log("📡 Waiting for AppCheck (max 5s)...");
-                await Promise.race([
-                    appCheckReady,
-                    new Promise(resolve => setTimeout(resolve, 5000))
-                ]);
-            } else {
-                // Retry: wait for full AppCheck with no timeout — this is our last chance
-                console.log("📡 Retry: waiting for full AppCheck...");
-                await appCheckReady;
-            }
-
+            // No AppCheck wait needed — products are public read (allow read: if true in rules).
+            // AppCheck is only required for sensitive writes (contact form, newsletter, reviews).
+            // Firebase Console: App Check → Cloud Firestore must be "Monitoring" not "Enforced".
             console.log("📡 Syncing prices & stock from Firestore...");
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 15000));
             const querySnapshot = await Promise.race([
@@ -1274,17 +1262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             syncError = error;
             console.error("Error syncing with Firestore:", error);
-            // AUTO-RETRY: If this is the first attempt and we got a permission/auth error,
-            // AppCheck likely wasn't ready. Wait for full AppCheck and retry once.
-            if (!isRetry && error.message !== "Firestore sync timeout") {
-                console.warn("🔄 First attempt failed. Retrying after full AppCheck...");
-                // Call retry WITHOUT return — let this finally run but skip its cleanup
-                await loadProductCatalog(true);
-                return; // Skip the finally cleanup below since the retry handled it
-            }
         } finally {
-            // Skip cleanup if we already delegated to a retry above
-            if (syncError && !isRetry && syncError.message !== "Firestore sync timeout") return;
             firestoreSynced = true;
             // Reveal fallback names for cards if they are still shimmers
             Object.keys(productCatalog).forEach(productId => {
@@ -1303,12 +1281,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeProd) {
                 initProductPage();
             }
-
-            // On error: NEVER show "Price unavailable". Keep shimmers visible.
-            // On reload, the persistent cache will have data from a previous successful sync.
-            // This avoids showing misleading permanent error states on slow first loads.
             if (syncError) {
-                console.warn("⏱️ Prices didn't load this time. Shimmers will stay until next reload.");
+                console.warn("⏱️ Prices didn't load. Shimmers stay until next reload (cache will serve data then).");
             }
         }
     };

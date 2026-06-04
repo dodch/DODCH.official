@@ -7,6 +7,14 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
     }
 
+    // Helper: Require AppCheck for sensitive public-facing writes (spam/abuse protection)
+    // NOTE: Firebase Console → App Check → Cloud Firestore must be set to "Monitoring"
+    // (not "Enforced") so that product reads work without a token.
+    // request.app.verified is true only when a valid AppCheck token is present.
+    function isVerifiedApp() {
+      return request.app != null && request.app.verified == true;
+    }
+
     // Helper: Validate String Length (prevents buffer overflows/spam)
     function isValidString(text, min, max) {
       return text is string && text.size() >= min && text.size() <= max;
@@ -17,7 +25,8 @@ service cloud.firestore {
       return num is number && num >= 0;
     }
 
-    // Products & Overrides: Public Read, Admin Write
+    // Products & Overrides: Fully public read — no AppCheck needed for browsing.
+    // Admin write is protected by auth.
     match /products/{productId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -28,12 +37,8 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Orders: 
-    // - Create: Allowed from frontend for Spark plan (no billing account needed).
-    // - Read: Admin can read all. Users can read only their own.
-    // - Update: Finalized security logic
+    // Orders: Created via Cloud Function only (not from client)
     match /orders/{orderId} {
-      // SECURITY: Client-side creation is blocked. Orders must be processed via the createOrder Cloud Function.
       allow create: if isAdmin();
         
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
@@ -42,14 +47,12 @@ service cloud.firestore {
         || (
           request.auth != null 
           && (
-            // Logic: Users CANNOT change price, items, or delivery status.
-            
-            // Case 1: Claiming a guest order (allows connecting a guest ORD to a newly created account)
+            // Case 1: Claiming a guest order
             (resource.data.userId == 'guest' 
              && request.resource.data.userId == request.auth.uid 
              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userId', 'hasUnseenUpdate']))
             ||
-            // Case 2: Canceling their own (only allowed if status is currently Pending)
+            // Case 2: Canceling their own pending order
             (resource.data.userId == request.auth.uid 
              && resource.data.status == 'Pending'
              && request.resource.data.status == 'Cancelled'
@@ -64,10 +67,11 @@ service cloud.firestore {
       allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     } 
 
-    // Product Reviews: 
+    // Product Reviews: Public read. Writes require auth + AppCheck (prevents fake reviews from bots)
     match /product_reviews/{reviewId} {
       allow read: if true;
-      allow create: if request.auth != null 
+      allow create: if request.auth != null
+        && isVerifiedApp()
         && request.resource.data.userId == request.auth.uid
         && isValidString(request.resource.data.text, 1, 3000)
         && (request.resource.data.images is list ? request.resource.data.images.size() <= 2 : true)
@@ -83,9 +87,10 @@ service cloud.firestore {
       allow delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
     }
     
-    // Public Submissions (Newsletter & Contact Form)
+    // Newsletter: Requires AppCheck to prevent spam bots from filling the list
     match /newsletter/{document=**} {
-      allow create: if true && isValidString(request.resource.data.email, 5, 100);
+      allow create: if isVerifiedApp()
+        && isValidString(request.resource.data.email, 5, 100);
       allow read, update, delete: if isAdmin();
     }
     
@@ -103,25 +108,22 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Push Notification Subscribers
+    // Push Notification Subscribers: Requires AppCheck to prevent fake subscriptions
     match /subscribers/{token} {
       allow read: if isAdmin();
-      allow write: if true;
+      allow write: if isVerifiedApp();
     }
 
-    // --- MESSAGES ---
+    // Messages (Contact Form): Requires AppCheck to prevent spam
     match /messages/{messageId} {
-      allow create: if true 
+      allow create: if isVerifiedApp()
         && isValidString(request.resource.data.name, 2, 100)
         && isValidString(request.resource.data.email, 5, 100)
         && isValidString(request.resource.data.message, 1, 3000)
         && request.resource.data.status == 'unread'
         && request.resource.data.createdAt is timestamp;
       
-      // Allow Admin to manage messages
       allow update: if isAdmin();
-
-      // Only the Admin can read or delete messages from the database.
       allow read, delete: if isAdmin();
     }
   }
