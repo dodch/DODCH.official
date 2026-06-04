@@ -2754,6 +2754,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         userId: currentUser ? currentUser.uid : 'guest',
                         timestamp: serverTimestamp()
                     };
+                    if (typeof appCheckReady !== 'undefined') {
+                        await appCheckReady;
+                    }
                     // --- DIRECT FIRESTORE SAVE (Spark Plan Support) ---
                     const docRef = await addDoc(collection(db, "orders"), orderData);
                     const orderId = docRef.id;
@@ -6832,6 +6835,9 @@ document.addEventListener('submit', async (e) => {
     // --- END SMART VALIDATION ---
 
     try {
+        if (typeof appCheckReady !== 'undefined') {
+            await appCheckReady;
+        }
         // Direct Firestore write (Spark-compatible)
         // Using addDoc to ensure every message is stored uniquely
         await addDoc(collection(db, "messages"), {
