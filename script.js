@@ -2888,39 +2888,147 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <span>Total</span>
                                             <span>${finalTotal.toFixed(2)} TND</span>
                                         </div>
-                                    </div>
-
                                      <div class="receipt-actions no-print" style="display: flex; gap: 1rem; margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2.5rem;">
                                         <button onclick="(function(){
                                             var receiptEl = document.querySelector('.order-receipt-sheet');
                                             if (!receiptEl) return;
                                             var receiptHTML = receiptEl.innerHTML;
-                                            var win = window.open('', '_blank', 'width=900,height=700');
+                                            var win = window.open('', '_blank', 'width=960,height=800');
                                             win.document.write(\`<!DOCTYPE html><html><head>
                                             <meta charset='UTF-8'>
                                             <title>DODCH Order Receipt</title>
-                                            <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600&display=swap' rel='stylesheet'>
+                                            <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700&display=swap' rel='stylesheet'>
                                             <style>
-                                                *{box-sizing:border-box;margin:0;padding:0}
-                                                body{font-family:'Montserrat',sans-serif;color:#1a1a1a;background:#fff;padding:2cm}
-                                                h2{font-family:'Playfair Display',serif;font-size:2rem;color:#1a1a1a}
-                                                h4{font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:0.8rem}
-                                                p{line-height:1.6}
-                                                strong{font-weight:600}
-                                                img{display:block;border-radius:8px;border:1px solid #eee}
-                                                .no-print,.receipt-actions{display:none!important}
-                                                .receipt-header{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid #eee}
-                                                .receipt-header h2{margin-bottom:0.4rem}
-                                                .receipt-details{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2.5rem;background:#fafafa;padding:1.5rem;border-radius:12px}
-                                                .receipt-items-section{margin-bottom:2.5rem}
-                                                .receipt-items-section h4{border-bottom:1px solid #eee;padding-bottom:0.8rem;margin-bottom:1rem}
-                                                .receipt-totals{width:100%;max-width:280px;margin-left:auto}
-                                                @page{margin:0;size:A4}
+                                                :root {
+                                                    --gold: #D4AF37;
+                                                    --gold-text: #866F00;
+                                                    --charcoal: #1a1a1a;
+                                                }
+                                                * { box-sizing: border-box; margin: 0; padding: 0; }
+                                                body {
+                                                    font-family: 'Montserrat', sans-serif;
+                                                    color: var(--charcoal);
+                                                    background: #fff;
+                                                    padding: 2.5cm 3cm;
+                                                    font-size: 13px;
+                                                    line-height: 1.6;
+                                                }
+                                                h2 {
+                                                    font-family: 'Playfair Display', serif;
+                                                    font-size: 2rem;
+                                                    font-weight: 700;
+                                                    color: var(--charcoal);
+                                                    margin-bottom: 0.4rem;
+                                                }
+                                                h4 {
+                                                    font-size: 0.7rem;
+                                                    color: #888;
+                                                    text-transform: uppercase;
+                                                    letter-spacing: 1.5px;
+                                                    margin-bottom: 0.8rem;
+                                                    font-weight: 500;
+                                                }
+                                                p { color: #555; }
+                                                strong { font-weight: 600; color: var(--charcoal); }
+                                                img { display: block; border-radius: 8px; border: 1px solid #eee; object-fit: cover; }
+
+                                                /* Header */
+                                                .receipt-header {
+                                                    text-align: center;
+                                                    margin-bottom: 2.5rem;
+                                                    padding-bottom: 1.5rem;
+                                                    border-bottom: 1px solid #eee;
+                                                }
+                                                .receipt-header p { color: #666; font-size: 1rem; }
+
+                                                /* Details grid */
+                                                .receipt-details {
+                                                    display: grid;
+                                                    grid-template-columns: 1fr 1fr;
+                                                    gap: 2rem;
+                                                    margin-bottom: 2.5rem;
+                                                    background: #fafafa;
+                                                    padding: 1.5rem;
+                                                    border-radius: 12px;
+                                                }
+                                                .receipt-details p { font-size: 0.9rem; margin-bottom: 0.35rem; }
+
+                                                /* Items */
+                                                .receipt-items-section { margin-bottom: 2.5rem; }
+                                                .receipt-items-section > h4 {
+                                                    border-bottom: 1px solid #eee;
+                                                    padding-bottom: 0.8rem;
+                                                    margin-bottom: 1rem;
+                                                }
+                                                .receipt-items-list > div {
+                                                    display: flex;
+                                                    align-items: center;
+                                                    gap: 1rem;
+                                                    padding: 0.9rem 0;
+                                                    border-bottom: 1px solid #f0f0f0;
+                                                }
+                                                .receipt-items-list > div > div:nth-child(2) { flex-grow: 1; }
+                                                .receipt-items-list h4 {
+                                                    font-size: 0.9rem;
+                                                    color: var(--charcoal);
+                                                    text-transform: none;
+                                                    letter-spacing: 0;
+                                                    margin-bottom: 0.25rem;
+                                                }
+                                                .receipt-items-list p { font-size: 0.78rem; color: #888; }
+                                                .receipt-items-list > div > div:last-child {
+                                                    font-weight: 600;
+                                                    font-size: 0.9rem;
+                                                    color: var(--charcoal);
+                                                    text-align: right;
+                                                }
+
+                                                /* Totals */
+                                                .receipt-totals {
+                                                    width: 100%;
+                                                    max-width: 280px;
+                                                    margin-left: auto;
+                                                }
+                                                .receipt-totals > div {
+                                                    display: flex;
+                                                    justify-content: space-between;
+                                                    font-size: 0.9rem;
+                                                    color: #666;
+                                                    margin-bottom: 0.75rem;
+                                                }
+                                                .receipt-totals > div:last-child {
+                                                    border-top: 2px solid #eee;
+                                                    padding-top: 1rem;
+                                                    font-size: 1.15rem;
+                                                    font-weight: 700;
+                                                    color: var(--charcoal);
+                                                    margin-top: 0.25rem;
+                                                    margin-bottom: 0;
+                                                }
+
+                                                /* DODCH brand header at very top */
+                                                .receipt-brand {
+                                                    text-align: center;
+                                                    margin-bottom: 2rem;
+                                                    font-family: 'Playfair Display', serif;
+                                                    font-size: 1.4rem;
+                                                    font-weight: 700;
+                                                    letter-spacing: 4px;
+                                                    color: var(--charcoal);
+                                                    text-transform: uppercase;
+                                                    padding-bottom: 1rem;
+                                                    border-bottom: 1px solid var(--gold);
+                                                }
+
+                                                .no-print, .receipt-actions { display: none !important; }
+                                                @page { margin: 0; size: A4; }
                                             </style>
-                                            </head><body>\` + receiptHTML + \`</body></html>\`);
+                                            </head><body>
+                                            <div class='receipt-brand'>DODCH</div>
+                                            \` + receiptHTML + \`</body></html>\`);
                                             win.document.close();
                                             win.focus();
-                                            setTimeout(function(){ win.print(); win.close(); }, 500);
+                                            setTimeout(function(){ win.print(); }, 800);
                                         })()" class="cta-button cta-button-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: var(--text-charcoal); border: 1px solid #ddd; border-radius: 30px; cursor: pointer;">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                             Download PDF
