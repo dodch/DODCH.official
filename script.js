@@ -2890,8 +2890,38 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </div>
                                     </div>
 
-                                    <div class="receipt-actions no-print" style="display: flex; gap: 1rem; margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2.5rem;">
-                                        <button onclick="window.print()" class="cta-button cta-button-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: var(--text-charcoal); border: 1px solid #ddd; border-radius: 30px;">
+                                     <div class="receipt-actions no-print" style="display: flex; gap: 1rem; margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2.5rem;">
+                                        <button onclick="(function(){
+                                            var receiptEl = document.querySelector('.order-receipt-sheet');
+                                            if (!receiptEl) return;
+                                            var receiptHTML = receiptEl.innerHTML;
+                                            var win = window.open('', '_blank', 'width=900,height=700');
+                                            win.document.write(\`<!DOCTYPE html><html><head>
+                                            <meta charset='UTF-8'>
+                                            <title>DODCH Order Receipt</title>
+                                            <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600&display=swap' rel='stylesheet'>
+                                            <style>
+                                                *{box-sizing:border-box;margin:0;padding:0}
+                                                body{font-family:'Montserrat',sans-serif;color:#1a1a1a;background:#fff;padding:2cm}
+                                                h2{font-family:'Playfair Display',serif;font-size:2rem;color:#1a1a1a}
+                                                h4{font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:0.8rem}
+                                                p{line-height:1.6}
+                                                strong{font-weight:600}
+                                                img{display:block;border-radius:8px;border:1px solid #eee}
+                                                .no-print,.receipt-actions{display:none!important}
+                                                .receipt-header{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid #eee}
+                                                .receipt-header h2{margin-bottom:0.4rem}
+                                                .receipt-details{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2.5rem;background:#fafafa;padding:1.5rem;border-radius:12px}
+                                                .receipt-items-section{margin-bottom:2.5rem}
+                                                .receipt-items-section h4{border-bottom:1px solid #eee;padding-bottom:0.8rem;margin-bottom:1rem}
+                                                .receipt-totals{width:100%;max-width:280px;margin-left:auto}
+                                                @page{margin:0;size:A4}
+                                            </style>
+                                            </head><body>\` + receiptHTML + \`</body></html>\`);
+                                            win.document.close();
+                                            win.focus();
+                                            setTimeout(function(){ win.print(); win.close(); }, 500);
+                                        })()" class="cta-button cta-button-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: var(--text-charcoal); border: 1px solid #ddd; border-radius: 30px; cursor: pointer;">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                             Download PDF
                                         </button>
