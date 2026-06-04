@@ -15,7 +15,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
 import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { getMessaging, getToken as getMessagingToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
@@ -94,23 +94,17 @@ getToken(appCheck)
 const auth = getAuth(app);
 // Intelligent Caching: Enable persistent local cache so products load instantly on repeat visits
 let db;
-const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-const isSafariWebKit = /WebKit/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
-// Detect standalone mode (PWA/homescreen) or iOS WebKit which have buggy IndexedDB implementations for multi-tab locks
-const isBuggyIndexedDbEnvironment = isIos && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || isSafariWebKit);
-
 try {
-    if (isBuggyIndexedDbEnvironment) {
-        console.info("⚡ iOS WebKit/PWA detected. Using memory cache for Firestore to prevent loading loops.");
-        db = getFirestore(app);
-    } else {
-        db = initializeFirestore(app, {
-            localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-        });
-        console.info("⚡ Firestore: persistent local cache enabled.");
-    }
+    // Use single-tab persistent cache (no multi-tab manager).
+    // persistentMultipleTabManager() uses cross-tab IndexedDB locking via BroadcastChannel
+    // which hangs silently in private/incognito tabs — causing an infinite loading loop.
+    // Single-tab mode works correctly in ALL environments including private tabs.
+    db = initializeFirestore(app, {
+        localCache: persistentLocalCache()
+    });
+    console.info("⚡ Firestore: single-tab persistent cache enabled.");
 } catch (e) {
-    console.warn("⚠️ Firestore: persistent local cache failed to initialize, falling back to standard memory cache:", e);
+    console.warn("⚠️ Firestore: persistent cache failed, falling back to memory cache:", e);
     db = getFirestore(app);
 }
 const functions = getFunctions(app, "europe-west1");
@@ -1071,7 +1065,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // attachment internally for each request. No manual await needed.
             // Persistent local cache means repeat visitors get data from disk instantly.
             console.log("📡 Syncing prices & stock from Firestore...");
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 30000));
+            // 8s timeout — fast enough to catch private-tab hangs without feeling too slow on normal connections
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 8000));
             const querySnapshot = await Promise.race([
                 getDocs(collection(db, "products")),
                 timeoutPromise
