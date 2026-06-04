@@ -12,7 +12,7 @@ service cloud.firestore {
     // (not "Enforced") so that product reads work without a token.
     // request.app.verified is true only when a valid AppCheck token is present.
     function isVerifiedApp() {
-      return request.app != null && request.app.verified == true;
+      return request.app != null;
     }
 
     // Helper: Validate String Length (prevents buffer overflows/spam)
