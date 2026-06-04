@@ -101,12 +101,19 @@ try {
     // which hangs silently in private/incognito tabs — causing an infinite loading loop.
     // Single-tab mode works correctly in ALL environments including private tabs.
     db = initializeFirestore(app, {
-        localCache: persistentLocalCache()
+        localCache: persistentLocalCache(),
+        experimentalForceLongPolling: true
     });
-    console.info("⚡ Firestore: single-tab persistent cache enabled.");
+    console.info("⚡ Firestore: single-tab persistent cache and long polling enabled.");
 } catch (e) {
     console.warn("⚠️ Firestore: persistent cache failed, falling back to memory cache:", e);
-    db = getFirestore(app);
+    try {
+        db = initializeFirestore(app, {
+            experimentalForceLongPolling: true
+        });
+    } catch (e2) {
+        db = getFirestore(app);
+    }
 }
 const functions = getFunctions(app, "europe-west1");
 const storage = getStorage(app);
