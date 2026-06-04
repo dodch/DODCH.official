@@ -104,13 +104,9 @@
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap">
     </noscript>
 
-    <!-- CRITICAL: Prevent Flash of Unstyled Content (FOUC).
-         Hides the body immediately (before styles.css loads) and reveals
-         it only once JS marks the page as ready. -->
-    <style>
-      body { visibility: hidden; }
-      body.page-ready { visibility: visible; }
-    </style>
+    <!-- Preload AppCheck to speed up Firebase -->
+    <link rel="preload" as="script" href="https://www.google.com/recaptcha/api.js?render=6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy">
+    
     <link rel="stylesheet" href="styles.css?v=1">
     <meta name="view-transition" content="same-origin">
 </head>
@@ -206,10 +202,76 @@
 
         <div class="container shop-layout">
             <!-- Product Grid -->
-            <section class="shop-grid reveal">
-                <div style="grid-column: 1/-1; text-align: center; padding: 2rem; opacity: 0.6;">Loading collection...
+            <div class="shop-category-section">
+                <h2 class="shop-category-title">Hair Care</h2>
+                <div class="shop-grid horizontal-scroll">
+                    <div class="product-card reveal" style="--anim-delay: 0s;" data-product-id="dodchmellow-pro-v">
+                        <a href="product.html?id=dodchmellow-pro-v">
+                            <div class="product-image-wrapper">
+                                <img fetchpriority="high" src="IMG_4243.webp" alt="DODCHmellow" class="product-card-img">
+                                <button class="quick-view-btn" data-id="dodchmellow-pro-v">Quick View</button>
+                            </div>
+                            <div class="product-card-info">
+                                <h3 class="product-card-title" data-name-target="dodchmellow-pro-v"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
+                                <p class="product-card-price" data-price-target="dodchmellow-pro-v"><span class="price-shimmer"></span></p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="product-card reveal" style="--anim-delay: 0.15s;" data-product-id="silk-therapy-mask">
+                        <a href="product.html?id=silk-therapy-mask">
+                            <div class="product-image-wrapper">
+                                <img loading="lazy" src="IMG_3811.webp" alt="DODCH Pro-V Silk Therapy Mask" class="product-card-img">
+                                <button class="quick-view-btn" data-id="silk-therapy-mask">Quick View</button>
+                            </div>
+                            <div class="product-card-info">
+                                <h3 class="product-card-title" data-name-target="silk-therapy-mask"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
+                                <p class="product-card-price" data-price-target="silk-therapy-mask"><span class="price-shimmer"></span></p>
+                            </div>
+                        </a>
+                    </div>
                 </div>
-            </section>
+            </div>
+            <div class="shop-category-section">
+                <h2 class="shop-category-title">Skin Care</h2>
+                <div class="shop-grid horizontal-scroll">
+                    <div class="product-card reveal" style="--anim-delay: 0s;" data-product-id="foaming-cleanser">
+                        <a href="product.html?id=foaming-cleanser">
+                            <div class="product-image-wrapper">
+                                <img loading="lazy" src="IMG_4241.webp" alt="DODCH Foaming Cleanser" class="product-card-img" style="filter: brightness(1.05);">
+                                <button class="quick-view-btn" data-id="foaming-cleanser">Quick View</button>
+                            </div>
+                            <div class="product-card-info">
+                                <h3 class="product-card-title" data-name-target="foaming-cleanser"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
+                                <p class="product-card-price" data-price-target="foaming-cleanser"><span class="price-shimmer"></span></p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="product-card reveal" style="--anim-delay: 0.15s;" data-product-id="advanced-ha-serum">
+                        <a href="product.html?id=advanced-ha-serum">
+                            <div class="product-image-wrapper">
+                                <img loading="lazy" src="IMG_3407.webp" alt="Advanced HA Serum" class="product-card-img">
+                                <button class="quick-view-btn" data-id="advanced-ha-serum">Quick View</button>
+                            </div>
+                            <div class="product-card-info">
+                                <h3 class="product-card-title" data-name-target="advanced-ha-serum"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
+                                <p class="product-card-price" data-price-target="advanced-ha-serum"><span class="price-shimmer"></span></p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="product-card reveal" style="--anim-delay: 0.3s;" data-product-id="retinol-night-cream">
+                        <a href="product.html?id=retinol-night-cream">
+                            <div class="product-image-wrapper">
+                                <img loading="lazy" src="IMG_3783.webp" alt="0.5 Retinol Night Cream" class="product-card-img">
+                                <button class="quick-view-btn" data-id="retinol-night-cream">Quick View</button>
+                            </div>
+                            <div class="product-card-info">
+                                <h3 class="product-card-title" data-name-target="retinol-night-cream"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
+                                <p class="product-card-price" data-price-target="retinol-night-cream"><span class="price-shimmer"></span></p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </main>
