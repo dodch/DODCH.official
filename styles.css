@@ -104,38 +104,6 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* --- Enhanced Multi-Page View Transitions (Cinematic Sequential Fade) --- */
-@media (prefers-reduced-motion: no-preference) {
-    @keyframes fade-out {
-        to { opacity: 0; }
-    }
-
-    @keyframes fade-in {
-        from { opacity: 0; }
-    }
-
-    /* The old page fades out over the first 400ms */
-    ::view-transition-old(root) {
-        animation: 400ms cubic-bezier(0.4, 0, 1, 1) both fade-out;
-    }
-
-    /* The new page waits 400ms, then fades in over the next 400ms */
-    ::view-transition-new(root) {
-        animation: 400ms cubic-bezier(0, 0, 0.2, 1) 400ms both fade-in;
-    }
-
-    /* The backdrop color visible during the cross-fade 'gap' */
-    ::view-transition-backdrop {
-        background-color: var(--bg-cream);
-    }
-
-    /* Shared elements (images/titles) morph smoothly over the total 800ms */
-    ::view-transition-group(*) {
-        animation-duration: 800ms;
-        animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    }
-}
-
 main {
     flex-grow: 1;
 }
@@ -4694,7 +4662,7 @@ footer {
         right: 10px;
         left: 10px;
         align-items: center;
-
+    }
 /* Cart item layout fixes: normalize image sizes and align content */
 #cart-drawer .cart-body {
     padding: 1rem 1.25rem 0 1.25rem;
@@ -9003,14 +8971,6 @@ button[type="submit"]:hover,
 
     #search-results-halo.active {
         display: none !important;
-    }
-
-    /* Fix: Prevent dropdown from causing horizontal overflow */
-    #search-results-dropdown {
-        min-width: unset !important;
-        width: 100vw !important;
-        left: 0 !important;
-        border-radius: 0 !important;
     }
 }
 

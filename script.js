@@ -1150,11 +1150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        if (animate && document.startViewTransition) {
-            // Use the modern API for internal shop navigation (Category filters)
-            document.startViewTransition(() => renderContent());
-        } else if (animate) {
-            // Fallback for older browsers
+        if (animate) {
             shopLayout.classList.add('fade-out');
             if (shopTransitionTimeout) clearTimeout(shopTransitionTimeout);
 
@@ -2144,6 +2140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         (productId ? null : null);
 
         if (!product) return;
+
         const activeId = productId || Object.keys(productCatalog).find(k => productCatalog[k] === product);
 
         let titleEl = document.getElementById('product-title');
