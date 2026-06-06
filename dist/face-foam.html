@@ -176,13 +176,21 @@
     </script>
 
     <link rel="apple-touch-icon" href="IMG_3355.webp?v=3">
+    <style>
+        /* View Transitions: Match names from shop grid for the "fly-in" effect */
+        .foam-hero-video, .foam-hero-video-poster { view-transition-name: prod-img-foaming-cleanser; }
+        .foam-hero h1 { view-transition-name: prod-title-foaming-cleanser; }
+        
+        /* Ensure the video poster transitions smoothly if video hasn't loaded */
+        ::view-transition-old(prod-img-foaming-cleanser) { object-fit: cover; }
+    </style>
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
     <style>
         /* --- Luminous Purity Theme Overrides --- */
         :root {

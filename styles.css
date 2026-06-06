@@ -38,6 +38,31 @@
     --space-32: 8rem;    /* 128px */
 }
 
+/* --- Global Scrollbar Customization --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-cream);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(45, 45, 45, 0.2);
+    border-radius: 20px;
+    border: 2px solid var(--bg-cream); /* Creates a 'floating' margin effect */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-gold);
+}
+
+/* Firefox Support */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(45, 45, 45, 0.2) var(--bg-cream);
+}
 
 * {
     margin: 0;
@@ -77,6 +102,38 @@ body {
     touch-action: manipulation;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Enhanced Multi-Page View Transitions (Cinematic Sequential Fade) --- */
+@media (prefers-reduced-motion: no-preference) {
+    @keyframes fade-out {
+        to { opacity: 0; }
+    }
+
+    @keyframes fade-in {
+        from { opacity: 0; }
+    }
+
+    /* The old page fades out over the first 400ms */
+    ::view-transition-old(root) {
+        animation: 400ms cubic-bezier(0.4, 0, 1, 1) both fade-out;
+    }
+
+    /* The new page waits 400ms, then fades in over the next 400ms */
+    ::view-transition-new(root) {
+        animation: 400ms cubic-bezier(0, 0, 0.2, 1) 400ms both fade-in;
+    }
+
+    /* The backdrop color visible during the cross-fade 'gap' */
+    ::view-transition-backdrop {
+        background-color: var(--bg-cream);
+    }
+
+    /* Shared elements (images/titles) morph smoothly over the total 800ms */
+    ::view-transition-group(*) {
+        animation-duration: 800ms;
+        animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
 }
 
 main {
@@ -2241,7 +2298,9 @@ footer {
     }
     .product-thumbnails {
         position: static;
-        grid-template-columns: repeat(4, 72px);
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
         justify-items: start;
         width: 100%;
         margin-top: var(--space-4);
@@ -2267,7 +2326,7 @@ footer {
 
 .product-gallery {
     display: grid;
-    grid-template-columns: minmax(360px, 1fr) 120px;
+    grid-template-columns: 1fr 120px;
     gap: var(--space-5);
     align-items: start;
     position: sticky;
@@ -2327,11 +2386,17 @@ footer {
         grid-template-columns: 1fr;
         position: static;
     }
+    .product-info {
+        padding: var(--space-6) var(--space-4);
+        border-radius: 24px;
+    }
     .product-thumbnails {
         position: static;
-        grid-template-columns: repeat(4, 72px);
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
         justify-items: start;
-        width: 100%;
+        width: auto;
         margin-top: var(--space-4);
     }
 }
@@ -4003,7 +4068,7 @@ footer {
 
 .scroll-arrow {
     position: absolute;
-    top: 50%;
+    top: 42%; /* Visually centers the arrow on product images, above the text info */
     transform: translateY(-50%);
     width: 40px;
     height: 40px;
@@ -8938,6 +9003,14 @@ button[type="submit"]:hover,
 
     #search-results-halo.active {
         display: none !important;
+    }
+
+    /* Fix: Prevent dropdown from causing horizontal overflow */
+    #search-results-dropdown {
+        min-width: unset !important;
+        width: 100vw !important;
+        left: 0 !important;
+        border-radius: 0 !important;
     }
 }
 

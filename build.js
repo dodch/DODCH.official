@@ -104,6 +104,11 @@ console.log(`⚡ Minifying ${jsFiles.length} JS files...`);
             const out = fs.statSync(outFile).size;
             const saved = src > 0 ? (((src - out) / src) * 100).toFixed(1) : 0;
             console.log(`  ✓ ${path.basename(file)}: ${(src/1024).toFixed(1)} KiB → ${(out/1024).toFixed(1)} KiB (−${saved}%)`);
+            
+            // Also copy to root as .min.js for direct use if needed
+            if (path.basename(file) === 'script.js') {
+                fs.copyFileSync(outFile, path.join(SRC, 'script.min.js'));
+            }
         } catch (err) {
             console.warn(`  ⚠ ${path.basename(file)}: minification skipped (${err.message.split('\n')[0]})`);
             fs.copyFileSync(file, outFile);
@@ -131,6 +136,11 @@ console.log(`⚡ Minifying ${jsFiles.length} JS files...`);
             const out = fs.statSync(outFile).size;
             const saved = src > 0 ? (((src - out) / src) * 100).toFixed(1) : 0;
             console.log(`  ✓ ${path.basename(file)}: ${(src/1024).toFixed(1)} KiB → ${(out/1024).toFixed(1)} KiB (−${saved}%)`);
+            
+            // Also copy to root as .min.css for direct use if needed
+            if (path.basename(file) === 'styles.css') {
+                fs.copyFileSync(outFile, path.join(SRC, 'styles.min.css'));
+            }
         } catch (err) {
             console.warn(`  ⚠ ${path.basename(file)}: minification skipped`);
             fs.copyFileSync(file, outFile);

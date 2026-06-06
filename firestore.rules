@@ -7,28 +7,19 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
     }
 
-    // NOTE: Cloud Firestore App Check is set to "Monitoring" (not "Enforced").
-    // In Monitoring mode, request.app is always null in security rules, so we cannot
-    // use it to gate writes. Protection is handled by the other validation rules below
-    // (string length, status field, auth checks, etc.) plus the data validation rules.
+    // NOTE: Cloud Firestore App Check is set to "Monitoring".
     function isVerifiedApp() {
-      return true;
+      return true; 
     }
 
-    // Helper: Validate String Length (prevents buffer overflows/spam)
     function isValidString(text, min, max) {
       return text is string && text.size() >= min && text.size() <= max;
     }
 
-    // Helper: Validate Positive Number
-    function isPositiveNumber(num) {
-      return num is number && num >= 0;
-    }
-
-    // Products & Overrides: Fully public read — no AppCheck needed for browsing.
-    // Admin write is protected by auth.
+    // Products & Overrides: Public read, Admin write.
     match /products/{productId} {
       allow read: if true;
+      // Admin can manage products, including the new size-specific batch, expiry data, and performance metrics.
       allow write: if isAdmin();
     }
 
@@ -37,41 +28,49 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Orders: 
-    // - Create: Allowed from frontend for Spark plan (no billing account needed). Protected by AppCheck.
-    // - Read: Admin can read all. Users can read only their own.
-    // - Update: Finalized security logic
+    // Orders:
     match /orders/{orderId} {
-      allow create: if isVerifiedApp()
-        && request.resource.data.status == 'Pending';
+      // 1. Creation: Admin can create Local Orders; Verified App can create Pending online orders.
+      allow create: if (isAdmin() && request.resource.data.get('type', '') == 'local')
+        || (isVerifiedApp() && request.resource.data.status == 'Pending');
         
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       
-      allow update: if isAdmin()
+      // 2. Updates:
+      allow update: if (
+          isAdmin() 
+          && (
+            // Rule: If already exported, Admin CANNOT change the status (locks archived records).
+            // They can still update other meta fields (like correcting batch/date snapshots) or the 'exported' flag itself.
+            (resource.data.get('exported', false) == false || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']))
+          )
+        )
         || (
           request.auth != null 
+          && resource.data.get('exported', false) == false // Prevent users from touching archived orders
           && (
-            // Case 1: Claiming a guest order
+            // Case A: User claiming a guest order
             (resource.data.userId == 'guest' 
              && request.resource.data.userId == request.auth.uid 
              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userId', 'hasUnseenUpdate']))
             ||
-            // Case 2: Canceling their own pending order
+            // Case B: User canceling their own pending order
             (resource.data.userId == request.auth.uid 
              && resource.data.status == 'Pending'
              && request.resource.data.status == 'Cancelled'
              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
           )
         );
+        
       allow delete: if isAdmin();
     }
 
-    // Carts: Users can only read/write their own cart
+    // Carts: Users only
     match /carts/{userId} {
       allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     } 
 
-    // Product Reviews: Public read. Writes require auth + AppCheck (prevents fake reviews from bots)
+    // Product Reviews: Requires Delivered status
     match /product_reviews/{reviewId} {
       allow read: if true;
       allow create: if request.auth != null
@@ -91,14 +90,11 @@ service cloud.firestore {
       allow delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
     }
     
-    // Newsletter: Requires AppCheck to prevent spam bots from filling the list
     match /newsletter/{document=**} {
-      allow create: if isVerifiedApp()
-        && isValidString(request.resource.data.email, 5, 100);
+      allow create: if isVerifiedApp() && isValidString(request.resource.data.email, 5, 100);
       allow read, update, delete: if isAdmin();
     }
     
-    // Notifications: 
     match /notifications/{notifId} {
       allow create: if isAdmin();
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
@@ -107,18 +103,15 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isSeen']);
     }
 
-    // User Profiles: Users can read/write their own info
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Push Notification Subscribers: Requires AppCheck to prevent fake subscriptions
     match /subscribers/{token} {
       allow read: if isAdmin();
       allow write: if isVerifiedApp();
     }
 
-    // Messages (Contact Form): Requires AppCheck to prevent spam
     match /messages/{messageId} {
       allow create: if isVerifiedApp()
         && isValidString(request.resource.data.name, 2, 100)

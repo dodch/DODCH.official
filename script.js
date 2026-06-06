@@ -134,6 +134,63 @@ const escapeHTML = (str) => {
     );
 };
 
+window.printCheckoutReceipt = (fileName) => {
+    const receiptEl = document.querySelector('.order-receipt-sheet');
+    if (!receiptEl) return;
+
+    // Create a clone to strip UI elements
+    const clone = receiptEl.cloneNode(true);
+    const actions = clone.querySelector('.receipt-actions');
+    if (actions) actions.remove();
+    const receiptHTML = clone.innerHTML;
+
+    const win = window.open('', '_blank', 'width=960,height=800');
+    if (!win) {
+        window.showToast("Please allow popups to save the receipt.", "warning");
+        return;
+    }
+
+    win.document.write(`<!DOCTYPE html><html><head>
+        <meta charset='UTF-8'>
+        <title>${fileName}</title>
+        <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700&display=swap' rel='stylesheet'>
+        <style>
+            :root { --gold: #D4AF37; --gold-text: #866F00; --charcoal: #1a1a1a; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'Montserrat', sans-serif; color: var(--charcoal); background: #fff; padding: 2.5cm 3cm; font-size: 13px; line-height: 1.6; }
+            h2 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: var(--charcoal); margin-bottom: 0.4rem; }
+            h4 { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.8rem; font-weight: 500; }
+            p { color: #555; }
+            strong { font-weight: 600; color: var(--charcoal); }
+            img { display: block; border-radius: 8px; border: 1px solid #eee; object-fit: cover; }
+            .receipt-header { text-align: center; margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #eee; }
+            .receipt-header p { color: #666; font-size: 1rem; }
+            .receipt-details { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2.5rem; background: #fafafa; padding: 1.5rem; border-radius: 12px; }
+            .receipt-details p { font-size: 0.9rem; margin-bottom: 0.35rem; }
+            .receipt-items-section { margin-bottom: 2.5rem; }
+            .receipt-items-section > h4 { border-bottom: 1px solid #eee; padding-bottom: 0.8rem; margin-bottom: 1rem; }
+            .receipt-items-list > div { display: flex; align-items: center; gap: 1rem; padding: 0.9rem 0; border-bottom: 1px solid #f0f0f0; }
+            .receipt-items-list > div > div:nth-child(2) { flex-grow: 1; }
+            .receipt-items-list h4 { font-size: 0.9rem; color: var(--charcoal); text-transform: none; letter-spacing: 0; margin-bottom: 0.25rem; }
+            .receipt-items-list p { font-size: 0.78rem; color: #888; }
+            .receipt-items-list > div > div:last-child { font-weight: 600; font-size: 0.9rem; color: var(--charcoal); text-align: right; }
+            .receipt-totals { width: 100%; max-width: 280px; margin-left: auto; }
+            .receipt-totals > div { display: flex; justify-content: space-between; font-size: 0.9rem; color: #666; margin-bottom: 0.75rem; }
+            .receipt-totals > div:last-child { border-top: 2px solid #eee; padding-top: 1rem; font-size: 1.15rem; font-weight: 700; color: var(--charcoal); margin-top: 0.25rem; margin-bottom: 0; }
+            .receipt-brand { text-align: center; margin-bottom: 2rem; font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; letter-spacing: 4px; color: var(--charcoal); text-transform: uppercase; padding-bottom: 1rem; border-bottom: 1px solid var(--gold); }
+            .no-print, .receipt-actions { display: none !important; }
+            @page { margin: 0; size: A4; }
+        </style>
+        </head><body>
+        <div class='receipt-brand'>DODCH</div>
+        ${receiptHTML}
+        </body></html>`);
+    win.document.close();
+    win.document.title = fileName;
+    win.focus();
+    setTimeout(() => { win.print(); }, 800);
+};
+
 const getProductImages = (product) => {
     if (!product) return [];
     let images = [];
@@ -184,6 +241,45 @@ document.addEventListener('DOMContentLoaded', () => {
             #cart-drawer .qty-display { min-width:24px; text-align:center; font-weight:500; }
             #cart-drawer .cart-item-remove-btn { background:none; border:none; cursor:pointer; font-size:0.9rem; color:rgba(0,0,0,0.6); text-decoration:underline; padding:0; }
             @media (max-width: 480px) { #cart-drawer .cart-item-img { width:64px; height:64px; flex:0 0 64px; } #cart-drawer .cart-item-actions { min-width:72px; } }
+
+            /* Admin Dashboard: Export Status Visuals */
+            .admin-order-card.exported { opacity: 0.65; filter: grayscale(0.4); border-left: 5px solid #ddd !important; background: #fafafa; }
+            .admin-order-card.exported .status-badge { opacity: 0.8; }
+            .export-status-badge { padding: 4px 10px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; margin-left: auto; letter-spacing: 0.5px; }
+            .export-status-badge.status-ready { background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb; }
+            .export-status-badge.status-exported { background: #f5f5f5; color: #888; border: 1px solid #eee; }
+            .local-order-badge { background: #fff3e0; color: #e65100; border: 1px solid #ffe0b2; }
+            .status-local-order { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+
+            /* Local Order Modal */
+            .local-order-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 3000; backdrop-filter: blur(5px); opacity:0; transition: opacity 0.3s ease; }
+            .local-order-modal.active { display: flex; opacity: 1; }
+
+            /* Performance Metrics Admin & Product Styles */
+            .modern-performance-container { display: flex; flex-direction: column; gap: 1rem; }
+            .performance-input-row { transition: all 0.3s ease; }
+            .performance-input-row:hover { border-color: var(--accent-gold) !important; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+            .metric-level-label-input { font-size: 0.8rem !important; height: 32px !important; padding: 4px 10px !important; }
+            .section-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+            .admin-btn-sm { background: var(--text-charcoal); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
+            .perf-levels { display: flex; gap: 4px; margin-top: 8px; }
+            .level-step { height: 6px; flex: 1; background: #eee; border-radius: 10px; transition: all 0.5s ease; }
+            .level-step.active { background: var(--accent-gold); }
+            .perf-header { display: flex; justify-content: space-between; align-items: baseline; }
+            .perf-label { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-charcoal); }
+            .perf-value { font-size: 0.75rem; color: var(--accent-gold-text); font-weight: 700; }
+
+            .local-order-modal-content { background: #fff; width: 95%; max-width: 650px; max-height: 90vh; overflow-y: auto; padding: 2.5rem; border-radius: 24px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+            .local-order-product-suggestions { position: absolute; width: 100%; background: #fff; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 100; margin-top: 5px; max-height: 200px; overflow-y: auto; }
+            .local-order-product-suggestions div { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f5f5f5; transition: background 0.2s; }
+            .local-order-product-suggestions div:hover { background: #f9f9f9; color: var(--accent-gold-text); }
+            .local-order-product-item { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid #f0f0f0; border-radius: 14px; margin-bottom: 0.75rem; background: #fafafa; }
+            .local-order-product-item img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; }
+            .local-order-summary { margin: 2rem 0; padding: 1.5rem; background: #fcfcfc; border-radius: 16px; border: 1px solid #f0f0f0; }
+            .local-order-summary div { display: flex; justify-content: space-between; margin-bottom: 0.6rem; font-size: 0.95rem; }
+            .local-order-summary .total { font-weight: 700; font-size: 1.25rem; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 2px solid #eee; color: var(--text-charcoal); }
+            .local-order-actions { display: flex; gap: 1rem; margin-top: 1rem; }
+            .local-order-product-search-wrapper { position: relative; margin-bottom: 1.5rem; }
         `;
         const s = document.createElement('style');
         s.id = 'cart-fixes-style';
@@ -929,11 +1025,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <a ${linkAttributes}>
                             <div class="product-image-wrapper" style="${isActuallyOOS ? 'background-color: #f0f0f0;' : ''}">
                                 ${badgeHTML}
-                                <img loading="lazy" src="${getProductPrimaryImage(product)}" alt="${product.name}" class="product-card-img" style="${imgStyle}">
+                                <img loading="lazy" src="${getProductPrimaryImage(product)}" alt="${product.name}" class="product-card-img" style="${imgStyle}; view-transition-name: prod-img-${id};">
                                 <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${getProductPrimaryImage(product)}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
                             </div>
                             <div class="product-card-info" style="${isActuallyOOS ? 'opacity: 0.7;' : ''}">
-                                <h3 class="product-card-title" data-name-target="${id}">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
+                                <h3 class="product-card-title" data-name-target="${id}" style="view-transition-name: prod-title-${id};">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
                                 <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
                             </div>
                         </a>
@@ -1054,7 +1150,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        if (animate) {
+        if (animate && document.startViewTransition) {
+            // Use the modern API for internal shop navigation (Category filters)
+            document.startViewTransition(() => renderContent());
+        } else if (animate) {
+            // Fallback for older browsers
             shopLayout.classList.add('fade-out');
             if (shopTransitionTimeout) clearTimeout(shopTransitionTimeout);
 
@@ -1141,6 +1241,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // CRITICAL: Overwrite sizes. If Firestore has no sizes, clear the local sizes to use single price logic.
                         productCatalog[productId].sizes = data.sizes || [];
+
+                        // Sync dynamic performance metrics
+                        if (data.performance) {
+                            productCatalog[productId].performance = data.performance;
+                        }
+                        
+                        // Sync INCI ingredients
+                        if (data.inci) {
+                            productCatalog[productId].inci = data.inci;
+                        }
 
                         // Target specific price elements in the DOM to avoid full re-render
                         const priceTargets = document.querySelectorAll(`[data-price-target="${productId}"]`);
@@ -2024,11 +2134,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initProductPage() {
-        const productDetailContainer = document.querySelector('.product-detail-container');
-        if (!productDetailContainer) return; // Not on product page
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
-        const product = productCatalog[productId] || Object.values(productCatalog).find(p => p.storyUrl === window.location.pathname.split('/').pop()) || productCatalog['glass-glow-shampoo'];
+        const currentFilename = window.location.pathname.split('/').pop() || 'index.html';
+        
+        // Robust product matching for both generic and story pages
+        const product = productCatalog[productId] || 
+                        Object.values(productCatalog).find(p => p.storyUrl === currentFilename) || 
+                        (productId ? null : null);
+
+        if (!product) return;
+        const activeId = productId || Object.keys(productCatalog).find(k => productCatalog[k] === product);
+
         let titleEl = document.getElementById('product-title');
         if (!titleEl) {
             const info = document.querySelector('.product-info');
@@ -2048,6 +2165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
 
         if (titleEl) {
+            if (activeId) titleEl.style.viewTransitionName = `prod-title-${activeId}`;
             if (firestoreSynced) {
                 titleEl.textContent = product.name;
             } else {
@@ -2080,6 +2198,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Add batch number display
+        const existingBatch = document.getElementById('product-batch-display');
+        if (existingBatch) existingBatch.remove();
+        const sortedSizes = product.sizes && product.sizes.length > 0 ? [...product.sizes].sort((a, b) => parseFloat(a.price) - parseFloat(b.price)) : [];
+        const defaultSize = sortedSizes.find(s => !s.outOfStock) || sortedSizes[0];
+        if (defaultSize?.batchNumber) {
+            const batchEl = document.createElement('p');
+            batchEl.id = 'product-batch-display';
+            batchEl.style.cssText = 'font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem; font-family: var(--font-sans);';
+            batchEl.textContent = `Batch: ${defaultSize.batchNumber}`;
+            if (subtitleEl) subtitleEl.after(batchEl);
+        }
+
         if (descEl) {
             if (firestoreSynced) {
                 descEl.textContent = product.description;
@@ -2095,6 +2226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const productImages = getProductImages(product);
         const primaryImage = productImages[0] || '';
         if (imgEl) {
+            if (activeId) imgEl.style.viewTransitionName = `prod-img-${activeId}`;
             imgEl.src = primaryImage;
             if (product.style) imgEl.style = product.style;
         }
@@ -2156,10 +2288,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         document.title = `${product.name} | DODCH`;
 
-        const sizeOptionsContainer = productDetailContainer.querySelector('.size-options');
-        const sizeSelector = productDetailContainer.querySelector('.size-selector');
+        const sizeOptionsContainer = document.querySelector('.size-options');
+        const sizeSelector = document.querySelector('.size-selector');
 
-        if (sizeOptionsContainer) {
+        if (sizeOptionsContainer && product.sizes) {
             sizeOptionsContainer.innerHTML = '';
 
             if (product.sizes && product.sizes.length > 0) {
@@ -2234,6 +2366,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             atcBtn.style.backgroundColor = sizeObj.outOfStock ? "#ccc" : "";
                             atcBtn.style.opacity = sizeObj.outOfStock ? "0.5" : "";
                         }
+                        
+                        // Update Batch Display for selected size
+                        const batchDisplay = document.getElementById('product-batch-display');
+                        if (batchDisplay) {
+                            if (sizeObj.batchNumber) {
+                                batchDisplay.textContent = `Batch: ${sizeObj.batchNumber}`;
+                                batchDisplay.style.display = 'block';
+                            } else { batchDisplay.style.display = 'none'; }
+                        }
                     });
 
                     if (sizeObj.outOfStock) {
@@ -2259,6 +2400,43 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (sizeSelector) sizeSelector.style.display = 'none';
             }
+        }
+
+        // Performance Bars Dynamic Rendering
+        // Target the INCI accordion (usually the first one)
+        const inciAccordionInner = document.querySelector('.accordion-item:first-child .accordion-inner') || 
+                                   document.querySelector('.inci-list-container');
+        if (inciAccordionInner && product.inci) {
+            inciAccordionInner.textContent = product.inci;
+        }
+
+        let perfContainer = document.querySelector('.performance-bars');
+        if (!perfContainer && productInfo) {
+             // If container missing in HTML, inject it before the Add to Cart button
+             perfContainer = document.createElement('div');
+             perfContainer.className = 'performance-bars';
+             perfContainer.style.marginBottom = '2rem';
+             productInfo.querySelector('.add-to-cart-btn')?.before(perfContainer);
+        }
+        if (perfContainer && product.performance && product.performance.length > 0) {
+            perfContainer.innerHTML = product.performance.map(metric => {
+                const level = parseInt(metric.value) || 0;
+                const labels = metric.levels || [];
+                const currentLabel = labels[level - 1] || '';
+                
+                return `
+                    <div class="perf-item">
+                        <div class="perf-header">
+                            <span class="perf-label">${metric.label}</span>
+                            <span class="perf-value">${currentLabel}</span>
+                        </div>
+                        <div class="perf-levels">
+                            ${[1, 2, 3, 4].map(i => `<div class="level-step ${i <= level ? 'active' : ''}"></div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            applyPerformanceColors(); // Apply colors to newly injected bars
         }
         const existingStoryBtn = document.getElementById('product-story-link');
         if (existingStoryBtn) existingStoryBtn.remove();
@@ -2735,13 +2913,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
                         if (isNaN(priceVal)) priceVal = 0;
                         calculatedSubtotal += priceVal * item.quantity;
+                        const prod = productCatalog[item.productId || item.id];
+                        const sizeInfo = prod?.sizes?.find(s => s.label === item.size);
                         return {
                             id: item.id,
                             productId: item.productId || item.id,
                             name: item.name,
                             size: item.size,
                             quantity: item.quantity,
-                            price: priceVal.toFixed(2)
+                            price: priceVal.toFixed(2),
+                            batchNumber: sizeInfo?.batchNumber || prod?.batchNumber || 'N/A',
+                            expiryDate: sizeInfo?.expiryDate || prod?.expiryDate || 'N/A'
                         };
                     });
 
@@ -2776,6 +2958,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const orderId = docRef.id;
                     const finalOrderReference = orderReference;
                     // --- END DIRECT SAVE ---
+
+                    // Generate a clean filename for the PDF save dialog
+                    const safeFileName = `DODCH_Receipt_${finalOrderReference}_${name.replace(/[^a-z0-9\s-]/gi, '').replace(/\s+/g, '_')}`;
 
                     clearTimeout(operationTimeout);
                     console.log("Order placed successfully with ID: ", orderId);
@@ -2891,148 +3076,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <span>Total</span>
                                             <span>${finalTotal.toFixed(2)} TND</span>
                                         </div>
+                                    </div>
                                      <div class="receipt-actions no-print" style="display: flex; gap: 1rem; margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2.5rem;">
-                                        <button onclick="(function(){
-                                            var receiptEl = document.querySelector('.order-receipt-sheet');
-                                            if (!receiptEl) return;
-                                            var receiptHTML = receiptEl.innerHTML;
-                                            var win = window.open('', '_blank', 'width=960,height=800');
-                                            win.document.write(\`<!DOCTYPE html><html><head>
-                                            <meta charset='UTF-8'>
-                                            <title>DODCH Order Receipt</title>
-                                            <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700&display=swap' rel='stylesheet'>
-                                            <style>
-                                                :root {
-                                                    --gold: #D4AF37;
-                                                    --gold-text: #866F00;
-                                                    --charcoal: #1a1a1a;
-                                                }
-                                                * { box-sizing: border-box; margin: 0; padding: 0; }
-                                                body {
-                                                    font-family: 'Montserrat', sans-serif;
-                                                    color: var(--charcoal);
-                                                    background: #fff;
-                                                    padding: 2.5cm 3cm;
-                                                    font-size: 13px;
-                                                    line-height: 1.6;
-                                                }
-                                                h2 {
-                                                    font-family: 'Playfair Display', serif;
-                                                    font-size: 2rem;
-                                                    font-weight: 700;
-                                                    color: var(--charcoal);
-                                                    margin-bottom: 0.4rem;
-                                                }
-                                                h4 {
-                                                    font-size: 0.7rem;
-                                                    color: #888;
-                                                    text-transform: uppercase;
-                                                    letter-spacing: 1.5px;
-                                                    margin-bottom: 0.8rem;
-                                                    font-weight: 500;
-                                                }
-                                                p { color: #555; }
-                                                strong { font-weight: 600; color: var(--charcoal); }
-                                                img { display: block; border-radius: 8px; border: 1px solid #eee; object-fit: cover; }
-
-                                                /* Header */
-                                                .receipt-header {
-                                                    text-align: center;
-                                                    margin-bottom: 2.5rem;
-                                                    padding-bottom: 1.5rem;
-                                                    border-bottom: 1px solid #eee;
-                                                }
-                                                .receipt-header p { color: #666; font-size: 1rem; }
-
-                                                /* Details grid */
-                                                .receipt-details {
-                                                    display: grid;
-                                                    grid-template-columns: 1fr 1fr;
-                                                    gap: 2rem;
-                                                    margin-bottom: 2.5rem;
-                                                    background: #fafafa;
-                                                    padding: 1.5rem;
-                                                    border-radius: 12px;
-                                                }
-                                                .receipt-details p { font-size: 0.9rem; margin-bottom: 0.35rem; }
-
-                                                /* Items */
-                                                .receipt-items-section { margin-bottom: 2.5rem; }
-                                                .receipt-items-section > h4 {
-                                                    border-bottom: 1px solid #eee;
-                                                    padding-bottom: 0.8rem;
-                                                    margin-bottom: 1rem;
-                                                }
-                                                .receipt-items-list > div {
-                                                    display: flex;
-                                                    align-items: center;
-                                                    gap: 1rem;
-                                                    padding: 0.9rem 0;
-                                                    border-bottom: 1px solid #f0f0f0;
-                                                }
-                                                .receipt-items-list > div > div:nth-child(2) { flex-grow: 1; }
-                                                .receipt-items-list h4 {
-                                                    font-size: 0.9rem;
-                                                    color: var(--charcoal);
-                                                    text-transform: none;
-                                                    letter-spacing: 0;
-                                                    margin-bottom: 0.25rem;
-                                                }
-                                                .receipt-items-list p { font-size: 0.78rem; color: #888; }
-                                                .receipt-items-list > div > div:last-child {
-                                                    font-weight: 600;
-                                                    font-size: 0.9rem;
-                                                    color: var(--charcoal);
-                                                    text-align: right;
-                                                }
-
-                                                /* Totals */
-                                                .receipt-totals {
-                                                    width: 100%;
-                                                    max-width: 280px;
-                                                    margin-left: auto;
-                                                }
-                                                .receipt-totals > div {
-                                                    display: flex;
-                                                    justify-content: space-between;
-                                                    font-size: 0.9rem;
-                                                    color: #666;
-                                                    margin-bottom: 0.75rem;
-                                                }
-                                                .receipt-totals > div:last-child {
-                                                    border-top: 2px solid #eee;
-                                                    padding-top: 1rem;
-                                                    font-size: 1.15rem;
-                                                    font-weight: 700;
-                                                    color: var(--charcoal);
-                                                    margin-top: 0.25rem;
-                                                    margin-bottom: 0;
-                                                }
-
-                                                /* DODCH brand header at very top */
-                                                .receipt-brand {
-                                                    text-align: center;
-                                                    margin-bottom: 2rem;
-                                                    font-family: 'Playfair Display', serif;
-                                                    font-size: 1.4rem;
-                                                    font-weight: 700;
-                                                    letter-spacing: 4px;
-                                                    color: var(--charcoal);
-                                                    text-transform: uppercase;
-                                                    padding-bottom: 1rem;
-                                                    border-bottom: 1px solid var(--gold);
-                                                }
-
-                                                .no-print, .receipt-actions { display: none !important; }
-                                                @page { margin: 0; size: A4; }
-                                            </style>
-                                            </head><body>
-                                            <div class='receipt-brand'>DODCH</div>
-                                            \` + receiptHTML + \`</body></html>\`);
-                                            win.document.close();
-                                            win.focus();
-                                            setTimeout(function(){ win.print(); }, 800);
-                                        })()" class="cta-button cta-button-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: var(--text-charcoal); border: 1px solid #ddd; border-radius: 30px; cursor: pointer;">
+                                        <button onclick="window.printCheckoutReceipt('${safeFileName}')" class="cta-button cta-button-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: var(--text-charcoal); border: 1px solid #ddd; border-radius: 30px; cursor: pointer;">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                             Download PDF
                                         </button>
@@ -3594,6 +3640,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const adminProductsList = document.getElementById('admin-products-list');
 
         if (!adminOrdersList) return; // Not on admin page
+
+        const checkExportEligibility = async () => {
+            const exportBtn = document.getElementById('admin-export-btn');
+            if (!exportBtn) return;
+            try {
+                // Check system-wide for any orders that are not terminal (Delivered/Cancelled) and not yet exported
+                const q = query(collection(db, "orders"));
+                const querySnapshot = await getDocs(q);
+                let pendingCount = 0;
+                let exportableCount = 0;
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.exported) return;
+                    if (['Pending', 'Confirmed', 'In Delivery'].includes(data.status)) pendingCount++;
+                    else if (['Delivered', 'Cancelled', 'Local Order'].includes(data.status)) exportableCount++;
+                });
+                if (pendingCount > 0) {
+                    exportBtn.disabled = true;
+                    exportBtn.style.opacity = "0.5";
+                    exportBtn.title = `Export locked: ${pendingCount} order(s) still in progress.`;
+                } else if (exportableCount === 0) {
+                    exportBtn.disabled = true;
+                    exportBtn.style.opacity = "0.5";
+                    exportBtn.title = "No new delivered orders to export.";
+                } else {
+                    exportBtn.disabled = false;
+                    exportBtn.style.opacity = "1";
+                    exportBtn.title = `Export ${exportableCount} delivered order(s).`;
+                }
+            } catch (err) { console.warn("Eligibility check failed", err); }
+        };
+
         onAuthStateChanged(auth, (user) => {
             if (!user || user.uid !== ADMIN_UID) {
                 window.location.href = 'index.html';
@@ -3601,11 +3679,132 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadAdminOrders();
                 loadAdminProducts();
                 loadRevenueChart();
+                
+                // Add "Create Local Order" button - Refined to find the best header element
+                let adminOrdersHeader = document.querySelector('#tab-orders .admin-header');
+                if (!adminOrdersHeader) {
+                    const exportBtnAnchor = document.getElementById('admin-export-btn');
+                    if (exportBtnAnchor) adminOrdersHeader = exportBtnAnchor.parentElement;
+                }
+
+                if (adminOrdersHeader && !document.getElementById('create-local-order-btn')) {
+                    adminOrdersHeader.insertAdjacentHTML('beforeend', '<button id="create-local-order-btn" class="admin-btn btn-add" style="margin-left: 1rem;">+ Create Local Order</button>');
+                    // Fix: Attach listener immediately after dynamic creation
+                    document.getElementById('create-local-order-btn').addEventListener('click', () => {
+                        if (typeof openLocalOrderModal === 'function') openLocalOrderModal();
+                    });
+                }
                 loadAdminMessages();
+                checkExportEligibility();
             }
         });
         const tabs = document.querySelectorAll('.admin-tab-btn');
         const panes = document.querySelectorAll('.tab-pane');
+
+        // --- Local Order Modal HTML ---
+        const localOrderModalHTML = `
+            <div id="local-order-modal" class="local-order-modal">
+                <div class="local-order-modal-content">
+                    <button id="close-local-order-modal" class="qv-close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                    <h3>Create Local Order</h3>
+                    <form id="local-order-form">
+                        <h4>Customer Details</h4>
+                        <div class="form-group">
+                            <input type="text" id="lo-customer-name" placeholder="Customer Name" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" id="lo-customer-email" placeholder="Customer Email (Optional)">
+                        </div>
+                        <div class="form-group">
+                            <input type="tel" id="lo-customer-phone" placeholder="Customer Phone (Optional)">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="lo-customer-address" placeholder="Address" required>
+                        </div>
+                        <div class="form-group">
+                            <select id="lo-customer-city" required>
+                                <option value="" disabled selected>Select Governorate</option>
+                                ${SecurityValidator.TUNISIA_GOVERNORATES.map(gov => `<option value="${gov}">${gov}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="lo-customer-postal" placeholder="Postal Code" required>
+                        </div>
+
+                        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; background: #fff8e1; padding: 0.75rem; border-radius: 8px; border: 1px solid #ffe082;">
+                            <input type="checkbox" id="lo-apply-shipping" checked style="width: auto;">
+                            <label for="lo-apply-shipping" style="font-size: 0.9rem; cursor: pointer; font-weight: 600; color: #795548;">Apply Shipping Fee (7 TND if under 100 TND)</label>
+                        </div>
+
+                        <h4 style="margin-top: 2rem;">Order Items</h4>
+                        <div class="local-order-product-selection">
+                            <div class="local-order-product-search-wrapper">
+                                <input type="text" id="lo-product-search" placeholder="Search products..." class="modern-input">
+                                <div id="lo-product-suggestions" class="local-order-product-suggestions" style="display: none;"></div>
+                            </div>
+                            <div id="lo-selected-product-details" style="display: none; border: 1px solid #eee; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                                <h5 id="lo-selected-product-name" style="margin-top: 0; margin-bottom: 0.5rem;"></h5>
+                                <div style="display: flex; gap: 1rem; align-items: center;">
+                                    <img id="lo-selected-product-img" src="" alt="Product" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                    <div id="lo-selected-product-options" style="flex: 1;">
+                                        <select id="lo-product-size" style="width: auto; padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;"></select>
+                                        <input type="number" id="lo-product-qty" value="1" min="1" style="width: 60px; padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd; margin-left: 0.5rem;">
+                                    </div>
+                                    <button type="button" id="lo-add-product-btn" class="admin-btn btn-save" style="width: auto; padding: 0.5rem 1rem;">Add</button>
+                                </div>
+                            </div>
+                            <div id="lo-current-items-list">
+                                <!-- Added products will appear here -->
+                            </div>
+                        </div>
+
+                        <div class="local-order-summary">
+                            <div>
+                                <span>Subtotal:</span>
+                                <span id="lo-subtotal">0.00 TND</span>
+                            </div>
+                            <div>
+                                <span>Shipping:</span>
+                                <span id="lo-shipping">0.00 TND</span>
+                            </div>
+                            <div class="total">
+                                <span>Total:</span>
+                                <span id="lo-total">0.00 TND</span>
+                            </div>
+                        </div>
+
+                        <div class="local-order-actions">
+                            <button type="button" id="lo-cancel-btn" class="admin-btn btn-delete">Cancel</button>
+                            <button type="submit" id="lo-place-order-btn" class="admin-btn btn-save">Place Local Order</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', localOrderModalHTML);
+
+        // --- Local Order Modal Elements ---
+        const localOrderModal = document.getElementById('local-order-modal');
+        const closeLocalOrderModalBtn = document.getElementById('close-local-order-modal');
+        const localOrderForm = document.getElementById('local-order-form');
+        const loApplyShippingCheckbox = document.getElementById('lo-apply-shipping');
+        const loProductSearch = document.getElementById('lo-product-search');
+        const loProductSuggestions = document.getElementById('lo-product-suggestions');
+        const loSelectedProductDetails = document.getElementById('lo-selected-product-details');
+        const loSelectedProductName = document.getElementById('lo-selected-product-name');
+        const loSelectedProductImg = document.getElementById('lo-selected-product-img');
+        const loProductSize = document.getElementById('lo-product-size');
+        const loProductQty = document.getElementById('lo-product-qty');
+        const loAddProductBtn = document.getElementById('lo-add-product-btn');
+        const loCurrentItemsList = document.getElementById('lo-current-items-list');
+        const loSubtotalEl = document.getElementById('lo-subtotal');
+        const loShippingEl = document.getElementById('lo-shipping');
+        const loTotalEl = document.getElementById('lo-total');
+        const loCancelBtn = document.getElementById('lo-cancel-btn');
+        const loPlaceOrderBtn = document.getElementById('lo-place-order-btn');
+
+        let localOrderCart = [];
+        let selectedProductForAdd = null;
 
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
@@ -3617,6 +3816,251 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (targetPane) targetPane.classList.add('active');
             });
         });
+
+        // --- Local Order Modal Functions ---
+        const openLocalOrderModal = () => {
+            localOrderCart = [];
+            renderLocalOrderProducts();
+            updateLocalOrderSummary();
+            localOrderForm.reset();
+            loSelectedProductDetails.style.display = 'none';
+            loProductSuggestions.style.display = 'none';
+            if (localOrderModal) {
+                localOrderModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        const closeLocalOrderModal = () => {
+            if (localOrderModal) {
+                localOrderModal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        };
+
+        const renderLocalOrderProducts = () => {
+            loCurrentItemsList.innerHTML = '';
+            if (localOrderCart.length === 0) {
+                loCurrentItemsList.innerHTML = '<p style="opacity: 0.7;">No products added yet.</p>';
+                return;
+            }
+            localOrderCart.forEach((item, index) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'local-order-product-item';
+                itemEl.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}">
+                    <div style="flex: 1;">
+                        <p style="margin: 0; font-weight: 600;">${item.name} (${item.size})</p>
+                        <p style="margin: 0; font-size: 0.9rem; color: #666;">Qty: ${item.quantity} @ ${item.price} TND</p>
+                    </div>
+                    <button type="button" class="admin-btn btn-delete lo-remove-item-btn" data-index="${index}">Remove</button>
+                `;
+                loCurrentItemsList.appendChild(itemEl);
+            });
+            document.querySelectorAll('.lo-remove-item-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    localOrderCart.splice(index, 1);
+                    renderLocalOrderProducts();
+                    updateLocalOrderSummary();
+                });
+            });
+        };
+
+        const updateLocalOrderSummary = () => {
+            let subtotal = 0;
+            localOrderCart.forEach(item => {
+                subtotal += parseFloat(item.price) * item.quantity;
+            });
+
+            const applyShipping = loApplyShippingCheckbox ? loApplyShippingCheckbox.checked : true;
+            const SHIPPING_FEE = 7;
+            const FREE_SHIPPING_THRESHOLD = 100;
+
+            let shippingFee = 0;
+            if (applyShipping) {
+                shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+            }
+
+            const total = subtotal + shippingFee;
+
+            loSubtotalEl.textContent = `${subtotal.toFixed(2)} TND`;
+            loShippingEl.textContent = `${shippingFee.toFixed(2)} TND`;
+            loTotalEl.textContent = `${total.toFixed(2)} TND`;
+        };
+
+        // --- Event Listeners for Local Order Modal ---
+        if (closeLocalOrderModalBtn) closeLocalOrderModalBtn.addEventListener('click', closeLocalOrderModal);
+        if (loCancelBtn) loCancelBtn.addEventListener('click', closeLocalOrderModal);
+        if (localOrderModal) localOrderModal.addEventListener('click', (e) => {
+            if (e.target === localOrderModal) closeLocalOrderModal();
+        });
+
+        if (loApplyShippingCheckbox) {
+            loApplyShippingCheckbox.addEventListener('change', updateLocalOrderSummary);
+        }
+
+        loProductSearch.addEventListener('input', debounce(() => {
+            const searchTerm = loProductSearch.value.toLowerCase();
+            loProductSuggestions.innerHTML = '';
+            if (searchTerm.length < 2) {
+                loProductSuggestions.style.display = 'none';
+                return;
+            }
+
+            const filteredProducts = Object.entries(productCatalog).filter(([, prod]) =>
+                prod.name.toLowerCase().includes(searchTerm) || prod.subtitle.toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredProducts.length > 0) {
+                filteredProducts.slice(0, 5).forEach(([id, prod]) => {
+                    const suggestionEl = document.createElement('div');
+                    suggestionEl.textContent = prod.name;
+                    suggestionEl.addEventListener('click', () => {
+                        selectedProductForAdd = { id, ...prod };
+                        loProductSearch.value = prod.name;
+                        loProductSuggestions.style.display = 'none';
+                        loSelectedProductDetails.style.display = 'block';
+                        loSelectedProductName.textContent = prod.name;
+                        loSelectedProductImg.src = getProductPrimaryImage(prod);
+                        loProductSize.innerHTML = '';
+                        if (prod.sizes && prod.sizes.length > 0) {
+                            prod.sizes.forEach(size => {
+                                const option = document.createElement('option');
+                                option.value = size.label;
+                                option.textContent = `${size.label} (${size.price} TND)`;
+                                loProductSize.appendChild(option);
+                            });
+                        } else {
+                            const option = document.createElement('option');
+                            option.value = 'Standard';
+                            option.textContent = `Standard (${prod.price} TND)`;
+                            loProductSize.appendChild(option);
+                        }
+                        loProductQty.value = 1;
+                    });
+                    loProductSuggestions.appendChild(suggestionEl);
+                });
+                loProductSuggestions.style.display = 'block';
+            } else {
+                loProductSuggestions.style.display = 'none';
+            }
+        }, 300));
+
+        loAddProductBtn.addEventListener('click', () => {
+            if (!selectedProductForAdd) {
+                window.showToast("Please select a product first.", "error");
+                return;
+            }
+            const sizeLabel = loProductSize.value;
+            const quantity = parseInt(loProductQty.value);
+            if (isNaN(quantity) || quantity <= 0) {
+                window.showToast("Please enter a valid quantity.", "error");
+                return;
+            }
+
+            let price = selectedProductForAdd.price;
+            if (selectedProductForAdd.sizes && selectedProductForAdd.sizes.length > 0) {
+                const selectedSize = selectedProductForAdd.sizes.find(s => s.label === sizeLabel);
+                if (selectedSize) price = selectedSize.price;
+            }
+
+            const existingItemIndex = localOrderCart.findIndex(item => item.productId === selectedProductForAdd.id && item.size === sizeLabel);
+            if (existingItemIndex > -1) {
+                localOrderCart[existingItemIndex].quantity += quantity;
+            } else {
+                localOrderCart.push({
+                    productId: selectedProductForAdd.id,
+                    name: selectedProductForAdd.name,
+                    size: sizeLabel,
+                    price: parseFloat(price).toFixed(2),
+                    image: getProductPrimaryImage(selectedProductForAdd),
+                    quantity: quantity
+                });
+            }
+            renderLocalOrderProducts();
+            updateLocalOrderSummary();
+            loProductSearch.value = '';
+            loSelectedProductDetails.style.display = 'none';
+            selectedProductForAdd = null;
+        });
+
+        localOrderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (localOrderCart.length === 0) {
+                window.showToast("Please add products to the order.", "error");
+                return;
+            }
+
+            const customerName = document.getElementById('lo-customer-name').value.trim();
+            const customerEmail = document.getElementById('lo-customer-email').value.trim();
+            const customerPhone = document.getElementById('lo-customer-phone').value.trim();
+            const customerAddress = document.getElementById('lo-customer-address').value.trim();
+            const customerCity = document.getElementById('lo-customer-city').value.trim();
+            const customerPostal = document.getElementById('lo-customer-postal').value.trim();
+
+            if (customerEmail && !SecurityValidator.validateEmail(customerEmail)) { window.showToast("Invalid customer email.", "error"); return; }
+            if (customerPhone && !SecurityValidator.validatePhone(customerPhone)) { window.showToast("Invalid customer phone number.", "error"); return; }
+            if (!SecurityValidator.TUNISIA_GOVERNORATES.includes(customerCity)) { window.showToast("Invalid customer city.", "error"); return; }
+            if (SecurityValidator.isProfane(customerName) || SecurityValidator.isProfane(customerAddress)) { window.showToast("Inappropriate language detected in customer details.", "error"); return; }
+
+            loPlaceOrderBtn.disabled = true;
+            loPlaceOrderBtn.textContent = 'Placing Order...';
+
+            try {
+                const orderReference = 'LO-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
+                let calculatedSubtotal = 0;
+                const itemsForFirestore = localOrderCart.map(item => {
+                    calculatedSubtotal += parseFloat(item.price) * item.quantity;
+                    const prod = productCatalog[item.productId];
+                    const sizeInfo = prod?.sizes?.find(s => s.label === item.size);
+                    return { 
+                        ...item, 
+                        price: parseFloat(item.price),
+                        batchNumber: sizeInfo?.batchNumber || prod?.batchNumber || 'N/A',
+                        expiryDate: sizeInfo?.expiryDate || prod?.expiryDate || 'N/A'
+                    }; 
+                });
+
+                const applyShipping = loApplyShippingCheckbox ? loApplyShippingCheckbox.checked : true;
+                const SHIPPING_FEE = 7;
+                const FREE_SHIPPING_THRESHOLD = 100;
+                const shippingFee = (applyShipping && calculatedSubtotal < FREE_SHIPPING_THRESHOLD) ? SHIPPING_FEE : 0;
+                const finalTotal = calculatedSubtotal + shippingFee;
+
+                const orderData = {
+                    orderReference: orderReference,
+                    items: itemsForFirestore,
+                    shipping: {
+                        email: customerEmail,
+                        fullName: customerName,
+                        phone: customerPhone,
+                        address: customerAddress,
+                        city: customerCity,
+                        postalCode: customerPostal
+                    },
+                    subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
+                    shippingFee: shippingFee,
+                    total: parseFloat(finalTotal.toFixed(2)),
+                    status: 'Local Order', // Custom status for local orders
+                    type: 'local', // Custom type flag
+                    adminId: currentUser.uid, // Track which admin created it
+                    timestamp: serverTimestamp()
+                };
+
+                await addDoc(collection(db, "orders"), orderData);
+                window.showToast("Local order placed successfully!", "success");
+                closeLocalOrderModal();
+                loadAdminOrders(); // Refresh the orders list
+            } catch (error) {
+                console.error("Error placing local order:", error);
+                window.showToast("Failed to place local order.", "error");
+            } finally {
+                loPlaceOrderBtn.disabled = false;
+                loPlaceOrderBtn.textContent = 'Place Local Order';
+            }
+        });
+
         const addProductModal = document.getElementById('add-product-modal');
         const addProductBtn = document.getElementById('admin-add-product-btn');
         const cancelProductEditBtn = document.getElementById('cancel-product-edit');
@@ -3683,7 +4127,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (!imagePathInput.value.endsWith('\n')) {
                     imagePathInput.value += '\n';
                 }
-                imagePathInput.value += '';
                 imagePathInput.focus();
                 renderImagePreviews();
             });
@@ -3693,6 +4136,36 @@ document.addEventListener('DOMContentLoaded', () => {
             if (addProductModal) {
                 addProductModal.style.display = 'flex';
                 setTimeout(() => addProductModal.classList.add('active'), 10);
+
+                // Remove global batch fields if they were added dynamically previously
+                const oldBatch = document.getElementById('new-prod-batch');
+                const oldExpiry = document.getElementById('new-prod-expiry');
+                if (oldBatch) oldBatch.closest('.form-group').remove();
+                if (oldExpiry) oldExpiry.closest('.form-group').remove();
+
+                if (addProductForm && !document.getElementById('new-prod-performance-container')) {
+                    const section = document.createElement('div');
+                    section.className = 'form-section';
+                    section.innerHTML = `
+                        <div class="section-header-row">
+                            <h4>Performance Metrics</h4>
+                            <button type="button" id="add-metric-btn" class="admin-btn-sm">+ Add Metric</button>
+                        </div>
+                        <div id="new-prod-performance-container" class="modern-performance-container"></div>
+                    `;
+                    const footer = addProductForm.querySelector('.modal-footer');
+                    if (footer) addProductForm.insertBefore(section, footer);
+                    else addProductForm.appendChild(section);
+
+                    document.getElementById('add-metric-btn').addEventListener('click', () => addPerformanceMetricRow());
+
+                    // Pre-populate defaults for entirely new products
+                    const title = document.getElementById('product-modal-title');
+                    if (title && title.textContent === 'Add New Product') {
+                        addPerformanceMetricRow({ label: 'Hydration', value: 3, levels: ['Dry', 'Normal', 'Hydrated', 'Intense'] });
+                        addPerformanceMetricRow({ label: 'Shine', value: 2, levels: ['Matte', 'Natural', 'Glow', 'Glass-like'] });
+                    }
+                }
             }
         };
 
@@ -3723,28 +4196,70 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        const addSizeInputRow = (size = { label: '', price: '', originalPrice: '' }) => {
+        const addSizeInputRow = (size = { label: '', price: '', originalPrice: '', batchNumber: '', expiryDate: '' }) => {
             const sizeRow = document.createElement('div');
             sizeRow.className = 'size-input-row';
+            sizeRow.style.cssText = 'display: flex; flex-direction: column; gap: 10px; background: #fafafa; padding: 1.25rem; border-radius: 12px; border: 1px solid #eee; margin-bottom: 1rem;';
             sizeRow.innerHTML = `
-                <div class="form-group" style="margin: 0;">
-                    <label style="display:none;">Size</label>
-                    <input type="text" class="size-label-input modern-input" placeholder="Size (e.g., 50ml)" value="${size.label}" required>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px;">
+                    <div class="form-group" style="margin: 0;">
+                        <input type="text" class="size-label-input modern-input" placeholder="Size (e.g., 50ml)" value="${size.label}" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <input type="number" step="0.01" class="size-price-input modern-input" placeholder="Price" value="${size.price}" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <input type="number" step="0.01" class="size-original-price-input modern-input" placeholder="Old Price" value="${size.originalPrice || ''}">
+                    </div>
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="display:none;">Price</label>
-                    <input type="number" step="0.01" class="size-price-input modern-input" placeholder="Price" value="${size.price}" required>
+                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: center;">
+                    <div class="form-group" style="margin: 0;">
+                        <input type="text" class="size-batch-input modern-input" placeholder="Batch #" value="${size.batchNumber || ''}">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <input type="date" class="size-expiry-input modern-input" value="${size.expiryDate || ''}">
+                    </div>
+                    <button type="button" class="remove-size-btn remove-btn" style="position: relative; top: 0; right: 0; width: 32px; height: 32px; background: #ffebee; color: #c62828;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="display:none;">Old Price</label>
-                    <input type="number" step="0.01" class="size-original-price-input modern-input" placeholder="Old Price" value="${size.originalPrice || ''}">
-                </div>
-                <button type="button" class="remove-size-btn remove-btn" style="position: relative; top: 0; right: 0; width: 32px; height: 32px; background: #ffebee; color: #c62828;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
             `;
             if (sizesContainer) sizesContainer.appendChild(sizeRow);
             sizeRow.querySelector('.remove-size-btn').addEventListener('click', () => sizeRow.remove());
+        };
+
+        const addPerformanceMetricRow = (metric = { label: '', value: 3, levels: ['Low', 'Moderate', 'High', 'Intense'] }) => {
+            const container = document.getElementById('new-prod-performance-container');
+            if (!container) return;
+            const row = document.createElement('div');
+            row.className = 'performance-input-row';
+            row.style.cssText = 'background: #fafafa; padding: 1.25rem; border-radius: 12px; border: 1px solid #eee; margin-bottom: 1rem;';
+            row.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div class="form-group" style="margin: 0; flex: 1;">
+                        <input type="text" class="metric-label-input modern-input" placeholder="Metric Name (e.g. Hydration)" value="${metric.label}" required>
+                    </div>
+                    <button type="button" class="remove-metric-btn remove-btn" style="position: relative; top: 0; right: 0; margin-left: 1rem; width: 32px; height: 32px; background: #ffebee; color: #c62828;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.7rem;">Active Level (1-4)</label>
+                        <input type="number" min="1" max="4" class="metric-value-input modern-input" value="${metric.value}">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                    ${[0, 1, 2, 3].map(i => `
+                        <div class="form-group" style="margin: 0;">
+                            <label style="font-size: 0.7rem; color: #888;">Lvl ${i + 1} Label</label>
+                            <input type="text" class="metric-level-label-input modern-input" data-index="${i}" value="${metric.levels ? (metric.levels[i] || '') : ''}" placeholder="Level ${i + 1} label">
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(row);
+            row.querySelector('.remove-metric-btn').addEventListener('click', () => row.remove());
         };
 
         const closeModalTopBtn = document.getElementById('close-modal-top-btn');
@@ -3789,8 +4304,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     label: row.querySelector('.size-label-input').value,
                     price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
                     originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
+                    batchNumber: row.querySelector('.size-batch-input').value.trim(),
+                    expiryDate: row.querySelector('.size-expiry-input').value,
                     outOfStock: false // Default to false, will be preserved below if editing
                 }));
+
+                const performanceMetrics = Array.from(document.querySelectorAll('.performance-input-row')).map(row => ({
+                    label: row.querySelector('.metric-label-input').value.trim(),
+                    value: parseInt(row.querySelector('.metric-value-input').value) || 0,
+                    levels: Array.from(row.querySelectorAll('.metric-level-label-input')).map(inp => inp.value.trim())
+                }));
+
                 const existingProduct = isEdit ? productCatalog[newId] : {};
                 if (isEdit && existingProduct.sizes) {
                     sizes.forEach(newSize => {
@@ -3812,9 +4336,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     name,
                     subtitle: document.getElementById('new-prod-subtitle').value.trim(),
                     description: document.getElementById('new-prod-desc').value.trim(),
+                    inci: document.getElementById('new-prod-inci').value.trim(),
                     image: imagePaths[0],
                     images: imagePaths,
                     sizes,
+                    performance: performanceMetrics,
                     price: Math.min(...sizes.map(s => parseFloat(s.price))).toFixed(2),
                     outOfStock: isEdit ? (existingProduct.outOfStock || false) : false,
                     style: isEdit ? (existingProduct.style || "") : "",
@@ -3857,37 +4383,68 @@ document.addEventListener('DOMContentLoaded', () => {
         const exportBtn = document.getElementById('admin-export-btn');
         if (exportBtn) {
             exportBtn.addEventListener('click', async () => {
-                const originalText = exportBtn.innerText;
-                exportBtn.innerText = "Exporting...";
-                exportBtn.disabled = true;
-
                 try {
-                    let q = collection(db, "orders");
-                    const statusValue = filterStatus ? filterStatus.value : '';
-                    const dateDir = sortDate ? sortDate.value : 'desc';
-
-                    if (statusValue) q = query(q, where("status", "==", statusValue));
-                    q = query(q, orderBy("timestamp", dateDir));
-
-                    const querySnapshot = await getDocs(q);
-                    let csvContent = "data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items\n";
+                    // Smart Export Prep: Count handled orders before confirming
+                    const querySnapshot = await getDocs(collection(db, "orders"));
+                    
+                    const exportableBatch = [];
+                    let csvCount = 0;
+                    let archiveCount = 0;
 
                     querySnapshot.forEach(doc => {
                         const data = doc.data();
-                        const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
-                        const itemsStr = data.items ? data.items.map(i => `${i.quantity}x ${i.name} (${i.size})`).join('; ') : '';
-                        const row = [
-                            data.orderReference || doc.id,
-                            date,
-                            `"${data.shipping?.fullName || ''}"`,
-                            data.shipping?.email || '',
-                            data.status || 'Pending',
-                            data.total || 0,
-                            `"${itemsStr}"`
-                        ].join(",");
-                        csvContent += row + "\n";
+                        if (data.exported || !['Delivered', 'Cancelled', 'Local Order'].includes(data.status)) return;
+                        exportableBatch.push({ id: doc.id, ref: doc.ref, data });
+                        if (data.status === 'Delivered' || data.status === 'Local Order') csvCount++;
+                        archiveCount++;
                     });
 
+                    if (archiveCount === 0) {
+                        window.showToast("No new handled orders to process.", "info");
+                        checkExportEligibility();
+                        return;
+                    }
+
+                    const confirmed = await window.showConfirm(
+                        `You are about to export <strong>${csvCount}</strong> orders to CSV and archive <strong>${archiveCount}</strong> total terminal records. <br><br>Archived orders will be locked and cannot be modified. Proceed?`,
+                        "Confirm Export"
+                    );
+
+                    if (!confirmed) return;
+
+                    const originalText = exportBtn.innerText;
+                    exportBtn.innerText = "Exporting...";
+                    exportBtn.disabled = true;
+
+                    let csvContent = "data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items\n";
+                    let csvRowsCount = 0;
+                    const updatePromises = [];
+
+                    exportableBatch.forEach(item => {
+                        const data = item.data;
+                        if (data.status === 'Delivered' || data.status === 'Local Order') {
+                            const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
+                            const itemsStr = data.items ? data.items.map(i => `${i.quantity}x ${i.name} (${i.size})`).join('; ') : '';
+                            const row = [
+                                data.orderReference || item.id,
+                                date,
+                                `"${data.shipping?.fullName || ''}"`,
+                                data.shipping?.email || '',
+                                data.status,
+                                data.total || 0,
+                                `"${itemsStr}"`
+                            ].join(",");
+                            
+                            csvContent += row + "\n";
+                            csvRowsCount++;
+                        }
+                        
+                        updatePromises.push(updateDoc(item.ref, { exported: true }));
+                    });
+
+                    await Promise.all(updatePromises);
+
+                    if (csvRowsCount > 0) {
                     const encodedUri = encodeURI(csvContent);
                     const link = document.createElement("a");
                     link.setAttribute("href", encodedUri);
@@ -3895,17 +4452,157 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
+                        window.showToast(`Exported ${csvRowsCount} orders and marked ${archiveCount} as handled.`, "success");
+                    } else {
+                        window.showToast(`Archived ${archiveCount} terminal orders (No CSV needed).`, "success");
+                    }
 
-                    window.showToast("Export complete!", "success");
+                    // Refresh the current view to show the dimmed states
+                    loadAdminOrders(currentPage - 1);
                 } catch (error) {
                     console.error("Export failed:", error);
                     window.showToast("Export failed. Check console for details.", "error");
                 } finally {
-                    exportBtn.innerText = originalText;
-                    exportBtn.disabled = false;
+                    exportBtn.innerText = "Export CSV";
+                    checkExportEligibility();
                 }
             });
         }
+
+        const printOrderReceipt = (order) => {
+            const dateStr = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleDateString('en-US', { 
+                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+            }) : 'N/A';
+            
+            const safeFileName = `DODCH_Receipt_${(order.orderReference || order.id.slice(0, 8)).toUpperCase()}_${(order.shipping?.fullName || 'Customer').replace(/[^a-z0-9\s-]/gi, '').replace(/\s+/g, '_')}`;
+
+            let itemsHtml = '';
+            order.items.forEach(item => {
+                const pId = item.productId || item.id;
+                const product = productCatalog[pId];
+                const img = item.image || (product ? getProductPrimaryImage(product) : 'placeholder-glow.webp');
+                const price = parseFloat(item.price);
+                const sub = price * item.quantity;
+                
+                itemsHtml += `
+                    <div style="display: flex; align-items: center; gap: 1.5rem; padding: 1.25rem 0; border-bottom: 1px solid #f2f2f2; break-inside: avoid;">
+                        <div style="width: 70px; height: 70px; flex-shrink: 0; border-radius: 10px; overflow: hidden; border: 1px solid #eee; background: #fafafa;">
+                            <img src="${img}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <div style="flex-grow: 1;">
+                            <h4 style="margin: 0 0 0.4rem 0; font-size: 1rem; color: #1a1a1a; font-family: 'Montserrat', sans-serif; font-weight: 600;">${item.name}</h4>
+                            <p style="margin: 0; font-size: 0.85rem; color: #777; letter-spacing: 0.5px;">Size: ${item.size} <span style="margin: 0 0.5rem; opacity: 0.3;">|</span> Quantity: ${item.quantity}</p>
+                            <p style="margin: 0.2rem 0 0; font-size: 0.75rem; color: #999;">Batch: ${item.batchNumber || 'N/A'} <span style="margin: 0 0.4rem; opacity: 0.3;">|</span> Exp: ${item.expiryDate || 'N/A'}</p>
+                        </div>
+                        <div style="text-align: right; font-weight: 700; color: #1a1a1a; font-size: 1rem; font-family: 'Montserrat', sans-serif;">
+                            ${sub.toFixed(2)} TND
+                        </div>
+                    </div>
+                `;
+            });
+
+            const subtotal = order.subtotal || order.items.reduce((acc, i) => acc + (parseFloat(i.price) * i.quantity), 0);
+            const shipping = order.shippingFee || 0;
+            const total = order.total || (subtotal + shipping);
+
+            const win = window.open('', '_blank', 'width=900,height=900');
+            win.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset='UTF-8'>
+                    <title>${safeFileName}</title>
+                    <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap' rel='stylesheet'>
+                    <style>
+                        * { box-sizing: border-box; }
+                        body { margin: 0; padding: 50px; background: #fff; font-family: 'Montserrat', sans-serif; color: #2d2d2d; line-height: 1.6; }
+                        h1, h2, h3, h4 { font-family: 'Playfair Display', serif; font-weight: 600; margin: 0; }
+                        .receipt-wrapper { max-width: 800px; margin: 0 auto; position: relative; }
+                        .header { text-align: center; margin-bottom: 4rem; padding-bottom: 2rem; border-bottom: 1px solid #f0f0f0; }
+                        .logo { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 2.8rem; letter-spacing: 8px; text-transform: uppercase; color: #1a1a1a; margin-bottom: 0.5rem; }
+                        .tagline { color: #C5A059; font-size: 0.8rem; letter-spacing: 3px; text-transform: uppercase; font-weight: 500; }
+                        
+                        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; margin-bottom: 4rem; break-inside: avoid; }
+                        .section-label { font-size: 0.7rem; color: #bbb; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 1.2rem; display: block; border-bottom: 1px solid #f5f5f5; padding-bottom: 0.5rem; }
+                        .detail-val { font-size: 0.95rem; margin-bottom: 0.4rem; color: #333; }
+                        .detail-val strong { font-weight: 600; color: #1a1a1a; }
+
+                        .items-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.5rem; }
+                        
+                        .totals-box { width: 100%; max-width: 320px; margin-left: auto; margin-top: 3rem; background: #fafafa; padding: 2rem; border-radius: 16px; border: 1px solid #f0f0f0; break-inside: avoid; }
+                        .total-row { display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 1rem; color: #666; }
+                        .total-row.grand { margin-top: 1.2rem; padding-top: 1.2rem; border-top: 2px solid #1a1a1a; font-size: 1.5rem; font-weight: 800; color: #1a1a1a; }
+
+                        .footer { margin-top: 6rem; text-align: center; border-top: 1px solid #eee; padding-top: 3rem; break-inside: avoid; }
+                        .quote { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.1rem; color: #888; margin-bottom: 1.5rem; }
+                        .footer-links { font-size: 0.8rem; letter-spacing: 1px; color: #bbb; }
+
+                        @media print {
+                            body { padding: 0; }
+                            .totals-box { background: #fff !important; border: 1px solid #eee; }
+                            @page { margin: 1.5cm; size: A4; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="receipt-wrapper">
+                        <div class="header">
+                            <div class="logo">DODCH</div>
+                            <div class="tagline">The Golden Standard of Mediterranean Beauty</div>
+                        </div>
+
+                        <div class="details-grid">
+                            <div>
+                                <span class="section-label">Order Details</span>
+                                <div class="detail-val"><strong>Reference:</strong> #${order.orderReference || order.id.slice(0, 8).toUpperCase()}</div>
+                                <div class="detail-val"><strong>Date:</strong> ${dateStr}</div>
+                                <div class="detail-val"><strong>Status:</strong> ${order.status}</div>
+                                ${order.type === 'local' ? '<div class="detail-val" style="color: #e65100; font-weight: 700; margin-top: 1rem;">LOCAL ORDER</div>' : ''}
+                            </div>
+                            <div>
+                                <span class="section-label">Shipping Details</span>
+                                <div class="detail-val"><strong>${escapeHTML(order.shipping?.fullName) || 'N/A'}</strong></div>
+                                <div class="detail-val">${escapeHTML(order.shipping?.address) || 'N/A'}</div>
+                                <div class="detail-val">${escapeHTML(order.shipping?.city) || ''} ${escapeHTML(order.shipping?.postalCode) || ''}</div>
+                                <div class="detail-val">${escapeHTML(order.shipping?.phone) || 'N/A'}</div>
+                                <div class="detail-val" style="font-size: 0.85rem; color: #888;">${escapeHTML(order.shipping?.email) || ''}</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="section-label">Order Summary</span>
+                            ${itemsHtml}
+                        </div>
+
+                        <div class="totals-box">
+                            <div class="total-row">
+                                <span>Subtotal</span>
+                                <span>${parseFloat(subtotal).toFixed(2)} TND</span>
+                            </div>
+                            <div class="total-row">
+                                <span>Shipping</span>
+                                <span>${shipping === 0 ? 'Free' : shipping.toFixed(2) + ' TND'}</span>
+                            </div>
+                            <div class="total-row grand">
+                                <span>Total</span>
+                                <span>${parseFloat(total).toFixed(2)} TND</span>
+                            </div>
+                        </div>
+
+                        <div class="footer">
+                            <div class="quote">"At DODCH, luxury is not just a label; it is an obsession."</div>
+                            <div class="footer-links">WWW.DODCH.COM <span style="margin: 0 1rem; opacity: 0.2;">|</span> TUNISIA</div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `);
+            win.document.close();
+            win.document.title = safeFileName;
+            win.focus();
+            // Use a slight timeout to ensure OS print driver registers the new title for filename pre-population
+            setTimeout(() => { win.print(); }, 800);
+        };
 
         const loadAdminMessages = async () => {
             const adminMessagesList = document.getElementById('admin-messages-list');
@@ -4052,18 +4749,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     ordersToRender.forEach(order => {
                         const date = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleString() : 'N/A';
                         const status = order.status || 'Pending';
+                        const isExported = order.exported === true;
+                        const isLocalOrder = order.type === 'local';
+                        
+                        // Badge priority: Exported > Local Order > New
+                        let badgeHTML = isExported 
+                            ? '<span class="export-status-badge status-exported">Exported</span>' 
+                            : (isLocalOrder ? '<span class="export-status-badge local-order-badge">Local Order</span>' : '<span class="export-status-badge status-ready">New</span>');
 
                         const el = document.createElement('div');
-                        el.className = 'admin-order-card';
+                        el.className = `admin-order-card ${isExported ? 'exported' : ''}`;
                         el.innerHTML = `
                         <div class="admin-order-header">
                             <strong>#${order.orderReference || order.id.slice(0, 6)}</strong>
                             <span>${date}</span>
+                            ${badgeHTML}
                         </div>
                         <div class="admin-order-details">
-                            <p><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)}</p>
-                            <p><strong>Email:</strong> ${escapeHTML(order.shipping?.email)}</p>
-                            <p><strong>Address:</strong> ${escapeHTML(order.shipping?.address)}, ${escapeHTML(order.shipping?.city)}</p>
+                            <p><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)} (${escapeHTML(order.shipping?.phone || 'N/A')})</p>
+                            <p><strong>Email:</strong> ${escapeHTML(order.shipping?.email || 'N/A')}</p>
+                            <p><strong>Address:</strong> ${escapeHTML(order.shipping?.address || 'N/A')}, ${escapeHTML(order.shipping?.city || '')}</p>
                             <p><strong>Total:</strong> <span style="color: var(--accent-gold-text); font-weight: 700;">${order.total} TND</span></p>
                             <div class="admin-order-items">
                                 ${order.items.map(i => `<div>• ${i.quantity}x ${escapeHTML(i.name)} (${escapeHTML(i.size)})</div>`).join('')}
@@ -4071,13 +4776,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="admin-order-actions">
                             <span class="status-badge status-${status.toLowerCase().replace(/\s/g, '-')}">${status}</span>
-                            <select class="admin-status-select" data-id="${order.id}">
-                                <option value="" disabled selected>Update Status</option>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <select class="admin-status-select" data-id="${order.id}" ${isExported ? 'disabled title="Exported orders cannot be modified"' : ''} style="margin: 0; min-width: 140px;">
+                                    <option value="" disabled selected>Update Status</option>
                                 <option value="Confirmed">Confirmed</option>
                                 <option value="In Delivery">In Delivery</option>
                                 <option value="Delivered">Delivered</option>
                                 <option value="Cancelled">Cancelled</option>
                             </select>
+                                <button class="admin-btn btn-save admin-download-receipt-btn" data-id="${order.id}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.75rem;">Download Receipt</button>
+                            </div>
                         </div>
                     `;
                         adminOrdersList.appendChild(el);
@@ -4131,6 +4839,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             try {
                                 await updateDoc(doc(db, "orders", orderId), { status: newStatus, hasUnseenUpdate: true });
                                 window.showToast("Order status updated", "success");
+                                checkExportEligibility(); // Re-evaluate export button state
 
                                 const order = orders.find(o => o.id === orderId);
 
@@ -4151,7 +4860,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     }
 
                                     window.sendTargetedPushNotification(db, order.userId, pushTitle, pushBody, '/my-account.html#orders');
-                                } else if (order && order.userId === 'guest') {
+                                } else if (order && order.userId === 'guest' && order.type !== 'local') {
                                     window.showToast("Push Not Sent: Guest order (not linked to a user account).", "info");
                                 }
                                 if (newStatus === 'Confirmed') {
@@ -4195,6 +4904,14 @@ The DODCH Team`;
                     });
                 });
 
+                adminOrdersList.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.admin-download-receipt-btn');
+                    if (btn) {
+                        const orderId = btn.dataset.id;
+                        const order = orders.find(o => o.id === orderId);
+                        if (order) printOrderReceipt(order);
+                    }
+                });
             } catch (error) {
                 console.error("Error loading orders:", error);
                 if (error.code === 'permission-denied') {
@@ -4276,6 +4993,7 @@ The DODCH Team`;
                         if (data.name) productCatalog[id].name = data.name;
                         if (data.subtitle) productCatalog[id].subtitle = data.subtitle;
                         if (data.description) productCatalog[id].description = data.description;
+                        if (data.inci) productCatalog[id].inci = data.inci;
                         productCatalog[id].price = data.price || null;
                         productCatalog[id].originalPrice = data.originalPrice || null;
                         productCatalog[id].outOfStock = data.outOfStock === true;
@@ -4324,12 +5042,18 @@ The DODCH Team`;
                     priceInputsHTML = '<div class="price-inputs-container">';
                     product.sizes.forEach((size, index) => {
                         priceInputsHTML += `
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 5px;">
+                            <div style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                                 <span style="font-size: 0.8rem; color: #666; flex: 1;">${size.label}</span>
                                 <div style="display: flex; align-items: center; gap: 5px; flex: 3;">
                                     <input type="number" class="admin-size-price-input" data-index="${index}" value="${parseFloat(size.price)}" placeholder="Price" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
                                     <input type="number" class="admin-size-original-price-input" data-index="${index}" value="${size.originalPrice ? parseFloat(size.originalPrice) : ''}" placeholder="Old" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
                                     <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-size-stock-check" data-index="${index}" ${size.outOfStock ? 'checked' : ''}> OOS</label>
+                                </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                                    <input type="text" class="admin-size-batch-input" data-index="${index}" value="${size.batchNumber || ''}" placeholder="Batch #" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;">
+                                    <input type="date" class="admin-size-expiry-input" data-index="${index}" value="${size.expiryDate || ''}" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;">
                                 </div>
                             </div>
                         `;
@@ -4401,6 +5125,8 @@ The DODCH Team`;
                             const pInput = row.querySelector('.admin-size-price-input');
                             const opInput = row.querySelector('.admin-size-original-price-input');
                             const sCheck = row.querySelector('.admin-size-stock-check');
+                            const bInput = row.querySelector('.admin-size-batch-input');
+                            const eInput = row.querySelector('.admin-size-expiry-input');
 
                             const original = product.sizes[idx];
                             if (parseFloat(pInput.value).toFixed(2) !== parseFloat(original.price).toFixed(2)) hasChanged = true;
@@ -4408,6 +5134,8 @@ The DODCH Team`;
                             const originalOp = original.originalPrice ? parseFloat(original.originalPrice).toFixed(2) : null;
                             if (currentOp !== originalOp) hasChanged = true;
                             if (sCheck.checked !== (original.outOfStock === true)) hasChanged = true;
+                            if ((bInput.value || '') !== (original.batchNumber || '')) hasChanged = true;
+                            if ((eInput.value || '') !== (original.expiryDate || '')) hasChanged = true;
                         });
                     } else {
                         const pInput = el.querySelector('.admin-price-input');
@@ -4437,6 +5165,7 @@ The DODCH Team`;
                     document.getElementById('new-prod-name').value = product.name || '';
                     document.getElementById('new-prod-subtitle').value = product.subtitle || '';
                     document.getElementById('new-prod-desc').value = product.description || '';
+                    document.getElementById('new-prod-inci').value = product.inci || '';
 
                     if (imagePathInput) {
                         const paths = product.images && Array.isArray(product.images) && product.images.length > 0
@@ -4449,12 +5178,18 @@ The DODCH Team`;
                     const modalTitle = document.getElementById('product-modal-title');
                     if (modalTitle) modalTitle.textContent = 'Edit Product';
 
+                    openProductModal(); // Inject section container first
+
                     if (sizesContainer) sizesContainer.innerHTML = '';
                     if (product.sizes && Array.isArray(product.sizes)) {
                         product.sizes.forEach(size => addSizeInputRow(size));
                     }
 
-                    openProductModal();
+                    const perfContainer = document.getElementById('new-prod-performance-container');
+                    if (perfContainer) perfContainer.innerHTML = '';
+                    if (product.performance && Array.isArray(product.performance)) {
+                        product.performance.forEach(m => addPerformanceMetricRow(m));
+                    }
                 });
             });
 
@@ -4483,6 +5218,14 @@ The DODCH Team`;
                                 const stockCheck = card.querySelector(`.admin-size-stock-check[data-index="${index}"]`);
                                 if (stockCheck) {
                                     productCatalog[id].sizes[index].outOfStock = stockCheck.checked;
+                                }
+                                const batchInput = card.querySelector(`.admin-size-batch-input[data-index="${index}"]`);
+                                if (batchInput) {
+                                    productCatalog[id].sizes[index].batchNumber = batchInput.value.trim();
+                                }
+                                const expiryInput = card.querySelector(`.admin-size-expiry-input[data-index="${index}"]`);
+                                if (expiryInput) {
+                                    productCatalog[id].sizes[index].expiryDate = expiryInput.value;
                                 }
                             });
                             const prices = productCatalog[id].sizes.map(s => parseFloat(s.price));
@@ -4586,18 +5329,20 @@ The DODCH Team`;
                 let totalOrdersCount = 0;
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                const validStatuses = ['Confirmed', 'In Delivery', 'Delivered'];
+                const validStatuses = ['Confirmed', 'In Delivery', 'Delivered', 'Local Order'];
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     totalOrdersCount++;
-                    if (data.timestamp && data.total && data.status && validStatuses.includes(data.status)) {
-                        totalRevenue += data.total;
+                    if (data.timestamp && data.status && validStatuses.includes(data.status)) {
+                        // Exclude shipping fee from revenue (Use subtotal if available, otherwise calculate it)
+                        const orderRevenue = data.subtotal || (data.total ? (data.total - (data.shippingFee || 0)) : 0);
+                        totalRevenue += orderRevenue;
 
                         const date = new Date(data.timestamp.seconds * 1000);
                         if (date >= thirtyDaysAgo) {
                             const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                            revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + data.total;
+                            revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + orderRevenue;
                         }
                     }
                 });
@@ -5040,7 +5785,7 @@ The DODCH Team`;
                     <a href="product.html?id=${id}">
                         <div class="product-image-wrapper">
                             ${badgeHTML}
-                            <img loading="lazy" src="${getProductPrimaryImage(product) || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}">
+                            <img loading="lazy" src="${getProductPrimaryImage(product) || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}; view-transition-name: prod-img-${id};">
                             <button class="quick-view-btn" 
                                 data-id="${id}" 
                                 data-title="${product.name}" 
@@ -5052,7 +5797,7 @@ The DODCH Team`;
                             </button>
                         </div>
                         <div class="product-card-info">
-                            <h3 class="product-card-title" data-name-target="${id}">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
+                            <h3 class="product-card-title" data-name-target="${id}" style="view-transition-name: prod-title-${id};">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
                             <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
                         </div>
                     </a>
@@ -5091,16 +5836,28 @@ The DODCH Team`;
                 });
 
                 const updateScrollUI = () => {
+                    const isScrollable = grid.scrollWidth > grid.clientWidth + 10;
+                    
+                    if (!isScrollable) {
+                        btnPrev.style.display = 'none';
+                        btnNext.style.display = 'none';
+                        if (wrapper) {
+                            wrapper.classList.remove('show-left-fade', 'show-right-fade');
+                        }
+                        return;
+                    }
+
+                    btnPrev.style.display = 'flex';
+                    btnNext.style.display = 'flex';
+
                     const isStart = grid.scrollLeft <= 10;
                     const isEnd = grid.scrollLeft + grid.clientWidth >= grid.scrollWidth - 10;
 
-                    // Toggle arrows
                     btnPrev.style.opacity = isStart ? '0.3' : '1';
                     btnPrev.style.pointerEvents = isStart ? 'none' : 'auto';
                     btnNext.style.opacity = isEnd ? '0.3' : '1';
                     btnNext.style.pointerEvents = isEnd ? 'none' : 'auto';
 
-                    // Toggle vignette fades
                     if (wrapper) {
                         wrapper.classList.toggle('show-left-fade', !isStart);
                         wrapper.classList.toggle('show-right-fade', !isEnd);
@@ -5108,6 +5865,8 @@ The DODCH Team`;
                 };
 
                 grid.addEventListener('scroll', updateScrollUI);
+                const resizeObserver = new ResizeObserver(updateScrollUI);
+                resizeObserver.observe(grid);
                 updateScrollUI();
             }
         }, 0);
@@ -6090,7 +6849,8 @@ const initAccountTabs = () => {
         });
     });
 };
-const initializePerformanceBars = () => {
+
+function applyPerformanceColors() {
     const getLevelColor = (level) => {
         const colorScale = ["#B8995E", "#8EA35E", "#5DA35E", "#2E7D32"];
         return colorScale[level - 1] || "#B8995E";
@@ -6110,20 +6870,20 @@ const initializePerformanceBars = () => {
             if (valueEl) valueEl.style.color = color;
         }
     });
-};
+}
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initProductReviews();
         initGlobalReviewPrompt();
         initAccountTabs();
-        initializePerformanceBars();
+        applyPerformanceColors();
     });
 } else {
     initProductReviews();
     initGlobalReviewPrompt();
     initAccountTabs();
-    initializePerformanceBars();
+    applyPerformanceColors();
 }
 
 const SEARCH_SYNONYMS = {
@@ -7490,4 +8250,4 @@ if (initialSearch) {
 MotionBlurEngine.init();
 window.addEventListener('load', initPushNotifications);
 
-import "./admin-edit.js";
+// import "./admin-edit.js"; // Conflict resolved: logic centralized in Inventory Dashboard

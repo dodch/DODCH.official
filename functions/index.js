@@ -11,8 +11,11 @@ function getEmailHtml(orderData) {
   const orderId = orderData.id.slice(0, 8).toUpperCase();
   const itemsHtml = orderData.items.map((item) => `
     <tr style="border-bottom: 1px solid #eee;">
-      <td style="padding: 10px 0;">${item.name} (${item.size})</td>
-      <td style="padding: 10px 0; text-align: right;">${item.quantity} x ${item.price}</td>
+      <td style="padding: 15px 0;">
+        <div style="font-weight: 600;">${item.name} (${item.size})</div>
+        <div style="font-size: 0.75rem; color: #888; margin-top: 4px;">Batch: ${item.batchNumber || 'N/A'} | Exp: ${item.expiryDate || 'N/A'}</div>
+      </td>
+      <td style="padding: 15px 0; text-align: right; vertical-align: top;">${item.quantity} x ${item.price}</td>
     </tr>
   `).join("");
 
