@@ -853,7 +853,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'silk-therapy-mask',
         'foaming-cleanser',
         'advanced-ha-serum',
-        'retinol-night-cream'
+        'retinol-night-cream',
+        'sooth-repair'
     ];
 
     // --- PRODUCT CATALOG (Single Source of Truth) ---
@@ -937,6 +938,19 @@ document.addEventListener('DOMContentLoaded', () => {
             storyUrl: "retinol-night-cream.html",
             orderIndex: 5,
             sizes: []
+        },
+        'sooth-repair': {
+            name: "DODCH Sooth & Repair",
+            category: "skin-care",
+            subCategory: "creams",
+            subtitle: "Intensive Barrier Recovery",
+            price: null,
+            image: "IMG_3799.webp",
+            description: "An intensive recovery treatment designed to soothe inflammation and repair the skin barrier. Formulated with Mediterranean botanicals to restore radiance to stressed skin.",
+            style: "",
+            storyUrl: "sooth-repair.html",
+            orderIndex: 6,
+            sizes: []
         }
     };
     productCatalog = { ...defaultProductCatalog };
@@ -974,6 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const activeSub = urlParams.get('sub');
             const generateCardHTML = (id, product, index = 0) => {
                 const staggerDelay = `${(index % 4) * 0.15}s`;
+                const primaryImg = getProductPrimaryImage(product);
                 let displayPrice = product.price;
                 let originalPriceDisplay = '';
                 let hasDiscount = false;
@@ -1023,10 +1038,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                     <div class="product-card reveal" style="--anim-delay: ${staggerDelay};" data-product-id="${id}">
                         <a ${linkAttributes}>
+                            <div class="tinted-shadow" style="background-image: url('${primaryImg}');"></div>
                             <div class="product-image-wrapper" style="${isActuallyOOS ? 'background-color: #f0f0f0;' : ''}">
                                 ${badgeHTML}
-                                <img loading="lazy" src="${getProductPrimaryImage(product)}" alt="${product.name}" class="product-card-img" style="${imgStyle}; view-transition-name: prod-img-${id};">
-                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${getProductPrimaryImage(product)}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
+                                <img loading="lazy" src="${primaryImg}" alt="${product.name}" class="product-card-img" style="${imgStyle}; view-transition-name: prod-img-${id};">
+                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${primaryImg}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
                             </div>
                             <div class="product-card-info" style="${isActuallyOOS ? 'opacity: 0.7;' : ''}">
                                 <h3 class="product-card-title" data-name-target="${id}" style="view-transition-name: prod-title-${id};">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
@@ -1200,6 +1216,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data.description) {
                             productCatalog[productId].description = data.description;
                         }
+                        productCatalog[productId].notice = data.notice || "";
                         productCatalog[productId].price = data.price || null;
                         productCatalog[productId].originalPrice = data.originalPrice || null;
                         productCatalog[productId].outOfStock = data.outOfStock === true;
@@ -1229,6 +1246,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const cardImg = gridCard.querySelector('.product-card-img');
                                 if (cardImg && cardImg.src !== newPrimaryImg) {
                                     cardImg.src = newPrimaryImg;
+                                }
+                                const tintedShadow = gridCard.querySelector('.tinted-shadow');
+                                if (tintedShadow) {
+                                    tintedShadow.style.backgroundImage = `url('${newPrimaryImg}')`;
                                 }
                                 const qvBtn = gridCard.querySelector('.quick-view-btn');
                                 if (qvBtn) qvBtn.dataset.img = newPrimaryImg;
@@ -2220,12 +2241,48 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Notice Section Display (Generic & Story Pages)
+        let noticeContainer = document.getElementById('product-notice-container');
+        const storyAccordion = document.querySelector('.product-details-accordion');
+        if (firestoreSynced && product.notice) {
+            if (!noticeContainer) {
+                noticeContainer = document.createElement('div');
+                noticeContainer.id = 'product-notice-container';
+                noticeContainer.className = 'product-notice';
+                
+                if (descEl) {
+                    descEl.after(noticeContainer);
+                } else if (storyAccordion) {
+                    storyAccordion.before(noticeContainer);
+                    noticeContainer.style.marginBottom = '2rem';
+                }
+            }
+            if (noticeContainer) {
+                noticeContainer.innerHTML = `<div class="product-notice-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Important Notice</div>${product.notice}`;
+                noticeContainer.style.display = 'block';
+            }
+        } else if (noticeContainer) {
+            noticeContainer.style.display = 'none';
+        }
+
         const productImages = getProductImages(product);
         const primaryImage = productImages[0] || '';
         if (imgEl) {
             if (activeId) imgEl.style.viewTransitionName = `prod-img-${activeId}`;
             imgEl.src = primaryImage;
             if (product.style) imgEl.style = product.style;
+
+            // Inject Product Page Tinted Shadow
+            const windowEl = imgEl.closest('.product-image-window');
+            if (windowEl) {
+                let tintedShadow = windowEl.parentElement.querySelector('.product-page-tinted-shadow');
+                if (!tintedShadow) {
+                    tintedShadow = document.createElement('div');
+                    tintedShadow.className = 'tinted-shadow product-page-tinted-shadow';
+                    windowEl.before(tintedShadow);
+                }
+                tintedShadow.style.backgroundImage = `url('${primaryImage}')`;
+            }
         }
 
         const thumbnailsContainer = document.getElementById('product-thumbnails');
@@ -2244,6 +2301,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             imgEl.classList.remove('switching');
                         }, 260);
                     }
+                    // Update tinted shadow
+                    const ts = imgEl.closest('.product-gallery')?.querySelector('.product-page-tinted-shadow');
+                    if (ts) ts.style.backgroundImage = `url('${imageSrc}')`;
+
                     thumbnailsContainer.querySelectorAll('.product-thumbnail-btn').forEach(btn => btn.classList.remove('active'));
                     thumb.classList.add('active');
                     if (autoProductImageInterval) {
@@ -2269,6 +2330,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             imgEl.classList.remove('switching');
                         }, 260);
                     }
+                    // Update tinted shadow on auto-switch
+                    const ts = imgEl.closest('.product-gallery')?.querySelector('.product-page-tinted-shadow');
+                    if (ts) ts.style.backgroundImage = `url('${nextImage}')`;
+
                     buttons.forEach(btn => btn.classList.remove('active'));
                     nextBtn.classList.add('active');
                 }
@@ -2336,42 +2401,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     btn.addEventListener('click', () => {
+                        window.triggerHaptic('light');
                         sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
-                        if (priceEl) {
+
+                        const batchDisplay = document.getElementById('product-batch-display');
+                        const animTargets = [priceEl, batchDisplay].filter(Boolean);
+
+                        animTargets.forEach(el => el.classList.add('text-switch-anim', 'text-switch-blur'));
+
+                        setTimeout(() => {
+                            if (priceEl) {
+                                const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                    ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                    : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                                const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
+                                const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+
+                                if (sizeObj.originalPrice) {
+                                    priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span class="offer-badge">ONLINE OFFER</span>`;
+                                } else {
+                                    priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
+                                    priceEl.style.color = "";
+                                }
+                            }
+
+                            const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
                             const isActuallyOOS = product.sizes && product.sizes.length > 0
                                 ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                                 : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                            const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
-                            const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
-
-                            if (sizeObj.originalPrice) {
-                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span class="offer-badge">ONLINE OFFER</span>`;
-                            } else {
-                                priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
-                                priceEl.style.color = "";
+                            if (atcBtn && !isActuallyOOS) {
+                                const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                                atcBtn.disabled = sizeObj.outOfStock === true;
+                                atcBtn.innerHTML = sizeObj.outOfStock ? "Out of Stock" : cartIcon + "Add to Cart";
+                                atcBtn.style.backgroundColor = sizeObj.outOfStock ? "#ccc" : "";
+                                atcBtn.style.opacity = sizeObj.outOfStock ? "0.5" : "";
                             }
-                        }
-                        const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
-                        const isActuallyOOS = product.sizes && product.sizes.length > 0
-                            ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                            : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                        if (atcBtn && !isActuallyOOS) {
-                            const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                            atcBtn.disabled = sizeObj.outOfStock === true;
-                            atcBtn.innerHTML = sizeObj.outOfStock ? "Out of Stock" : cartIcon + "Add to Cart";
-                            atcBtn.style.backgroundColor = sizeObj.outOfStock ? "#ccc" : "";
-                            atcBtn.style.opacity = sizeObj.outOfStock ? "0.5" : "";
-                        }
-                        
-                        // Update Batch Display for selected size
-                        const batchDisplay = document.getElementById('product-batch-display');
-                        if (batchDisplay) {
-                            if (sizeObj.batchNumber) {
-                                batchDisplay.textContent = `Batch: ${sizeObj.batchNumber}`;
-                                batchDisplay.style.display = 'block';
-                            } else { batchDisplay.style.display = 'none'; }
-                        }
+
+                            if (batchDisplay) {
+                                if (sizeObj.batchNumber) {
+                                    batchDisplay.textContent = `Batch: ${sizeObj.batchNumber}`;
+                                    batchDisplay.style.display = 'block';
+                                } else { batchDisplay.style.display = 'none'; }
+                            }
+                            animTargets.forEach(el => el.classList.remove('text-switch-blur'));
+                        }, 250);
                     });
 
                     if (sizeObj.outOfStock) {
@@ -2400,7 +2474,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Performance Bars Dynamic Rendering
-        // Target the INCI accordion (usually the first one)
+        // Target the INCI accordion (usually the first one in story pages)
         const inciAccordionInner = document.querySelector('.accordion-item:first-child .accordion-inner') || 
                                    document.querySelector('.inci-list-container');
         if (inciAccordionInner && product.inci) {
@@ -3254,9 +3328,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (footer) {
             if (!document.getElementById('contact')) {
                 const contactSectionHTML = `
-                    <section id="contact" class="section-padding bg-white">
-                        <div class="container">
-                            <div class="contact-wrapper">
+                    <section id="contact" style="padding: var(--space-12) 0; background: transparent;">
+                        <div class="contact-card" style="margin: 0 var(--space-6) var(--space-12) var(--space-6); background: #FFFFFF; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.08); padding: var(--space-12) 0; border: 1px solid rgba(0,0,0,0.05);">
+                            <div class="container">
+                                <div class="contact-wrapper">
                                 <div class="contact-info">
                                     <h3>Get in Touch</h3>
                                     <p style="margin-bottom: 2rem; opacity: 0.8;">Have questions about our products or your order? We're here to help.</p>
@@ -4065,8 +4140,80 @@ document.addEventListener('DOMContentLoaded', () => {
         const addSizeBtn = document.getElementById('add-size-btn');
         const sizesContainer = document.getElementById('new-prod-sizes-container');
         const imagePathInput = document.getElementById('new-prod-image-paths');
-        const imagePreviewGallery = document.getElementById('image-preview-gallery');
 
+        let currentModalProductId = null; // Track if we are editing an existing product
+
+        const checkModalChanges = () => {
+            const submitBtn = document.querySelector('button[type="submit"][form="add-product-form"]');
+            if (!submitBtn) return;
+
+            if (!currentModalProductId) {
+                submitBtn.disabled = false; // Always allow save for "Add New Product"
+                return;
+            }
+
+            const product = productCatalog[currentModalProductId];
+            if (!product) return;
+
+            let hasChanged = false;
+
+            // 1. Basic Fields
+            if (document.getElementById('new-prod-name').value.trim() !== (product.name || '')) hasChanged = true;
+            if (document.getElementById('new-prod-subtitle').value.trim() !== (product.subtitle || '')) hasChanged = true;
+            if (document.getElementById('new-prod-desc').value.trim() !== (product.description || '')) hasChanged = true;
+            if (document.getElementById('new-prod-inci').value.trim() !== (product.inci || '')) hasChanged = true;
+            const noticeVal = document.getElementById('new-prod-notice')?.value.trim() || "";
+            if (noticeVal !== (product.notice || "")) hasChanged = true;
+
+            // 2. Images
+            if (!hasChanged) {
+                const paths = parseImagePaths(imagePathInput.value);
+                const originalPaths = product.images && Array.isArray(product.images) && product.images.length > 0
+                    ? product.images
+                    : (product.image ? [product.image] : []);
+                if (JSON.stringify(paths) !== JSON.stringify(originalPaths)) hasChanged = true;
+            }
+
+            // 3. Sizes
+            if (!hasChanged) {
+                const currentSizes = Array.from(sizesContainer.querySelectorAll('.size-input-row')).map(row => ({
+                    label: row.querySelector('.size-label-input').value,
+                    price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
+                    originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
+                    batchNumber: row.querySelector('.size-batch-input').value.trim(),
+                    expiryDate: row.querySelector('.size-expiry-input').value
+                }));
+                
+                const originalSizes = (product.sizes || []).map(s => ({
+                    label: s.label,
+                    price: parseFloat(s.price).toFixed(2),
+                    originalPrice: s.originalPrice ? parseFloat(s.originalPrice).toFixed(2) : null,
+                    batchNumber: s.batchNumber || '',
+                    expiryDate: s.expiryDate || ''
+                }));
+                if (JSON.stringify(currentSizes) !== JSON.stringify(originalSizes)) hasChanged = true;
+            }
+
+            // 4. Performance
+            if (!hasChanged) {
+                const currentPerf = Array.from(document.querySelectorAll('.performance-input-row')).map(row => ({
+                    label: row.querySelector('.metric-label-input').value.trim(),
+                    value: parseInt(row.querySelector('.metric-value-input').value) || 0,
+                    levels: Array.from(row.querySelectorAll('.metric-level-label-input')).map(inp => inp.value.trim())
+                }));
+                
+                const originalPerf = (product.performance || []).map(m => ({
+                    label: m.label || '',
+                    value: parseInt(m.value) || 0,
+                    levels: (m.levels || []).map(l => l.trim())
+                }));
+                if (JSON.stringify(currentPerf) !== JSON.stringify(originalPerf)) hasChanged = true;
+            }
+
+            submitBtn.disabled = !hasChanged;
+        };
+
+        const imagePreviewGallery = document.getElementById('image-preview-gallery');
         const parseImagePaths = (raw) => {
             if (!raw) return [];
             return raw
@@ -4140,6 +4287,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (oldBatch) oldBatch.closest('.form-group').remove();
                 if (oldExpiry) oldExpiry.closest('.form-group').remove();
 
+                if (addProductForm && !document.getElementById('new-prod-notice-container')) {
+                    const noticeSection = document.createElement('div');
+                    noticeSection.className = 'form-group';
+                    noticeSection.id = 'new-prod-notice-container';
+                    noticeSection.innerHTML = `
+                        <label for="new-prod-notice">Product Notice (Optional)</label>
+                        <textarea id="new-prod-notice" rows="3" class="modern-input" placeholder="Precautions, limited batch info, etc."></textarea>
+                    `;
+                    const descField = document.getElementById('new-prod-desc')?.closest('.form-group');
+                    if (descField) descField.after(noticeSection);
+                }
+
                 if (addProductForm && !document.getElementById('new-prod-performance-container')) {
                     const section = document.createElement('div');
                     section.className = 'form-section';
@@ -4154,7 +4313,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (footer) addProductForm.insertBefore(section, footer);
                     else addProductForm.appendChild(section);
 
-                    document.getElementById('add-metric-btn').addEventListener('click', () => addPerformanceMetricRow());
+                    document.getElementById('add-metric-btn').addEventListener('click', () => {
+                        addPerformanceMetricRow();
+                        checkModalChanges();
+                    });
 
                     // Pre-populate defaults for entirely new products
                     const title = document.getElementById('product-modal-title');
@@ -4169,10 +4331,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const closeProductModal = () => {
             if (addProductModal) {
                 addProductModal.classList.remove('active');
+                currentModalProductId = null;
                 setTimeout(() => {
                     addProductModal.style.display = 'none';
-                    if (addProductForm) addProductForm.reset();
-                    if (sizesContainer) sizesContainer.innerHTML = '';
+                    // Manually clear fields instead of form.reset() to avoid unexpected behavior with dynamic elements
+                    if (document.getElementById('new-prod-name')) document.getElementById('new-prod-name').value = '';
+                    if (document.getElementById('new-prod-subtitle')) document.getElementById('new-prod-subtitle').value = '';
+                    if (document.getElementById('new-prod-desc')) document.getElementById('new-prod-desc').value = '';
+                    if (document.getElementById('new-prod-inci')) document.getElementById('new-prod-inci').value = '';
+                    if (document.getElementById('new-prod-notice')) document.getElementById('new-prod-notice').value = '';
+                    if (document.getElementById('new-prod-performance-container')) document.getElementById('new-prod-performance-container').innerHTML = '';
+                    if (sizesContainer) sizesContainer.innerHTML = ''; // Clear sizes
                     const productIdInput = document.getElementById('product-id-input');
                     if (productIdInput) productIdInput.value = '';
                     if (imagePathInput) imagePathInput.value = '';
@@ -4181,11 +4350,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        if (addProductBtn) addProductBtn.addEventListener('click', () => {
-            const modalTitle = document.getElementById('product-modal-title');
-            if (modalTitle) modalTitle.textContent = 'Add New Product';
-            openProductModal();
-        });
+        if (addProductBtn) {
+            addProductBtn.addEventListener('click', () => {
+                const modalTitle = document.getElementById('product-modal-title');
+                if (modalTitle) modalTitle.textContent = 'Add New Product';
+                currentModalProductId = null;
+                openProductModal();
+                checkModalChanges();
+            });
+        }
         if (cancelProductEditBtn) cancelProductEditBtn.addEventListener('click', closeProductModal);
         if (addProductModal) {
             addProductModal.addEventListener('click', (e) => {
@@ -4194,6 +4367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const addSizeInputRow = (size = { label: '', price: '', originalPrice: '', batchNumber: '', expiryDate: '' }) => {
+            if (sizesContainer) {
             const sizeRow = document.createElement('div');
             sizeRow.className = 'size-input-row';
             sizeRow.style.cssText = 'display: flex; flex-direction: column; gap: 10px; background: #fafafa; padding: 1.25rem; border-radius: 12px; border: 1px solid #eee; margin-bottom: 1rem;';
@@ -4221,13 +4395,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </div>
             `;
-            if (sizesContainer) sizesContainer.appendChild(sizeRow);
-            sizeRow.querySelector('.remove-size-btn').addEventListener('click', () => sizeRow.remove());
+            sizesContainer.appendChild(sizeRow);
+            
+            sizeRow.querySelectorAll('input').forEach(inp => inp.addEventListener('input', checkModalChanges));
+
+            sizeRow.querySelector('.remove-size-btn').addEventListener('click', async () => {
+                if (await window.showConfirm("Are you sure you want to remove this size option?", "Remove Size")) {
+                    sizeRow.remove();
+                    checkModalChanges();
+                }
+            });
+            }
         };
 
         const addPerformanceMetricRow = (metric = { label: '', value: 3, levels: ['Low', 'Moderate', 'High', 'Intense'] }) => {
             const container = document.getElementById('new-prod-performance-container');
             if (!container) return;
+            
             const row = document.createElement('div');
             row.className = 'performance-input-row';
             row.style.cssText = 'background: #fafafa; padding: 1.25rem; border-radius: 12px; border: 1px solid #eee; margin-bottom: 1rem;';
@@ -4256,15 +4440,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             container.appendChild(row);
-            row.querySelector('.remove-metric-btn').addEventListener('click', () => row.remove());
+            
+            row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', checkModalChanges));
+
+            row.querySelector('.remove-metric-btn').addEventListener('click', async () => {
+                if (await window.showConfirm("Are you sure you want to remove this performance metric?", "Remove Metric")) {
+                    row.remove();
+                    checkModalChanges();
+                }
+            });
         };
 
         const closeModalTopBtn = document.getElementById('close-modal-top-btn');
         if (closeModalTopBtn) closeModalTopBtn.addEventListener('click', closeProductModal);
 
-        if (addSizeBtn) addSizeBtn.addEventListener('click', () => addSizeInputRow());
+        if (addSizeBtn) addSizeBtn.addEventListener('click', () => { addSizeInputRow(); checkModalChanges(); });
 
         if (addProductForm) {
+            addProductForm.addEventListener('input', checkModalChanges);
             addProductForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const submitBtn = document.querySelector('button[type="submit"][form="add-product-form"]');
@@ -4334,6 +4527,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     subtitle: document.getElementById('new-prod-subtitle').value.trim(),
                     description: document.getElementById('new-prod-desc').value.trim(),
                     inci: document.getElementById('new-prod-inci').value.trim(),
+                    notice: document.getElementById('new-prod-notice')?.value.trim() || "",
                     image: imagePaths[0],
                     images: imagePaths,
                     sizes,
@@ -4991,6 +5185,7 @@ The DODCH Team`;
                         if (data.subtitle) productCatalog[id].subtitle = data.subtitle;
                         if (data.description) productCatalog[id].description = data.description;
                         if (data.inci) productCatalog[id].inci = data.inci;
+                        productCatalog[id].notice = data.notice || "";
                         productCatalog[id].price = data.price || null;
                         productCatalog[id].originalPrice = data.originalPrice || null;
                         productCatalog[id].outOfStock = data.outOfStock === true;
@@ -5014,7 +5209,8 @@ The DODCH Team`;
                             style: data.style || '',
                             storyUrl: data.storyUrl || null,
                             category: data.category || 'uncategorized',
-                            subCategory: data.subCategory || ''
+                            subCategory: data.subCategory || '',
+                            notice: data.notice || ''
                         };
                     }
                 });
@@ -5156,6 +5352,13 @@ The DODCH Team`;
                     const product = productCatalog[id];
                     if (!product) return;
 
+                    const modalTitle = document.getElementById('product-modal-title');
+                    if (modalTitle) modalTitle.textContent = 'Edit Product';
+
+                    currentModalProductId = id; // Track for change detection
+
+                    openProductModal(); // Inject section container first (ensures notice textarea exists)
+
                     const idInput = document.getElementById('product-id-input');
                     if (idInput) idInput.value = id;
 
@@ -5163,6 +5366,7 @@ The DODCH Team`;
                     document.getElementById('new-prod-subtitle').value = product.subtitle || '';
                     document.getElementById('new-prod-desc').value = product.description || '';
                     document.getElementById('new-prod-inci').value = product.inci || '';
+                    if (document.getElementById('new-prod-notice')) document.getElementById('new-prod-notice').value = product.notice || '';
 
                     if (imagePathInput) {
                         const paths = product.images && Array.isArray(product.images) && product.images.length > 0
@@ -5171,11 +5375,6 @@ The DODCH Team`;
                         imagePathInput.value = paths.join('\n');
                         renderImagePreviews();
                     }
-
-                    const modalTitle = document.getElementById('product-modal-title');
-                    if (modalTitle) modalTitle.textContent = 'Edit Product';
-
-                    openProductModal(); // Inject section container first
 
                     if (sizesContainer) sizesContainer.innerHTML = '';
                     if (product.sizes && Array.isArray(product.sizes)) {
@@ -5187,6 +5386,8 @@ The DODCH Team`;
                     if (product.performance && Array.isArray(product.performance)) {
                         product.performance.forEach(m => addPerformanceMetricRow(m));
                     }
+
+                    checkModalChanges(); // Initial check to disable Save button
                 });
             });
 
@@ -5254,7 +5455,11 @@ The DODCH Team`;
             document.querySelectorAll('.admin-delete-prod-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const id = e.currentTarget.dataset.id;
-                    if (await window.showConfirm("Are you sure you want to delete this product? This action cannot be undone.", "Delete Product")) {
+                    const prodName = productCatalog[id]?.name || id;
+                    
+                    if (await window.showConfirm(`Are you sure you want to delete <strong>${prodName}</strong>? This action cannot be undone.`, "Delete Product")) {
+                        if (await window.showConfirm(`FINAL WARNING: This will permanently remove <strong>${prodName}</strong> from the shop and database. Are you absolutely certain?`, "Confirm Permanent Deletion")) {
+                            if (await window.showConfirm(`This is your last chance to cancel. Proceed with deleting <strong>${prodName}</strong>?`, "Last Chance")) {
                         try {
                             console.log("Deleting product:", id);
                             if (defaultProductCatalog.hasOwnProperty(id)) {
@@ -5272,6 +5477,8 @@ The DODCH Team`;
                         } catch (error) {
                             console.error("Error deleting product:", error);
                             window.showToast("Failed to delete product.", "error");
+                        }
+                    }
                         }
                     }
                 });
@@ -5482,6 +5689,9 @@ The DODCH Team`;
                         thumbBtn.innerHTML = `<img src="${imageSrc}" alt="Thumbnail ${index + 1}">`;
                         thumbBtn.addEventListener('click', () => {
                             qvImage.src = imageSrc;
+                            const qs = qvImage.parentElement.querySelector('.qv-tinted-shadow');
+                            if (qs) qs.style.backgroundImage = `url('${imageSrc}')`;
+
                             qvThumbnails.querySelectorAll('.qv-thumbnail-btn').forEach(b => b.classList.remove('active'));
                             thumbBtn.classList.add('active');
                         });
@@ -5547,28 +5757,35 @@ The DODCH Team`;
                             window.triggerHaptic('light');
                             sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
                             btn.classList.add('active');
-                            if (sizeObj.originalPrice) {
-                                qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
-                            } else {
-                                qvPrice.textContent = `${sizeObj.price} TND`;
-                            }
 
-                            const isActuallyOOS = product.sizes && product.sizes.length > 0
-                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                            const animTargets = [qvPrice].filter(Boolean);
+                            animTargets.forEach(el => el.classList.add('text-switch-anim', 'text-switch-blur'));
 
-                            if (!isActuallyOOS) {
-                                if (sizeObj.outOfStock) {
-                                    qvAddToCart.disabled = true;
-                                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
-                                    qvAddToCart.style.backgroundColor = "#ccc";
+                            setTimeout(() => {
+                                if (sizeObj.originalPrice) {
+                                    qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
                                 } else {
-                                    qvAddToCart.disabled = false;
-                                    const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                                    qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
-                                    qvAddToCart.style.backgroundColor = "";
+                                    qvPrice.textContent = `${sizeObj.price} TND`;
                                 }
-                            }
+
+                                const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                    ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                    : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
+                                if (!isActuallyOOS) {
+                                    if (sizeObj.outOfStock) {
+                                        qvAddToCart.disabled = true;
+                                        qvAddToCart.querySelector('span').textContent = "Out of Stock";
+                                        qvAddToCart.style.backgroundColor = "#ccc";
+                                    } else {
+                                        qvAddToCart.disabled = false;
+                                        const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                                        qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
+                                        qvAddToCart.style.backgroundColor = "";
+                                    }
+                                }
+                                animTargets.forEach(el => el.classList.remove('text-switch-blur'));
+                            }, 250);
                         });
 
                         if (sizeObj.outOfStock) {
@@ -5737,6 +5954,7 @@ The DODCH Team`;
         relatedIds.forEach(id => {
             const product = productCatalog[id];
             if (!product) return;
+            const primaryImg = getProductPrimaryImage(product);
             let displayPrice = product.price;
             let originalPriceDisplay = '';
             let hasDiscount = false;
@@ -5780,14 +5998,15 @@ The DODCH Team`;
             productsHtml += `
                 <div class="product-card reveal" ${isActuallyOOS ? 'style="opacity: 0.8;"' : ''} data-product-id="${id}">
                     <a href="product.html?id=${id}">
+                        <div class="tinted-shadow" style="background-image: url('${primaryImg || 'https://via.placeholder.com/300'}');"></div>
                         <div class="product-image-wrapper">
                             ${badgeHTML}
-                            <img loading="lazy" src="${getProductPrimaryImage(product) || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}; view-transition-name: prod-img-${id};">
+                            <img loading="lazy" src="${primaryImg || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}; view-transition-name: prod-img-${id};">
                             <button class="quick-view-btn" 
                                 data-id="${id}" 
                                 data-title="${product.name}" 
                                 data-price="${displayPrice || ''}" 
-                                data-img="${getProductPrimaryImage(product) || 'https://via.placeholder.com/300'}" 
+                                data-img="${primaryImg || 'https://via.placeholder.com/300'}" 
                                 data-style="${product.style || ''}"
                                 data-desc="${product.description || ''}">
                                 Quick View
@@ -7174,7 +7393,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const positionDropdown = (inputEl) => {
         const container = inputEl.closest(".search-container");
         if (container && dropdown.parentNode !== container) {
-            container.prepend(halo);
             container.appendChild(dropdown);
             if (!container.querySelector("#search-close-btn")) {
                 const closeBtn = document.createElement("button");
@@ -7185,15 +7403,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 closeBtn.addEventListener("mousedown", (e) => {
                     e.preventDefault();
-                    inputEl.value = "";
-                    dropdown.classList.remove("active");
-                    halo.classList.remove("active");
-                    const nav = document.getElementById("navbar");
-                    if (nav) nav.classList.remove("search-active");
-                    container.classList.remove("active");
-                    document.body.classList.remove("search-active");
-                    document.documentElement.classList.remove("search-active");
-                    inputEl.blur();
+                    closeSearchUI(container, inputEl);
                 });
             }
         }
@@ -7202,6 +7412,30 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
         });
     };
+
+    const closeSearchUI = (container, inputEl) => {
+        if (inputEl) {
+            inputEl.value = "";
+            inputEl.blur();
+        }
+        dropdown.classList.remove("active");
+        halo.classList.remove("active");
+        const nav = document.getElementById("navbar");
+        if (nav) nav.classList.remove("search-active");
+        if (container) {
+            container.classList.remove("active");
+        } else {
+            searchContainers.forEach(c => c.classList.remove("active"));
+        }
+        document.body.classList.remove("search-active");
+        document.documentElement.classList.remove("search-active");
+        selectedIndex = -1;
+    };
+
+    // Handle tab switching and keyboard dismissal/backgrounding
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') closeSearchUI(null, activeInput);
+    });
 
     const layoutDiv = document.createElement("div");
     layoutDiv.className = "search-dropdown-layout";
@@ -7457,13 +7691,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         document.addEventListener("mousedown", (evt) => {
             if (container.classList.contains("active") && !container.contains(evt.target) && !dropdown.contains(evt.target)) {
-                dropdown.classList.remove("active");
-                halo.classList.remove("active");
-                const nav = document.getElementById("navbar");
-                if (nav) nav.classList.remove("search-active");
-                container.classList.remove("active");
-                document.body.classList.remove("search-active");
-                document.documentElement.classList.remove("search-active");
+                closeSearchUI(container, input);
             }
         });
 
@@ -7471,6 +7699,14 @@ document.addEventListener("DOMContentLoaded", () => {
             activeInput = e.target;
             positionDropdown(activeInput);
             handleSearch(e);
+        });
+
+        input.addEventListener("blur", () => {
+            setTimeout(() => {
+                if (container.classList.contains("active")) {
+                    closeSearchUI(container, input);
+                }
+            }, 200);
         });
 
         input.addEventListener("keydown", (e) => {

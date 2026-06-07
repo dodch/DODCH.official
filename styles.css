@@ -1409,6 +1409,11 @@ footer {
     font-size: 0.9rem;
     content-visibility: auto;
     contain-intrinsic-size: auto 500px;
+    /* Floating Card Aesthetic */
+    margin: 0 var(--space-6) var(--space-10) var(--space-6);
+    border-radius: 24px; /* Matches Sidebar and Contact Card */
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .footer-content {
@@ -2179,20 +2184,64 @@ footer {
 .product-card a {
     text-decoration: none;
     color: #1a1a1a !important;
+    position: relative;
+    display: block;
+}
+
+.tinted-shadow {
+    position: absolute;
+    top: 25px;
+    left: 10%;
+    right: 10%;
+    bottom: 15%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(35px) saturate(1.8);
+    opacity: 0.35;
+    z-index: 0;
+    pointer-events: none;
+    transition: transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
+    border-radius: 24px;
+}
+
+/* Product Page & Quick View Specific Shadows */
+.product-page-tinted-shadow {
+    top: 50px !important;
+    left: 5% !important;
+    right: 5% !important;
+    bottom: 5% !important;
+    filter: blur(65px) saturate(2.2) !important;
+    opacity: 0.45 !important;
+}
+
+.qv-tinted-shadow {
+    top: 40px !important;
+    left: 8% !important;
+    right: 8% !important;
+    bottom: 8% !important;
+    filter: blur(50px) saturate(1.8) !important;
+    opacity: 0.4 !important;
 }
 
 .product-image-wrapper {
     position: relative;
+    z-index: 1;
     overflow: hidden;
     border-radius: 20px;
     background-color: #f5f5f5;
     aspect-ratio: 4 / 5;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
     transition: box-shadow 0.3s ease;
 }
 
 .product-card:hover .product-image-wrapper {
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
+}
+
+.product-card:hover .tinted-shadow {
+    opacity: 0.55;
+    transform: translateY(12px) scale(1.02);
+    filter: blur(45px) saturate(2.2);
 }
 
 .product-card-img {
@@ -4758,7 +4807,6 @@ footer {
     }
     #cart-drawer .cart-item-actions { min-width: 72px; }
 }
-    }
 
     .custom-toast {
         min-width: unset;
@@ -6213,6 +6261,45 @@ body.has-notification #login-btn::after {
     border-radius: 0 8px 8px 0;
 }
 
+/* --- Product Notice Section --- */
+.product-notice {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: rgba(212, 175, 55, 0.07);
+    border-left: 4px solid var(--accent-gold);
+    border-radius: 0 12px 12px 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-charcoal);
+    white-space: pre-wrap;
+}
+
+.product-notice-title {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    color: var(--accent-gold-text);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* --- Text Switching Animation --- */
+.text-switch-anim {
+    transition: filter 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    will-change: filter, opacity, transform;
+}
+
+.text-switch-blur {
+    filter: blur(8px) !important;
+    opacity: 0 !important;
+    transform: translateY(2px) scale(0.98) !important;
+}
+
 .panel-image img {
     width: 100%;
     border-radius: 12px;
@@ -7477,7 +7564,7 @@ body.has-notification #login-btn::after {
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 9998;
+    z-index: 10001; /* Above sidebar (10000) and standard navbar (1000) */
     pointer-events: none;
     background: rgba(0, 0, 0, 0.6);
     /* Clean dimming without blur */
