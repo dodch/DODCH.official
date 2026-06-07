@@ -2318,7 +2318,7 @@ footer {
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-3);
-        justify-content: flex-start;
+        justify-content: center;
         width: 100%;
         margin-top: var(--space-4);
     }
@@ -2326,18 +2326,20 @@ footer {
 
 @media (max-width: 768px) {
     .product-detail-container {
-        padding: var(--space-24) var(--space-4) var(--space-12);
+        padding: var(--space-24) var(--space-2) var(--space-12);
         gap: var(--space-8);
+        overflow-x: hidden;
     }
     .product-gallery {
         grid-template-columns: 1fr;
+        min-width: 0;
     }
     .product-thumbnails {
         position: static;
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-2);
-        justify-content: flex-start;
+        justify-content: center;
         width: 100%;
         margin-top: var(--space-4);
     }
@@ -6274,6 +6276,8 @@ body.has-notification #login-btn::after {
     line-height: 1.6;
     color: var(--text-charcoal);
     white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .product-notice-title {
