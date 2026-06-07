@@ -2318,7 +2318,7 @@ footer {
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-3);
-        justify-items: start;
+        justify-content: flex-start;
         width: 100%;
         margin-top: var(--space-4);
     }
@@ -2326,7 +2326,7 @@ footer {
 
 @media (max-width: 768px) {
     .product-detail-container {
-        padding: var(--space-24) var(--space-5) var(--space-12);
+        padding: var(--space-24) var(--space-4) var(--space-12);
         gap: var(--space-8);
     }
     .product-gallery {
@@ -2334,8 +2334,10 @@ footer {
     }
     .product-thumbnails {
         position: static;
-        grid-template-columns: repeat(4, 72px);
-        justify-items: start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        justify-content: flex-start;
         width: 100%;
         margin-top: var(--space-4);
     }
@@ -2536,7 +2538,7 @@ footer {
 
 .size-options {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
     gap: var(--space-3);
 }
 
@@ -9061,6 +9063,37 @@ button[type="submit"]:hover,
     }
 }
 
+/* --- Mobile Full-Width Footer & Contact Alignment --- */
+@media (max-width: 767px) {
+    #contact {
+        padding-top: var(--space-8) !important;
+        padding-bottom: 0 !important; /* Removes space below the contact section */
+    }
+    .contact-card {
+        margin: 0 !important; /* Overrides inline margins to span full width */
+        border-radius: 0 !important; /* Removes rounded corners */
+        border: none !important;
+        box-shadow: none !important;
+        padding: var(--space-10) var(--space-6) !important; /* Internal side padding for text */
+    }
+    .contact-info {
+        text-align: center;
+    }
+    .contact-detail-item {
+        justify-content: center;
+    }
+    .social-links {
+        justify-content: center;
+    }
+    footer {
+        margin: 0 !important; /* Spans full width and attaches to contact section */
+        border-radius: 0 !important; /* Removes rounded corners */
+        border: none !important;
+        box-shadow: none !important;
+        padding-top: var(--space-10) !important;
+    }
+}
+
 /* --- PRINT STYLES FOR ORDER RECEIPT --- */
 @media print {
     @page { margin: 0; size: auto; }
@@ -9101,3 +9134,4 @@ button[type="submit"]:hover,
         print-color-adjust: exact !important; 
     }
 }
+    

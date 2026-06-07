@@ -2258,7 +2258,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             if (noticeContainer) {
-                noticeContainer.innerHTML = `<div class="product-notice-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Important Notice</div>${product.notice}`;
+                const MAX_NOTICE_LENGTH = 180;
+                const titleHtml = `<div class="product-notice-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Important Notice</div>`;
+                
+                if (product.notice.length > MAX_NOTICE_LENGTH) {
+                    const truncated = product.notice.substring(0, MAX_NOTICE_LENGTH).trim() + '...';
+                    noticeContainer.innerHTML = `${titleHtml}<span class="notice-content-text">${truncated}</span> <button class="read-more-notice-btn" style="background:none; border:none; color:var(--accent-gold-text); font-weight:600; cursor:pointer; font-family:inherit; font-size:0.85rem; text-decoration:underline; padding:0; display:inline;">Read More</button>`;
+                    
+                    noticeContainer.querySelector('.read-more-notice-btn').onclick = (e) => {
+                        noticeContainer.querySelector('.notice-content-text').textContent = product.notice;
+                        e.target.remove();
+                    };
+                } else {
+                    noticeContainer.innerHTML = `${titleHtml}${product.notice}`;
+                }
                 noticeContainer.style.display = 'block';
             }
         } else if (noticeContainer) {
