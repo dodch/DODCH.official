@@ -35,5 +35,11 @@
     "price": "19.00",
     "currency": "TND",
     "availability": "in_stock"
+  },
+  "sooth-repair": {
+    "sku": "DODCH-SOOTH-REPAIR",
+    "price": "32.00",
+    "currency": "TND",
+    "availability": "in_stock"
   }
 }
