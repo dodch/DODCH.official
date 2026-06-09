@@ -8,7 +8,7 @@
   },
   "dodchmellow-pro-v": {
     "sku": "DODCH-DMW-005",
-    "price": "24.00",
+    "price": "29.00",
     "currency": "TND",
     "availability": "in_stock"
   },
@@ -33,6 +33,12 @@
   "silk-therapy-mask": {
     "sku": "DODCH-STM-004",
     "price": "19.00",
+    "currency": "TND",
+    "availability": "in_stock"
+  },
+  "sooth-repair": {
+    "sku": "DODCH-SOOTH-REPAIR",
+    "price": "32.00",
     "currency": "TND",
     "availability": "in_stock"
   }
