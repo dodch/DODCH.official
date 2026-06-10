@@ -3555,6 +3555,15 @@ footer {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
+.qv-view-details-btn.disabled {
+    background-color: #ccc !important;
+    color: #777 !important;
+    border-color: #ccc !important;
+    pointer-events: none !important;
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
 @media (max-width: 768px) {
     .qv-view-details-btn {
         margin-bottom: 0;

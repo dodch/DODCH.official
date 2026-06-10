@@ -1,147 +1,136 @@
-/* --- Silk Therapy Mask Interactive Logic --- */
-
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Hair Type Selector Logic
-    const typeButtons = document.querySelectorAll('.hair-type-btn');
-    const typePanels = document.querySelectorAll('.hair-panel');
+    const heroVideo = document.getElementById('hero-video-silk');
+    const heroCanvas = document.getElementById('hero-canvas-silk');
 
-    if (typeButtons.length > 0 && typePanels.length > 0) {
-        typeButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetType = btn.getAttribute('data-type');
-                if (window.triggerHaptic) window.triggerHaptic('light');
+    if (heroVideo && heroCanvas) {
+        const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        
+        // Mobile fallback to simple loop to save battery/CPU - mobile browsers struggle with frame capture
+        if (isMobile) {
+            heroVideo.loop = true;
+            heroVideo.style.display = 'block';
+            if (heroCanvas) heroCanvas.style.display = 'none';
+            heroVideo.play().catch(e => console.log('Autoplay prevented:', e));
+            return;
+        }
 
-                // Update active button
-                typeButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        const ctx = heroCanvas.getContext('2d');
 
-                // Update active panel
-                typePanels.forEach(panel => {
-                    panel.classList.remove('active');
-                    if (panel.id === `panel-${targetType}`) {
-                        panel.classList.add('active');
-                    }
-                });
-            });
-        });
-    }
+        // Frame capture config
+        const CAPTURE_FPS = 30;      
+        const REVERSE_FPS = 30;      
+        const CAPTURE_INTERVAL = 1000 / CAPTURE_FPS;
+        const REVERSE_INTERVAL = 1000 / REVERSE_FPS;
 
+        let frames = [];
+        let captureTimer = null;
+        let reverseRaf = null;
+        let reverseIndex = 0;
+        let isReversing = false;
+        let lastReverseTime = 0;
 
-
-    // 3. Scroll Reveal for custom sections if they aren't marked with .reveal
-    // Actually, we've already added .reveal to most sections in the HTML.
-    // script.js handles .reveal elements using IntersectionObserver.
-
-    // 4. Hero CTA Smooth Scroll
-    const heroBtn = document.querySelector('.hero-mask .cta-button');
-    if (heroBtn) {
-        heroBtn.addEventListener('click', (e) => {
-            if (window.triggerHaptic) window.triggerHaptic('light');
-            const targetId = heroBtn.getAttribute('href');
-            if (targetId && targetId.startsWith('#')) {
-                e.preventDefault();
-                const targetEl = document.querySelector(targetId);
-                if (targetEl) {
-                    window.scrollTo({
-                        top: targetEl.offsetTop - 100, // Adjust for navbar height
-                        behavior: 'smooth'
-                    });
-                }
-            }
-        });
-    }
-
-    // 5. Mobile Scroll Hint for Hair Type Tabs
-    const tabsContainer = document.querySelector('.hair-type-tabs');
-    const tabsGrid = document.querySelector('.hair-type-grid');
-
-    if (tabsContainer && tabsGrid) {
-        // Ensure parent is relative for absolute positioning of arrow
-        tabsGrid.style.position = 'relative';
-
-        // Create Right Arrow
-        const arrowRight = document.createElement('div');
-        arrowRight.className = 'scroll-hint-arrow right';
-        arrowRight.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
-
-        // Create Left Arrow
-        const arrowLeft = document.createElement('div');
-        arrowLeft.className = 'scroll-hint-arrow left';
-        arrowLeft.style.opacity = '0'; // Hidden initially
-        arrowLeft.style.pointerEvents = 'none';
-        arrowLeft.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
-
-        tabsGrid.appendChild(arrowRight);
-        tabsGrid.appendChild(arrowLeft);
-
-        // Click Handlers
-        arrowRight.addEventListener('click', () => {
-            if (window.triggerHaptic) window.triggerHaptic('light');
-            tabsContainer.scrollBy({ left: 150, behavior: 'smooth' });
-        });
-
-        arrowLeft.addEventListener('click', () => {
-            if (window.triggerHaptic) window.triggerHaptic('light');
-            tabsContainer.scrollBy({ left: -150, behavior: 'smooth' });
-        });
-
-        // Scroll Handler to toggle visibility
-        const updateArrows = () => {
-            const scrollLeft = tabsContainer.scrollLeft;
-            const maxScroll = tabsContainer.scrollWidth - tabsContainer.clientWidth;
-            const tolerance = 5;
-
-            // Left Arrow Visibility
-            if (scrollLeft > tolerance) {
-                arrowLeft.style.opacity = '1';
-                arrowLeft.style.pointerEvents = 'auto';
-            } else {
-                arrowLeft.style.opacity = '0';
-                arrowLeft.style.pointerEvents = 'none';
-            }
-
-            // Right Arrow Visibility
-            if (scrollLeft < maxScroll - tolerance) {
-                arrowRight.style.opacity = '1';
-                arrowRight.style.pointerEvents = 'auto';
-            } else {
-                arrowRight.style.opacity = '0';
-                arrowRight.style.pointerEvents = 'none';
+        const syncCanvasSize = () => {
+            if (heroVideo.videoWidth) {
+                heroCanvas.width = heroVideo.videoWidth;
+                heroCanvas.height = heroVideo.videoHeight;
             }
         };
 
-        tabsContainer.addEventListener('scroll', updateArrows);
+        const captureFrame = () => {
+            if (heroVideo.readyState < 2 || heroVideo.paused || heroVideo.ended) return;
+            createImageBitmap(heroVideo).then(bitmap => {
+                if (!isReversing) frames.push(bitmap);
+            }).catch(() => { });
+        };
 
-        // Initial check
-        setTimeout(updateArrows, 100);
-        window.addEventListener('resize', updateArrows);
-    }
-    // 6. Subtle Parallax Effect
-    const parallaxElements = document.querySelectorAll('.parallax-el');
-    if (parallaxElements.length > 0) {
-        let isTicking = false;
-        window.addEventListener('scroll', () => {
-            if (!isTicking) {
-                window.requestAnimationFrame(() => {
-                    parallaxElements.forEach(el => {
-                        const speed = parseFloat(el.getAttribute('data-speed')) || 0.05;
-                        const rect = el.getBoundingClientRect();
-                        const windowHeight = window.innerHeight;
-                        
-                        // Only animate if in viewport
-                        if (rect.top < windowHeight && rect.bottom > 0) {
-                            const elementCenter = rect.top + rect.height / 2;
-                            const viewportCenter = windowHeight / 2;
-                            const distance = viewportCenter - elementCenter;
-                            
-                            const translateY = distance * speed;
-                            el.style.transform = `translateY(${translateY}px)`;
-                        }
-                    });
-                    isTicking = false;
-                });
-                isTicking = true;
+        const startCapture = () => {
+            frames = []; 
+            stopCapture();
+            captureTimer = setInterval(captureFrame, CAPTURE_INTERVAL);
+        };
+
+        const stopCapture = () => {
+            if (captureTimer) clearInterval(captureTimer);
+            captureTimer = null;
+        };
+
+        const reverseLoop = (timestamp) => {
+            if (!isReversing) return;
+
+            if (timestamp - lastReverseTime >= REVERSE_INTERVAL) {
+                lastReverseTime = timestamp;
+
+                if (reverseIndex < 0 || frames.length === 0) {
+                    stopReverse();
+                    return;
+                }
+
+                const frame = frames[reverseIndex];
+                if (frame) {
+                    ctx.clearRect(0, 0, heroCanvas.width, heroCanvas.height);
+                    ctx.drawImage(frame, 0, 0, heroCanvas.width, heroCanvas.height);
+                }
+                reverseIndex--;
             }
-        }, { passive: true });
+            reverseRaf = requestAnimationFrame(reverseLoop);
+        };
+
+        const startReverse = () => {
+            stopCapture();
+            if (frames.length === 0) {
+                heroVideo.currentTime = 0;
+                heroVideo.play();
+                return;
+            }
+
+            syncCanvasSize();
+            reverseIndex = frames.length - 1;
+            isReversing = true;
+            lastReverseTime = 0;
+
+            // Draw the very last frame immediately to prevent a black flicker
+            const lastFrame = frames[reverseIndex];
+            if (lastFrame) {
+                ctx.drawImage(lastFrame, 0, 0, heroCanvas.width, heroCanvas.height);
+            }
+
+            heroVideo.style.display = 'none';
+            heroCanvas.style.display = 'block';
+            reverseRaf = requestAnimationFrame(reverseLoop);
+        };
+
+        const stopReverse = () => {
+            isReversing = false;
+            cancelAnimationFrame(reverseRaf);
+            
+            heroVideo.currentTime = 0;
+            heroCanvas.style.display = 'none';
+            heroVideo.style.display = 'block';
+            
+            heroVideo.play().then(() => startCapture()).catch(() => { });
+        };
+
+        const init = () => {
+            syncCanvasSize();
+            heroVideo.loop = false;
+            heroVideo.addEventListener('ended', startReverse);
+            
+            // Use Intersection Observer to only run the logic when visible
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    heroVideo.play().then(() => startCapture()).catch(() => {});
+                } else {
+                    heroVideo.pause();
+                    stopCapture();
+                    isReversing = false;
+                    cancelAnimationFrame(reverseRaf);
+                }
+            }, { threshold: 0.1 });
+
+            observer.observe(heroVideo.closest('section'));
+        };
+
+        if (heroVideo.readyState >= 1) init();
+        else heroVideo.addEventListener('loadedmetadata', init, { once: true });
     }
 });

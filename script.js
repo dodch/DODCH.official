@@ -407,6 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroOverlay = document.querySelector('.hero-overlay');
     const heroBgParallax = document.querySelector('.hero-bg-parallax');
     const experienceImageContainers = document.querySelectorAll('.experience-image');
+    const parallaxEls = document.querySelectorAll('.parallax-el');
     const promiseIcons = document.querySelectorAll('.promise-icon');
     const progressBar = document.getElementById('scroll-progress');
     const stickyCTA = document.getElementById('sticky-cta');
@@ -488,8 +489,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         stickyCTA.classList.remove('visible');
                     }
                 }
-                if (heroBgParallax && scrollY < hero.offsetHeight) {
-                    heroBgParallax.style.transform = `translateY(${scrollY * 0.4}px)`;
+                if (hero && heroBgParallax && scrollY < hero.offsetHeight) {
+                    heroBgParallax.style.transform = `translateY(${scrollY * 0.1}px)`;
                 }
                 if (experienceImageContainers.length > 0) {
                     experienceImageContainers.forEach(container => {
@@ -500,6 +501,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             const difference = (windowHeight / 2) - elementCenter;
                             const parallaxFactor = 0.1;
                             container.style.transform = `translateY(${difference * parallaxFactor}px)`;
+                        }
+                    });
+                }
+                if (parallaxEls.length > 0) {
+                    parallaxEls.forEach(el => {
+                        const rect = el.getBoundingClientRect();
+                        const windowHeight = window.innerHeight;
+                        if (rect.top < windowHeight && rect.bottom > 0) {
+                            const speed = parseFloat(el.getAttribute('data-speed')) || 0.05;
+                            const elementCenter = rect.top + rect.height / 2;
+                            const difference = (windowHeight / 2) - elementCenter;
+                            el.style.transform = `translateY(${difference * speed}px)`;
                         }
                     });
                 }
@@ -935,7 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
             image: "IMG_3783.webp",
             description: "A powerful overnight cream formulated with 0.5% active retinol to visibly reduce fine lines, refine skin texture, and promote a radiant, youthful complexion.",
             style: "",
-            storyUrl: "retinol-night-cream.html",
+            storyUrl: null,
             orderIndex: 5,
             sizes: []
         },
@@ -948,7 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
             image: "IMG_3799.webp",
             description: "An intensive recovery treatment designed to soothe inflammation and repair the skin barrier. Formulated with Mediterranean botanicals to restore radiance to stressed skin.",
             style: "",
-            storyUrl: "sooth-repair.html",
+            storyUrl: null,
             orderIndex: 6,
             sizes: []
         }
@@ -1219,6 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         productCatalog[productId].notice = data.notice || "";
                         productCatalog[productId].price = data.price || null;
                         productCatalog[productId].originalPrice = data.originalPrice || null;
+                        productCatalog[productId].storyUrl = data.storyUrl || null;
                         productCatalog[productId].outOfStock = data.outOfStock === true;
                         productCatalog[productId].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
 
@@ -2145,8 +2159,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function hasStandaloneStoryPage(product) {
         if (!product || !product.storyUrl) return false;
-        const url = product.storyUrl.trim();
-        if (url === '' || url === '#' || url.includes('product.html')) return false;
+        const storyUrl = product.storyUrl.trim();
+        if (storyUrl === '' || storyUrl === '#' || storyUrl.includes('product.html')) return false;
+
+        // Prevent self-linking: normalize both paths to handle trailing slashes and extensions
+        const currentPath = window.location.pathname;
+        const currentFile = currentPath.split('/').pop() || 'index.html';
+        
+        const normStory = storyUrl.replace(/\.html$/, '').replace(/^\/+/, '');
+        const normCurrent = currentFile.replace(/\.html$/, '');
+        
+        if (normStory === normCurrent) return false;
+
         return true;
     }
 
@@ -2529,26 +2553,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (addToCartBtn) {
             const storyBtn = document.createElement('a');
             storyBtn.id = 'product-story-link';
-            storyBtn.textContent = 'View Full Details';
             storyBtn.className = 'qv-view-details-btn';
             storyBtn.style.marginBottom = '1rem';
             storyBtn.style.display = 'block'; // Ensure it takes full width if qv-view-details-btn uses inline-block
 
-            if (hasStandaloneStoryPage(product)) {
-                storyBtn.href = product.storyUrl;
-                storyBtn.style.pointerEvents = '';
-                storyBtn.style.opacity = '';
-                storyBtn.style.background = '';
-                storyBtn.style.color = '';
-                storyBtn.style.cursor = '';
-            } else {
-                storyBtn.href = '#';
-                storyBtn.style.pointerEvents = 'none';
-                storyBtn.style.opacity = '0.5';
-                storyBtn.style.background = '#ccc';
-                storyBtn.style.color = '#777';
-                storyBtn.style.cursor = 'not-allowed';
-            }
+            const hasStory = hasStandaloneStoryPage(product);
+            storyBtn.textContent = hasStory ? 'View Full Details' : 'No Additional Details';
+
+            storyBtn.href = hasStory ? product.storyUrl : '#';
+            storyBtn.classList.toggle('disabled', !hasStory);
             addToCartBtn.before(storyBtn);
         }
     };
@@ -4175,6 +4188,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.getElementById('new-prod-subtitle').value.trim() !== (product.subtitle || '')) hasChanged = true;
             if (document.getElementById('new-prod-desc').value.trim() !== (product.description || '')) hasChanged = true;
             if (document.getElementById('new-prod-inci').value.trim() !== (product.inci || '')) hasChanged = true;
+            if ((document.getElementById('new-prod-story-url')?.value.trim() || '') !== (product.storyUrl || '')) hasChanged = true;
             const noticeVal = document.getElementById('new-prod-notice')?.value.trim() || "";
             if (noticeVal !== (product.notice || "")) hasChanged = true;
 
@@ -4312,6 +4326,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (descField) descField.after(noticeSection);
                 }
 
+                if (addProductForm && !document.getElementById('new-prod-story-url-container')) {
+                    const storyUrlSection = document.createElement('div');
+                    storyUrlSection.className = 'form-group';
+                    storyUrlSection.id = 'new-prod-story-url-container';
+                    storyUrlSection.innerHTML = `
+                        <label for="new-prod-story-url">Story Page URL (Optional)</label>
+                        <input type="text" id="new-prod-story-url" class="modern-input" placeholder="e.g. glass-glow-shampoo.html">
+                    `;
+                    const noticeField = document.getElementById('new-prod-notice-container')?.closest('.form-group');
+                    if (noticeField) noticeField.after(storyUrlSection);
+                }
+
                 if (addProductForm && !document.getElementById('new-prod-performance-container')) {
                     const section = document.createElement('div');
                     section.className = 'form-section';
@@ -4353,6 +4379,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (document.getElementById('new-prod-desc')) document.getElementById('new-prod-desc').value = '';
                     if (document.getElementById('new-prod-inci')) document.getElementById('new-prod-inci').value = '';
                     if (document.getElementById('new-prod-notice')) document.getElementById('new-prod-notice').value = '';
+                    if (document.getElementById('new-prod-story-url')) document.getElementById('new-prod-story-url').value = '';
                     if (document.getElementById('new-prod-performance-container')) document.getElementById('new-prod-performance-container').innerHTML = '';
                     if (sizesContainer) sizesContainer.innerHTML = ''; // Clear sizes
                     const productIdInput = document.getElementById('product-id-input');
@@ -4540,6 +4567,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     subtitle: document.getElementById('new-prod-subtitle').value.trim(),
                     description: document.getElementById('new-prod-desc').value.trim(),
                     inci: document.getElementById('new-prod-inci').value.trim(),
+                    storyUrl: document.getElementById('new-prod-story-url')?.value.trim() || null,
                     notice: document.getElementById('new-prod-notice')?.value.trim() || "",
                     image: imagePaths[0],
                     images: imagePaths,
@@ -5380,6 +5408,7 @@ The DODCH Team`;
                     document.getElementById('new-prod-desc').value = product.description || '';
                     document.getElementById('new-prod-inci').value = product.inci || '';
                     if (document.getElementById('new-prod-notice')) document.getElementById('new-prod-notice').value = product.notice || '';
+                    if (document.getElementById('new-prod-story-url')) document.getElementById('new-prod-story-url').value = product.storyUrl || '';
 
                     if (imagePathInput) {
                         const paths = product.images && Array.isArray(product.images) && product.images.length > 0
@@ -5713,21 +5742,11 @@ The DODCH Team`;
                 }
 
                 if (qvLearnMore) {
-                    if (hasStandaloneStoryPage(product)) {
-                        qvLearnMore.href = product.storyUrl;
-                        qvLearnMore.style.pointerEvents = '';
-                        qvLearnMore.style.opacity = '';
-                        qvLearnMore.style.background = '';
-                        qvLearnMore.style.color = '';
-                        qvLearnMore.style.cursor = '';
-                    } else {
-                        qvLearnMore.href = '#';
-                        qvLearnMore.style.pointerEvents = 'none';
-                        qvLearnMore.style.opacity = '0.5';
-                        qvLearnMore.style.background = '#ccc';
-                        qvLearnMore.style.color = '#777';
-                        qvLearnMore.style.cursor = 'not-allowed';
-                    }
+                    const hasStory = hasStandaloneStoryPage(product);
+                    qvLearnMore.textContent = hasStory ? 'View Full Details' : 'No Additional Details';
+
+                    qvLearnMore.href = hasStory ? product.storyUrl : '#';
+                    qvLearnMore.classList.toggle('disabled', !hasStory);
                     if (qvExpandPage) qvExpandPage.href = `product.html?id=${id}`;
                 }
                 const sizeOptionsContainer = modal.querySelector('.size-options');
@@ -8433,8 +8452,6 @@ window.saveShippingFromCheckout = async function (userId) {
 document.addEventListener('DOMContentLoaded', () => {
     // Prefetching removed due to WKWebView (iOS in-app browser) script execution bugs.
 });
-
-window.addEventListener('load', initPushNotifications);
 
 // --- GLOBAL MOTION BLUR ENGINE ---
 const MotionBlurEngine = {

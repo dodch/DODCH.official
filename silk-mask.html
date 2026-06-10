@@ -280,7 +280,10 @@
         <!-- Hero Section -->
         <section id="hero-silk" class="hero-mask">
             <div class="hero-bg-parallax">
-                <div class="hero-bg"></div>
+                <video autoplay muted playsinline class="hero-bg-video" id="hero-video-silk">
+                    <source src="video-output-82480FF5-3419-4A2A-881B-AAF1D595C03B-1.webm" type="video/webm">
+                </video>
+                <canvas id="hero-canvas-silk" class="hero-bg-video" style="display: none;"></canvas>
             </div>
             <div class="hero-overlay"></div>
             <div class="hero-content reveal">
@@ -424,7 +427,7 @@
             <div class="container text-center">
                 <div class="overview-grid reveal">
                     <div class="overview-image img-frame reveal parallax-el" data-speed="0.08">
-                        <img loading="lazy" src="IMG_3256.webp" alt="DODCH Pro-V Silk Therapy Hair Mask - Luxury Deep Conditioning Treatment Tunisia" class="img-frame-img">
+                        <img loading="lazy" src="IMG_3836.webp" alt="DODCH Pro-V Silk Therapy Hair Mask - Luxury Deep Conditioning Treatment Tunisia" class="img-frame-img">
                     </div>
                     <div class="overview-text">
                         <h2 class="section-title">The Multi-Dimensional Repair</h2>
@@ -495,84 +498,6 @@
                         <img loading="lazy" src="1777590156c4d2.png" alt="The DODCH Phenomenon - Liquid Glass Hair" class="img-frame-img" style="border-radius: 12px; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
                     </div>
                 </div>
-            </div>
-        </section>
-
-        <!-- Feather Cloud Section -->
-        <section id="feather-cloud" class="section-padding" style="position: relative; overflow: hidden; background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%); color: #fff;">
-            <!-- Subtle feather SVG background decoration -->
-            <svg class="parallax-el" data-speed="0.1" style="position: absolute; top: -10%; right: -5%; width: 50%; opacity: 0.03; pointer-events: none; transform: rotate(15deg);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
-                <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
-                <line x1="16" y1="8" x2="2" y2="22"></line>
-                <line x1="17.5" y1="15" x2="9" y2="15"></line>
-            </svg>
-            <div class="container text-center reveal" style="position: relative; z-index: 2;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold, #C5A059)" stroke-width="1.5" style="width: 48px; height: 48px; margin-bottom: 1rem;">
-                    <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
-                    <line x1="16" y1="8" x2="2" y2="22"></line>
-                    <line x1="17.5" y1="15" x2="9" y2="15"></line>
-                </svg>
-                <h2 class="section-title parallax-el" data-speed="0.04" style="color: #fff;">The Feather Cloud: Weightless Softness & Defiant Volume</h2>
-                
-                <div class="grid-3 grid-reveal reveal" style="margin-top: 3rem; text-align: left; gap: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
-                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">Ethereal Suppleness</h4>
-                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">Experience the "Feather Cloud" effect—a texture so plush and light it feels weightless to the touch. While the surface reflects a <strong>shattering gloss</strong>, the interior remains soft, bouncy, and incredibly resilient.</p>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
-                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">Gravity-Defying Fluidity</h4>
-                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">Unlike heavy, waxy treatments that weigh hair down, <strong>DODCH</strong> provides a high-performance, frictionless glide. Your hair maintains <strong>dramatic movement</strong> and airy volume, flowing like silk with every turn.</p>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
-                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">The Invisible Shield</h4>
-                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">A microscopically thin protective veil seals in hydration while repelling environmental stressors. This ensures your <strong>dramatic hair shine</strong> remains crisp, aligned, and frizz-free from morning until night.</p>
-                    </div>
-                </div>
-
-                <div class="parallax-el" data-speed="0.02" style="margin-top: 3rem; background: linear-gradient(135deg, rgba(197, 160, 89, 0.1) 0%, rgba(197, 160, 89, 0.02) 100%); border: 1px solid rgba(197, 160, 89, 0.3); padding: 2.5rem; border-radius: 12px; text-align: left; max-width: 900px; margin-left: auto; margin-right: auto; position: relative;">
-                    <div style="position: absolute; top: -15px; left: 30px; background: #1A1A1A; padding: 0 15px; color: var(--accent-gold, #C5A059); font-family: var(--font-serif); font-weight: 600; font-style: italic; font-size: 1.1rem; border: 1px solid rgba(197, 160, 89, 0.3); border-radius: 20px;">The Leave-In Experience</div>
-                    <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin-bottom: 1rem; color: #fff;">Zero-Grease. Instant Melt. Professional Results.</h3>
-                    <p style="font-size: 1rem; line-height: 1.7; color: #e0e0e0; margin-bottom: 0;">
-                        When applied as a leave-in therapy, the DODCH formula undergoes a rapid micro-dispersion process. It <strong>melts instantly</strong> into the hair fiber and dries as if it were never there, leaving absolutely <strong>no greasy residue or heavy coating</strong>. You receive the full transformative power and professional, salon-quality repair of an intensive mask, wrapped in a weightless finish that simply makes your hair feel incredibly healthy, soft, and alive.
-                    </p>
-                </div>
-
-                <div style="margin-top: 4rem;">
-                    <h3 style="font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 2rem; color: #fff;">The DODCH Transformation Profile</h3>
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; max-width: 800px; margin: 0 auto; border-collapse: collapse; text-align: left; background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; min-width: 500px;">
-                            <thead>
-                                <tr>
-                                    <th style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); font-family: var(--font-serif); color: var(--accent-gold, #C5A059); font-size: 1.1rem; width: 40%; font-weight: 600;">The Aesthetic</th>
-                                    <th style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); font-family: var(--font-serif); color: var(--accent-gold, #C5A059); font-size: 1.1rem; font-weight: 600;">The Result</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr style="transition: background 0.3s ease;">
-                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0;"><strong>Visual Impact</strong></td>
-                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;"><strong>Dramatic, High-Definition Gloss</strong></td>
-                                </tr>
-                                <tr style="transition: background 0.3s ease; background: rgba(0,0,0,0.2);">
-                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0;"><strong>Texture Identity</strong></td>
-                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;"><strong>Feather Cloud Softness</strong></td>
-                                </tr>
-                                <tr style="transition: background 0.3s ease;">
-                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0;"><strong>Movement</strong></td>
-                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;"><strong>Fluid, Weightless, and Infinite</strong></td>
-                                </tr>
-                                <tr style="transition: background 0.3s ease; background: rgba(0,0,0,0.2);">
-                                    <td style="padding: 1.5rem; color: #e0e0e0;"><strong>Surface Finish</strong></td>
-                                    <td style="padding: 1.5rem; color: #fff;"><strong>Crystalline Liquid Glass Seal</strong></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <p style="margin-top: 3rem; font-size: 1.2rem; max-width: 700px; margin-left: auto; margin-right: auto; font-family: var(--font-serif); font-style: italic; color: var(--accent-gold, #C5A059);">
-                    <strong>One application. Absolute brilliance.</strong><br>
-                    Lock in the <strong>DODCH</strong> "Liquid Glass" finish and experience hair that doesn't just catch the light—it commands it.
-                </p>
             </div>
         </section>
 
@@ -705,6 +630,84 @@
             </div>
         </section>
 
+        <!-- Feather Cloud Section -->
+        <section id="feather-cloud" class="section-padding" style="position: relative; overflow: hidden; background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%); color: #fff;">
+            <!-- Subtle feather SVG background decoration -->
+            <svg class="parallax-el" data-speed="0.1" style="position: absolute; top: -10%; right: -5%; width: 50%; opacity: 0.03; pointer-events: none; transform: rotate(15deg);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
+                <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+                <line x1="16" y1="8" x2="2" y2="22"></line>
+                <line x1="17.5" y1="15" x2="9" y2="15"></line>
+            </svg>
+            <div class="container text-center reveal" style="position: relative; z-index: 2;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold, #C5A059)" stroke-width="1.5" style="width: 48px; height: 48px; margin-bottom: 1rem;">
+                    <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+                    <line x1="16" y1="8" x2="2" y2="22"></line>
+                    <line x1="17.5" y1="15" x2="9" y2="15"></line>
+                </svg>
+                <h2 class="section-title parallax-el" data-speed="0.04" style="color: #fff;">The Feather Cloud: Weightless Softness & Defiant Volume</h2>
+                
+                <div class="grid-3 grid-reveal reveal" style="margin-top: 3rem; text-align: left; gap: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
+                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">Ethereal Suppleness</h4>
+                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">Experience the "Feather Cloud" effect—a texture so plush and light it feels weightless to the touch. While the surface reflects a <strong>shattering gloss</strong>, the interior remains soft, bouncy, and incredibly resilient.</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
+                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">Gravity-Defying Fluidity</h4>
+                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">Unlike heavy, waxy treatments that weigh hair down, <strong>DODCH</strong> provides a high-performance, frictionless glide. Your hair maintains <strong>dramatic movement</strong> and airy volume, flowing like silk with every turn.</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
+                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">The Invisible Shield</h4>
+                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">A microscopically thin protective veil seals in hydration while repelling environmental stressors. This ensures your <strong>dramatic hair shine</strong> remains crisp, aligned, and frizz-free from morning until night.</p>
+                    </div>
+                </div>
+
+                <div class="parallax-el" data-speed="0.02" style="margin-top: 3rem; background: linear-gradient(135deg, rgba(197, 160, 89, 0.1) 0%, rgba(197, 160, 89, 0.02) 100%); border: 1px solid rgba(197, 160, 89, 0.3); padding: 2.5rem; border-radius: 12px; text-align: left; max-width: 900px; margin-left: auto; margin-right: auto; position: relative;">
+                    <div style="position: absolute; top: -15px; left: 30px; background: #1A1A1A; padding: 0 15px; color: var(--accent-gold, #C5A059); font-family: var(--font-serif); font-weight: 600; font-style: italic; font-size: 1.1rem; border: 1px solid rgba(197, 160, 89, 0.3); border-radius: 20px;">The Leave-In Experience</div>
+                    <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin-bottom: 1rem; color: #fff;">Zero-Grease. Instant Melt. Professional Results.</h3>
+                    <p style="font-size: 1rem; line-height: 1.7; color: #e0e0e0; margin-bottom: 0;">
+                        When applied as a leave-in therapy, the DODCH formula undergoes a rapid micro-dispersion process. It <strong>melts instantly</strong> into the hair fiber and dries as if it were never there, leaving absolutely <strong>no greasy residue or heavy coating</strong>. You receive the full transformative power and professional, salon-quality repair of an intensive mask, wrapped in a weightless finish that simply makes your hair feel incredibly healthy, soft, and alive.
+                    </p>
+                </div>
+
+                <div style="margin-top: 4rem;">
+                    <h3 style="font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 2rem; color: #fff;">The DODCH Transformation Profile</h3>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; max-width: 800px; margin: 0 auto; border-collapse: collapse; text-align: left; background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; min-width: 500px;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); font-family: var(--font-serif); color: var(--accent-gold, #C5A059); font-size: 1.1rem; width: 40%; font-weight: 600;">The Aesthetic</th>
+                                    <th style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); font-family: var(--font-serif); color: var(--accent-gold, #C5A059); font-size: 1.1rem; font-weight: 600;">The Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="transition: background 0.3s ease;">
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0;"><strong>Visual Impact</strong></td>
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;"><strong>Dramatic, High-Definition Gloss</strong></td>
+                                </tr>
+                                <tr style="transition: background 0.3s ease; background: rgba(0,0,0,0.2);">
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0;"><strong>Texture Identity</strong></td>
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;"><strong>Feather Cloud Softness</strong></td>
+                                </tr>
+                                <tr style="transition: background 0.3s ease;">
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0;"><strong>Movement</strong></td>
+                                    <td style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;"><strong>Fluid, Weightless, and Infinite</strong></td>
+                                </tr>
+                                <tr style="transition: background 0.3s ease; background: rgba(0,0,0,0.2);">
+                                    <td style="padding: 1.5rem; color: #e0e0e0;"><strong>Surface Finish</strong></td>
+                                    <td style="padding: 1.5rem; color: #fff;"><strong>Crystalline Liquid Glass Seal</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <p style="margin-top: 3rem; font-size: 1.2rem; max-width: 700px; margin-left: auto; margin-right: auto; font-family: var(--font-serif); font-style: italic; color: var(--accent-gold, #C5A059);">
+                    <strong>One application. Absolute brilliance.</strong><br>
+                    Lock in the <strong>DODCH</strong> "Liquid Glass" finish and experience hair that doesn't just catch the light—it commands it.
+                </p>
+            </div>
+        </section>
+
         <!-- Features & Key Ingredients Section -->
         <section id="ingredients" class="section-padding bg-cream">
             <div class="container">
@@ -747,10 +750,6 @@
                 <h2 class="section-title text-center reveal">The Ritual of Choice</h2>
                 <div class="ritual-dual-grid reveal">
                     <div class="ritual-option">
-                        <div class="ritual-image parallax-el" data-speed="0.05">
-                            <!-- Visual for rinse-off -->
-                            <img loading="lazy" src="IMG_3257.webp" alt="Applying DODCH Silk Hair Mask as a rinse-off intensive treatment">
-                        </div>
                         <div class="ritual-details">
                             <h3>1. The Rinse-Off Mask</h3>
                             <p>For deep restoration and intensive treatment.</p>
@@ -763,10 +762,6 @@
                         </div>
                     </div>
                     <div class="ritual-option">
-                        <div class="ritual-image img-frame parallax-el" data-speed="-0.05">
-                            <!-- Visual for leave-in -->
-                            <img loading="lazy" src="IMG_3256.webp" alt="Applying DODCH Silk Hair Mask as a leave-in protection serum" class="img-frame-img">
-                        </div>
                         <div class="ritual-details">
                             <h3>2. The Leave-In Therapy</h3>
                             <p>For daily protection, shine, and frizz control.</p>
