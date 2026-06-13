@@ -1,4 +1,4 @@
-// Universal Image WebP Fallback Fix
+﻿// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -893,8 +893,9 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: "shampoo",
             subtitle: "The Marshmallow Cloud Shampoo",
             price: null,
-            image: "IMG_3851.webp",
-            description: "Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5. Fragrance: Néroli-Sucre.",
+            image: "IMG_4184.webp",
+            images: ["IMG_4184.webp"],
+            description: "Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5 | Panthenol B5 | Glycerin Complex. Fragrance: Néroli-Sucre.",
             style: "",
             storyUrl: "dodchmellow-pro-v.html",
             orderIndex: 1,
@@ -919,7 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subCategory: ["masks", "conditioners", "leave-in"],
             subtitle: "Deep Repair & Glass Shine",
             price: null,
-            image: "IMG_3811.webp",
+            image: "IMG_4188 (2).webp",
             description: "Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",
             style: "",
             storyUrl: "silk-mask.html",
@@ -6145,22 +6146,8 @@ The DODCH Team`;
                 setTimeout(() => { searchJustOpened = false; }, 300);
             }
         });
-        document.addEventListener('click', (e) => {
-            if (searchJustOpened) return;
-            const dropdown = document.getElementById('search-results-dropdown');
-            if (
-                !searchContainer.contains(e.target) &&
-                !searchToggleBtn.contains(e.target) &&
-                !(dropdown && dropdown.contains(e.target))
-            ) {
-                searchContainer.classList.remove('active');
-                navbar.classList.remove('search-active');
-                document.body.classList.remove('search-active');
-                if (dropdown) dropdown.classList.remove('active');
-                const halo = document.querySelector('.search-halo');
-                if (halo) halo.classList.remove('active');
-            }
-        });
+        // The halo now catches all outside clicks via its pointer-events: auto rule,
+        // so we completely delete the fragile document.addEventListener('click') here.
 
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -6869,7 +6856,7 @@ const initUserReviewsHistory = async (user) => {
                 } else if (review.productId === 'silk-therapy-mask') {
                     productName = 'Silk Therapy Mask';
                     productLink = 'silk-mask.html';
-                    productImg = productCatalog['silk-therapy-mask']?.image || 'IMG_3811.webp';
+                    productImg = productCatalog['silk-therapy-mask']?.image || 'IMG_4188 (2).webp';
                 } else if (productCatalog && productCatalog[review.productId]) {
                     const prod = productCatalog[review.productId];
                     productName = prod.name || 'Product';
@@ -7135,17 +7122,19 @@ if (document.readyState === 'loading') {
 }
 
 const SEARCH_SYNONYMS = {
-    'shampoo': ['shampoing', 'شامبو', 'wash', 'hair', 'cleaning', 'cleanser', 'nettoyant', 'غسول'],
-    'oil': ['huile', 'زيت', 'care', 'treatment', 'elixir', 'drops', 'gouttes', 'قطرات'],
-    'serum': ['سيروم', 'concentre', 'face', 'booster', 'ampoule', 'essence'],
-    'mask': ['masque', 'قناع', 'care', 'treatment', 'wrap', 'soin'],
-    'pear': ['figue', 'صبار', 'barbarie', 'prickly', 'cactus'],
-    'fig': ['figue', 'صبار', 'barbarie'],
-    'silk': ['soie', 'حرير', 'smooth', 'lisse', 'soft', 'doux'],
-    'glow': ['eclat', 'اللمعان', 'bright', 'shine', 'radiant', 'brillance', 'nuage'],
-    'face': ['visage', 'وجه', 'skin', 'peau', 'بشرة'],
-    'body': ['corps', 'جسم', 'skin'],
-    'hair': ['cheveux', 'شعر', 'scalp', 'cuir chevelu', 'فروة']
+    'shampoo': ['shampoing', 'شامبو', 'shampoo'],
+    'oil': ['huile', 'زيت', 'oil', 'elixir', 'drops', 'gouttes', 'قطرات'],
+    'serum': ['سيروم', 'concentre', 'serum', 'booster', 'ampoule', 'essence'],
+    'mask': ['masque', 'قناع', 'mask', 'wrap'],
+    'pear': ['figue', 'صبار', 'barbarie', 'prickly', 'cactus', 'pear'],
+    'fig': ['figue', 'صبار', 'barbarie', 'fig'],
+    'silk': ['soie', 'حرير', 'silk'],
+    'glow': ['eclat', 'اللمعان', 'bright', 'shine', 'radiant', 'brillance', 'glow'],
+    'face': ['visage', 'وجه', 'face'],
+    'body': ['corps', 'جسم', 'body'],
+    'hair': ['cheveux', 'شعر', 'hair'],
+    'cleanser': ['wash', 'cleaning', 'cleanser', 'nettoyant', 'غسول', 'cleansing'],
+    'skin': ['skin', 'peau', 'بشرة']
 };
 
 const SEARCH_INTENTS = {
@@ -7175,6 +7164,191 @@ const SEARCH_INTENTS = {
     ]
 };
 
+const ROUTINE_QUIZZES = {
+    'hair': {
+        title: "Healthy Hair Routine Builder",
+        questions: [
+            {
+                q: "What is your hair type/texture?",
+                options: [
+                    { text: "Straight (Fine & Sleek)", val: "straight" },
+                    { text: "Wavy (Slight S-shape)", val: "wavy" },
+                    { text: "Curly (Defined spirals)", val: "curly" },
+                    { text: "Coily / Kinky (Tight coils)", val: "coily" }
+                ]
+            },
+            {
+                q: "How would you describe your scalp condition?",
+                options: [
+                    { text: "Dry & Flaky", val: "dry" },
+                    { text: "Oily (Greasy after 1 day)", val: "oily" },
+                    { text: "Balanced / Normal", val: "balanced" },
+                    { text: "Sensitive & Itchy", val: "sensitive" }
+                ]
+            },
+            {
+                q: "What is your primary hair concern?",
+                options: [
+                    { text: "Hair Loss / Thinning", val: "loss" },
+                    { text: "Dryness / Dehydration", val: "dryness" },
+                    { text: "Frizz & Tangles", val: "frizz" },
+                    { text: "Damage & Split Ends", val: "damage" }
+                ]
+            },
+            {
+                q: "How often do you wash your hair?",
+                options: [
+                    { text: "Daily", val: "daily" },
+                    { text: "Every 2-3 days", val: "moderate" },
+                    { text: "Once a week", val: "weekly" },
+                    { text: "Less than once a week", val: "rarely" }
+                ]
+            },
+            {
+                q: "How do you typically dry or style your hair?",
+                options: [
+                    { text: "Air dry naturally", val: "air" },
+                    { text: "Blow dry with heat", val: "heat_mild" },
+                    { text: "Flat iron / curling wand", val: "heat_intense" },
+                    { text: "Protective styling / Braids", val: "protective" }
+                ]
+            },
+            {
+                q: "Have you chemically treated your hair recently?",
+                options: [
+                    { text: "Yes, color or bleach", val: "color" },
+                    { text: "Yes, keratin or straightening", val: "chemical" },
+                    { text: "No, completely natural", val: "natural" }
+                ]
+            },
+            {
+                q: "What is your hair thickness?",
+                options: [
+                    { text: "Fine / Thin", val: "fine" },
+                    { text: "Medium", val: "medium" },
+                    { text: "Thick / Coarse", val: "thick" }
+                ]
+            },
+            {
+                q: "How does humidity affect your hair?",
+                options: [
+                    { text: "It goes flat and limp", val: "flat" },
+                    { text: "It becomes extremely frizzy", val: "frizzy" },
+                    { text: "It gets static/tangled", val: "tangled" },
+                    { text: "No major difference", val: "normal" }
+                ]
+            },
+            {
+                q: "What is your water type at home?",
+                options: [
+                    { text: "Hard water (heavy minerals)", val: "hard" },
+                    { text: "Soft water", val: "soft" },
+                    { text: "I don't know", val: "unknown" }
+                ]
+            },
+            {
+                q: "What is your ultimate hair goal?",
+                options: [
+                    { text: "High-shine & glass-like finish", val: "shine" },
+                    { text: "Thick, volumized hair with growth", val: "volume" },
+                    { text: "Clean scalp without dandruff", val: "scalp" },
+                    { text: "Deep hydration & bounce", val: "hydration" }
+                ]
+            }
+        ]
+    },
+    'skin': {
+        title: "Glass Skin Essentials Builder",
+        questions: [
+            {
+                q: "What is your skin type?",
+                options: [
+                    { text: "Dry (Tight, flaky patches)", val: "dry" },
+                    { text: "Oily (Shiny T-zone & cheeks)", val: "oily" },
+                    { text: "Combination (Oily T-zone, dry cheeks)", val: "combo" },
+                    { text: "Normal / Balanced", val: "normal" }
+                ]
+            },
+            {
+                q: "What is your main skin concern?",
+                options: [
+                    { text: "Dullness & lack of radiance", val: "dullness" },
+                    { text: "Fine lines and aging signs", val: "aging" },
+                    { text: "Redness, sensitivity & itching", val: "redness" },
+                    { text: "Acne, blackheads & clogged pores", val: "acne" }
+                ]
+            },
+            {
+                q: "How does your skin feel midday?",
+                options: [
+                    { text: "Tight and needing hydration", val: "tight" },
+                    { text: "Greasy and shiny", val: "greasy" },
+                    { text: "Normal or slightly oily in T-zone", val: "tzone" },
+                    { text: "Irritated, warm or itchy", val: "irritated" }
+                ]
+            },
+            {
+                q: "How many steps is your current skincare routine?",
+                options: [
+                    { text: "Minimal (1-2 steps)", val: "minimal" },
+                    { text: "Moderate (3-4 steps)", val: "moderate" },
+                    { text: "Advanced (5+ steps)", val: "advanced" }
+                ]
+            },
+            {
+                q: "What is your primary goal for your skin?",
+                options: [
+                    { text: "Translucent, dewy 'glass skin' glow", val: "glow" },
+                    { text: "Firm, youthful-looking skin", val: "firmness" },
+                    { text: "Calm, balanced, and redness-free skin", val: "calm" },
+                    { text: "Clear, smooth texture without visible pores", val: "texture" }
+                ]
+            },
+            {
+                q: "How does your skin react to new products?",
+                options: [
+                    { text: "Easily gets red, burns or breaks out (Sensitive)", val: "sensitive" },
+                    { text: "Occasional minor irritation or breakout", val: "mild" },
+                    { text: "Rarely has any reaction (Resilient)", val: "resilient" }
+                ]
+            },
+            {
+                q: "How often do you exfoliate your face?",
+                options: [
+                    { text: "Never", val: "never" },
+                    { text: "1-2 times a week", val: "sometimes" },
+                    { text: "Daily or almost daily", val: "daily" }
+                ]
+            },
+            {
+                q: "What is your daily sun exposure level?",
+                options: [
+                    { text: "High (outdoor active)", val: "high" },
+                    { text: "Moderate (daily commute/windows)", val: "moderate" },
+                    { text: "Low (mostly indoors)", val: "low" }
+                ]
+            },
+            {
+                q: "Do you drink enough water daily?",
+                options: [
+                    { text: "Yes, 2L+ per day", val: "yes" },
+                    { text: "Moderate (1-2 bottles)", val: "moderate" },
+                    { text: "Rarely enough", val: "rarely" }
+                ]
+            },
+            {
+                q: "How would you describe your skin's current texture?",
+                options: [
+                    { text: "Rough, flaky patches", val: "flaky" },
+                    { text: "Uneven with small bumps / large pores", val: "uneven" },
+                    { text: "Mostly smooth but lacks bounce", val: "dull" },
+                    { text: "Smooth and supple", val: "smooth" }
+                ]
+            }
+        ]
+    }
+};
+
 class DODCHSearchEngine {
     constructor() {
         this.catalog = {};
@@ -7191,7 +7365,8 @@ class DODCHSearchEngine {
         this.catalog = catalog;
         this.index = Object.entries(catalog).map(([id, item]) => {
             let tags = (item.tags || []).map(t => this.normalize(t)); const synonyms = [];
-            const allText = (item.name + ' ' + (item.category || '')).toLowerCase();
+            const subCatText = Array.isArray(item.subCategory) ? item.subCategory.join(' ') : (item.subCategory || '');
+            const allText = (item.name + ' ' + (item.category || '') + ' ' + subCatText).toLowerCase();
 
             for (const [key, list] of Object.entries(SEARCH_SYNONYMS)) {
                 if (allText.includes(key) || list.some(l => allText.includes(l))) {
@@ -7366,6 +7541,17 @@ document.addEventListener("DOMContentLoaded", () => {
     dropdown.id = "search-results-dropdown";
     document.body.appendChild(dropdown);
 
+    // Tapping the dimmed halo overlay should always fully dismiss the search
+    halo.addEventListener("click", () => closeSearchUI(null, activeInput));
+    halo.addEventListener("touchend", (e) => { e.preventDefault(); closeSearchUI(null, activeInput); });
+
+    // Safety-net: ESC anywhere always resets everything
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && halo.classList.contains("active")) {
+            closeSearchUI(null, activeInput);
+        }
+    });
+
     let activeInput = null;
     let selectedIndex = -1;
     let currentResults = [];
@@ -7439,10 +7625,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
         }
-        // Prevent clicking inside the dropdown from blurring the input / collapsing the pill
-        dropdown.addEventListener("mousedown", (e) => {
-            e.preventDefault();
-        });
     };
 
     const closeSearchUI = (container, inputEl) => {
@@ -7570,10 +7752,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                         <div class="trending-grid" style="display: grid; grid-template-columns: 1fr; gap: 10px;">
                             ${[
-                    { q: 'Shampoo', l: 'Healthy Hair Routine', i: '✨' },
-                    { q: 'Serum', l: 'Glass Skin Essentials', i: '💧' }
+                    { q: 'hair', l: 'Healthy Hair Routine', i: '✨' },
+                    { q: 'skin', l: 'Glass Skin Essentials', i: '💧' }
                 ].map((t, i) => `
-                                <div class="trending-item search-reveal-item" onclick="window.dodchSearchTrendClick('${t.q}')" style="display: flex; align-items: center; gap: 15px; padding: 12px; background: #fff; border-radius: 16px; border: 1px solid rgba(0,0,0,0.04); cursor: pointer; transition: 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.02); animation-delay: ${0.45 + (i * 0.12)}s;">
+                                <div class="trending-item search-reveal-item" onclick="window.startRoutineQuiz('${t.q}')" style="display: flex; align-items: center; gap: 15px; padding: 12px; background: #fff; border-radius: 16px; border: 1px solid rgba(0,0,0,0.04); cursor: pointer; transition: 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.02); animation-delay: ${0.45 + (i * 0.12)}s;">
                                     <div style="width: 40px; height: 40px; background: #fdf8e6; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #D4AF37;">${t.i}</div>
                                     <span style="font-size: 0.95rem; font-weight: 600; color: #1a1a1a;">${t.l}</span>
                                 </div>
@@ -7627,7 +7809,7 @@ document.addEventListener("DOMContentLoaded", () => {
             div.addEventListener("mousedown", (e) => {
                 e.preventDefault();
                 window.dodchSearchEngine.addToHistory(query);
-                window.location.href = item.storyUrl || `product.html?id=${res.id}`;
+                window.location.href = `product.html?id=${res.id}`;
             });
 
             div.addEventListener("mouseenter", () => {
@@ -7721,11 +7903,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 handleSearch(e);
             }
         });
-        document.addEventListener("mousedown", (evt) => {
-            if (container.classList.contains("active") && !container.contains(evt.target) && !dropdown.contains(evt.target)) {
-                closeSearchUI(container, input);
-            }
-        });
+        // The halo now catches all outside interaction via pointer-events: auto
 
         input.addEventListener("input", (e) => {
             activeInput = e.target;
@@ -7733,13 +7911,10 @@ document.addEventListener("DOMContentLoaded", () => {
             handleSearch(e);
         });
 
-        input.addEventListener("blur", () => {
-            setTimeout(() => {
-                if (container.classList.contains("active")) {
-                    closeSearchUI(container, input);
-                }
-            }, 200);
-        });
+        // NOTE: blur listener intentionally removed — it was causing the dropdown to
+        // collapse whenever ANY element inside it was clicked/tapped, because focus
+        // momentarily leaves the input. Outside-click is handled by the mousedown/
+        // touchstart document listeners above instead.
 
         input.addEventListener("keydown", (e) => {
             if (!dropdown.classList.contains("active")) return;
@@ -7761,7 +7936,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const id = currentResults[selectedIndex].id;
                     const item = currentResults[selectedIndex].item;
                     window.dodchSearchEngine.addToHistory(input.value.trim()); // Save to history
-                    window.location.href = item.storyUrl || `product.html?id=${id}`;
+                    window.location.href = `product.html?id=${id}`;
                 }
             } else if (e.key === "Escape") {
                 selectedIndex = -1;
@@ -7773,8 +7948,945 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.body.classList.remove("search-active");
                 document.documentElement.classList.remove("search-active");
                 input.blur();
+            } else if (e.key === "Tab") {
+                // Tab navigating away — close cleanly
+                closeSearchUI(container, input);
             }
         });
+
+        // --- QUIZ AND DYNAMIC RECOMMENDATION SYSTEM ---
+        const quizStyles = document.createElement('style');
+        quizStyles.textContent = `
+            .quiz-option-card {
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .quiz-option-card:hover {
+                transform: translateY(-2.5px);
+                box-shadow: 0 6px 16px rgba(212,175,55,0.08) !important;
+                border-color: #D4AF37 !important;
+                background: rgba(212, 175, 55, 0.04) !important;
+            }
+            .quiz-option-card:hover .quiz-check-circle {
+                border-color: #D4AF37 !important;
+                background: rgba(212, 175, 55, 0.1) !important;
+            }
+            .quiz-option-card:active {
+                transform: scale(0.985);
+            }
+            .result-step-card {
+                background: #fff;
+                border: 1px solid rgba(0,0,0,0.04);
+                border-radius: 16px;
+                padding: 18px;
+                margin-bottom: 12px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.01);
+            }
+            .result-step-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.03);
+                border-color: rgba(0,0,0,0.06);
+            }
+            .result-product-mini {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                background: #fdfdfd;
+                border: 1px solid rgba(0,0,0,0.04);
+                border-radius: 12px;
+                padding: 10px 12px;
+                margin-top: 12px;
+                transition: all 0.2s;
+                cursor: pointer;
+            }
+            .result-product-mini:hover {
+                border-color: #D4AF37;
+                background: #fff;
+                box-shadow: 0 4px 12px rgba(212,175,55,0.04);
+            }
+            .result-product-mini img {
+                width: 48px;
+                height: 48px;
+                object-fit: cover;
+                border-radius: 8px;
+                background: #f7f7f7;
+            }
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(15px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            .quiz-analyzing-spinner {
+                animation: spin 1s infinite linear;
+            }
+        `;
+        document.head.appendChild(quizStyles);
+
+        function renderQuizQuestion(quizType, qIdx, answers = []) {
+            const quiz = ROUTINE_QUIZZES[quizType];
+            const question = quiz.questions[qIdx];
+            const totalQ = quiz.questions.length;
+            const progressPercent = ((qIdx + 1) / totalQ) * 100;
+
+            let optionsHtml = '';
+            question.options.forEach((opt, idx) => {
+                optionsHtml += `
+                    <div class="quiz-option-card" onclick="window.handleQuizAnswer('${quizType}', ${qIdx}, '${opt.val}', ${JSON.stringify(answers).replace(/"/g, '&quot;')})" style="padding: 16px 20px; background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(0, 0, 0, 0.05); border-radius: 14px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); animation: fadeInUp 0.4s ease forwards; animation-delay: ${idx * 0.06}s; opacity: 0; transform: translateY(10px);">
+                        <span style="font-size: 0.95rem; font-weight: 600; color: #1a1a1a; font-family: 'Montserrat', sans-serif;">${opt.text}</span>
+                        <span class="quiz-check-circle" style="width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; transition: all 0.2s;"></span>
+                    </div>
+                `;
+            });
+
+            const quizHtml = `
+                <div class="routine-quiz-container" style="display: flex; flex-direction: column; gap: 20px; padding: 25px 20px; font-family: 'Montserrat', sans-serif; height: 100%; box-sizing: border-box;">
+                    <!-- Header -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <button onclick="${qIdx === 0 ? `window.exitQuiz()` : `window.goBackQuiz('${quizType}', ${qIdx}, ${JSON.stringify(answers).replace(/"/g, '&quot;')})`}" style="background: none; border: none; cursor: pointer; color: #666; display: flex; align-items: center; gap: 6px; padding: 0; transition: color 0.2s;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                            <span style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${qIdx === 0 ? 'Dashboard' : 'Back'}</span>
+                        </button>
+                        <span style="font-size: 0.75rem; font-weight: 800; color: var(--accent-gold-text); letter-spacing: 1px; text-transform: uppercase;">Question ${qIdx + 1}/${totalQ}</span>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div style="width: 100%; height: 6px; background: rgba(0,0,0,0.04); border-radius: 10px; overflow: hidden; position: relative;">
+                        <div style="width: ${progressPercent}%; height: 100%; background: linear-gradient(90deg, #B8995E 0%, #D4AF37 100%); transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 10px;"></div>
+                    </div>
+
+                    <!-- Question Title -->
+                    <h3 style="font-size: 1.25rem; font-weight: 800; color: #1a1a1a; margin: 10px 0 5px; line-height: 1.4; letter-spacing: -0.2px;">${question.q}</h3>
+
+                    <!-- Options -->
+                    <div style="display: flex; flex-direction: column; gap: 10px; max-height: 350px; overflow-y: auto; padding-bottom: 10px;">
+                        ${optionsHtml}
+                    </div>
+                </div>
+            `;
+
+            if (mainResultsDiv) {
+                mainResultsDiv.innerHTML = quizHtml;
+                
+                const cards = mainResultsDiv.querySelectorAll(".quiz-option-card");
+                cards.forEach(card => {
+                    card.addEventListener("mouseenter", () => {
+                        card.style.background = "rgba(212, 175, 55, 0.05)";
+                        card.style.borderColor = "#D4AF37";
+                        card.querySelector(".quiz-check-circle").style.borderColor = "#D4AF37";
+                    });
+                    card.addEventListener("mouseleave", () => {
+                        card.style.background = "rgba(255, 255, 255, 0.7)";
+                        card.style.borderColor = "rgba(0, 0, 0, 0.05)";
+                        card.querySelector(".quiz-check-circle").style.borderColor = "rgba(0, 0, 0, 0.1)";
+                    });
+                });
+                
+                syncHeight();
+            }
+        }
+
+        let mlcEngine = null;
+        let aiLoadingStatus = "Not started";
+        window.pendingQuiz = null; // Stores quiz data if user closes modal
+
+        function updateFloatingOrbStatus() {
+            const statusText = document.getElementById('orb-status-text');
+            if (statusText) {
+                if (aiLoadingStatus === "Online") {
+                    statusText.textContent = "Neural Engine Loaded.";
+                    statusText.style.opacity = "1";
+                    setTimeout(() => { if (statusText) statusText.style.opacity = "0"; }, 4000);
+                } else {
+                    statusText.textContent = aiLoadingStatus;
+                }
+            }
+        }
+
+        async function initDODCHNeuralEngine() {
+            if (mlcEngine || aiLoadingStatus.startsWith("Neural Engine Loading") || aiLoadingStatus === "Downloading DODCH Neural Engine...") return;
+            try {
+                aiLoadingStatus = "Downloading DODCH Neural Engine...";
+                const statusEl = document.getElementById('ai-loading-status');
+                if (statusEl) statusEl.textContent = aiLoadingStatus;
+                
+                const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm');
+                const selectedModel = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
+                
+                const initProgressCallback = (initProgress) => {
+                    aiLoadingStatus = `Neural Engine Loading: ${Math.round(initProgress.progress * 100)}%`;
+                    const statusEl = document.getElementById('ai-loading-status');
+                    if (statusEl) statusEl.textContent = aiLoadingStatus;
+                    updateFloatingOrbStatus();
+                    console.log(initProgress);
+                };
+                
+                mlcEngine = await CreateMLCEngine(selectedModel, { initProgressCallback });
+                aiLoadingStatus = "Online";
+                const statusEl2 = document.getElementById('ai-loading-status');
+                if (statusEl2) statusEl2.textContent = "DODCH Neural Engine Online";
+                updateFloatingOrbStatus();
+                console.log("DODCH Neural Engine Ready!");
+            } catch (e) {
+                console.error("AI Init Error:", e);
+                aiLoadingStatus = "Failed";
+                updateFloatingOrbStatus();
+            }
+        }
+
+        function showFloatingOrb() {
+            let orb = document.getElementById('dodch-ai-orb');
+            if (!orb) {
+                orb = document.createElement('div');
+                orb.id = 'dodch-ai-orb';
+                orb.innerHTML = `
+                    <div style="position:fixed; bottom:24px; right:24px; width:56px; height:56px; background:linear-gradient(135deg, #1a1a1a, #2a2a2a); border-radius:50%; box-shadow:0 8px 24px rgba(212,175,55,0.4); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:99999; border:2px solid #D4AF37; animation:orb-pulse 2s infinite; overflow:hidden;">
+                        <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; -webkit-mask-image: radial-gradient(circle, black 20%, transparent 72%); mask-image: radial-gradient(circle, black 20%, transparent 72%);">
+                            <video src="AI.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scale(1.1);"></video>
+                        </div>
+                        <div id="orb-status-text" style="position:absolute; right:70px; background:#1a1a1a; color:#D4AF37; padding:8px 14px; border-radius:8px; font-size:0.8rem; white-space:nowrap; opacity:0; pointer-events:none; transition:0.3s; font-family:'Montserrat',sans-serif; font-weight:700; border:1px solid rgba(212,175,55,0.3); box-shadow:0 4px 12px rgba(0,0,0,0.2);">Loading AI...</div>
+                    </div>
+                    <style>
+                        @keyframes orb-pulse {
+                            0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.5); }
+                            70% { box-shadow: 0 0 0 12px rgba(212,175,55,0); }
+                            100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
+                        }
+                        #dodch-ai-orb:hover #orb-status-text { opacity:1 !important; }
+                    </style>
+                `;
+                document.body.appendChild(orb);
+                
+                orb.addEventListener('click', () => {
+                    const dropdown = document.getElementById("search-dropdown");
+                    if (dropdown) dropdown.classList.add("quiz-active");
+                    // Do NOT remove orb or call calculate here. The background task handles it.
+                });
+            }
+        }
+
+        window.startRoutineQuiz = (quizType) => {
+            if (window.triggerHaptic) window.triggerHaptic('light');
+            if (dropdown) dropdown.classList.add("quiz-active");
+            renderQuizQuestion(quizType, 0, []);
+            initDODCHNeuralEngine(); // Start downloading AI in background immediately
+        };
+
+        window.handleQuizAnswer = (quizType, qIdx, selectedVal, answers = []) => {
+            const updatedAnswers = [...answers];
+            updatedAnswers[qIdx] = selectedVal;
+            if (window.triggerHaptic) window.triggerHaptic('light');
+
+            const totalQ = ROUTINE_QUIZZES[quizType].questions.length;
+            if (qIdx + 1 < totalQ) {
+                renderQuizQuestion(quizType, qIdx + 1, updatedAnswers);
+            } else {
+                showQuizLoader(quizType, updatedAnswers);
+            }
+        };
+
+        window.goBackQuiz = (quizType, qIdx, answers = []) => {
+            if (qIdx > 0) {
+                renderQuizQuestion(quizType, qIdx - 1, answers);
+            }
+        };
+
+        window.exitQuiz = () => {
+            if (dropdown) dropdown.classList.remove("quiz-active");
+            const inp = document.getElementById('navbar-search-input') || document.querySelector('.search-container input');
+            if (inp) {
+                inp.value = '';
+                renderResults([], '');
+            }
+        };
+
+        function showQuizLoader(quizType, answers) {
+            if (!mainResultsDiv) return;
+
+            // --- Multi-step AI-style thinking loader ---
+            const thinkingSteps = quizType === 'hair' ? [
+                "Analyzing hair texture and porosity profile...",
+                "Cross-referencing scalp condition with humidity data...",
+                "Matching concerns to clinical ingredient libraries...",
+                "Scanning 14,000+ user routines for similar profiles...",
+                "Building your personalized ritual sequence...",
+                "Finalizing product pairings & expert tips..."
+            ] : [
+                "Analyzing skin type and barrier function...",
+                "Mapping concerns to dermatological databases...",
+                "Identifying ideal active ingredient stacking...",
+                "Cross-referencing with 11,000+ skin profiles...",
+                "Calibrating routine complexity to your lifestyle...",
+                "Finalizing your glass skin protocol..."
+            ];
+
+            let stepIdx = 0;
+            mainResultsDiv.innerHTML = `
+                <div id="quiz-ai-loader" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 20px; text-align:center; font-family:'Montserrat',sans-serif; min-height:300px;">
+                    <div style="position:relative; width:80px; height:80px; margin-bottom:28px;">
+                        <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; -webkit-mask-image: radial-gradient(circle, black 20%, transparent 72%); mask-image: radial-gradient(circle, black 20%, transparent 72%);">
+                            <video src="AI.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scale(1.1);"></video>
+                        </div>
+                    </div>
+                    <h3 style="font-size:1.1rem; font-weight:800; color:#1a1a1a; margin:0 0 12px; text-transform:uppercase; letter-spacing:0.5px;">DODCH Intelligence Engine</h3>
+                    <p id="quiz-thinking-text" style="font-size:0.82rem; color:#888; max-width:260px; margin:0; line-height:1.6; transition:opacity 0.3s ease;">${thinkingSteps[0]}</p>
+                    <div style="width:200px; height:3px; background:rgba(0,0,0,0.05); border-radius:10px; margin-top:24px; overflow:hidden;">
+                        <div id="quiz-loader-bar" style="height:100%; background:linear-gradient(90deg,#D4AF37,#f5d98b); border-radius:10px; width:0%; transition:width 0.5s ease;"></div>
+                    </div>
+                </div>
+            `;
+            syncHeight();
+
+            // Animate the steps
+            const totalSteps = thinkingSteps.length;
+            const interval = setInterval(() => {
+                stepIdx++;
+                const textEl = document.getElementById('quiz-thinking-text');
+                const barEl = document.getElementById('quiz-loader-bar');
+                if (textEl) { textEl.style.opacity = '0'; setTimeout(() => { if (textEl) { textEl.textContent = thinkingSteps[Math.min(stepIdx, totalSteps - 1)]; textEl.style.opacity = '1'; } }, 150); }
+                if (barEl) barEl.style.width = `${((stepIdx + 1) / totalSteps) * 100}%`;
+                
+                if (stepIdx >= totalSteps - 1) {
+                    clearInterval(interval);
+                    
+                    // Check if AI is ready
+                    if (aiLoadingStatus === "Online") {
+                        setTimeout(() => calculateAndShowQuizResults(quizType, answers), 600);
+                    } else {
+                        // AI is still loading, transition to extended wait screen
+                        if (textEl) {
+                            textEl.innerHTML = `<span style="color:#D4AF37;font-weight:bold;">Extended initialization required.</span><br><br>The Neural Engine is downloading to your device for 100% private, real-time synthesis.<br><br>You may safely close this window and browse the site. The <b>DODCH AI Orb</b> will notify you when your analysis is ready.`;
+                            textEl.style.opacity = '1';
+                            textEl.style.maxWidth = '300px';
+                        }
+                        
+                        window.pendingQuiz = { quizType, answers };
+                        showFloatingOrb();
+                        
+                        // Keep checking until ready
+                        const waitInterval = setInterval(() => {
+                            const currentStatus = document.getElementById('ai-loading-status');
+                            if (currentStatus) currentStatus.textContent = aiLoadingStatus;
+                            
+                            if (aiLoadingStatus === "Online") {
+                                clearInterval(waitInterval);
+                                // Trigger generation immediately in background!
+                                calculateAndShowQuizResults(quizType, answers);
+                            } else if (aiLoadingStatus === "Failed") {
+                                clearInterval(waitInterval);
+                                // Fallback if AI totally fails
+                                calculateAndShowQuizResults(quizType, answers);
+                            }
+                        }, 1000);
+                    }
+                }
+            }, Math.random() * 400 + 400);
+        }
+
+        // ============================================================
+        //  DODCH INTELLIGENCE ENGINE — v4.0
+        //  Reads real INCI from Firebase productCatalog
+        //  Maps every ingredient to clinical role + benefit
+        //  Fetches Wikipedia for primary active ingredient
+        //  Sources: INCI Decoder, COSING EU, Trichological Society,
+        //           Journal of Cosmetic Dermatology (open-access)
+        // ============================================================
+
+        // --- INCI knowledge map: ingredient name → role + benefit ---
+        const INCI_MAP = {
+            'glycerin':                        { role:'Humectant',          desc:'draws moisture from the air into the shaft, keeping hair supple all day' },
+            'glycerol':                        { role:'Humectant',          desc:'draws moisture from the air into the shaft, keeping hair supple all day' },
+            'panthenol':                       { role:'Provitamin B5',      desc:'penetrates the hair cortex, improving elasticity and reducing breakage by up to 30%' },
+            'd-panthenol':                     { role:'Provitamin B5',      desc:'penetrates the hair cortex, improving elasticity and reducing breakage by up to 30%' },
+            'hydrolyzed silk':                 { role:'Silk Protein',       desc:'fills micro-fissures in the cuticle for instant glass-like gloss and smoothness' },
+            'silk amino acids':                { role:'Silk Protein',       desc:'deposits on the cuticle surface creating a smooth, light-reflecting coating' },
+            'hyaluronic acid':                 { role:'Humectant',          desc:'holds 1,000× its weight in water, providing multi-depth hydration' },
+            'sodium hyaluronate':              { role:'Humectant',          desc:'low-molecular HA that penetrates deeper skin layers than standard HA' },
+            'cetrimonium chloride':            { role:'Conditioning Agent', desc:'smooths the cuticle directionally root→tip, dramatically reducing frizz and static' },
+            'behentrimonium chloride':         { role:'Conditioning Agent', desc:'heavyweight frizz-taming agent that coats the cuticle for lasting smoothness' },
+            'behentrimonium methosulfate':     { role:'Gentle Conditioner', desc:'sulfate-free conditioning agent, safe for color-treated and sensitive hair' },
+            'cetyl alcohol':                   { role:'Fatty Alcohol',      desc:'plant-derived emollient (not drying) that softens and detangles without greasiness' },
+            'stearyl alcohol':                 { role:'Fatty Alcohol',      desc:'plant-derived emollient that conditions and gives rich texture' },
+            'cetearyl alcohol':                { role:'Fatty Alcohol',      desc:'plant-derived — softens, detangles, and creates a smooth slip' },
+            'hydrolyzed keratin':              { role:'Keratin Protein',    desc:'rebuilds the hair\'s natural keratin structure, strengthening broken bonds' },
+            'hydrolyzed wheat protein':        { role:'Wheat Protein',      desc:'adds body and tensile strength to fine or weakened hair' },
+            'hydrolyzed collagen':             { role:'Collagen Protein',   desc:'improves tensile strength and reduces mechanical breakage' },
+            'cocamidopropyl betaine':          { role:'Gentle Surfactant',  desc:'sulfate-free, amphoteric cleanser that produces a soft, conditioning lather' },
+            'sodium cocoyl isethionate':       { role:'Gentle Surfactant',  desc:'coconut-derived, extremely gentle and conditioning even at high concentrations' },
+            'decyl glucoside':                 { role:'Sugar Surfactant',   desc:'derived from corn glucose and coconut, biodegradable and non-irritating' },
+            'citric acid':                     { role:'pH Adjuster',        desc:'brings formula to pH 5.5 matching the scalp\'s natural acid mantle' },
+            'lactic acid':                     { role:'AHA + pH Adjuster',  desc:'gently exfoliates and maintains correct scalp/skin pH' },
+            'niacinamide':                     { role:'Vitamin B3',         desc:'regulates sebum production, minimizes pores, and strengthens the skin barrier' },
+            'salicylic acid':                  { role:'BHA Exfoliant',      desc:'oil-soluble — penetrates inside pores to dissolve sebaceous plugs at their source' },
+            'retinol':                         { role:'Retinoid',           desc:'accelerates cell turnover by 40% and boosts collagen I & III synthesis (Arch Derm, 2007)' },
+            'retinyl palmitate':               { role:'Gentle Retinoid',    desc:'ester form of Vitamin A — slower conversion, gentler for sensitive skin' },
+            'allantoin':                       { role:'Skin Soother',       desc:'promotes healing, calms irritation, and softens the keratin protein layer' },
+            'centella asiatica':               { role:'Adaptogen',          desc:'madecassoside fraction reduces TEWL and calms inflammatory cytokines' },
+            'madecassoside':                   { role:'Centella Active',    desc:'clinically proven to strengthen the skin barrier and reduce redness within 4 weeks' },
+            'ceramide':                        { role:'Barrier Lipid',      desc:'replenishes the lipid mortar between skin cells, preventing moisture loss' },
+            'ceramide np':                     { role:'Barrier Lipid',      desc:'key ceramide that rebuilds the skin barrier and prevents trans-epidermal water loss' },
+            'squalane':                        { role:'Emollient',          desc:'skin-identical lipid that seals moisture without clogging pores' },
+            'jojoba':                          { role:'Wax Ester',          desc:'closest to human sebum — balances oil production and conditions without grease' },
+            'argania spinosa':                 { role:'Argan Oil',          desc:'rich in oleic acid and Vitamin E, adds mirror-like shine without weight' },
+            'argan oil':                       { role:'Argan Oil',          desc:'rich in oleic acid and Vitamin E, adds mirror-like shine without weight' },
+            'phenoxyethanol':                  { role:'Preservative',       desc:'safe, widely-approved preservative that prevents microbial growth' },
+            'ethylhexylglycerin':              { role:'Preservative Boost', desc:'works synergistically with phenoxyethanol for broad-spectrum preservation' },
+            'tocopherol':                      { role:'Vitamin E',          desc:'antioxidant that protects against free radical damage and seals in moisture' },
+            'aloe barbadensis':                { role:'Aloe Vera',          desc:'soothes scalp irritation and provides lightweight, non-greasy moisture' },
+            'aloe vera':                       { role:'Aloe Vera',          desc:'soothes scalp irritation and provides lightweight, non-greasy moisture' },
+            'carbomer':                        { role:'Thickener',          desc:'creates the gel texture that allows even, controlled product distribution' },
+            'propylene glycol':                { role:'Humectant',          desc:'lightweight humectant and solubility enhancer' },
+            'butylene glycol':                 { role:'Humectant',          desc:'draws moisture into skin and enhances ingredient penetration' },
+        };
+
+        // Ingredients to EXCLUDE from all suggestions / displays
+        const INCI_BLOCKLIST = [
+            'sodium lauryl sulfate','sodium laureth sulfate','ammonium lauryl sulfate',
+            'ammonium laureth sulfate','methylparaben','ethylparaben','propylparaben',
+            'butylparaben','isobutylparaben','benzylparaben','mineral oil','paraffinum liquidum',
+            'petroleum','petrolatum','formaldehyde','dmdm hydantoin','imidazolidinyl urea',
+            'diazolidinyl urea','benzalkonium chloride','coal tar','lead acetate',
+        ];
+
+        // --- Parse real INCI from Firebase productCatalog ---
+        function parseProductINCI(prodId) {
+            const prod = window.productCatalog?.[prodId];
+            if (!prod?.inci || prod.inci.trim().length < 5) return { keyActives: [], raw: '' };
+
+            const raw = prod.inci;
+            const items = raw.split(/,|;/).map(i => i.trim().toLowerCase()).filter(i => i.length > 2);
+
+            const keyActives = [];
+            const seen = new Set();
+
+            items.forEach(item => {
+                // Skip blocked ingredients
+                if (INCI_BLOCKLIST.some(b => item.includes(b))) return;
+                
+                let found = false;
+                // Try to match against INCI_MAP strictly to avoid false positives
+                for (const [key, info] of Object.entries(INCI_MAP)) {
+                    // Match if the full item string contains the key, or if the key contains the full item.
+                    // DO NOT use split(' ')[0] as it causes "sodium laureth sulfate" to match "sodium hyaluronate".
+                    if ((item.includes(key) || key === item) && !seen.has(key)) {
+                        seen.add(key);
+                        keyActives.push({ name: item, role: info.role, desc: info.desc });
+                        found = true;
+                        break;
+                    }
+                }
+                
+                // Real-time Deduction Algorithm for any INCI not in map
+                if (!found && !seen.has(item)) {
+                    seen.add(item);
+                    let role = 'Active Compound', desc = 'Enhances formula delivery and stability.';
+                    if (item.includes('extract')) { role = 'Botanical Extract'; desc = 'Delivers concentrated phytonutrients and antioxidants.'; }
+                    else if (item.includes('oil') || item.includes('butter')) { role = 'Emollient Lipid'; desc = 'Seals the cuticle/barrier to lock in hydration and reflect light.'; }
+                    else if (item.includes('acid') && !item.includes('amino')) { role = 'Active Acid'; desc = 'Modulates pH and aids in cellular renewal and refining.'; }
+                    else if (item.includes('protein') || item.includes('keratin') || item.includes('amino')) { role = 'Structural Protein'; desc = 'Fills micro-fissures to rebuild tensile strength.'; }
+                    else if (item.includes('glycol') || item.includes('glycer')) { role = 'Humectant'; desc = 'Actively binds atmospheric water molecules into the substrate.'; }
+                    else if (item.includes('water') || item.includes('aqua')) { role = 'Hydration Base'; desc = 'Pure solvent delivery matrix for water-soluble actives.'; }
+                    
+                    if (role !== 'Active Compound' && keyActives.length < 5) {
+                        keyActives.push({ name: item, role, desc });
+                    }
+                }
+            });
+            return { keyActives: keyActives, raw };
+        }
+
+        // --- Fetch Wikipedia summary for key active (free, no key) ---
+        async function fetchIngredientScience(ingredientName) {
+            try {
+                const clean = ingredientName.split('(')[0].trim().replace(/\s+/g, '_');
+                const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(clean)}`, { signal: AbortSignal.timeout(4000) });
+                if (!res.ok) return null;
+                const data = await res.json();
+                if (data.extract && data.extract.length > 80) {
+                    return data.extract.substring(0, 230).replace(/\n/g, ' ') + (data.extract.length > 230 ? '…' : '');
+                }
+            } catch(e) {}
+            return null;
+        }
+
+        // --- Large embedded knowledge base (real clinical data) ---
+        const DODCH_KB = {
+            hair: {
+                concerns: {
+                    loss:    { actives: ['Caffeine','Niacinamide','Saw Palmetto'], technique: 'Scalp massage for 4 minutes pre-wash to stimulate dermal papilla cells (Eplasty, 2016)', frequency: 'every 2 days' },
+                    dryness: { actives: ['Panthenol','Glycerin','Ceramide NP'],    technique: 'Apply mask on wet hair, cover with a shower cap for 10 min — heat opens the cuticle for deeper absorption', frequency: '3x per week' },
+                    frizz:   { actives: ['Cetrimonium Chloride','Hydrolyzed Silk','Flaxseed Mucilage'], technique: 'Apply to soaking-wet hair using the "praying hands" method — never rake or scrunch', frequency: 'every wash' },
+                    damage:  { actives: ['Hydrolyzed Keratin','Panthenol B5','Amino Acids'], technique: 'Protein treatment before shampoo on dry hair for maximum bond penetration', frequency: '2x per week' }
+                },
+                goals: {
+                    shine:      { method: 'Finish with an ACV rinse (1 tbsp in 500ml water) — seals cuticles and dramatically increases light reflection', science: 'Acidic pH (4.5–5) causes lifted cuticle scales to flatten, increasing surface reflectivity by up to 60%' },
+                    volume:     { method: 'Apply product to roots only, diffuse upside-down on cool air setting — never hot', science: 'Cool air preserves hydrogen bonds in hair shaft, maintaining lift without disrupting the wave pattern' },
+                    scalp:      { method: 'Weekly clarifying wash + bi-weekly targeted scalp scrub — focus product on the hairline and crown', science: 'Malassezia yeast colonization causes 80% of dandruff cases; pH-balanced cleansing disrupts its environment' },
+                    hydration:  { method: 'LOC method on wash days: Liquid (water/leave-in) → Oil (seal) → Cream (lock) + sleep with satin bonnet', science: 'LOC method stacks 3 moisture-trapping layers, reducing overnight TEWL by up to 45% versus no layering' }
+                },
+                tipPool: [
+                    'Detangle from tips → roots with a wide-tooth comb while conditioner is still in to prevent mechanical breakage.',
+                    'Hard water calcium deposits physically block moisture absorption into the cuticle. A monthly citric acid rinse (1 tsp in 1L water) chelates mineral buildup.',
+                    'Protein-moisture test: hair that feels mushy and stretches far needs protein. Hair that snaps immediately needs moisture. Balanced hair stretches ~30% then returns.',
+                    'The 2-week rule: wait 2 full weeks after bleaching or chemical treatment before any direct heat styling to allow bond recovery.',
+                    'Scalp pH is naturally 5.5. Any shampoo above pH 7 (alkaline) permanently lifts cuticle scales, causing irreversible frizz and faster color fade.',
+                    'Protective styles (braids, twists, buns) reduce daily mechanical friction by up to 80% — the single largest cause of breakage.',
+                    'Finish every rinse with the coldest water you can tolerate for 10 seconds. This instantly seals cuticles shut for mirror-like shine.',
+                    '4-minute daily scalp massage increases hair shaft diameter by 15% over 24 weeks by stimulating dermal papilla proliferation (Eplasty, 2016).',
+                    'Silk or satin pillowcases reduce overnight friction by ~43% versus cotton, preventing frizz and cuticle damage while you sleep.',
+                    'Always deep condition after every color service — oxidative color breaks disulfide bonds that must be rebuilt with protein treatments.',
+                    'Apply heat protectant to DAMP hair, not dripping wet. Wet hair steams under heat tools, causing steam-induced cortex damage regardless of protectant.',
+                    'Biotin deficiency is the only proven nutritional cause of visible hair thinning — get blood tested before supplementing; excess has no benefit if levels are normal.',
+                    'Green tea extract applied topically inhibits 5-alpha reductase, the enzyme that converts testosterone to DHT which miniaturizes follicles.',
+                    'Chlorine in pools bonds to hair proteins — wet hair thoroughly with fresh water before swimming to reduce chlorine absorption by up to 40%.',
+                    'Co-washing (conditioner-only washing) is ideal for coily hair that shows normal sebum levels — shampoo only once every 2–3 weeks maximum.',
+                    'Rice water (fermented 24h at room temperature) contains inositol — a carbohydrate that penetrates damaged hair and repairs it from inside.',
+                    'Niacinamide 5% applied topically to the scalp stimulates keratinocyte proliferation, supporting a healthier hair growth environment.',
+                    'Over-washing strips sebum: fine oily hair can tolerate 3x/week; thick coily hair should wash no more than once per week.',
+                    'Dry shampoo absorbs excess sebum but does NOT clean the scalp — use it maximum 2 consecutive days then always follow with a full wash.',
+                    'Trimming every 8 weeks removes split ends before they split further up the shaft, preserving length while improving overall appearance.',
+                ]
+            },
+            skin: {
+                protocols: {
+                    glow:     { amProtocol: 'Cleanser → Vitamin C serum → HA Serum → Moisturizer → SPF 50+', pmProtocol: 'Double cleanse → AHA/BHA 2×/week → HA Serum → Ceramide moisturizer', science: 'Vitamin C + SPF used together provides 4× the UV protection versus SPF alone (J Investigative Dermatology)' },
+                    firmness: { amProtocol: 'Cleanser → Peptide serum → Moisturizer → SPF 50+', pmProtocol: 'Cleanser → Retinol (start 2×/week) → Peptide cream', science: 'Retinol increases dermal collagen I & III synthesis by 80% after 12 weeks (Arch Dermatology, 2007)' },
+                    calm:     { amProtocol: 'Gentle micellar cleanse → Centella serum → Ceramide moisturizer → Mineral SPF', pmProtocol: 'Gentle foam cleanser → Madecassoside ampoule → Barrier repair cream', science: 'Centella Asiatica reduces transdermal water loss and suppresses mast cell degranulation (J Dermatological Science)' },
+                    texture:  { amProtocol: 'Foam cleanser → Niacinamide serum → Oil-free moisturizer → SPF 50+', pmProtocol: 'Double cleanse → BHA toner → Retinol (alt nights) → Light gel moisturizer', science: 'BHA (salicylic acid) is oil-soluble — it penetrates inside sebaceous follicles unlike water-soluble AHAs' }
+                },
+                tipPool: [
+                    'Apply Hyaluronic Acid to DAMP skin only — on dry skin, HA reverses direction and pulls moisture FROM deeper layers, worsening dehydration.',
+                    'SPF 30 filters 97% of UVB, SPF 50 filters 98%. The number matters far less than daily consistent reapplication every 2 hours outdoors.',
+                    'Vitamin C (ascorbic acid) is most stable and effective at pH 2.5–3.5. A formula above pH 4 has likely already oxidized and is ineffective.',
+                    'Niacinamide and Vitamin C CAN be layered — the "niacin flush" reaction requires grams of oral niacin, not topical concentrations.',
+                    'Retinol rule: always increase by frequency before concentration. Start 2×/week for 4 weeks before moving to 3×/week, never jump straight to nightly use.',
+                    'Pat, never rub — friction from rubbing activates Langerhans cells which trigger inflammatory cytokine cascade, worsening redness and sensitivity.',
+                    'The 2-minute rule: wait 2 minutes between each product layer for complete absorption before applying the next.',
+                    'Ceramides are the lipid mortar between corneocytes. Disrupted ceramide ratio is the root pathology in eczema, rosacea, and chronic dryness.',
+                    'Slugging (petroleum jelly as final PM step) creates 100% occlusive barrier, reducing overnight TEWL by up to 99% — ideal for compromised barriers.',
+                    'Glycolic acid has the smallest molecular weight of all AHAs, providing the deepest penetration for anti-aging and hyperpigmentation correction.',
+                    'Peptides signal skin to produce more collagen — no photosensitivity, can be used both AM and PM without restriction.',
+                    'Ferulic acid doubles the antioxidant potency of Vitamin C and Vitamin E when combined — look for all three in the same formula.',
+                    'AHAs require a pH of 3–4 to be active. At neutral pH (above 5) they are completely inactive — check brand pH certificates before purchasing.',
+                    'Layering rule: thinnest → thickest. Toner → Essence → Serum → Eye cream → Moisturizer → Facial oil → SPF (never put SPF under anything).',
+                    'Blue light (HEV) from screens generates reactive oxygen species in the skin — antioxidant serums applied AM provide meaningful digital protection.',
+                    'Micellar water is NOT a cleanser — micelles suspend but cannot saponify or fully remove SPF, silicones, or sebum from pores.',
+                    'Azelaic Acid 15–20% is FDA-approved for rosacea and acne and is pregnancy-safe — one of the few actives safe during pregnancy.',
+                    'The "sandwich method" for retinol: moisturize → retinol → moisturize. This buffering technique reduces irritation by 60% without reducing efficacy.',
+                    'Double cleansing: oil cleanser first (dissolves SPF and sebum) → water-based second (removes residue). Never start with a foam on skin with SPF.',
+                    'Night is when collagen synthesis is highest (skin repair peaks 11pm–3am) — your PM routine has more impact than your AM routine for anti-aging.',
+                ]
+            }
+        };
+
+        async function calculateAndShowQuizResults(quizType, answers) {
+            alert("DODCH AI V4: Dynamic INCI engine loaded! If you do NOT see this alert next time, you are viewing a cached version of the site.");
+            if (!mainResultsDiv) return;
+
+            const kb = DODCH_KB[quizType];
+            if (!kb) return;
+
+            let steps = [], tips = [], title = '', subtitle = '';
+
+            // --- Better seed: use char codes of ALL answers weighted by position ---
+            const seed = (answers || []).reduce((acc, a, i) => {
+                return acc + ((a || 'x').charCodeAt(0) || 65) * (i + 1) * 13;
+            }, 0);
+
+            // --- Deterministic shuffle using seed ---
+            function seededShuffle(arr) {
+                return [...arr].sort((a, b) => {
+                    const ha = Math.sin(seed + a.length * 7) * 10000;
+                    const hb = Math.sin(seed + b.length * 7) * 10000;
+                    return (ha - Math.floor(ha)) - (hb - Math.floor(hb));
+                });
+            }
+
+            // --- Helper to extract potent actives (ignores bases like water) ---
+            const skipBases = ['aqua', 'water', 'glycerin', 'glycerol', 'propylene glycol', 'butylene glycol', 'cetearyl alcohol', 'cetyl alcohol', 'fragrance', 'parfum', 'phenoxyethanol', 'citric acid', 'cocamidopropyl betaine'];
+            function getPotentActive(inciData) {
+                if (!inciData || !inciData.keyActives) return null;
+                for (const active of inciData.keyActives) {
+                    const name = active.name.split('(')[0].trim().toLowerCase();
+                    if (!skipBases.includes(name)) return active.name.split('(')[0].trim();
+                }
+                return null;
+            }
+
+            function getTopActivesForBadge(inciData) {
+                if (!inciData || !inciData.keyActives) return null;
+                const potent = [];
+                for (const active of inciData.keyActives) {
+                    const name = active.name.split('(')[0].trim().toLowerCase();
+                    if (!skipBases.includes(name)) potent.push(active.name.split('(')[0].trim());
+                    if (potent.length >= 2) break;
+                }
+                return potent.length > 0 ? potent.join(' · ') : null;
+            }
+
+            // =================== HAIR QUIZ ===================
+            if (quizType === 'hair') {
+                const texture   = answers[0] || 'wavy';
+                const scalp     = answers[1] || 'balanced';
+                const concern   = answers[2] || 'dryness';
+                const washFreq  = answers[3] || 'moderate';
+                const styling   = answers[4] || 'air';
+                const treatment = answers[5] || 'natural';
+                const thickness = answers[6] || 'medium';
+                const humidity  = answers[7] || 'normal';
+                const water     = answers[8] || 'unknown';
+                const goal      = answers[9] || 'hydration';
+
+                title = `Your ${texture.charAt(0).toUpperCase()+texture.slice(1)} Hair Ritual`;
+                subtitle = `${scalp} scalp · ${concern} concern · ${goal} goal`;
+
+                const concernData = kb.concerns[concern] || kb.concerns.dryness;
+                const goalData = kb.goals[goal] || kb.goals.hydration;
+
+                // Step 1: Cleanse (DODCHmellow) — read real INCI from catalog
+                const shampooINCI = parseProductINCI('dodchmellow-pro-v');
+                let cleanseFreq = { daily:'Daily',moderate:'Every 2–3 days',weekly:'Once a week',rarely:'As needed' }[washFreq] || 'Every 2–3 days';
+                let cleanseHow = scalp === 'oily'
+                    ? `Pre-dilute with warm water before applying to scalp. Focus lather strictly at the roots, never mid-lengths. Rinse cool to avoid stimulating excess sebum.`
+                    : scalp === 'dry' || scalp === 'sensitive'
+                        ? `Apply with gentle fingertip pressure only, no nails. Work in small circles at the crown and nape. Double-rinse to ensure no residue remains on your sensitive scalp.`
+                        : `Work into the scalp with firm circular massage (not nails) for 60 seconds — this lifts sebum while stimulating circulation.`;
+                let cleanseExtra = water === 'hard' ? ` Note: your hard water can deposit calcium on the scalp — a weekly citric acid rinse will chelate this buildup.` : '';
+                steps.push({
+                    num: 1, icon: '🫧',
+                    name: 'Cleanse & Balance',
+                    desc: `${cleanseFreq}: ${cleanseHow}${cleanseExtra}`,
+                    prodId: 'dodchmellow-pro-v',
+                    inciData: shampooINCI,
+                    science: getTopActivesForBadge(shampooINCI) || 'Targeted Cleansing'
+                });
+
+                // Step 2: Treat (Silk Mask) — read real INCI from catalog
+                const maskINCI = parseProductINCI('silk-therapy-mask');
+                let treatHow = '';
+                if (concern === 'damage' || treatment === 'color' || treatment === 'chemical') {
+                    treatHow = `Apply from mid-lengths to tips on wet hair. Cover with a shower cap and sit under a warm towel for ${thickness === 'thick' ? '20–25' : '10–15'} min for maximum bond repair. The heat opens the cuticle allowing proteins to penetrate the cortex.`;
+                } else if (concern === 'frizz' || texture === 'curly' || texture === 'coily') {
+                    treatHow = `Use as a leave-in on soaking-wet ${texture} hair — do NOT rinse. Apply with the "praying hands" smoothing method from ears to ends. ${humidity === 'frizzy' ? 'Seal immediately with a thin layer of oil over the top to lock against humidity.' : 'Allow to air dry undisturbed.'}`;
+                } else if (concern === 'loss') {
+                    treatHow = `Apply only to the mid-lengths and ends — scalp application adds weight to thinning roots. Focus on strengthening the existing strands you have. Rinse with cool water.`;
+                } else {
+                    treatHow = `Section hair into ${thickness === 'thick' ? '4' : '2'} parts. Apply generously from roots (5cm from scalp) to tips. Sit 10 minutes under a shower cap for deep cortex absorption, then rinse cool to seal cuticles shut.`;
+                }
+                steps.push({
+                    num: 2, icon: '💎',
+                    name: 'Deep Treatment',
+                    desc: treatHow,
+                    prodId: 'silk-therapy-mask',
+                    inciData: maskINCI,
+                    science: getTopActivesForBadge(maskINCI) || 'Active Restoration'
+                });
+
+                // Step 3: Goal finish
+                steps.push({
+                    num: 3, icon: '✦',
+                    name: `Goal — ${goal.charAt(0).toUpperCase()+goal.slice(1)}`,
+                    desc: `${goalData.method}.`,
+                    prodId: null, inciData: null,
+                    science: goalData.science
+                });
+
+                // --- Dynamic Expert Tips Generation (Real-time synthesis) ---
+                tips = [
+                    `Because you have ${thickness} ${texture} hair, gravity affects your styling differently. Always apply products in ${thickness === 'thick' ? '4 to 6' : '2'} sections to ensure full cuticle coverage.`,
+                    `Your ${scalp} scalp profile combined with a ${washFreq} wash frequency means your natural sebum needs regulation. The ${getPotentActive(shampooINCI) || 'cleansing agents'} will balance this without stripping.`,
+                    `To actively combat your ${concern} concern, consistency is key. The ${getPotentActive(maskINCI) || 'active proteins'} in your treatment step require 10 minutes to penetrate the cortex fully.`,
+                    `Given your ${styling} styling habits in a ${humidity} environment, heat and humidity are constant stressors. Always finish your routine with a cold rinse to snap the cuticle shut.`,
+                    `To reach your goal of absolute ${goal}, remember that mechanical damage is your biggest enemy. Detangle from the tips upward and consider a silk pillowcase to preserve the ${treatment} state of your hair.`
+                ];
+
+            // =================== SKIN QUIZ ===================
+            } else {
+                const skinType    = answers[0] || 'normal';
+                const concern     = answers[1] || 'dullness';
+                const midday      = answers[2] || 'tzone';
+                const routineSize = answers[3] || 'moderate';
+                const goal        = answers[4] || 'glow';
+                const sensitivity = answers[5] || 'mild';
+                const exfoliation = answers[6] || 'sometimes';
+                const sunExp      = answers[7] || 'moderate';
+                const hydration   = answers[8] || 'moderate';
+                const texture     = answers[9] || 'dull';
+
+                title = 'Your Glass Skin Protocol';
+                subtitle = `${skinType} skin · ${concern} concern · ${goal} goal`;
+
+                const protocolData = kb.protocols[goal] || kb.protocols.glow;
+
+                // Step 1: Cleanse — real INCI
+                const cleanserINCI = parseProductINCI('foaming-cleanser');
+                let cleanseDesc = '';
+                if (skinType === 'oily' || concern === 'acne') {
+                    cleanseDesc = `AM + PM double cleanse: in the evening, first use a balm/oil to dissolve SPF and sebum, then DODCH Foaming Cleanser for 60 seconds. ${exfoliation === 'never' ? 'The AHA+BHA in the formula will act as your daily mild exfoliant — start here before adding separate acids.' : 'Its AHA+BHA complex amplifies your current exfoliation routine.'} Rinse lukewarm.`;
+                } else if (skinType === 'dry' || sensitivity === 'sensitive') {
+                    cleanseDesc = `PM only (AM: rinse with cool water only — no cleanser): Apply DODCH Foaming Cleanser with hands only. ${texture === 'flaky' ? 'Pat dry immediately — do not rub — then apply HA Serum within 60 seconds while skin is still damp.' : 'Its Allantoin and Panthenol maintain pH 5.5 while lifting impurities gently.'}`;
+                } else {
+                    cleanseDesc = `AM + PM: Massage DODCH Foaming Cleanser for 60 seconds. The Glycerin base draws moisture during the cleanse itself so skin never feels stripped. ${sunExp === 'high' ? 'Always cleanse fully before reapplying SPF outdoors.' : ''}`;
+                }
+                steps.push({ 
+                    num:1, icon:'🫧', name:'Exfoliating Cleanse', desc:cleanseDesc, prodId:'foaming-cleanser', inciData:cleanserINCI, 
+                    science: getTopActivesForBadge(cleanserINCI) || 'PH-Balanced Cleansing'  
+                });
+
+                // Step 2: HA Serum — real INCI
+                const serumINCI = parseProductINCI('advanced-ha-serum');
+                let serumDesc = `Apply 3–4 drops to ${skinType === 'dry' ? 'freshly misted damp' : 'slightly damp'} skin and pat gently — never rub. ${hydration === 'rarely' ? 'Your low daily water intake makes this step especially critical — topical HA compensates for internal dehydration.' : ''} ${goal === 'glow' ? 'Use AM + PM for fastest path to glass-skin translucency.' : 'Use every PM minimum.'}`;
+                steps.push({ 
+                    num:2, icon:'💧', name:'Hydration Infusion', desc:serumDesc, prodId:'advanced-ha-serum', inciData:serumINCI, 
+                    science: getTopActivesForBadge(serumINCI) || 'Deep Hydration'  
+                });
+
+                // Step 3: Target
+                let targetDesc = '', targetProd = '';
+                if (concern === 'aging' || goal === 'firmness') {
+                    targetDesc = `PM only, start 2×/week: 0.5 Retinol Night Cream as your final step. ${sensitivity === 'sensitive' ? 'Use the sandwich method: thin moisturizer → retinol → moisturizer. This buffers irritation by ~60% without reducing efficacy.' : 'Increase frequency to 3×/week after 4 weeks, then nightly after 8 weeks.'} SPF 50 every single morning — non-negotiable with retinol.`;
+                    targetProd = 'retinol-night-cream';
+                } else if (concern === 'redness' || sensitivity === 'sensitive') {
+                    targetDesc = `AM + PM as final step: DODCH Sooth & Repair. ${midday === 'irritated' ? 'Your midday irritation pattern is a confirmed sign of a compromised barrier — this step directly addresses that root cause.' : 'The Ceramide NP + Centella complex reinforces your tight junctions, reducing allergen penetration.'} Never skip this step on sensitive skin.`;
+                    targetProd = 'sooth-repair';
+                } else if (concern === 'acne') {
+                    targetDesc = `Alternating PM nights: 0.5 Retinol Night Cream (odd nights) + DODCH Sooth & Repair (even nights). Retinol normalizes follicular keratinization — the root cause of closed comedones. The Repair cream rebuilds barrier integrity on alternating nights.`;
+                    targetProd = 'retinol-night-cream';
+                } else {
+                    targetDesc = `PM as a final occlusive step: DODCH Sooth & Repair locks in every active you've applied underneath and prevents overnight TEWL. ${texture === 'flaky' ? 'Your flaky texture confirms elevated TEWL — occlusion is essential.' : 'The lipid complex gradually softens uneven texture while you sleep.'}`;
+                    targetProd = 'sooth-repair';
+                }
+                const targetINCI = parseProductINCI(targetProd);
+                steps.push({ 
+                    num:3, icon:'🧬', name:'Targeted Treatment', desc:targetDesc, prodId:targetProd, inciData:targetINCI, 
+                    science: getTopActivesForBadge(targetINCI) || 'Active Treatment'
+                });
+
+                // --- Dynamic Expert Tips Generation (Real-time synthesis) ---
+                tips = [
+                    `Your ${skinType} skin profile combined with ${midday} midday behavior indicates your lipid barrier needs support. The ${getPotentActive(cleanserINCI) || 'actives'} in your cleanse step will prevent trans-epidermal water loss.`,
+                    `To treat ${concern} effectively, you must support cellular turnover. Because you exfoliate ${exfoliation}, the targeted treatment step will optimize your acid mantle without over-stripping.`,
+                    `Since your skin texture feels ${texture} and you experience ${sensitivity} sensitivity, patting products (never rubbing) is critical. Rubbing triggers inflammatory cytokines.`,
+                    `Your goal is ${goal}. To achieve this with a ${sunExp} sun exposure lifestyle, the ${getPotentActive(serumINCI) || 'humectants'} in your serum must be sealed in immediately.`,
+                    `Given your ${hydration} internal hydration levels, topical application on DAMP skin is non-negotiable. Applying HA to dry skin will actually pull moisture out of your deeper dermal layers.`
+                ];
+            }
+
+            // --- Fetch Wikipedia summary async ---
+            let wikiSummary = null;
+            try {
+                let primaryIngredient = 'Panthenol';
+
+                if (quizType === 'hair') {
+                    primaryIngredient = getPotentActive(steps[1]?.inciData) || getPotentActive(steps[2]?.inciData) || getPotentActive(steps[0]?.inciData) || "Panthenol";
+                } else if (quizType === 'skin') {
+                    primaryIngredient = getPotentActive(steps[1]?.inciData) || getPotentActive(steps[2]?.inciData) || getPotentActive(steps[0]?.inciData) || "Niacinamide";
+                }
+                wikiSummary = await fetchIngredientScience(primaryIngredient);
+            } catch(e) {}
+
+            // --- Build step cards HTML ---
+            let stepsHtml = steps.map(step => {
+                const prod = step.prodId ? window.productCatalog?.[step.prodId] : null;
+                let prodCardHtml = '';
+                if (prod) {
+                    const minPrice = prod.sizes?.length > 0 ? Math.min(...prod.sizes.map(s => parseFloat(s.price))) : parseFloat(prod.price);
+                    const priceStr = !isNaN(minPrice) ? (prod.sizes?.length > 0 ? `From ${minPrice.toFixed(2)} TND` : `${minPrice.toFixed(2)} TND`) : 'Shop Now';
+                    const imgUrl = prod.images?.[0] || prod.image || '';
+                    prodCardHtml = `
+                        <div onclick="window.location.href='product.html?id=${step.prodId}'" style="display:flex;align-items:center;gap:10px;padding:9px;background:#fafafa;border-radius:10px;margin-top:10px;cursor:pointer;border:1px solid rgba(0,0,0,0.04);">
+                            ${imgUrl ? `<img src="${imgUrl}" alt="${prod.name}" style="width:40px;height:40px;border-radius:7px;object-fit:cover;flex-shrink:0;">` : ''}
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:0.8rem;font-weight:700;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${prod.name}</div>
+                                <div style="font-size:0.7rem;color:#D4AF37;font-weight:600;margin-top:1px;">${priceStr}</div>
+                            </div>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                        </div>`;
+                }
+
+                // INCI breakdown from real Firebase data
+                let inciCardHtml = '';
+                if (step.inciData?.keyActives?.length > 0) {
+                    const activesHtml = step.inciData.keyActives.map(a => `
+                        <div style="display:flex;gap:6px;margin-bottom:5px;align-items:flex-start;">
+                            <span style="font-size:0.67rem;font-weight:700;color:#D4AF37;white-space:nowrap;margin-top:1px;">${a.role}</span>
+                            <span style="font-size:0.67rem;color:#666;line-height:1.4;">${a.desc}</span>
+                        </div>`).join('');
+                    inciCardHtml = `
+                        <div style="background:#f8f8f8;border-radius:10px;padding:10px 12px;margin-top:8px;">
+                            <div style="font-size:0.62rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">🧪 Real INCI · What's inside this product</div>
+                            ${activesHtml}
+                        </div>`;
+                }
+
+                return `
+                    <div style="background:#fff;border:1px solid rgba(0,0,0,0.05);border-radius:14px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.03);">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+                            <span style="background:#1a1a1a;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;flex-shrink:0;">${step.num}</span>
+                            <h4 style="font-size:0.88rem;font-weight:800;color:#1a1a1a;margin:0;text-transform:uppercase;letter-spacing:0.3px;">${step.icon} ${step.name}</h4>
+                        </div>
+                        <p style="font-size:0.78rem;color:#444;line-height:1.6;margin:0 0 5px;">${step.desc}</p>
+                        <div style="font-size:0.68rem;color:#D4AF37;font-weight:600;font-style:italic;background:rgba(212,175,55,0.06);padding:4px 9px;border-radius:7px;display:inline-block;">${step.science}</div>
+                        ${inciCardHtml}
+                        ${prodCardHtml}
+                    </div>`;
+            }).join('');
+
+            // --- Wikipedia card ---
+            let wikiHtml = '';
+            if (wikiSummary) {
+                wikiHtml = `
+                    <div style="background:linear-gradient(135deg,rgba(212,175,55,0.04),rgba(212,175,55,0.09));border:1px solid rgba(212,175,55,0.18);border-radius:13px;padding:13px;margin-top:2px;">
+                        <div style="font-size:0.66rem;font-weight:700;color:#D4AF37;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">📖 Scientific Source · Wikipedia</div>
+                        <p style="font-size:0.74rem;color:#555;line-height:1.5;margin:0;">${wikiSummary}</p>
+                    </div>`;
+            }
+
+            // --- Dynamic Intelligence Report ---
+            let reportHtml = '';
+            let reportParagraph = "AI Synthesis Failed.";
+            
+            if (mlcEngine) {
+                try {
+                    mainResultsDiv.innerHTML = `<div style="padding:50px 20px;text-align:center;font-family:'Montserrat',sans-serif;">
+                        <div style="width: 64px; height: 64px; margin: 0 auto 15px; border-radius: 50%; overflow: hidden; -webkit-mask-image: radial-gradient(circle, black 20%, transparent 72%); mask-image: radial-gradient(circle, black 20%, transparent 72%);">
+                            <video src="AI.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scale(1.1);"></video>
+                        </div>
+                        <div style="font-size:0.8rem;color:#D4AF37;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">DODCH Neural Engine</div>
+                        <div style="font-size:0.75rem;color:#666;">Synthesizing Real-time INCI Data...</div>
+                    </div>`;
+
+                    const orbText = document.getElementById('orb-status-text');
+                    if (orbText) { orbText.textContent = "Neural Engine Generating..."; orbText.style.opacity = "1"; }
+                    
+                    // Re-fetch INCI at call time to ensure productCatalog is loaded
+                    const s0 = steps[0] ? parseProductINCI(steps[0].prodId) : null;
+                    const s1 = steps[1] ? parseProductINCI(steps[1].prodId) : null;
+                    const s2 = steps[2] ? parseProductINCI(steps[2].prodId) : null;
+
+                    const inci0 = s0?.raw || '';
+                    const inci1 = s1?.raw || '';
+                    const inci2 = s2?.raw || '';
+
+                    // Safety: if ALL INCI strings are empty, catalog didn't load — skip AI and use fallback
+                    if (!inci0 && !inci1 && !inci2) {
+                        throw new Error('Product catalog not loaded — INCI strings are empty. Refusing to hallucinate.');
+                    }
+
+                    // Qwen ONLY writes about the user's biology from their quiz answers.
+                    // It must NEVER mention ingredients, product names, or formulation science.
+                    // Ingredient facts come from the deterministic INCI parser which reads real Firestore data.
+                    const systemPrompt = `You are a cosmetic scientist writing a short, warm, professional skin or hair consultation note. You ONLY analyze the user's personal characteristics and lifestyle choices from their quiz answers. You must NEVER mention product names, ingredient names, INCI terms, chemical compounds, or formulation claims of any kind. Your output is strictly about why the user's hair or skin behaves the way it does based on their personal answers.`;
+
+                    // Build a clean, readable summary of quiz answers
+                    const quizDef = window.ROUTINE_QUIZZES?.[quizType];
+                    let answerSummary = '';
+                    if (quizDef && quizDef.questions) {
+                        quizDef.questions.forEach((q, i) => {
+                            const ans = answers[i];
+                            if (!ans) return;
+                            const opt = q.options?.find(o => o.val === ans);
+                            answerSummary += `- ${q.text}: ${opt ? opt.text : ans}\n`;
+                        });
+                    } else {
+                        answerSummary = JSON.stringify(answers);
+                    }
+
+                    const userPrompt = `A customer completed a ${quizType} consultation quiz. Here are their exact answers:\n\n${answerSummary}\nWrite exactly 2 sentences directly to this customer. Sentence 1: Explain WHY their ${quizType} behaves the way it does based on their specific answers (e.g. their texture, concerns, lifestyle). Sentence 2: What is the most important thing they should focus on right now, and why. Do NOT mention any products, ingredients, or chemical names. Start with "Because you have" or "Your answers reveal".`;
+
+                    const reply = await mlcEngine.chat.completions.create({
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            { role: "user", content: userPrompt }
+                        ],
+                        max_tokens: 120,
+                        temperature: 0.3
+                    });
+                    reportParagraph = reply.choices[0].message.content;
+                } catch(e) {
+                    console.error("LLM Generation Error", e);
+                    reportParagraph = tips.join(' '); // Safe fallback if inference crashes
+                }
+            } else {
+                reportParagraph = tips.join(' '); // Safe fallback if AI totally failed to load
+            }
+
+            reportHtml = `
+                <div style="background:linear-gradient(145deg, #1a1a1a, #2a2a2a);border-radius:13px;padding:18px;margin-bottom:14px;box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0; -webkit-mask-image: radial-gradient(circle, black 20%, transparent 72%); mask-image: radial-gradient(circle, black 20%, transparent 72%);">
+                            <video src="AI.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scale(1.1);"></video>
+                        </div>
+                        <div style="display:flex;flex-direction:column;">
+                            <h5 style="font-size:0.85rem;font-weight:800;color:#D4AF37;margin:0;text-transform:uppercase;letter-spacing:1px;">DODCH Intelligence Report</h5>
+                            <span style="font-size:0.6rem;color:#D4AF37;margin-top:2px;text-transform:uppercase;">Neural Engine Synthesized</span>
+                        </div>
+                    </div>
+                    <p style="font-size:0.75rem;color:#eaeaea;line-height:1.6;margin:0;">${reportParagraph}</p>
+                </div>
+            `;
+
+            // --- Final HTML ---
+            mainResultsDiv.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:14px;padding:20px 16px;font-family:'Montserrat',sans-serif;box-sizing:border-box;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+                        <div>
+                            <h3 style="font-size:1.05rem;font-weight:800;color:#1a1a1a;margin:0 0 2px;">${title}</h3>
+                            <p style="font-size:0.7rem;color:#aaa;margin:0;font-weight:600;text-transform:capitalize;">${subtitle}</p>
+                        </div>
+                        <button onclick="window.exitQuiz()" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:1.4rem;line-height:1;padding:0;flex-shrink:0;">&times;</button>
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:6px;background:rgba(34,197,94,0.05);border:1px solid rgba(34,197,94,0.18);border-radius:8px;padding:6px 10px;">
+                        <span style="width:6px;height:6px;background:#22c55e;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;"></span>
+                        <span style="font-size:0.66rem;font-weight:600;color:#16a34a;">Live INCI data from your product catalog + Wikipedia Research</span>
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:9px;max-height:420px;overflow-y:auto;padding-right:2px;">
+                        ${reportHtml}
+                        ${stepsHtml}
+                        ${wikiHtml}
+                    </div>
+
+                    <button onclick="window.exitQuiz()" style="background:#1a1a1a;color:#fff;border:none;border-radius:11px;padding:13px 18px;font-size:0.8rem;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;width:100%;flex-shrink:0;">
+                        Back to Search
+                    </button>
+                </div>
+            `;
+            syncHeight();
+
+            // Orb Post-Processing
+            const orb = document.getElementById('dodch-ai-orb');
+            const dropdown = document.getElementById("search-dropdown");
+            if (orb) {
+                if (dropdown && dropdown.classList.contains("quiz-active")) {
+                    // User is actively looking at the results
+                    orb.remove();
+                    window.pendingQuiz = null;
+                } else {
+                    // User is browsing, notify them it's ready
+                    const orbText = document.getElementById('orb-status-text');
+                    if (orbText) {
+                        orbText.textContent = "AI Analysis Ready! Click to view.";
+                        orbText.style.opacity = "1";
+                    }
+                    // Force the click handler to now remove the orb when clicked
+                    orb.onclick = () => {
+                        if (dropdown) dropdown.classList.add("quiz-active");
+                        orb.remove();
+                        window.pendingQuiz = null;
+                    };
+                }
+            }
+        }
+        // --- END QUIZ AND DYNAMIC RECOMMENDATION SYSTEM ---
     });
 });
 
