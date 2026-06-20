@@ -2420,6 +2420,10 @@ footer {
         grid-template-columns: 1fr;
         position: static;
     }
+    .product-image-window {
+        aspect-ratio: 1.1 / 1;
+        max-height: 380px;
+    }
     .product-info {
         padding: var(--space-6) var(--space-4);
         border-radius: 24px;
@@ -2504,7 +2508,7 @@ footer {
 }
 
 .product-price {
-    display: inline-flex;
+    display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
@@ -2521,7 +2525,7 @@ footer {
     white-space: nowrap;
     align-items: center;
     justify-content: center;
-    background: var(--accent-offer);
+    background: #3D6E50;
     color: #fff;
     padding: var(--space-2) var(--space-3);
     border-radius: 999px;
@@ -2603,6 +2607,116 @@ footer {
     background-color: var(--accent-gold);
     transform: translateY(-1px);
 }
+
+/* --- Notify Me When Back in Stock Button --- */
+.notify-back-in-stock-btn {
+    width: 100%;
+    padding: var(--space-5);
+    background: linear-gradient(135deg, #1C1C1C 0%, #2D2D2D 50%, #404040 100%);
+    color: #fff;
+    border: 1px solid var(--accent-gold);
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: var(--space-6);
+    border-radius: 999px;
+    box-shadow: 0 8px 32px rgba(214, 175, 55, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.notify-back-in-stock-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.notify-back-in-stock-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 48px rgba(214, 175, 55, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, var(--accent-gold) 0%, #E5C178 50%, #C5A059 100%);
+    color: #2D2D2D;
+    border-color: #E5C178;
+}
+
+.notify-back-in-stock-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 16px rgba(214, 175, 55, 0.1);
+}
+
+.notify-back-in-stock-btn svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    animation: bell-ring 3s ease-in-out infinite;
+}
+
+@keyframes bell-ring {
+    0%, 85%, 100% { transform: rotate(0deg); }
+    90% { transform: rotate(15deg); }
+    95% { transform: rotate(-12deg); }
+}
+
+.notify-back-in-stock-btn.subscribed {
+    background: linear-gradient(135deg, #4A5D4E 0%, #5C7060 100%);
+    border-color: #5C7060;
+    box-shadow: 0 8px 32px rgba(74, 93, 78, 0.2);
+    cursor: default;
+    color: #fff;
+}
+
+.notify-back-in-stock-btn.subscribed:hover {
+    transform: none;
+    background: linear-gradient(135deg, #4A5D4E 0%, #5C7060 100%);
+    box-shadow: 0 8px 32px rgba(74, 93, 78, 0.2);
+}
+
+.notify-back-in-stock-btn.loading {
+    opacity: 0.75;
+    cursor: wait;
+}
+
+/* --- Product Story Link (View Full Details) on Product Page --- */
+#product-story-link {
+    width: 100%;
+    padding: var(--space-5);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    color: var(--text-charcoal);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    margin-top: var(--space-4) !important;
+    margin-bottom: 0 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+#product-story-link:hover {
+    background-color: var(--text-charcoal);
+    color: #fff;
+    border-color: var(--text-charcoal);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
 
 .product-description {
     margin-top: var(--space-10);
@@ -3656,6 +3770,73 @@ footer {
 
 .qv-add-to-cart-btn:hover::after {
     left: 0;
+}
+
+/* --- Quick View Stock Notification Button --- */
+.qv-notify-btn {
+    width: 100%;
+    padding: var(--space-4);
+    background: linear-gradient(135deg, #1C1C1C 0%, #2D2D2D 50%, #404040 100%);
+    color: #fff;
+    border: 1px solid var(--accent-gold);
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50px;
+    box-shadow: 0 8px 24px rgba(214, 175, 55, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    position: relative;
+    overflow: hidden;
+    margin-top: var(--space-4);
+}
+
+.qv-notify-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.qv-notify-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 36px rgba(214, 175, 55, 0.2), 0 3px 8px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, var(--accent-gold) 0%, #E5C178 50%, #C5A059 100%);
+    color: #2D2D2D;
+    border-color: #E5C178;
+}
+
+.qv-notify-btn svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    animation: bell-ring 3s ease-in-out infinite;
+}
+
+.qv-notify-btn.subscribed {
+    background: linear-gradient(135deg, #4A5D4E 0%, #5C7060 100%);
+    border-color: #5C7060;
+    box-shadow: 0 6px 20px rgba(74, 93, 78, 0.15);
+    cursor: default;
+    color: #fff;
+}
+
+.qv-notify-btn.subscribed:hover {
+    transform: none;
+    background: linear-gradient(135deg, #4A5D4E 0%, #5C7060 100%);
+    box-shadow: 0 6px 20px rgba(74, 93, 78, 0.15);
+}
+
+.qv-notify-btn.loading {
+    opacity: 0.75;
+    cursor: wait;
 }
 
 @media (max-width: 767px) {

@@ -17,10 +17,16 @@ service cloud.firestore {
     }
 
     // Products & Overrides: Public read, Admin write.
+    // Product documents contain: name, subtitle, description, inci, price, sizes (with batchNumber, expiryDate),
+    // batchHistory (array of {size, batchNumber, expiryDate, timestamp, inci}), images, outOfStock, etc.
     match /products/{productId} {
       allow read: if true;
-      // Admin can manage products, including the new size-specific batch, expiry data, and performance metrics.
-      allow write: if isAdmin();
+      // Only the admin can write products, including updating batch history records.
+      allow write: if isAdmin()
+        && (
+          !('batchHistory' in request.resource.data)
+          || request.resource.data.batchHistory is list
+        );
     }
 
     match /product_overrides/{slug} {
@@ -110,6 +116,14 @@ service cloud.firestore {
     match /subscribers/{token} {
       allow read: if isAdmin();
       allow write: if isVerifiedApp();
+    }
+
+    match /back_in_stock_subscriptions/{subscriptionId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow create: if isVerifiedApp() && (
+        request.resource.data.userId == null || (request.auth != null && request.resource.data.userId == request.auth.uid)
+      );
+      allow update, delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
     }
 
     match /messages/{messageId} {

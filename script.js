@@ -1,4 +1,4 @@
-﻿// Universal Image WebP Fallback Fix
+// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -1284,6 +1284,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             productCatalog[productId].inci = data.inci;
                         }
 
+                        // Sync Batch History
+                        if (data.batchHistory) {
+                            productCatalog[productId].batchHistory = data.batchHistory;
+                        }
+
                         // Target specific price elements in the DOM to avoid full re-render
                         const priceTargets = document.querySelectorAll(`[data-price-target="${productId}"]`);
                         if (priceTargets.length > 0) {
@@ -2416,7 +2421,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                                 : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
                             const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
-                            const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+                            const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
 
                             if (sizeObj.originalPrice) {
                                 priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span class="offer-badge">ONLINE OFFER</span>`;
@@ -2429,12 +2434,44 @@ document.addEventListener('DOMContentLoaded', () => {
                         const isActuallyOOS = product.sizes && product.sizes.length > 0
                             ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                             : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                        if (atcBtn && !isActuallyOOS) {
-                            const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                            atcBtn.disabled = sizeObj.outOfStock === true;
-                            atcBtn.innerHTML = sizeObj.outOfStock ? "Out of Stock" : cartIcon + "Add to Cart";
-                            atcBtn.style.backgroundColor = sizeObj.outOfStock ? "#ccc" : "";
-                            atcBtn.style.opacity = sizeObj.outOfStock ? "0.5" : "";
+                        
+                        // Handle stock notification button dynamic injection
+                        let notifyBtn = document.getElementById('back-in-stock-notify-btn');
+                        if (notifyBtn) notifyBtn.remove();
+
+                        if (atcBtn) {
+                            if (isActuallyOOS || sizeObj.outOfStock) {
+                                // Out of Stock state
+                                atcBtn.style.display = 'none';
+                                
+                                notifyBtn = document.createElement('button');
+                                notifyBtn.id = 'back-in-stock-notify-btn';
+                                notifyBtn.className = 'notify-back-in-stock-btn';
+                                notifyBtn.innerHTML = `
+                                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
+                                    Notify Me When Back in Stock
+                                `;
+                                atcBtn.before(notifyBtn);
+                                
+                                notifyBtn.addEventListener('click', async () => {
+                                    window.triggerHaptic('medium');
+                                    notifyBtn.classList.add('loading');
+                                    notifyBtn.disabled = true;
+                                    await handleBackInStockSubscription(productId, sizeObj.label, notifyBtn);
+                                    notifyBtn.classList.remove('loading');
+                                    notifyBtn.disabled = false;
+                                });
+                            } else {
+                                // In Stock state
+                                atcBtn.style.display = 'block';
+                                const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                                atcBtn.disabled = false;
+                                atcBtn.innerHTML = cartIcon + "Add to Cart";
+                                atcBtn.style.backgroundColor = "";
+                                atcBtn.style.opacity = "";
+                            }
                         }
                     }
 
@@ -2454,7 +2491,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                                     : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
                                 const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
-                                const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+                                const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
 
                                 if (sizeObj.originalPrice) {
                                     priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span class="offer-badge">ONLINE OFFER</span>`;
@@ -2464,16 +2501,43 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
                             }
 
-                            const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
-                            const isActuallyOOS = product.sizes && product.sizes.length > 0
-                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                            if (atcBtn && !isActuallyOOS) {
-                                const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                                atcBtn.disabled = sizeObj.outOfStock === true;
-                                atcBtn.innerHTML = sizeObj.outOfStock ? "Out of Stock" : cartIcon + "Add to Cart";
-                                atcBtn.style.backgroundColor = sizeObj.outOfStock ? "#ccc" : "";
-                                atcBtn.style.opacity = sizeObj.outOfStock ? "0.5" : "";
+                            // Handle stock notification button dynamic injection
+                            let notifyBtn = document.getElementById('back-in-stock-notify-btn');
+                            if (notifyBtn) notifyBtn.remove();
+
+                            if (atcBtn) {
+                                if (isActuallyOOS || sizeObj.outOfStock) {
+                                    // Out of Stock state
+                                    atcBtn.style.display = 'none';
+                                    
+                                    notifyBtn = document.createElement('button');
+                                    notifyBtn.id = 'back-in-stock-notify-btn';
+                                    notifyBtn.className = 'notify-back-in-stock-btn';
+                                    notifyBtn.innerHTML = `
+                                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                        </svg>
+                                        Notify Me When Back in Stock
+                                    `;
+                                    atcBtn.before(notifyBtn);
+                                    
+                                    notifyBtn.addEventListener('click', async () => {
+                                        window.triggerHaptic('medium');
+                                        notifyBtn.classList.add('loading');
+                                        notifyBtn.disabled = true;
+                                        await handleBackInStockSubscription(productId, sizeObj.label, notifyBtn);
+                                        notifyBtn.classList.remove('loading');
+                                        notifyBtn.disabled = false;
+                                    });
+                                } else {
+                                    // In Stock state
+                                    atcBtn.style.display = 'block';
+                                    const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                                    atcBtn.disabled = false;
+                                    atcBtn.innerHTML = cartIcon + "Add to Cart";
+                                    atcBtn.style.backgroundColor = "";
+                                    atcBtn.style.opacity = "";
+                                }
                             }
 
                             if (batchDisplay) {
@@ -2552,18 +2616,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // The Add to Cart button state is already managed by the size selection logic above.
 
         if (addToCartBtn) {
-            const storyBtn = document.createElement('a');
-            storyBtn.id = 'product-story-link';
-            storyBtn.className = 'qv-view-details-btn';
-            storyBtn.style.marginBottom = '1rem';
-            storyBtn.style.display = 'block'; // Ensure it takes full width if qv-view-details-btn uses inline-block
-
             const hasStory = hasStandaloneStoryPage(product);
-            storyBtn.textContent = hasStory ? 'View Full Details' : 'No Additional Details';
-
-            storyBtn.href = hasStory ? product.storyUrl : '#';
-            storyBtn.classList.toggle('disabled', !hasStory);
-            addToCartBtn.before(storyBtn);
+            if (hasStory) {
+                const storyBtn = document.createElement('a');
+                storyBtn.id = 'product-story-link';
+                storyBtn.className = 'qv-view-details-btn';
+                storyBtn.style.marginBottom = '1rem';
+                storyBtn.style.display = 'block'; // Ensure it takes full width if qv-view-details-btn uses inline-block
+                storyBtn.textContent = 'View Full Details';
+                storyBtn.href = product.storyUrl;
+                addToCartBtn.before(storyBtn);
+            }
         }
     };
     initProductPage();
@@ -4383,6 +4446,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (document.getElementById('new-prod-story-url')) document.getElementById('new-prod-story-url').value = '';
                     if (document.getElementById('new-prod-performance-container')) document.getElementById('new-prod-performance-container').innerHTML = '';
                     if (sizesContainer) sizesContainer.innerHTML = ''; // Clear sizes
+                    const historySection = document.getElementById('batch-history-section');
+                    const historyContainer = document.getElementById('batch-history-container');
+                    if (historySection) historySection.style.display = 'none';
+                    if (historyContainer) historyContainer.innerHTML = '';
                     const productIdInput = document.getElementById('product-id-input');
                     if (productIdInput) productIdInput.value = '';
                     if (imagePathInput) imagePathInput.value = '';
@@ -4562,12 +4629,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // --- Step 2: Construct Product Object with Final Image URLs ---
+                const batchHistory = existingProduct.batchHistory || [];
+                const currentInci = document.getElementById('new-prod-inci').value.trim();
+                if (isEdit && existingProduct.sizes && Array.isArray(existingProduct.sizes)) {
+                    sizes.forEach(newSize => {
+                        const oldSize = existingProduct.sizes.find(s => s.label === newSize.label);
+                        const oldBatch = oldSize ? (oldSize.batchNumber || '') : '';
+                        const newBatch = newSize.batchNumber || '';
+                        if (newBatch && newBatch !== oldBatch) {
+                            batchHistory.push({
+                                size: newSize.label,
+                                batchNumber: newBatch,
+                                expiryDate: newSize.expiryDate || '',
+                                timestamp: new Date().toISOString(),
+                                inci: currentInci
+                            });
+                        }
+                    });
+                } else {
+                    // For new products or if the product had no sizes, log any initial batches
+                    sizes.forEach(newSize => {
+                        const newBatch = newSize.batchNumber || '';
+                        if (newBatch) {
+                            batchHistory.push({
+                                size: newSize.label,
+                                batchNumber: newBatch,
+                                expiryDate: newSize.expiryDate || '',
+                                timestamp: new Date().toISOString(),
+                                inci: currentInci
+                            });
+                        }
+                    });
+                }
+
                 const newProduct = {
                     ...existingProduct,
                     name,
                     subtitle: document.getElementById('new-prod-subtitle').value.trim(),
                     description: document.getElementById('new-prod-desc').value.trim(),
-                    inci: document.getElementById('new-prod-inci').value.trim(),
+                    inci: currentInci,
                     storyUrl: document.getElementById('new-prod-story-url')?.value.trim() || null,
                     notice: document.getElementById('new-prod-notice')?.value.trim() || "",
                     image: imagePaths[0],
@@ -4577,7 +4677,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     price: Math.min(...sizes.map(s => parseFloat(s.price))).toFixed(2),
                     outOfStock: isEdit ? (existingProduct.outOfStock || false) : false,
                     style: isEdit ? (existingProduct.style || "") : "",
-                    orderIndex: orderIndex
+                    orderIndex: orderIndex,
+                    batchHistory: batchHistory
                 };
 
                 // --- Step 3: Save to Firestore ---
@@ -5235,6 +5336,7 @@ The DODCH Team`;
                         productCatalog[id].sizes = data.sizes || [];
                         productCatalog[id].image = data.image || '';
                         productCatalog[id].images = data.images || [];
+                        productCatalog[id].batchHistory = data.batchHistory || [];
                     } else {
                         // Product exists only in Firestore (added via admin), add to local catalog
                         productCatalog[id] = {
@@ -5252,7 +5354,8 @@ The DODCH Team`;
                             storyUrl: data.storyUrl || null,
                             category: data.category || 'uncategorized',
                             subCategory: data.subCategory || '',
-                            notice: data.notice || ''
+                            notice: data.notice || '',
+                            batchHistory: data.batchHistory || []
                         };
                     }
                 });
@@ -5338,6 +5441,10 @@ The DODCH Team`;
                             <button class="admin-btn btn-delete admin-delete-prod-btn" data-id="${id}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                 Delete
+                            </button>
+                            <button class="admin-btn btn-history admin-history-prod-btn" data-id="${id}" title="View Batch History" style="background: linear-gradient(135deg, #6c63ff, #a78bfa); border-color: #6c63ff; color: #fff;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                History
                             </button>
                         </div>
                     </div>
@@ -5430,6 +5537,45 @@ The DODCH Team`;
                         product.performance.forEach(m => addPerformanceMetricRow(m));
                     }
 
+                    // Render Batch History
+                    const historySection = document.getElementById('batch-history-section');
+                    const historyContainer = document.getElementById('batch-history-container');
+                    if (historySection && historyContainer) {
+                        if (product.batchHistory && product.batchHistory.length > 0) {
+                            historySection.style.display = 'block';
+                            const sortedHistory = [...product.batchHistory].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                            historyContainer.innerHTML = `
+                                <table style="width: 100%; border-collapse: collapse; font-family: var(--font-sans); font-size: 0.85rem; text-align: left;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid #eee; font-weight: 600; color: #333;">
+                                            <th style="padding: 8px;">Size</th>
+                                            <th style="padding: 8px;">Batch #</th>
+                                            <th style="padding: 8px;">Expiry</th>
+                                            <th style="padding: 8px;">Date Set</th>
+                                            <th style="padding: 8px;">INCI List</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${sortedHistory.map((h, i) => `
+                                            <tr style="border-bottom: 1px solid #eee;">
+                                                <td style="padding: 8px; font-weight: 500;">${h.size}</td>
+                                                <td style="padding: 8px; color: var(--accent-gold-text); font-weight: 600;">${h.batchNumber}</td>
+                                                <td style="padding: 8px; color: #666;">${h.expiryDate || 'N/A'}</td>
+                                                <td style="padding: 8px; color: #666; font-size: 0.8rem;">${new Date(h.timestamp).toLocaleString()}</td>
+                                                <td style="padding: 8px; position: relative;">
+                                                    <button type="button" class="admin-btn-sm" style="padding: 2px 6px; font-size: 0.75rem;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">View INCI</button>
+                                                    <div style="display: none; position: absolute; right: 10px; top: 35px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; max-width: 300px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-size: 0.75rem; white-space: normal; color: #333;">${h.inci || 'None'}</div>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            `;
+                        } else {
+                            historySection.style.display = 'none';
+                        }
+                    }
+
                     checkModalChanges(); // Initial check to disable Save button
                 });
             });
@@ -5447,38 +5593,59 @@ The DODCH Team`;
                     try {
                         const sizeInputs = card.querySelectorAll('.admin-size-price-input');
                         if (sizeInputs.length > 0) {
+                            productCatalog[id].batchHistory = productCatalog[id].batchHistory || [];
                             sizeInputs.forEach(input => {
                                 const index = input.dataset.index;
                                 const newPrice = parseFloat(input.value).toFixed(2);
-                                productCatalog[id].sizes[index].price = newPrice;
                                 const originalPriceInput = card.querySelector(`.admin-size-original-price-input[data-index="${index}"]`);
-                                if (originalPriceInput) {
-                                    const oldPrice = originalPriceInput.value ? parseFloat(originalPriceInput.value).toFixed(2) : null;
-                                    productCatalog[id].sizes[index].originalPrice = oldPrice;
-                                }
+                                const oldPrice = originalPriceInput ? (originalPriceInput.value ? parseFloat(originalPriceInput.value).toFixed(2) : null) : null;
                                 const stockCheck = card.querySelector(`.admin-size-stock-check[data-index="${index}"]`);
-                                if (stockCheck) {
-                                    productCatalog[id].sizes[index].outOfStock = stockCheck.checked;
-                                }
+                                const isOutOfStock = stockCheck ? stockCheck.checked : false;
                                 const batchInput = card.querySelector(`.admin-size-batch-input[data-index="${index}"]`);
-                                if (batchInput) {
-                                    productCatalog[id].sizes[index].batchNumber = batchInput.value.trim();
-                                }
+                                const newBatch = batchInput ? batchInput.value.trim() : '';
                                 const expiryInput = card.querySelector(`.admin-size-expiry-input[data-index="${index}"]`);
-                                if (expiryInput) {
-                                    productCatalog[id].sizes[index].expiryDate = expiryInput.value;
+                                const expiryDateVal = expiryInput ? expiryInput.value : '';
+
+                                const oldSize = productCatalog[id].sizes[index];
+                                const oldBatch = oldSize ? (oldSize.batchNumber || '') : '';
+
+                                if (newBatch && newBatch !== oldBatch) {
+                                    productCatalog[id].batchHistory.push({
+                                        size: oldSize.label,
+                                        batchNumber: newBatch,
+                                        expiryDate: expiryDateVal,
+                                        timestamp: new Date().toISOString(),
+                                        inci: productCatalog[id].inci || ''
+                                    });
                                 }
+
+                                // Check for Back In Stock status change (from outOfStock=true to false)
+                                if (oldSize && oldSize.outOfStock && !isOutOfStock) {
+                                    triggerBackInStockNotifications(id, oldSize.label, productCatalog[id].name);
+                                }
+
+                                productCatalog[id].sizes[index].price = newPrice;
+                                productCatalog[id].sizes[index].originalPrice = oldPrice;
+                                productCatalog[id].sizes[index].outOfStock = isOutOfStock;
+                                productCatalog[id].sizes[index].batchNumber = newBatch;
+                                productCatalog[id].sizes[index].expiryDate = expiryDateVal;
                             });
                             const prices = productCatalog[id].sizes.map(s => parseFloat(s.price));
                             productCatalog[id].price = Math.min(...prices).toFixed(2);
                         } else {
                             const priceInput = card.querySelector('.admin-price-input');
                             const stockCheck = card.querySelector('.admin-single-stock-check');
+                            const wasOOS = productCatalog[id].outOfStock === true;
+                            
                             if (priceInput) {
                                 productCatalog[id].price = parseFloat(priceInput.value).toFixed(2);
                             }
                             if (stockCheck) {
-                                productCatalog[id].outOfStock = stockCheck.checked;
+                                const isOOS = stockCheck.checked;
+                                if (wasOOS && !isOOS) {
+                                    triggerBackInStockNotifications(id, 'Standard', productCatalog[id].name);
+                                }
+                                productCatalog[id].outOfStock = isOOS;
                             }
                         }
                         const cleanedData = JSON.parse(JSON.stringify(productCatalog[id]));
@@ -5526,6 +5693,91 @@ The DODCH Team`;
                     }
                 });
             });
+
+            // --- Batch History Button Handler ---
+            document.querySelectorAll('.admin-history-prod-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const product = productCatalog[id];
+                    if (!product) return;
+
+                    const modal = document.getElementById('batch-history-modal');
+                    const titleEl = document.getElementById('history-modal-title');
+                    const bodyEl = document.getElementById('history-modal-body');
+                    if (!modal || !bodyEl) return;
+
+                    if (titleEl) titleEl.textContent = `Batch History — ${product.name}`;
+
+                    const history = product.batchHistory || [];
+                    if (history.length === 0) {
+                        bodyEl.innerHTML = `
+                            <div style="text-align:center; padding: 2rem; color: #999;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin-bottom:0.75rem;opacity:0.4;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                <p style="font-size:0.95rem;">No batch history recorded yet.</p>
+                                <p style="font-size:0.82rem;margin-top:0.25rem;">History is saved each time a batch number is changed.</p>
+                            </div>`;
+                    } else {
+                        const sorted = [...history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        bodyEl.innerHTML = `
+                            <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #e8e0ff;">
+                                        <th style="padding:10px 8px;color:#6c63ff;font-weight:600;">Size</th>
+                                        <th style="padding:10px 8px;color:#6c63ff;font-weight:600;">Batch #</th>
+                                        <th style="padding:10px 8px;color:#6c63ff;font-weight:600;">Expiry</th>
+                                        <th style="padding:10px 8px;color:#6c63ff;font-weight:600;">Date Set</th>
+                                        <th style="padding:10px 8px;color:#6c63ff;font-weight:600;">INCI</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${sorted.map((h, i) => {
+                                        const rowId = `inci-row-${i}`;
+                                        return `
+                                        <tr style="border-bottom:1px solid #f0eeff;background:${i % 2 === 0 ? '#fff' : '#faf8ff'};">
+                                            <td style="padding:12px 8px;font-weight:500;color:#333;">${h.size || '—'}</td>
+                                            <td style="padding:12px 8px;color:#6c63ff;font-weight:700;letter-spacing:0.02em;">${h.batchNumber}</td>
+                                            <td style="padding:12px 8px;color:#555;">${h.expiryDate || 'N/A'}</td>
+                                            <td style="padding:12px 8px;color:#888;font-size:0.78rem;white-space:nowrap;">${new Date(h.timestamp).toLocaleString()}</td>
+                                            <td style="padding:12px 8px;">
+                                                <button type="button" style="background:#f0eeff;border:none;color:#6c63ff;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;cursor:pointer;" onclick="const d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none';this.textContent=d.style.display==='table-row'?'Hide':'View';">View</button>
+                                            </td>
+                                        </tr>
+                                        <tr id="${rowId}" style="display:none;background:${i % 2 === 0 ? '#fff' : '#faf8ff'};border-bottom:1px solid #f0eeff;">
+                                            <td colspan="5" style="padding:12px 16px;font-size:0.8rem;color:#555;line-height:1.5;background:#f9f9ff;">
+                                                <div style="font-weight:600;margin-bottom:6px;color:#6c63ff;">INCI Ingredients:</div>
+                                                <div style="white-space:normal;word-break:break-word;">${h.inci || 'No INCI recorded'}</div>
+                                            </td>
+                                        </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>`;
+                    }
+
+                    modal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                });
+            });
+
+            // Close batch history modal
+            const closeHistoryBtn = document.getElementById('close-history-modal-btn');
+            if (closeHistoryBtn) {
+                closeHistoryBtn.onclick = () => {
+                    const modal = document.getElementById('batch-history-modal');
+                    if (modal) modal.classList.remove('active');
+                    document.body.style.overflow = '';
+                };
+            }
+            const historyModalOverlay = document.getElementById('batch-history-modal');
+            if (historyModalOverlay) {
+                historyModalOverlay.addEventListener('click', (e) => {
+                    if (e.target === historyModalOverlay) {
+                        historyModalOverlay.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
+            }
+
             document.querySelectorAll('.admin-move-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const id = e.currentTarget.dataset.id;
@@ -5744,15 +5996,55 @@ The DODCH Team`;
 
                 if (qvLearnMore) {
                     const hasStory = hasStandaloneStoryPage(product);
-                    qvLearnMore.textContent = hasStory ? 'View Full Details' : 'No Additional Details';
-
+                    qvLearnMore.textContent = hasStory ? 'View Full Details' : '';
                     qvLearnMore.href = hasStory ? product.storyUrl : '#';
-                    qvLearnMore.classList.toggle('disabled', !hasStory);
+                    qvLearnMore.style.display = hasStory ? 'inline-block' : 'none';
                     if (qvExpandPage) qvExpandPage.href = `product.html?id=${id}`;
                 }
                 const sizeOptionsContainer = modal.querySelector('.size-options');
                 const sizeSelector = modal.querySelector('.size-selector');
                 sizeOptionsContainer.innerHTML = ''; // Clear previous
+
+                const updateQuickViewATC = (sizeObj) => {
+                    let notifyBtn = document.getElementById('qv-back-in-stock-notify-btn');
+                    if (notifyBtn) notifyBtn.remove();
+
+                    const isActuallyOOS = product.sizes && product.sizes.length > 0
+                        ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                        : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                    
+                    const isOOS = isActuallyOOS || (sizeObj && (sizeObj.outOfStock === true || String(sizeObj.outOfStock).toLowerCase() === 'true'));
+
+                    if (isOOS) {
+                        qvAddToCart.style.display = 'none';
+                        notifyBtn = document.createElement('button');
+                        notifyBtn.id = 'qv-back-in-stock-notify-btn';
+                        notifyBtn.className = 'qv-notify-btn';
+                        notifyBtn.innerHTML = `
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            Notify Me When Back in Stock
+                        `;
+                        qvAddToCart.before(notifyBtn);
+                        
+                        notifyBtn.addEventListener('click', async () => {
+                            window.triggerHaptic('medium');
+                            notifyBtn.classList.add('loading');
+                            notifyBtn.disabled = true;
+                            await handleBackInStockSubscription(id, sizeObj ? sizeObj.label : 'Default', notifyBtn);
+                            notifyBtn.classList.remove('loading');
+                            notifyBtn.disabled = false;
+                        });
+                    } else {
+                        qvAddToCart.style.display = 'flex';
+                        qvAddToCart.disabled = false;
+                        const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                        qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
+                        qvAddToCart.style.backgroundColor = "";
+                        qvAddToCart.style.cursor = "pointer";
+                    }
+                };
 
                 if (product && product.sizes && product.sizes.length > 0) {
                     sizeSelector.style.display = 'block';
@@ -5763,24 +6055,9 @@ The DODCH Team`;
                     product.sizes.forEach((sizeObj, index) => {
                         const btn = document.createElement('button');
                         btn.className = 'size-btn';
-                        const isActuallyOOS = product.sizes && product.sizes.length > 0
-                            ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                            : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
 
                         if (index === minIndex) {
                             btn.classList.add('active'); // Default to lowest
-                            if (!isActuallyOOS) {
-                                if (sizeObj.outOfStock) {
-                                    qvAddToCart.disabled = true;
-                                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
-                                    qvAddToCart.style.backgroundColor = "#ccc";
-                                } else {
-                                    qvAddToCart.disabled = false;
-                                    const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                                    qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
-                                    qvAddToCart.style.backgroundColor = "";
-                                }
-                            }
                         }
                         btn.dataset.size = sizeObj.label;
                         btn.dataset.price = sizeObj.price;
@@ -5801,22 +6078,7 @@ The DODCH Team`;
                                     qvPrice.textContent = `${sizeObj.price} TND`;
                                 }
 
-                                const isActuallyOOS = product.sizes && product.sizes.length > 0
-                                    ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                                    : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-
-                                if (!isActuallyOOS) {
-                                    if (sizeObj.outOfStock) {
-                                        qvAddToCart.disabled = true;
-                                        qvAddToCart.querySelector('span').textContent = "Out of Stock";
-                                        qvAddToCart.style.backgroundColor = "#ccc";
-                                    } else {
-                                        qvAddToCart.disabled = false;
-                                        const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                                        qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
-                                        qvAddToCart.style.backgroundColor = "";
-                                    }
-                                }
+                                updateQuickViewATC(sizeObj);
                                 animTargets.forEach(el => el.classList.remove('text-switch-blur'));
                             }, 250);
                         });
@@ -5834,25 +6096,11 @@ The DODCH Team`;
                     } else {
                         qvPrice.textContent = `${initialSize.price} TND`;
                     }
+                    updateQuickViewATC(initialSize);
                 } else {
                     sizeSelector.style.display = 'none';
                     qvPrice.textContent = `${price} TND`;
-                }
-                const isActuallyOOS = product.sizes && product.sizes.length > 0
-                    ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                    : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-
-                if (product && isActuallyOOS) { // Global override
-                    qvAddToCart.disabled = true;
-                    qvAddToCart.querySelector('span').textContent = "Out of Stock";
-                    qvAddToCart.style.backgroundColor = "#ccc";
-                    qvAddToCart.style.cursor = "not-allowed";
-                } else {
-                    qvAddToCart.disabled = false;
-                    const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                    qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
-                    qvAddToCart.style.backgroundColor = "";
-                    qvAddToCart.style.cursor = "pointer";
+                    updateQuickViewATC(null);
                 }
 
                 modal.classList.add('active');
@@ -5863,6 +6111,8 @@ The DODCH Team`;
             window.triggerHaptic('light');
             document.body.style.overflow = '';
             modal.classList.remove('active');
+            const qvNotify = document.getElementById('qv-back-in-stock-notify-btn');
+            if (qvNotify) qvNotify.remove();
         };
         if (closeBtn) closeBtn.addEventListener('click', closeModal);
         if (modal) modal.addEventListener('click', (e) => {
@@ -9198,6 +9448,169 @@ async function syncPushTokenToUser(user) {
         }
     } catch (err) {
         console.warn('Silent token sync failed:', err);
+    }
+}
+
+// --- Back In Stock Subscription Logic ---
+async function handleBackInStockSubscription(productId, sizeLabel, btnEl) {
+    if (!('Notification' in window)) {
+        window.showToast("Notifications are not supported by this browser.", "warning");
+        return;
+    }
+
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            window.showToast("Notifications must be enabled to receive stock updates.", "info");
+            return;
+        }
+
+        const supported = await isSupported();
+        if (!supported) return;
+
+        if (!messaging) messaging = getMessaging(app);
+        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
+        const token = await getMessagingToken(messaging, { vapidKey: VAPID });
+
+        if (!token) {
+            window.showToast("Failed to retrieve notification registration token.", "error");
+            return;
+        }
+
+        const user = getAuth(app).currentUser;
+        const subId = `${token.substring(0, 30)}_${productId}_${sizeLabel.replace(/\s+/g, '')}`;
+        
+        await setDoc(doc(db, 'back_in_stock_subscriptions', subId), {
+            token,
+            productId,
+            size: sizeLabel,
+            userId: user ? user.uid : null,
+            createdAt: serverTimestamp(),
+            active: true
+        }, { merge: true });
+
+        // Save token to general subscribers collection to ensure device is tracked
+        await setDoc(doc(db, 'subscribers', token), {
+            token,
+            userId: user ? user.uid : null,
+            lastSeen: serverTimestamp()
+        }, { merge: true });
+
+        // Update button to subscribed state
+        if (btnEl) {
+            btnEl.classList.add('subscribed');
+            btnEl.innerHTML = `
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                You're On the List!
+            `;
+            btnEl.disabled = true;
+        }
+
+        window.showToast("Radiance is returning! You will be notified the instant it's back in stock. ✨", "success", 5000);
+    } catch (err) {
+        console.error("Back-in-stock subscription error:", err);
+        window.showToast("Failed to register back-in-stock alert. Please try again.", "error");
+    }
+}
+
+// --- Trigger Back In Stock Notifications (called by admin when marking product back in stock) ---
+async function triggerBackInStockNotifications(productId, sizeLabel, productName) {
+    try {
+        // Query all active back-in-stock subscriptions for this product + size
+        const q = query(
+            collection(db, 'back_in_stock_subscriptions'),
+            where('productId', '==', productId),
+            where('active', '==', true)
+        );
+        const snap = await getDocs(q);
+        if (snap.empty) {
+            console.log(`No back-in-stock subscribers for ${productId} / ${sizeLabel}`);
+            return;
+        }
+
+        // Filter to matching size (or notify all if size is 'Standard')
+        const subs = [];
+        snap.forEach(docSnap => {
+            const d = docSnap.data();
+            if (sizeLabel === 'Standard' || !d.size || d.size === sizeLabel) {
+                subs.push({ id: docSnap.id, ...d });
+            }
+        });
+
+        if (subs.length === 0) return;
+
+        const credsStr = localStorage.getItem('dodchUrlFCMCreds');
+        if (!credsStr) {
+            console.warn('Cannot send back-in-stock push: Missing FCM credentials.');
+            window.showToast(`${subs.length} subscriber(s) waiting — push not sent (missing FCM creds).`, 'info');
+            return;
+        }
+
+        // Use the existing push infrastructure from admin-push.js
+        const { importPKCS8, SignJWT } = await import('https://cdn.jsdelivr.net/npm/jose@5.2.3/dist/browser/index.js');
+        const creds = JSON.parse(credsStr);
+        const privateKey = await importPKCS8(creds.private_key, 'RS256');
+        const jwt = await new SignJWT({
+            iss: creds.client_email,
+            scope: 'https://www.googleapis.com/auth/firebase.messaging',
+            aud: 'https://oauth2.googleapis.com/token'
+        })
+        .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+        .setIssuedAt()
+        .setExpirationTime('1h')
+        .sign(privateKey);
+
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                assertion: jwt
+            })
+        });
+        if (!tokenRes.ok) throw new Error('Failed to get Google Access Token for back-in-stock push.');
+        const { access_token: accessToken } = await tokenRes.json();
+
+        const displaySize = sizeLabel && sizeLabel !== 'Standard' ? ` (${sizeLabel})` : '';
+        const notifTitle = `${productName || 'Your product'} is Back in Stock! 🎉`;
+        const notifBody = `${productName}${displaySize} is now available again. Shop before it sells out!`;
+        const notifUrl = `/product.html?id=${productId}`;
+
+        let sent = 0;
+        const deactivatePromises = [];
+        for (const sub of subs) {
+            const payload = {
+                message: {
+                    token: sub.token,
+                    webpush: {
+                        notification: {
+                            title: notifTitle,
+                            body: notifBody,
+                            icon: '/IMG_3352.webp'
+                        },
+                        fcmOptions: { link: notifUrl }
+                    },
+                    data: { title: notifTitle, body: notifBody, url: notifUrl }
+                }
+            };
+            const res = await fetch(`https://fcm.googleapis.com/v1/projects/${creds.project_id}/messages:send`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                sent++;
+                // Deactivate the subscription so they're not notified again for the same restock
+                deactivatePromises.push(updateDoc(doc(db, 'back_in_stock_subscriptions', sub.id), { active: false }));
+            }
+        }
+        await Promise.all(deactivatePromises);
+        console.log(`Back-in-stock: sent ${sent}/${subs.length} notifications for ${productId} / ${sizeLabel}`);
+        if (window.showToast) window.showToast(`✅ ${sent} back-in-stock notification(s) sent!`, 'success');
+    } catch (err) {
+        console.error('triggerBackInStockNotifications error:', err);
     }
 }
 

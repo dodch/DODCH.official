@@ -250,12 +250,32 @@
                             <!-- Dynamic size inputs will go here -->
                         </div>
                     </div>
+
+                    <div class="form-section" id="batch-history-section" style="display: none;">
+                        <h4>Batch History</h4>
+                        <div id="batch-history-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 1rem; background: #fafafa;">
+                            <!-- Dynamic history list will go here -->
+                        </div>
+                    </div>
                 </form>
             </div>
             
             <div class="modal-footer">
                 <button type="button" id="cancel-product-edit" class="modern-btn-outline">Cancel</button>
                 <button type="submit" form="add-product-form" class="modern-btn-primary">Save Product</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dedicated Batch History Modal -->
+    <div id="batch-history-modal" class="confirm-overlay">
+        <div class="confirm-box admin-modern-modal" style="max-width: 650px; width: 90%;">
+            <div class="modal-header">
+                <h3 class="confirm-title" id="history-modal-title">Batch History</h3>
+                <button type="button" id="close-history-modal-btn" class="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="history-modal-body" style="padding: 1.5rem; max-height: 400px; overflow-y: auto;">
+                <!-- Table will be dynamically populated -->
             </div>
         </div>
     </div>
