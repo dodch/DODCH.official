@@ -2424,7 +2424,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
 
                             if (sizeObj.originalPrice) {
-                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span class="offer-badge">ONLINE OFFER</span>`;
+                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
                             } else {
                                 priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
                                 priceEl.style.color = "";
@@ -2494,7 +2494,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
 
                                 if (sizeObj.originalPrice) {
-                                    priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> <span class="offer-badge">ONLINE OFFER</span>`;
+                                    priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
                                 } else {
                                     priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
                                     priceEl.style.color = "";
