@@ -2447,22 +2447,31 @@ document.addEventListener('DOMContentLoaded', () => {
                                 notifyBtn = document.createElement('button');
                                 notifyBtn.id = 'back-in-stock-notify-btn';
                                 notifyBtn.className = 'notify-back-in-stock-btn';
-                                notifyBtn.innerHTML = `
-                                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                    </svg>
-                                    Notify Me When Back in Stock
-                                `;
+
+                                // Check localStorage — if already subscribed, show persisted state
+                                if (isNotifySubscribed(productId, sizeObj.label)) {
+                                    applySubscribedState(notifyBtn);
+                                } else {
+                                    notifyBtn.innerHTML = `
+                                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                        </svg>
+                                        Notify Me When Back in Stock
+                                    `;
+                                }
+
                                 atcBtn.before(notifyBtn);
                                 
                                 notifyBtn.addEventListener('click', async () => {
+                                    if (notifyBtn.disabled) return;
                                     window.triggerHaptic('medium');
                                     notifyBtn.classList.add('loading');
                                     notifyBtn.disabled = true;
                                     await handleBackInStockSubscription(productId, sizeObj.label, notifyBtn);
                                     notifyBtn.classList.remove('loading');
-                                    notifyBtn.disabled = false;
+                                    if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
                                 });
+
                             } else {
                                 // In Stock state
                                 atcBtn.style.display = 'block';
@@ -2513,21 +2522,29 @@ document.addEventListener('DOMContentLoaded', () => {
                                     notifyBtn = document.createElement('button');
                                     notifyBtn.id = 'back-in-stock-notify-btn';
                                     notifyBtn.className = 'notify-back-in-stock-btn';
-                                    notifyBtn.innerHTML = `
-                                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                        </svg>
-                                        Notify Me When Back in Stock
-                                    `;
+
+                                    // Check localStorage — if already subscribed, show persisted state
+                                    if (isNotifySubscribed(productId, sizeObj.label)) {
+                                        applySubscribedState(notifyBtn);
+                                    } else {
+                                        notifyBtn.innerHTML = `
+                                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                            </svg>
+                                            Notify Me When Back in Stock
+                                        `;
+                                    }
+
                                     atcBtn.before(notifyBtn);
                                     
                                     notifyBtn.addEventListener('click', async () => {
+                                        if (notifyBtn.disabled) return;
                                         window.triggerHaptic('medium');
                                         notifyBtn.classList.add('loading');
                                         notifyBtn.disabled = true;
                                         await handleBackInStockSubscription(productId, sizeObj.label, notifyBtn);
                                         notifyBtn.classList.remove('loading');
-                                        notifyBtn.disabled = false;
+                                        if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
                                     });
                                 } else {
                                     // In Stock state
@@ -2625,7 +2642,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 storyBtn.style.display = 'block'; // Ensure it takes full width if qv-view-details-btn uses inline-block
                 storyBtn.textContent = 'View Full Details';
                 storyBtn.href = product.storyUrl;
-                addToCartBtn.before(storyBtn);
+                addToCartBtn.after(storyBtn);
             }
         }
     };
@@ -3125,6 +3142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     clearTimeout(operationTimeout);
                     console.log("Order placed successfully with ID: ", orderId);
+                    localStorage.setItem('dodch_has_ordered', '1');
                     if (currentUser && typeof window.saveShippingFromCheckout === 'function') {
                         await window.saveShippingFromCheckout(currentUser.uid);
                     }
@@ -5999,7 +6017,26 @@ The DODCH Team`;
                     qvLearnMore.textContent = hasStory ? 'View Full Details' : '';
                     qvLearnMore.href = hasStory ? product.storyUrl : '#';
                     qvLearnMore.style.display = hasStory ? 'inline-block' : 'none';
-                    if (qvExpandPage) qvExpandPage.href = `product.html?id=${id}`;
+                    if (qvExpandPage) {
+                        qvExpandPage.href = `product.html?id=${id}`;
+                        const expandSVG = `
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="expand-svg">
+                                <g class="arrow-tr"><polyline points="15 3 21 3 21 9"></polyline><line x1="21" y1="3" x2="14" y2="10"></line></g>
+                                <g class="arrow-bl"><polyline points="9 21 3 21 3 15"></polyline><line x1="3" y1="21" x2="10" y2="14"></line></g>
+                                <g class="arrow-br"><polyline points="21 15 21 21 15 21"></polyline><line x1="21" y1="21" x2="14" y2="14"></line></g>
+                                <g class="arrow-tl"><polyline points="3 9 3 3 9 3"></polyline><line x1="3" y1="3" x2="10" y2="10"></line></g>
+                            </svg>
+                        `;
+                        if (hasStory) {
+                            qvExpandPage.classList.remove('pill-button');
+                            qvExpandPage.innerHTML = expandSVG;
+                            qvExpandPage.title = "Open Product Page";
+                        } else {
+                            qvExpandPage.classList.add('pill-button');
+                            qvExpandPage.innerHTML = `View Full Product Page ${expandSVG}`;
+                            qvExpandPage.removeAttribute('title');
+                        }
+                    }
                 }
                 const sizeOptionsContainer = modal.querySelector('.size-options');
                 const sizeSelector = modal.querySelector('.size-selector');
@@ -6020,21 +6057,30 @@ The DODCH Team`;
                         notifyBtn = document.createElement('button');
                         notifyBtn.id = 'qv-back-in-stock-notify-btn';
                         notifyBtn.className = 'qv-notify-btn';
-                        notifyBtn.innerHTML = `
-                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            Notify Me When Back in Stock
-                        `;
+
+                        const qvSizeLabel = sizeObj ? sizeObj.label : 'Default';
+                        // Check localStorage — if already subscribed, show persisted state
+                        if (isNotifySubscribed(id, qvSizeLabel)) {
+                            applySubscribedState(notifyBtn);
+                        } else {
+                            notifyBtn.innerHTML = `
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                Notify Me When Back in Stock
+                            `;
+                        }
+
                         qvAddToCart.before(notifyBtn);
                         
                         notifyBtn.addEventListener('click', async () => {
+                            if (notifyBtn.disabled) return;
                             window.triggerHaptic('medium');
                             notifyBtn.classList.add('loading');
                             notifyBtn.disabled = true;
-                            await handleBackInStockSubscription(id, sizeObj ? sizeObj.label : 'Default', notifyBtn);
+                            await handleBackInStockSubscription(id, qvSizeLabel, notifyBtn);
                             notifyBtn.classList.remove('loading');
-                            notifyBtn.disabled = false;
+                            if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
                         });
                     } else {
                         qvAddToCart.style.display = 'flex';
@@ -6072,10 +6118,16 @@ The DODCH Team`;
                             animTargets.forEach(el => el.classList.add('text-switch-anim', 'text-switch-blur'));
 
                             setTimeout(() => {
+                                const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                    ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                    : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                                const isOOS = isActuallyOOS || sizeObj.outOfStock;
+                                const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+
                                 if (sizeObj.originalPrice) {
-                                    qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
+                                    qvPrice.innerHTML = `${outOfStockLabel}<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
                                 } else {
-                                    qvPrice.textContent = `${sizeObj.price} TND`;
+                                    qvPrice.innerHTML = `${outOfStockLabel}${sizeObj.price} TND`;
                                 }
 
                                 updateQuickViewATC(sizeObj);
@@ -6091,15 +6143,23 @@ The DODCH Team`;
                         sizeOptionsContainer.appendChild(btn);
                     });
                     const initialSize = product.sizes[minIndex];
+                    const isActuallyOOS = product.sizes && product.sizes.length > 0
+                        ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                        : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                    const isOOS = isActuallyOOS || initialSize.outOfStock;
+                    const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+
                     if (initialSize.originalPrice) {
-                        qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND`;
+                        qvPrice.innerHTML = `${outOfStockLabel}<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND`;
                     } else {
-                        qvPrice.textContent = `${initialSize.price} TND`;
+                        qvPrice.innerHTML = `${outOfStockLabel}${initialSize.price} TND`;
                     }
                     updateQuickViewATC(initialSize);
                 } else {
                     sizeSelector.style.display = 'none';
-                    qvPrice.textContent = `${price} TND`;
+                    const isActuallyOOS = (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                    const outOfStockLabel = isActuallyOOS ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+                    qvPrice.innerHTML = `${outOfStockLabel}${price} TND`;
                     updateQuickViewATC(null);
                 }
 
@@ -9273,8 +9333,10 @@ function showIOSInstallBanner() {
     const isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
     const isStandalone = window.navigator.standalone === true;
     const dismissed = localStorage.getItem('dodch_ios_banner_dismissed');
+    const hasOrdered = localStorage.getItem('dodch_has_ordered') === '1';
 
-    if (!isIOS || !isSafari || isStandalone || dismissed) return;
+    if (!isIOS || !isSafari || isStandalone || dismissed || !hasOrdered) return;
+    localStorage.setItem('dodch_ios_banner_dismissed', '1');
     const styles = document.createElement('style');
     styles.textContent = `
         #dodch-ios-banner {
@@ -9451,8 +9513,182 @@ async function syncPushTokenToUser(user) {
     }
 }
 
+function triggerIOSInstallFlow() {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS) {
+        const existing = document.getElementById('dodch-ios-banner');
+        if (existing) {
+            existing.classList.add('visible');
+            return true;
+        }
+
+        if (!document.querySelector('style[data-ios-banner]')) {
+            const styles = document.createElement('style');
+            styles.setAttribute('data-ios-banner', 'true');
+            styles.textContent = `
+                #dodch-ios-banner {
+                    position: fixed;
+                    bottom: 0; left: 0; right: 0;
+                    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                    color: #fff;
+                    padding: 14px 16px max(env(safe-area-inset-bottom, 16px), 16px);
+                    z-index: 2147483647;
+                    box-shadow: 0 -4px 30px rgba(0,0,0,0.45);
+                    transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+                    transform: translateY(110%);
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                }
+                #dodch-ios-banner.visible { transform: translateY(0); }
+                #dodch-ios-banner-inner {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    max-width: 600px;
+                    margin: 0 auto;
+                }
+                #dodch-ios-banner-icon-wrap {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+                    flex-shrink: 0;
+                }
+                #dodch-ios-banner-icon {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+                @media (max-width: 480px) {
+                    #dodch-ios-banner-icon-wrap { display: none; }
+                }
+                #dodch-ios-banner-text { flex: 1; min-width: 0; }
+                #dodch-ios-banner-title {
+                    font-size: 15px;
+                    font-weight: 700;
+                    margin: 0 0 3px 0;
+                    letter-spacing: -0.2px;
+                }
+                #dodch-ios-banner-body {
+                    font-size: 12px;
+                    color: #aaa;
+                    margin: 0 0 8px 0;
+                    line-height: 1.35;
+                }
+                #dodch-ios-banner-steps {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 11px;
+                    color: #fff;
+                    font-weight: 500;
+                }
+                #dodch-ios-banner-steps .step-badge {
+                    background: rgba(255,255,255,0.15);
+                    padding: 3px 8px;
+                    border-radius: 6px;
+                    border: 1px solid rgba(255,255,255,0.1);
+                }
+                #dodch-ios-banner-close {
+                    background: rgba(255,255,255,0.1);
+                    border: none;
+                    color: #fff;
+                    font-size: 20px;
+                    cursor: pointer;
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: background 0.2s;
+                    flex-shrink: 0;
+                }
+                #dodch-ios-banner-close:active {
+                    background: rgba(255,255,255,0.25);
+                }
+                #dodch-ios-banner-arrow {
+                    position: absolute;
+                    bottom: 4px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    color: var(--accent-gold);
+                    font-size: 16px;
+                    animation: bounce 1.5s infinite;
+                    pointer-events: none;
+                }
+                @keyframes bounce {
+                    0%, 100% { transform: translate(-50%, 0); }
+                    50% { transform: translate(-50%, 5px); }
+                }
+            `;
+            document.head.appendChild(styles);
+        }
+
+        const banner = document.createElement('div');
+        banner.id = 'dodch-ios-banner';
+        banner.innerHTML = `
+            <div id="dodch-ios-banner-inner">
+                <div id="dodch-ios-banner-icon-wrap">
+                    <img id="dodch-ios-banner-icon" src="IMG_3352.webp" alt="DODCH">
+                </div>
+                <div id="dodch-ios-banner-text">
+                    <p id="dodch-ios-banner-title">Get DODCH on your Home Screen</p>
+                    <p id="dodch-ios-banner-body">Receive order updates &amp; exclusive offers as push notifications.</p>
+                    <div id="dodch-ios-banner-steps">
+                        <span>Tap</span>
+                        <span class="step-badge">⬆️ Share</span>
+                        <span>then</span>
+                        <span class="step-badge">＋ Add to Home Screen</span>
+                    </div>
+                </div>
+                <button id="dodch-ios-banner-close" aria-label="Dismiss">&times;</button>
+            </div>
+            <div id="dodch-ios-banner-arrow">↓</div>
+        `;
+        document.body.appendChild(banner);
+        setTimeout(() => banner.classList.add('visible'), 100);
+        document.getElementById('dodch-ios-banner-close').addEventListener('click', () => {
+            banner.classList.remove('visible');
+            setTimeout(() => banner.remove(), 500);
+        });
+        return true;
+    }
+    return false;
+}
+
 // --- Back In Stock Subscription Logic ---
+// --- Notify-Me localStorage Persistence Helpers ---
+function getNotifyStorageKey(productId, sizeLabel) {
+    return `dodch_notify_${productId}_${(sizeLabel || 'default').replace(/\s+/g, '_').toLowerCase()}`;
+}
+function markNotifySubscribed(productId, sizeLabel) {
+    try { localStorage.setItem(getNotifyStorageKey(productId, sizeLabel), '1'); } catch(e) {}
+}
+function isNotifySubscribed(productId, sizeLabel) {
+    try { return localStorage.getItem(getNotifyStorageKey(productId, sizeLabel)) === '1'; } catch(e) { return false; }
+}
+function applySubscribedState(btnEl) {
+    btnEl.classList.add('subscribed');
+    btnEl.innerHTML = `
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        You're On the List!
+    `;
+    btnEl.disabled = true;
+}
+
 async function handleBackInStockSubscription(productId, sizeLabel, btnEl) {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS) {
+        // Mark as subscribed in localStorage so button persists state
+        markNotifySubscribed(productId, sizeLabel);
+        if (btnEl) applySubscribedState(btnEl);
+        triggerIOSInstallFlow();
+        return;
+    }
+
     if (!('Notification' in window)) {
         window.showToast("Notifications are not supported by this browser.", "warning");
         return;
@@ -9496,17 +9732,11 @@ async function handleBackInStockSubscription(productId, sizeLabel, btnEl) {
             lastSeen: serverTimestamp()
         }, { merge: true });
 
+        // Persist to localStorage so button state survives page reload
+        markNotifySubscribed(productId, sizeLabel);
+
         // Update button to subscribed state
-        if (btnEl) {
-            btnEl.classList.add('subscribed');
-            btnEl.innerHTML = `
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                You're On the List!
-            `;
-            btnEl.disabled = true;
-        }
+        if (btnEl) applySubscribedState(btnEl);
 
         window.showToast("Radiance is returning! You will be notified the instant it's back in stock. ✨", "success", 5000);
     } catch (err) {

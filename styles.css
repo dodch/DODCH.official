@@ -3647,6 +3647,10 @@ footer {
     margin-bottom: var(--space-4); /* Tightened from 1.5rem */
     font-weight: 600;
     letter-spacing: 0.5px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
 }
 
 .qv-product-desc {
@@ -3727,6 +3731,21 @@ footer {
 .qv-expand-btn:hover .expand-svg .arrow-bl { transform: translate(-2px, 2px); }
 .qv-expand-btn:hover .expand-svg .arrow-br { transform: translate(2px, 2px); }
 .qv-expand-btn:hover .expand-svg .arrow-tl { transform: translate(-2px, -2px); }
+
+/* Expand Button as full-width Pill Button in Quick View */
+.qv-expand-btn.pill-button {
+    width: 100%;
+    height: auto;
+    border-radius: 30px;
+    padding: var(--space-3) var(--space-6);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    gap: 10px;
+    text-decoration: none;
+}
+
 
 .qv-add-to-cart-btn {
     width: 100%;
