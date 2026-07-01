@@ -96,24 +96,23 @@ const auth = getAuth(app);
 // Intelligent Caching: Enable persistent local cache so products load instantly on repeat visits
 let db;
 try {
-    // Use single-tab persistent cache (no multi-tab manager).
-    // persistentMultipleTabManager() uses cross-tab IndexedDB locking via BroadcastChannel
-    // which hangs silently in private/incognito tabs — causing an infinite loading loop.
-    // Single-tab mode works correctly in ALL environments including private tabs.
-    db = initializeFirestore(app, {
-        localCache: persistentLocalCache(),
-        experimentalForceLongPolling: true
-    });
-    console.info("⚡ Firestore: single-tab persistent cache and long polling enabled.");
-} catch (e) {
-    console.warn("⚠️ Firestore: persistent cache failed, falling back to memory cache:", e);
-    try {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isInAppBrowser = /FBAN|FBAV|Instagram|Snapchat|TikTok|Twitter|Line/i.test(navigator.userAgent);
+
+    if (isInAppBrowser || isIOS || isSafari) {
+        console.info("⚡ Firestore: iOS/Safari/In-App browser detected. Using memory cache to prevent IndexedDB hangs.");
+        db = getFirestore(app);
+    } else {
         db = initializeFirestore(app, {
+            localCache: persistentLocalCache(),
             experimentalForceLongPolling: true
         });
-    } catch (e2) {
-        db = getFirestore(app);
+        console.info("⚡ Firestore: single-tab persistent cache and long polling enabled.");
     }
+} catch (e) {
+    console.warn("⚠️ Firestore: persistent cache failed, falling back to memory cache:", e);
+    db = getFirestore(app);
 }
 const functions = getFunctions(app, "europe-west1");
 const storage = getStorage(app);
@@ -2473,7 +2472,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 });
 
                             } else {
-                                // In Stock state
+                                // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
+                                try { localStorage.removeItem(getNotifyStorageKey(productId, sizeObj.label)); } catch(e) {}
                                 atcBtn.style.display = 'block';
                                 const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
                                 atcBtn.disabled = false;
@@ -2547,7 +2547,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
                                     });
                                 } else {
-                                    // In Stock state
+                                    // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
+                                    try { localStorage.removeItem(getNotifyStorageKey(productId, sizeObj.label)); } catch(e) {}
                                     atcBtn.style.display = 'block';
                                     const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
                                     atcBtn.disabled = false;
@@ -2844,7 +2845,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             document.getElementById('load-more-orders-container').style.display = 'none';
                         } else {
                             chunk.forEach(order => {
-                                const date = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleDateString() : 'Recent';
+                                const orderDate = order.timestamp ? new Date(order.timestamp.seconds * 1000) : new Date();
+                                const date = order.timestamp ? orderDate.toLocaleDateString() : 'Recent';
+                                const isWithinTwoWeeks = (new Date() - orderDate) < (14 * 24 * 60 * 60 * 1000);
                                 const total = typeof order.total === 'number' ? order.total.toFixed(2) : order.total;
                                 const status = order.status || 'Pending';
                                 const statusClass = `status-${status.toLowerCase().replace(/\s+/g, '-')}`;
@@ -2859,25 +2862,71 @@ document.addEventListener('DOMContentLoaded', () => {
                                 } else if (status.toLowerCase() === 'pending') {
                                     cancelButtonHtml = `<button class="cancel-order-btn" data-id="${order.id}" style="margin-left: 5px; color: #ff4d4d; background: none; border: 1px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer;">Cancel</button>`;
                                 } else if (status.toLowerCase() === 'delivered') {
-                                    const hasUnreviewed = order.items.some(item => !reviewedProductIds.has(item.productId || item.id));
-                                    if (hasUnreviewed) {
-                                        reviewButtonHtml = `<button class="review-prompt-btn" style="margin-left: 5px; background: #fdf6ec; color: #e6a23c; border: 1px solid #e6a23c; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600;">Rate Products</button>`;
+                                    const firstUnreviewedItem = order.items.find(item => !reviewedProductIds.has(item.productId || item.id));
+                                    if (firstUnreviewedItem) {
+                                        const firstPId = firstUnreviewedItem.productId || firstUnreviewedItem.id;
+                                        const firstProd = productCatalog[firstPId];
+                                        const reviewPageUrl = (firstProd && firstProd.storyUrl) ? `${firstProd.storyUrl}#reviews` : `product.html?id=${firstPId}#reviews`;
+                                        reviewButtonHtml = `<a href="${reviewPageUrl}" class="review-prompt-btn" style="margin-left: 5px; background: #fdf6ec; color: #e6a23c; border: 1px solid #e6a23c; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;">Rate Products</a>`;
                                     }
                                 }
+
 
                                 let itemsHtml = order.items.map(item => {
                                     const pId = item.productId || item.id;
                                     const img = productCatalog[pId]?.image || 'placeholder-glow.webp';
                                     const itemPrice = String(item.price).includes('TND') ? item.price : `${item.price} TND`;
+                                    
+                                    const isRefunded = item.refunded === true || item.refunded === 'true';
+                                    const statusText = isRefunded 
+                                        ? `<span class="refunded-badge" style="color: #e74c3c; font-weight: 600; font-size: 0.75rem; margin-left: 8px; border: 1px solid #e74c3c; border-radius: 4px; padding: 1px 4px; display: inline-block;">Refunded</span>` 
+                                        : '';
+
+                                    let reportHtml = '';
+                                    if (status.toLowerCase() === 'delivered' && isWithinTwoWeeks) {
+                                        if (item.report) {
+                                            const rStatus = item.report.status || 'Pending';
+                                            let rColor = '#e6a23c';
+                                            if (rStatus === 'Refunded') rColor = '#27ae60';
+                                            if (rStatus === 'Refused') rColor = '#e74c3c';
+                                            reportHtml = `
+                                                <div style="font-size: 0.75rem; margin-top: 4px; color: ${rColor}; font-weight: 500;">
+                                                     Problem Reported: <strong>${rStatus}</strong>
+                                                     ${item.report.reply ? `<br><span style="color: #666; font-style: italic; font-weight: 400;">Reply: ${item.report.reply}</span>` : ''}
+                                                </div>
+                                            `;
+                                        } else if (order.hasReports === true) {
+                                            reportHtml = `
+                                                <div style="font-size: 0.75rem; margin-top: 4px; color: #888; font-weight: 500;">
+                                                     Reported
+                                                </div>
+                                            `;
+                                        } else if (!isRefunded) {
+                                            reportHtml = `
+                                                <button class="report-problem-btn" 
+                                                    data-order-id="${order.id}" 
+                                                    data-item-id="${pId}" 
+                                                    data-item-size="${item.size}"
+                                                    data-item-name="${item.name.replace(/"/g, '&quot;')}"
+                                                    style="margin-top: 5px; background: none; border: 1px solid #999; border-radius: 6px; padding: 3px 8px; font-size: 0.7rem; cursor: pointer; color: #555; font-family: inherit; font-weight: 500; transition: all 0.2s;">
+                                                    Report a Problem
+                                                </button>
+                                            `;
+                                        }
+                                    }
+
                                     return `
-                                        <div class="order-item-row">
-                                            <img src="${img}" class="account-item-mini-img" alt="${item.name}">
-                                            <div style="flex: 1;">
-                                                <div style="font-weight: 500;">${item.name}</div>
-                                                <div style="color: #888; font-size: 0.85rem;">Size: ${item.size} | Qty: ${item.quantity}</div>
-                                            </div>
-                                            <div style="font-weight: 600;">${itemPrice}</div>
-                                        </div>
+                                         <div class="order-item-row" style="margin-bottom: 0.75rem;">
+                                             <img src="${img}" class="account-item-mini-img" alt="${item.name}">
+                                             <div style="flex: 1;">
+                                                 <div style="font-weight: 500; display: flex; align-items: center; flex-wrap: wrap;">
+                                                     ${item.name} ${statusText}
+                                                 </div>
+                                                 <div style="color: #888; font-size: 0.85rem;">Size: ${item.size} | Qty: ${item.quantity}</div>
+                                                 ${reportHtml}
+                                             </div>
+                                             <div style="font-weight: 600;">${itemPrice}</div>
+                                         </div>
                                     `;
                                 }).join('');
 
@@ -2964,15 +3013,129 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
 
                         document.querySelectorAll('.review-prompt-btn').forEach(btn => {
-                            btn.onclick = () => {
-                                if (typeof initGlobalReviewPrompt === 'function') {
-                                    initGlobalReviewPrompt(true); // Force open if needed
-                                } else {
-                                    window.showToast("Review system is preparing...", "info");
-                                }
+                            // Now handled via href anchor link — no JS needed
+                        });
+
+
+                        document.querySelectorAll('.report-problem-btn').forEach(btn => {
+                            btn.onclick = (e) => {
+                                const orderId = e.target.getAttribute('data-order-id');
+                                const itemId = e.target.getAttribute('data-item-id');
+                                const itemSize = e.target.getAttribute('data-item-size');
+                                const itemName = e.target.getAttribute('data-item-name');
+                                openReportProblemModal(orderId, itemId, itemSize, itemName);
                             };
                         });
 
+                    };
+
+                    const openReportProblemModal = (orderId, itemId, itemSize, itemName) => {
+                        document.getElementById('report-problem-modal')?.remove();
+
+                        const modalHTML = `
+                            <div id="report-problem-modal" class="confirm-overlay active" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);">
+                                <div class="confirm-box" style="max-width: 450px; width: 90%; padding: 2rem; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+                                    <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin-top: 0; margin-bottom: 0.5rem; color: var(--text-charcoal);">Report a Problem</h3>
+                                    <p style="font-size: 0.88rem; color: #666; margin-bottom: 1.5rem;">
+                                        Product: <strong>${itemName} (${itemSize})</strong>
+                                    </p>
+                                    <form id="report-problem-form">
+                                        <div class="form-group" style="margin-bottom: 1.25rem;">
+                                            <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.85rem; color: #444;">What is the issue?</label>
+                                            <select id="report-issue-select" required style="width: 100%; padding: 0.75rem; border: 1.5px solid #e0e0e0; border-radius: 8px; font-family: inherit; font-size: 0.9rem; background: #fff;">
+                                                <option value="" disabled selected>Select a reason...</option>
+                                                <option value="Damaged Product">Damaged or Broken Product</option>
+                                                <option value="Wrong Item Received">Wrong Item Received</option>
+                                                <option value="Missing Item">Missing Item</option>
+                                                <option value="Product Quality Issue">Product Quality Issue</option>
+                                                <option value="Other">Other issue</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                                            <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.85rem; color: #444;">Additional details (optional)</label>
+                                            <textarea id="report-message-input" rows="4" placeholder="Describe the issue in detail..." style="width: 100%; padding: 0.75rem; border: 1.5px solid #e0e0e0; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box;"></textarea>
+                                        </div>
+                                        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                                            <button type="button" id="cancel-report-btn" class="classic-btn" style="background: transparent; color: #666; border: 1.5px solid #e0e0e0; padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer;">Cancel</button>
+                                            <button type="submit" class="cta-button" style="padding: 0.6rem 1.5rem; margin: 0; font-size: 0.9rem; line-height: 1; border-radius: 20px; cursor: pointer; background: var(--text-charcoal); color: #fff; border: none;">Submit Report</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        `;
+
+                        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+                        const modal = document.getElementById('report-problem-modal');
+                        const form = document.getElementById('report-problem-form');
+                        const cancelBtn = document.getElementById('cancel-report-btn');
+
+                        const closeModal = () => {
+                            modal.remove();
+                        };
+
+                        cancelBtn.onclick = closeModal;
+                        modal.onclick = (e) => {
+                            if (e.target === modal) closeModal();
+                        };
+
+                        form.onsubmit = async (e) => {
+                            e.preventDefault();
+                            const problem = document.getElementById('report-issue-select').value;
+                            const message = document.getElementById('report-message-input').value.trim();
+                            const submitBtn = form.querySelector('button[type="submit"]');
+
+                            submitBtn.disabled = true;
+                            submitBtn.textContent = 'Submitting...';
+
+                            try {
+                                const orderRef = doc(db, "orders", orderId);
+                                const orderSnap = await getDoc(orderRef);
+
+                                if (!orderSnap.exists()) {
+                                    throw new Error("Order not found.");
+                                }
+
+                                const orderData = orderSnap.data();
+                                const updatedItems = orderData.items.map(item => {
+                                    const pId = item.productId || item.id;
+                                    if (pId === itemId && item.size === itemSize) {
+                                        return {
+                                            ...item,
+                                            report: {
+                                                problem,
+                                                message,
+                                                status: 'Pending',
+                                                createdAt: new Date().toISOString()
+                                            }
+                                        };
+                                    }
+                                    return item;
+                                });
+
+                                await updateDoc(orderRef, {
+                                    items: updatedItems,
+                                    hasReports: true,
+                                    hasUnseenReport: true
+                                });
+
+                                window.showToast("Report submitted successfully! ✨", "success");
+                                closeModal();
+
+                                const ordersTabBtn = document.querySelector('.account-tab-btn[data-tab="orders"]');
+                                if (ordersTabBtn) {
+                                    ordersTabBtn.click();
+                                } else {
+                                    location.reload();
+                                }
+
+                            } catch (err) {
+                                console.error("Error submitting report:", err);
+                                window.showToast("Failed to submit report. Please try again.", "error");
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = 'Submit Report';
+                            }
+                        };
                     };
                     setTimeout(() => {
                         if (ordersLoader) ordersLoader.classList.remove('active');
@@ -3073,6 +3236,119 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- END SMART VALIDATION ---
 
             if (checkoutForm.checkValidity()) {
+
+                // --- OOS GUARD: Check every cart item against live productCatalog ---
+                const oosItems = cart.filter(item => {
+                    const prod = productCatalog[item.productId || item.id];
+                    if (!prod) return false;
+                    if (prod.sizes && prod.sizes.length > 0) {
+                        const sizeObj = prod.sizes.find(s => s.label === item.size);
+                        return sizeObj
+                            ? (sizeObj.outOfStock === true || String(sizeObj.outOfStock).toLowerCase() === 'true')
+                            : false;
+                    }
+                    return prod.outOfStock === true || String(prod.outOfStock).toLowerCase() === 'true';
+                });
+
+                if (oosItems.length > 0) {
+                    // Remove any existing error panel first
+                    document.getElementById('oos-cart-error-panel')?.remove();
+
+                    const panel = document.createElement('div');
+                    panel.id = 'oos-cart-error-panel';
+                    panel.style.cssText = `
+                        background: #fff8f8; border: 1.5px solid #e74c3c; border-radius: 16px;
+                        padding: 1.5rem; margin-bottom: 1.5rem; animation: slideUpFade 0.4s ease;
+                    `;
+
+                    const itemRows = oosItems.map(item => {
+                        const pid = item.productId || item.id;
+                        const safeName = item.name.replace(/'/g, "&apos;");
+                        const safeSize = (item.size || 'Default').replace(/'/g, "&apos;");
+                        return `
+                            <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 0;border-bottom:1px solid rgba(231,76,60,0.12);">
+                                <div style="width:48px;height:48px;flex-shrink:0;border-radius:8px;overflow:hidden;border:1px solid #eee;">
+                                    <img src="${item.image || ''}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <p style="margin:0 0 2px;font-weight:600;font-size:0.9rem;color:#1a1a1a;">${item.name}</p>
+                                    <p style="margin:0;font-size:0.8rem;color:#e74c3c;font-weight:500;">⚠ Out of Stock${item.size ? ' &bull; ' + item.size : ''}</p>
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:0.4rem;flex-shrink:0;">
+                                    <button
+                                        onclick="window.__removeOOSItem('${pid}','${safeSize}')"
+                                        style="font-size:0.78rem;padding:5px 12px;border-radius:20px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;cursor:pointer;font-weight:600;white-space:nowrap;">
+                                        Remove
+                                    </button>
+                                    <button
+                                        onclick="window.__notifyOOSItem('${pid}','${safeSize}',this)"
+                                        style="font-size:0.78rem;padding:5px 12px;border-radius:20px;border:1.5px solid #c8a400;background:transparent;color:#c8a400;cursor:pointer;font-weight:600;white-space:nowrap;">
+                                        Notify Me
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    panel.innerHTML = `
+                        <div style="display:flex;align-items:flex-start;gap:0.8rem;margin-bottom:1rem;">
+                            <svg style="width:22px;height:22px;flex-shrink:0;color:#e74c3c;margin-top:2px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                            <div>
+                                <p style="margin:0 0 2px;font-weight:700;font-size:0.95rem;color:#c0392b;">Order Cannot Be Placed</p>
+                                <p style="margin:0;font-size:0.83rem;color:#888;">The following item${oosItems.length > 1 ? 's are' : ' is'} currently out of stock. Please remove ${oosItems.length > 1 ? 'them' : 'it'} or wait for restock.</p>
+                            </div>
+                        </div>
+                        ${itemRows}
+                    `;
+
+                    // Attach helpers
+                    window.__removeOOSItem = (productId, size) => {
+                        cart = cart.filter(i => !((i.productId || i.id) === productId && (i.size || 'Default') === size));
+                        localStorage.setItem('dodch_cart', JSON.stringify(cart));
+                        updateCartUI();
+                        // Refresh the checkout order summary
+                        if (typeof updateCheckoutUI === 'function') updateCheckoutUI();
+                        // If no more OOS items, dismiss the panel
+                        const remaining = cart.filter(item => {
+                            const prod = productCatalog[item.productId || item.id];
+                            if (!prod) return false;
+                            if (prod.sizes && prod.sizes.length > 0) {
+                                const s = prod.sizes.find(s => s.label === item.size);
+                                return s ? (s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true') : false;
+                            }
+                            return prod.outOfStock === true || String(prod.outOfStock).toLowerCase() === 'true';
+                        });
+                        if (remaining.length === 0) {
+                            document.getElementById('oos-cart-error-panel')?.remove();
+                        } else {
+                            // Re-trigger to refresh the panel with the remaining items
+                            placeOrderBtn.click();
+                        }
+                    };
+                    window.__notifyOOSItem = async (productId, size, btnEl) => {
+                        btnEl.disabled = true;
+                        btnEl.textContent = 'Saving...';
+                        await handleBackInStockSubscription(productId, size === 'Default' ? 'Default' : size, btnEl);
+                        if (!btnEl.classList.contains('subscribed')) {
+                            btnEl.disabled = false;
+                            btnEl.textContent = 'Notify Me';
+                        } else {
+                            btnEl.textContent = "You're On the List!";
+                            btnEl.style.background = 'rgba(200,164,0,0.08)';
+                        }
+                    };
+
+                    const checkoutContainer = document.querySelector('.checkout-container');
+                    if (checkoutContainer) {
+                        checkoutContainer.insertBefore(panel, checkoutContainer.firstChild);
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    return; // Stop order placement
+                }
+                // --- END OOS GUARD ---
+
                 placeOrderBtn.innerText = "Processing...";
                 placeOrderBtn.style.opacity = "0.7";
                 placeOrderBtn.style.pointerEvents = "none";
@@ -3209,6 +3485,25 @@ document.addEventListener('DOMContentLoaded', () => {
                             checkoutContainer.style.display = 'block';
                             checkoutContainer.style.maxWidth = '800px';
                             checkoutContainer.style.margin = '0 auto';
+
+                            // Inject mobile-responsive styles for the receipt
+                            if (!document.getElementById('receipt-mobile-fix')) {
+                                const mobileStyle = document.createElement('style');
+                                mobileStyle.id = 'receipt-mobile-fix';
+                                mobileStyle.textContent = `
+                                    @media (max-width: 600px) {
+                                        .order-receipt-sheet { padding: 1.25rem !important; border-radius: 16px !important; }
+                                        .receipt-header { margin-bottom: 1.5rem !important; padding-bottom: 1.25rem !important; }
+                                        .receipt-header h2 { font-size: 1.6rem !important; }
+                                        .receipt-details { grid-template-columns: 1fr !important; gap: 1rem !important; padding: 1rem !important; }
+                                        .receipt-totals { max-width: 100% !important; }
+                                        .receipt-actions { flex-direction: column !important; gap: 0.75rem !important; margin-top: 2rem !important; padding-top: 1.5rem !important; }
+                                        .receipt-actions a, .receipt-actions button { flex: none !important; width: 100% !important; box-sizing: border-box !important; }
+                                        .receipt-items-section { margin-bottom: 2rem !important; }
+                                    }
+                                `;
+                                document.head.appendChild(mobileStyle);
+                            }
 
                             checkoutContainer.innerHTML = `
                                 <div class="order-receipt-sheet" style="background: #fff; padding: 3rem; border-radius: 24px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 20px 60px rgba(0,0,0,0.04); animation: slideUpFade 0.6s ease;">
@@ -3875,6 +4170,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
                 loadAdminMessages();
+                loadAdminReports();
                 checkExportEligibility();
             }
         });
@@ -5057,6 +5353,183 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
+        const loadAdminReports = async () => {
+            const adminReportsList = document.getElementById('admin-reports-list');
+            if (!adminReportsList) return;
+
+            adminReportsList.innerHTML = '<p>Loading reports and complaints...</p>';
+
+            try {
+                const q = query(collection(db, 'orders'), where('hasReports', '==', true));
+                onSnapshot(q, (snapshot) => {
+                    adminReportsList.innerHTML = '';
+                    if (snapshot.empty) {
+                        adminReportsList.innerHTML = '<p>No reports or complaints found.</p>';
+                        const badge = document.getElementById('unread-reports-badge');
+                        if (badge) badge.style.display = 'none';
+                        return;
+                    }
+
+                    let unseenCount = 0;
+                    let reportCardsHtml = '';
+
+                    snapshot.forEach(docSnap => {
+                        const order = docSnap.data();
+                        const orderId = docSnap.id;
+
+                        if (order.hasUnseenReport) unseenCount++;
+
+                        order.items.forEach((item, itemIdx) => {
+                            if (item.report) {
+                                const r = item.report;
+                                const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A';
+                                const status = r.status || 'Pending';
+                                
+                                const isPending = status === 'Pending';
+                                
+                                let actionControlsHtml = '';
+                                if (isPending) {
+                                    actionControlsHtml = `
+                                        <div style="margin-top: 1rem; border-top: 1px solid #f0f0f0; padding-top: 1rem;">
+                                            <div class="form-group" style="margin-bottom: 0.75rem;">
+                                                <label style="display:block; margin-bottom: 0.3rem; font-size: 0.8rem; font-weight: 600; color: #555;">Reply message (Optional)</label>
+                                                <input type="text" class="admin-report-reply-input modern-input" placeholder="Enter message for user..." style="padding: 8px 12px; font-size: 0.85rem; width: 100%; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box; font-family: inherit;">
+                                            </div>
+                                            <div style="display: flex; gap: 0.5rem;">
+                                                <button class="admin-btn btn-save refund-report-btn" data-order-id="${orderId}" data-item-idx="${itemIdx}" style="background: #27ae60; border-color: #27ae60; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refund</button>
+                                                <button class="admin-btn btn-delete refuse-report-btn" data-order-id="${orderId}" data-item-idx="${itemIdx}" style="background: #e74c3c; border-color: #e74c3c; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refuse</button>
+                                            </div>
+                                        </div>
+                                    `;
+                                } else {
+                                    actionControlsHtml = `
+                                        <div style="margin-top: 1rem; border-top: 1px solid #f0f0f0; padding-top: 1rem; color: #666; font-size: 0.85rem;">
+                                            <div>Status: <strong style="color: ${status === 'Refunded' ? '#27ae60' : '#e74c3c'};">${status}</strong></div>
+                                            ${r.reply ? `<div style="margin-top: 0.25rem;">Reply: <em>"${escapeHTML(r.reply)}"</em></div>` : ''}
+                                        </div>
+                                    `;
+                                }
+
+                                const card = `
+                                    <div class="admin-order-card ${order.hasUnseenReport ? 'admin-unread-msg' : ''}" style="margin-bottom: 1rem; background: #fff; padding: 1.5rem; border-radius: 12px; border: 1px solid #eaeaea;">
+                                        <div class="admin-order-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f9f9f9; padding-bottom: 0.5rem;">
+                                            <strong style="font-size: 1.1rem; color: #1a1a1a;">Report: #${order.orderReference || orderId.slice(0, 8).toUpperCase()}</strong>
+                                            <span style="font-size: 0.8rem; color: #888;">${dateStr}</span>
+                                        </div>
+                                        <div class="admin-order-details" style="font-size: 0.9rem; line-height: 1.5; color: #444;">
+                                            <p style="margin: 0 0 0.5rem 0;"><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)} (${escapeHTML(order.shipping?.phone || 'N/A')})</p>
+                                            <p style="margin: 0 0 0.5rem 0;"><strong>Product:</strong> ${escapeHTML(item.name)} (${escapeHTML(item.size)}) - Qty: ${item.quantity} - Total: ${(item.price * item.quantity).toFixed(2)} TND</p>
+                                            <p style="margin: 0 0 0.5rem 0;"><strong>Problem Type:</strong> <span style="color: #c0392b; font-weight: 600;">${escapeHTML(r.problem)}</span></p>
+                                            <div style="background: #fafafa; padding: 0.75rem; border-radius: 8px; border-left: 3px solid #e74c3c; margin-top: 0.75rem; font-size: 0.9rem; color: #333; white-space: pre-wrap;">${escapeHTML(r.message || '(No details provided)')}</div>
+                                            ${actionControlsHtml}
+                                        </div>
+                                    </div>
+                                `;
+                                reportCardsHtml += card;
+                            }
+                        });
+                    });
+
+                    adminReportsList.innerHTML = reportCardsHtml || '<p>No reports found.</p>';
+
+                    const badge = document.getElementById('unread-reports-badge');
+                    if (badge) {
+                        badge.textContent = unseenCount;
+                        badge.style.display = unseenCount > 0 ? 'inline-block' : 'none';
+                    }
+
+                    if (!adminReportsList.dataset.listenersAttached) {
+                        adminReportsList.addEventListener('click', async (e) => {
+                            const refundBtn = e.target.closest('.refund-report-btn');
+                            const refuseBtn = e.target.closest('.refuse-report-btn');
+                            
+                            if (refundBtn || refuseBtn) {
+                                const isRefund = !!refundBtn;
+                                const btn = isRefund ? refundBtn : refuseBtn;
+                                const oId = btn.dataset.orderId;
+                                const itemIdx = parseInt(btn.dataset.itemIdx);
+                                const card = btn.closest('.admin-order-card');
+                                const replyInput = card.querySelector('.admin-report-reply-input');
+                                const replyVal = replyInput ? replyInput.value.trim() : '';
+
+                                const actionText = isRefund ? 'refund' : 'refuse';
+                                if (confirm(`Are you sure you want to ${actionText} this request?`)) {
+                                    btn.disabled = true;
+                                    btn.textContent = 'Processing...';
+
+                                    try {
+                                        const orderRef = doc(db, "orders", oId);
+                                        const orderSnap = await getDoc(orderRef);
+                                        if (orderSnap.exists()) {
+                                            const orderData = orderSnap.data();
+                                            const items = [...orderData.items];
+                                            
+                                            if (items[itemIdx] && items[itemIdx].report) {
+                                                items[itemIdx].report.status = isRefund ? 'Refunded' : 'Refused';
+                                                items[itemIdx].report.reply = replyVal;
+                                                items[itemIdx].report.handledAt = new Date().toISOString();
+                                                if (isRefund) {
+                                                    items[itemIdx].refunded = true;
+                                                }
+                                            }
+
+                                            const hasPending = items.some(it => it.report && it.report.status === 'Pending');
+                                            
+                                            await updateDoc(orderRef, {
+                                                items: items,
+                                                hasUnseenReport: hasPending,
+                                                hasUnseenUpdate: true // Notify the user
+                                            });
+
+                                            // Sync review refund state when admin approves a refund
+                                            if (isRefund && orderData.userId) {
+                                                const refundedItem = items[itemIdx];
+                                                const pId = refundedItem.productId || refundedItem.id;
+                                                if (pId) {
+                                                    const reviewDocId = `${orderData.userId}_${pId}`;
+                                                    const reviewDocRef = doc(db, "product_reviews", reviewDocId);
+                                                    const reviewSnap = await getDoc(reviewDocRef);
+                                                    if (reviewSnap.exists()) {
+                                                        await updateDoc(reviewDocRef, {
+                                                            refunded: true,
+                                                            refundedAt: new Date().toISOString()
+                                                        });
+                                                    }
+                                                }
+                                            }
+
+                                            window.showToast(`Request ${isRefund ? 'refunded' : 'refused'} successfully!`, "success");
+                                            
+                                            if (orderData.userId && orderData.userId !== 'guest' && typeof window.sendTargetedPushNotification === 'function') {
+                                                const title = isRefund ? "Refund Approved! 💰" : "Report Update";
+                                                const body = isRefund 
+                                                    ? `Your refund request for ${items[itemIdx].name} was approved.`
+                                                    : `Your report for ${items[itemIdx].name} was reviewed.`;
+                                                window.sendTargetedPushNotification(db, orderData.userId, title, body, '/my-account.html#orders');
+                                            }
+
+                                            loadRevenueChart();
+                                        }
+                                    } catch (err) {
+                                        console.error(err);
+                                        window.showToast("Failed to process request.", "error");
+                                        btn.disabled = false;
+                                        btn.textContent = isRefund ? 'Refund' : 'Refuse';
+                                    }
+                                }
+                            }
+                        });
+                        adminReportsList.dataset.listenersAttached = 'true';
+                    }
+                }, (error) => {
+                    console.error("Error fetching reports:", error);
+                    adminReportsList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied or Error loading reports.</p>';
+                });
+            } catch (err) {
+                console.error("Setup reports error:", err);
+            }
+        };
+
         const loadAdminOrders = async (pageIndex = 0) => {
             adminOrdersList.innerHTML = '<p>Loading orders...</p>';
             try {
@@ -5853,7 +6326,18 @@ The DODCH Team`;
                     totalOrdersCount++;
                     if (data.timestamp && data.status && validStatuses.includes(data.status)) {
                         // Exclude shipping fee from revenue (Use subtotal if available, otherwise calculate it)
-                        const orderRevenue = data.subtotal || (data.total ? (data.total - (data.shippingFee || 0)) : 0);
+                        let orderRevenue = data.subtotal || (data.total ? (data.total - (data.shippingFee || 0)) : 0);
+
+                        // Deduct value of refunded items
+                        if (data.items) {
+                            data.items.forEach(item => {
+                                if (item.refunded === true || item.refunded === 'true') {
+                                    const itemPrice = parseFloat(item.price) || 0;
+                                    orderRevenue -= itemPrice * (item.quantity || 1);
+                                }
+                            });
+                        }
+
                         totalRevenue += orderRevenue;
 
                         const date = new Date(data.timestamp.seconds * 1000);
@@ -6083,6 +6567,9 @@ The DODCH Team`;
                             if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
                         });
                     } else {
+                        // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
+                        const qvSizeLabelInStock = sizeObj ? sizeObj.label : 'Default';
+                        try { localStorage.removeItem(getNotifyStorageKey(id, qvSizeLabelInStock)); } catch(e) {}
                         qvAddToCart.style.display = 'flex';
                         qvAddToCart.disabled = false;
                         const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
@@ -6716,6 +7203,9 @@ const initProductReviews = () => {
     if (!productId) return;
 
     const reviewModal = document.getElementById('review-modal');
+    if (reviewModal && reviewModal.parentElement !== document.body) {
+        document.body.appendChild(reviewModal);
+    }
     const reviewForm = document.getElementById('product-review-form');
     const writeReviewBtn = document.getElementById('write-review-toggle-btn');
     const closeReviewModal = document.getElementById('close-review-modal');
@@ -6731,47 +7221,18 @@ const initProductReviews = () => {
         }
     }
 
-    let selectedFiles = [];
 
     let userState = {
         loggedIn: false,
         eligible: false,
         alreadyReviewed: false,
-        orderId: null, // To satisfy security rules
+        canEditAfterRefund: false,
+        orderId: null,
+        orderReference: null,
+        allOrderReferences: [],
         user: null
     };
-    if (imageInput) {
-        imageInput.addEventListener('change', (e) => {
-            const files = Array.from(e.target.files);
-            if (files.length + selectedFiles.length > 2) {
-                window.showToast("Maximum 2 photos allowed per review.", "warning");
-                return;
-            }
 
-            files.forEach(file => {
-                if (!file.type.startsWith('image/')) return;
-                selectedFiles.push(file);
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const previewDiv = document.createElement('div');
-                    previewDiv.style.cssText = 'position: relative; width: 60px; height: 60px;';
-                    previewDiv.innerHTML = `
-                        <img src="${event.target.result}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
-                        <button type="button" class="remove-img" style="position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
-                    `;
-
-                    previewDiv.querySelector('.remove-img').addEventListener('click', () => {
-                        selectedFiles = selectedFiles.filter(f => f !== file);
-                        previewDiv.remove();
-                    });
-
-                    imagePreviewContainer.appendChild(previewDiv);
-                };
-                reader.readAsDataURL(file);
-            });
-            imageInput.value = '';
-        });
-    }
     const renderReviews = (reviews) => {
         if (reviews.length === 0) {
             reviewsContainer.innerHTML = '<p class="text-center" style="color: #666; font-style: italic;">No reviews yet. Be the first to share your experience!</p>';
@@ -6785,23 +7246,19 @@ const initProductReviews = () => {
             const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#e0e0e0'}; font-size: 1.2rem;">★</span>`).join('');
             const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : 'Just now';
             const authorName = review.authorName || 'Verified Buyer';
-            let imagesHtml = '';
-            if (review.images && review.images.length > 0) {
-                imagesHtml = `
-                    <div style="display: flex; gap: 0.8rem; margin-top: 1rem; margin-bottom: 0.5rem;">
-                        ${review.images.map(url => `
-                            <img src="${url}" 
-                                 style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.3s ease;" 
-                                 onclick="window.open('${url}', '_blank')"
-                                 onmouseover="this.style.transform='scale(1.05)'"
-                                 onmouseout="this.style.transform='scale(1)'"
-                            >
-                        `).join('')}
-                    </div>
-                `;
-            }
+
             const isAuthor = auth.currentUser && review.userId === auth.currentUser.uid;
             const isAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_UID;
+
+            // Admin-only: show order reference info
+            let adminInfoHtml = '';
+            if (isAdmin) {
+                const refundedBadge = review.refunded ? '<span style="background:#fdecea;color:#e74c3c;padding:1px 6px;border-radius:4px;font-size:0.75rem;margin-left:6px;">Refunded</span>' : '';
+                const refs = review.orderReferences && review.orderReferences.length > 0
+                    ? review.orderReferences.map(r => `#${r}`).join(', ')
+                    : (review.orderReference ? `#${review.orderReference}` : 'N/A');
+                adminInfoHtml = `<div style="margin-top:0.5rem;padding:0.4rem 0.6rem;background:#f9f9f9;border-radius:4px;font-size:0.75rem;color:#666;border:1px dashed #ddd;">🔑 Admin: Order Ref ${refs}${refundedBadge}</div>`;
+            }
 
             let deleteBtnHtml = '';
             if (isAuthor || isAdmin) {
@@ -6818,8 +7275,9 @@ const initProductReviews = () => {
                 </div>
                 <div style="margin-bottom: 0.8rem;">${starsHtml}</div>
                 <p style="margin: 0; line-height: 1.6;">${review.text}</p>
-                ${imagesHtml}
+                ${adminInfoHtml}
             `;
+
             reviewsContainer.appendChild(reviewEl);
         });
     };
@@ -6836,6 +7294,24 @@ const initProductReviews = () => {
                 const timeB = b.createdAt ? b.createdAt.seconds : 0;
                 return timeB - timeA;
             });
+
+            // Bulk fetch private order references if user is Admin
+            if (auth.currentUser && auth.currentUser.uid === ADMIN_UID) {
+                const privatePromises = reviews.map(async (review) => {
+                    try {
+                        const privateDoc = await getDoc(doc(db, "product_reviews", review.id, "private_data", "info"));
+                        if (privateDoc.exists()) {
+                            const pData = privateDoc.data();
+                            review.orderReference = pData.orderReference;
+                            review.orderReferences = pData.orderReferences;
+                        }
+                    } catch (e) {
+                        console.warn("Failed to fetch private review data for admin", e);
+                    }
+                });
+                await Promise.all(privatePromises);
+            }
+
             renderReviews(reviews);
             updateDynamicRatings(reviews);
         } catch (error) {
@@ -6895,10 +7371,8 @@ const initProductReviews = () => {
         if (reviewModal) reviewModal.classList.remove('active');
         document.body.style.overflow = ''; // Restore scroll
         if (reviewForm) reviewForm.reset();
-        selectedFiles = [];
-        if (imagePreviewContainer) imagePreviewContainer.innerHTML = '';
-        if (imageInput) imageInput.value = '';
     };
+
 
     if (writeReviewBtn) {
         writeReviewBtn.addEventListener('click', () => {
@@ -6947,65 +7421,160 @@ const initProductReviews = () => {
         userState.user = user;
 
         try {
-            const reviewsRef = collection(db, "product_reviews");
-            const qReviews = query(reviewsRef, where("productId", "==", productId), where("userId", "==", user.uid));
-            const reviewsSnapshot = await getDocs(qReviews);
+            // 1. Fetch existing review for this user+product
+            const reviewDocId = `${user.uid}_${productId}`;
+            const existingReviewSnap = await getDoc(doc(db, "product_reviews", reviewDocId));
+            const existingReview = existingReviewSnap.exists() ? existingReviewSnap.data() : null;
 
-            if (!reviewsSnapshot.empty) {
-                userState.alreadyReviewed = true;
-                if (writeReviewBtn) {
-                    writeReviewBtn.classList.remove('eligible');
-                    writeReviewBtn.classList.add('ineligible');
-                    writeReviewBtn.innerText = "Reviewed ✅";
-                }
-                if (shouldOpenReview) {
-                    window.showToast("You have already reviewed this product. Thank you!", "info");
-                }
-                return;
-            }
+            // 2. Fetch all user orders containing this product
             const ordersRef = collection(db, "orders");
             const qOrders = query(ordersRef, where("userId", "==", user.uid));
             const ordersSnapshot = await getDocs(qOrders);
 
-            let latestDeliveredOrderId = null;
-            let isEligible = false;
+            let allDeliveredOrders = []; // All delivered orders with this product
+            let nonRefundedDeliveredOrders = []; // Delivered orders where this item is NOT refunded
+            let allOrderRefs = [];
 
             ordersSnapshot.forEach((docSnap) => {
                 const order = docSnap.data();
                 if (order.status === 'Delivered' && order.items && Array.isArray(order.items)) {
-                    if (order.items.some(item => (item.id === productId || item.productId === productId))) {
-                        isEligible = true;
-                        latestDeliveredOrderId = docSnap.id;
+                    const matchingItem = order.items.find(item => item.id === productId || item.productId === productId);
+                    if (matchingItem) {
+                        allDeliveredOrders.push({ id: docSnap.id, ...order, matchingItem });
+                        if (order.orderReference) allOrderRefs.push(order.orderReference);
+                        const isItemRefunded = matchingItem.refunded === true || matchingItem.refunded === 'true';
+                        if (!isItemRefunded) {
+                            nonRefundedDeliveredOrders.push({ id: docSnap.id, ...order, matchingItem });
+                        }
                     }
                 }
             });
 
-            userState.eligible = isEligible;
-            userState.orderId = latestDeliveredOrderId;
+            // Sort by timestamp descending to get most recent
+            const sortByTime = (a, b) => {
+                const tA = a.timestamp ? a.timestamp.seconds : 0;
+                const tB = b.timestamp ? b.timestamp.seconds : 0;
+                return tB - tA;
+            };
+            allDeliveredOrders.sort(sortByTime);
+            nonRefundedDeliveredOrders.sort(sortByTime);
 
-            if (writeReviewBtn) {
-                writeReviewBtn.removeAttribute('style');
-                if (isEligible) {
+            const latestNonRefunded = nonRefundedDeliveredOrders[0] || null;
+            const latestOrderRef = latestNonRefunded ? (latestNonRefunded.orderReference || latestNonRefunded.id) : null;
+
+            userState.allOrderReferences = allOrderRefs;
+            userState.orderId = latestNonRefunded ? latestNonRefunded.id : null;
+            userState.orderReference = latestOrderRef;
+
+            // Decision tree
+            if (allDeliveredOrders.length === 0) {
+                // Never purchased + delivered
+                userState.eligible = false;
+                userState.alreadyReviewed = false;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    writeReviewBtn.removeAttribute('style');
+                }
+                if (shouldOpenReview) window.showToast("Only verified purchasers can leave reviews.", "warning");
+                return;
+            }
+
+            if (nonRefundedDeliveredOrders.length === 0) {
+                // All deliveries were refunded - block reviewing
+                userState.eligible = false;
+                userState.alreadyReviewed = false;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    writeReviewBtn.innerText = 'Product Refunded';
+                }
+                if (shouldOpenReview) window.showToast("This product was refunded. You cannot review it.", "warning");
+                return;
+            }
+
+            // Has at least one non-refunded delivered order
+            if (!existingReview) {
+                // No existing review — standard eligible
+                userState.eligible = true;
+                userState.alreadyReviewed = false;
+                if (writeReviewBtn) {
                     writeReviewBtn.classList.remove('ineligible');
                     writeReviewBtn.classList.add('eligible');
+                    writeReviewBtn.removeAttribute('style');
+                }
+                if (shouldOpenReview) {
+                    setTimeout(() => {
+                        openModal();
+                        window.showToast("Fill in the form to post your review!", "success");
+                    }, 1200);
+                }
+                return;
+            }
+
+            // Has existing review
+            if (existingReview.reviewedAfterRefund === true) {
+                // Already used the one-time post-refund edit — permanently blocked
+                userState.eligible = false;
+                userState.alreadyReviewed = true;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    writeReviewBtn.innerText = 'Reviewed ✅';
+                }
+                if (shouldOpenReview) window.showToast("You have already reviewed this product. Thank you!", "info");
+                return;
+            }
+
+            if (existingReview.refunded === true) {
+                // Review was refunded but user has a new non-refunded order — allow one-time edit
+                const refundedAt = existingReview.refundedAt ? new Date(existingReview.refundedAt).getTime() : 0;
+                const hasNewerOrder = nonRefundedDeliveredOrders.some(o => {
+                    const orderTime = o.timestamp ? o.timestamp.seconds * 1000 : 0;
+                    return orderTime > refundedAt;
+                });
+                if (hasNewerOrder) {
+                    userState.eligible = true;
+                    userState.alreadyReviewed = false;
+                    userState.canEditAfterRefund = true;
+                    if (writeReviewBtn) {
+                        writeReviewBtn.classList.remove('ineligible');
+                        writeReviewBtn.classList.add('eligible');
+                        writeReviewBtn.innerText = 'Edit Review';
+                    }
                     if (shouldOpenReview) {
                         setTimeout(() => {
                             openModal();
-                            window.showToast("Fill in the form to post your review!", "success");
+                            window.showToast("You can update your review after reordering!", "success");
                         }, 1200);
                     }
                 } else {
-                    writeReviewBtn.classList.remove('eligible');
-                    writeReviewBtn.classList.add('ineligible');
-                    if (shouldOpenReview) {
-                        window.showToast("Only verified purchasers can leave reviews.", "warning");
+                    userState.eligible = false;
+                    userState.alreadyReviewed = true;
+                    if (writeReviewBtn) {
+                        writeReviewBtn.classList.remove('eligible');
+                        writeReviewBtn.classList.add('ineligible');
+                        writeReviewBtn.innerText = 'Product Refunded';
                     }
                 }
+                return;
             }
+
+            // Standard — already reviewed, not refunded
+            userState.eligible = false;
+            userState.alreadyReviewed = true;
+            if (writeReviewBtn) {
+                writeReviewBtn.classList.remove('eligible');
+                writeReviewBtn.classList.add('ineligible');
+                writeReviewBtn.innerText = 'Reviewed ✅';
+            }
+            if (shouldOpenReview) window.showToast("You have already reviewed this product. Thank you!", "info");
+
         } catch (error) {
             console.error("Error checking review eligibility:", error);
         }
     });
+
     if (reviewForm) {
         reviewForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -7032,12 +7601,6 @@ const initProductReviews = () => {
                 return;
             }
 
-            if (selectedFiles.length > 2) {
-                window.showToast("Maximum 2 photos allowed.", "error");
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Review';
-                return;
-            }
 
             if (SecurityValidator.isProfane(text)) {
                 window.showToast("Inappropriate language detected.", "error");
@@ -7054,27 +7617,33 @@ const initProductReviews = () => {
             }
 
             try {
-                const imageUrls = [];
-                for (const [index, file] of selectedFiles.entries()) {
-                    const storageRef = ref(storage, `product-reviews/${userState.user.uid}/${Date.now()}_${index}`);
-                    const snapshot = await uploadBytes(storageRef, file);
-                    const url = await getDownloadURL(snapshot.ref);
-                    imageUrls.push(url);
-                }
+                // Collect all order references for this product
+                const orderRefs = userState.allOrderReferences.length > 0
+                    ? userState.allOrderReferences
+                    : (userState.orderReference ? [userState.orderReference] : []);
 
+                const reviewDocId = `${userState.user.uid}_${productId}`;
                 const newReview = {
                     productId: productId,
                     userId: userState.user.uid,
-                    orderId: userState.orderId, // Crucial for security rules validation
+                    orderId: userState.orderId,
                     authorName: userState.user.displayName || 'Verified Buyer',
                     rating: rating,
                     text: text,
-                    images: imageUrls,
-                    createdAt: serverTimestamp()
+                    images: [],
+                    createdAt: serverTimestamp(),
+                    refunded: false,
+                    reviewedAfterRefund: userState.canEditAfterRefund === true
                 };
 
-                const reviewDocId = `${userState.user.uid}_${productId}`;
                 await setDoc(doc(db, "product_reviews", reviewDocId), newReview);
+
+                // Save private data securely in a subcollection
+                const privateData = {
+                    orderReference: userState.orderReference || null,
+                    orderReferences: orderRefs
+                };
+                await setDoc(doc(db, "product_reviews", reviewDocId, "private_data", "info"), privateData);
 
                 window.showToast("Review submitted successfully!", "success");
                 closeModal();
@@ -7263,7 +7832,10 @@ const initGlobalReviewPrompt = (forceShow = false) => {
                 const isDelivered = order.status && order.status.toLowerCase() === 'delivered';
                 if (isDelivered && order.items && Array.isArray(order.items)) {
                     order.items.forEach(item => {
-                        deliveredProducts.add(item.productId || item.id);
+                        const isRefunded = item.refunded === true || item.refunded === 'true';
+                        if (!isRefunded) {
+                            deliveredProducts.add(item.productId || item.id);
+                        }
                     });
                 }
             });
@@ -9682,11 +10254,17 @@ function applySubscribedState(btnEl) {
 async function handleBackInStockSubscription(productId, sizeLabel, btnEl) {
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     if (isIOS) {
-        // Mark as subscribed in localStorage so button persists state
-        markNotifySubscribed(productId, sizeLabel);
-        if (btnEl) applySubscribedState(btnEl);
-        triggerIOSInstallFlow();
-        return;
+        const isStandalone = window.navigator.standalone === true;
+        if (!isStandalone) {
+            // App not installed — show the install prompt every click.
+            // Do NOT change the button or save to localStorage; the notification
+            // hasn't actually been registered yet.
+            triggerIOSInstallFlow();
+            return;
+        }
+        // Standalone (PWA installed) — fall through to the real notification
+        // flow below so the subscription is actually registered and the button
+        // only turns to "You're On the List!" on genuine success.
     }
 
     if (!('Notification' in window)) {
@@ -9940,13 +10518,12 @@ async function initPushNotifications() {
 async function initShippingInfo(user) {
     if (!user) return;
 
+    // ── Checkout-page side (profiles panel + auto-fill) ──────────────────────
     const profilesPanel = document.getElementById('shipping-profiles-panel');
-    const profileForm = document.getElementById('profile-shipping-form');
     const saveProfileRow = document.getElementById('save-profile-row');
 
-    // Helper: fill checkout form from a profile object
-    const fillFormFromProfile = (profile) => {
-        const fields = {
+    const fillCheckoutForm = (profile) => {
+        const map = {
             'checkout-email': profile.email,
             'checkout-name': profile.fullName,
             'checkout-phone': profile.phone,
@@ -9954,48 +10531,37 @@ async function initShippingInfo(user) {
             'checkout-city': profile.city,
             'checkout-postal-code': profile.postalCode
         };
-        for (const [id, val] of Object.entries(fields)) {
+        for (const [id, val] of Object.entries(map)) {
             const el = document.getElementById(id);
             if (el && val !== undefined) el.value = val;
         }
     };
 
-    // Helper: render the profiles panel
-    const renderProfilesPanel = (profiles, selectedIndex) => {
-        if (!profilesPanel) return;
+    const GOVS = ["Ariana","Béja","Ben Arous","Bizerte","Gabès","Gafsa","Jendouba","Kairouan","Kasserine","Kebili","Kef","Mahdia","Manouba","Medenine","Monastir","Nabeul","Sfax","Sidi Bouzid","Siliana","Sousse","Tataouine","Tozeur","Tunis","Zaghouan"];
+    const govOptions = GOVS.map(g => `<option value="${g}">${g === 'Kef' ? 'Le Kef' : g === 'Kebili' ? 'Kébili' : g}</option>`).join('');
 
+    const renderCheckoutProfilesPanel = (profiles, selectedIndex) => {
+        if (!profilesPanel) return;
         if (profiles.length === 0) {
             profilesPanel.style.display = 'none';
             if (saveProfileRow) saveProfileRow.style.display = 'flex';
             return;
         }
-
         profilesPanel.style.display = 'block';
-        if (saveProfileRow) saveProfileRow.style.display = 'none'; // shown dynamically below
+        if (saveProfileRow) saveProfileRow.style.display = 'none';
 
-        const profileCards = profiles.map((p, i) => `
-            <div class="shipping-profile-card ${i === selectedIndex ? 'selected' : ''}" 
-                 data-index="${i}" 
-                 onclick="window.selectShippingProfile(${i})"
-                 style="cursor:pointer;">
+        const cards = profiles.map((p, i) => `
+            <div class="shipping-profile-card ${i === selectedIndex ? 'selected' : ''}" data-index="${i}" onclick="window.selectShippingProfile(${i})" style="cursor:pointer;">
                 <div class="profile-card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                        <polyline points="9 22 9 12 15 12 15 22"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 </div>
                 <div class="profile-card-info">
                     <div class="profile-card-name">${p.label || p.fullName}</div>
                     <div class="profile-card-detail">${p.address}, ${p.city}</div>
                     <div class="profile-card-detail">${p.phone}</div>
                 </div>
-                ${i === selectedIndex ? `<div class="profile-card-check">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                </div>` : ''}
-            </div>
-        `).join('');
+                ${i === selectedIndex ? `<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>` : ''}
+            </div>`).join('');
 
         profilesPanel.innerHTML = `
             <div class="profiles-panel-header">
@@ -10005,71 +10571,259 @@ async function initShippingInfo(user) {
                     New Address
                 </button>
             </div>
-            <div class="shipping-profiles-list">
-                ${profileCards}
-            </div>
+            <div class="shipping-profiles-list">${cards}</div>
             <div id="new-profile-form-wrapper" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.06);">
                 <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.75rem;">Fill in details and place your order — it will be saved automatically.</p>
                 <div class="form-group" style="margin-bottom: 0.5rem;">
                     <input type="text" id="new-profile-label" placeholder='Profile name (e.g. "Home", "Work")' style="width:100%; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-family: inherit; font-size: 0.9rem;">
                 </div>
-            </div>
-        `;
+            </div>`;
 
-        // When "New Address" is toggled, show the form and unhide the save checkbox
         window.toggleNewProfileForm = () => {
             const wrapper = document.getElementById('new-profile-form-wrapper');
             const btn = document.getElementById('add-new-profile-btn');
             const isShowing = wrapper.style.display !== 'none';
             wrapper.style.display = isShowing ? 'none' : 'block';
             if (saveProfileRow) saveProfileRow.style.display = isShowing ? 'none' : 'flex';
-            btn.textContent = isShowing ? '+ New Address' : '✕ Cancel';
             btn.innerHTML = isShowing
                 ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Address`
                 : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel`;
             if (!isShowing) {
-                // Clear form for new profile entry
-                ['checkout-email', 'checkout-name', 'checkout-phone', 'checkout-address', 'checkout-postal-code'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.value = '';
-                });
-                const city = document.getElementById('checkout-city');
-                if (city) city.value = '';
-                // Deselect all cards
+                ['checkout-email','checkout-name','checkout-phone','checkout-address','checkout-postal-code'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                const city = document.getElementById('checkout-city'); if (city) city.value = '';
                 document.querySelectorAll('.shipping-profile-card').forEach(c => c.classList.remove('selected'));
             }
         };
     };
 
+    // ── Account-page side (full profile manager) ─────────────────────────────
+    const accountRoot = document.getElementById('account-shipping-root');
+
+    // Build the inline edit form HTML
+    const buildProfileForm = (p = {}, isNew = false) => `
+        <form id="acct-profile-form" class="acct-profile-form" style="margin-top: 1.25rem;">
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Address Label</label>
+                <input type="text" id="acct-label" value="${p.label || ''}" placeholder='e.g. "Home", "Work"' style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                <div>
+                    <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Full Name</label>
+                    <input type="text" id="acct-name" value="${p.fullName || ''}" placeholder="Nom Complet" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Phone</label>
+                    <input type="tel" id="acct-phone" value="${p.phone || ''}" placeholder="e.g. 21654321" required pattern="[24579][0-9]{7}" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                </div>
+            </div>
+            <div style="margin-bottom:0.75rem;">
+                <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Email</label>
+                <input type="email" id="acct-email" value="${p.email || ''}" placeholder="nom@exemple.tn" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:0.75rem;">
+                <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Address</label>
+                <input type="text" id="acct-address" value="${p.address || ''}" placeholder="Rue, Appartement, Bureau..." required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
+                <div>
+                    <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Governorate</label>
+                    <select id="acct-city" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                        <option value="" disabled ${!p.city ? 'selected' : ''}>Select region</option>
+                        ${govOptions}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Postal Code</label>
+                    <input type="text" id="acct-postal" value="${p.postalCode || ''}" placeholder="e.g. 1000" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                <button type="submit" style="flex:1;min-width:140px;padding:0.8rem 1.2rem;background:var(--text-charcoal);color:#fff;border:none;border-radius:30px;font-family:inherit;font-weight:600;font-size:0.9rem;cursor:pointer;transition:background 0.2s;">
+                    ${isNew ? 'Add Address' : 'Save Changes'}
+                </button>
+                <button type="button" id="acct-form-cancel" style="flex:1;min-width:100px;padding:0.8rem 1.2rem;background:transparent;color:#888;border:1.5px solid #e0e0e0;border-radius:30px;font-family:inherit;font-weight:500;font-size:0.9rem;cursor:pointer;">
+                    Cancel
+                </button>
+            </div>
+        </form>`;
+
+    const renderAccountShipping = (profiles, editingIndex = null, isAdding = false) => {
+        if (!accountRoot) return;
+
+        const hasProfiles = profiles.length > 0;
+
+        const profileCards = profiles.map((p, i) => `
+            <div class="shipping-profile-card" style="margin-bottom:0.5rem;">
+                <div class="profile-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                <div class="profile-card-info" style="flex:1;min-width:0;">
+                    <div class="profile-card-name">${p.label || p.fullName || 'Address'}</div>
+                    <div class="profile-card-detail">${p.address || ''}, ${p.city || ''}</div>
+                    <div class="profile-card-detail">${p.phone || ''}${p.email ? ' · ' + p.email : ''}</div>
+                </div>
+                <div style="display:flex;gap:0.4rem;flex-shrink:0;">
+                    <button onclick="window.__acctEditProfile(${i})" title="Edit" style="background:rgba(212,175,55,0.1);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--accent-gold-text);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button onclick="window.__acctDeleteProfile(${i})" title="Delete" style="background:rgba(231,76,60,0.08);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#e74c3c;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    </button>
+                </div>
+            </div>
+            ${editingIndex === i ? buildProfileForm(p, false) : ''}`).join('');
+
+        accountRoot.innerHTML = `
+            <h3 style="margin-bottom:0.5rem;font-family:var(--font-serif);font-size:1.4rem;">Delivery Addresses</h3>
+            <p style="margin-bottom:1.5rem;color:#888;font-size:0.88rem;">Manage your saved addresses for faster checkout.</p>
+            ${hasProfiles ? `<div class="shipping-profiles-list" style="margin-bottom:1rem;">${profileCards}</div>` : `<p style="color:#aaa;font-style:italic;margin-bottom:1.5rem;">No addresses saved yet.</p>`}
+            ${!isAdding ? `
+                <button id="acct-add-btn" onclick="window.__acctStartAdd()" style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1.4rem;background:transparent;border:1.5px dashed rgba(0,0,0,0.18);border-radius:12px;color:#666;font-family:inherit;font-size:0.88rem;cursor:pointer;width:100%;justify-content:center;transition:all 0.2s;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add New Address
+                </button>` : buildProfileForm({}, true)}`;
+
+        // Wire up city select after render
+        const cityEl = document.getElementById('acct-city');
+        if (cityEl) {
+            const profile = editingIndex !== null ? profiles[editingIndex] : {};
+            if (profile.city) cityEl.value = profile.city;
+        }
+
+        // Form submit handler
+        const form = document.getElementById('acct-profile-form');
+        if (form) {
+            document.getElementById('acct-form-cancel')?.addEventListener('click', () => renderAccountShipping(profiles));
+
+            const labelEl = document.getElementById('acct-label');
+            const nameEl = document.getElementById('acct-name');
+            const phoneEl = document.getElementById('acct-phone');
+            const emailEl = document.getElementById('acct-email');
+            const addressEl = document.getElementById('acct-address');
+            const cityEl = document.getElementById('acct-city');
+            const postalEl = document.getElementById('acct-postal');
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            const getFormValues = () => ({
+                label: labelEl ? labelEl.value.trim() : '',
+                fullName: nameEl ? nameEl.value.trim() : '',
+                phone: phoneEl ? phoneEl.value.trim() : '',
+                email: emailEl ? emailEl.value.trim() : '',
+                address: addressEl ? addressEl.value.trim() : '',
+                city: cityEl ? cityEl.value : '',
+                postalCode: postalEl ? postalEl.value.trim() : ''
+            });
+
+            const initialValues = getFormValues();
+
+            const checkChanges = () => {
+                if (isAdding) return;
+                const currentValues = getFormValues();
+                const hasChanges = Object.keys(initialValues).some(key => initialValues[key] !== currentValues[key]);
+                submitBtn.disabled = !hasChanges;
+                submitBtn.style.opacity = hasChanges ? '1' : '0.5';
+                submitBtn.style.cursor = hasChanges ? 'pointer' : 'not-allowed';
+            };
+
+            if (!isAdding && submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
+
+                [labelEl, nameEl, phoneEl, emailEl, addressEl, cityEl, postalEl].forEach(el => {
+                    if (el) {
+                        el.addEventListener('input', checkChanges);
+                        el.addEventListener('change', checkChanges);
+                    }
+                });
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const orig = submitBtn.textContent;
+                submitBtn.textContent = 'Saving...';
+                submitBtn.disabled = true;
+
+                const updated = {
+                    label: document.getElementById('acct-label').value.trim() || 'Address',
+                    fullName: document.getElementById('acct-name').value.trim(),
+                    phone: document.getElementById('acct-phone').value.trim(),
+                    email: document.getElementById('acct-email').value.trim(),
+                    address: document.getElementById('acct-address').value.trim(),
+                    city: document.getElementById('acct-city').value,
+                    postalCode: document.getElementById('acct-postal').value.trim(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                const newProfiles = [...profiles];
+                if (isAdding) {
+                    newProfiles.push(updated);
+                } else {
+                    newProfiles[editingIndex] = updated;
+                }
+
+                try {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        shippingProfiles: newProfiles,
+                        shippingInfo: newProfiles[0],
+                        lastSelectedProfile: isAdding ? newProfiles.length - 1 : editingIndex
+                    }, { merge: true });
+                    window._dodchShippingProfiles = newProfiles;
+                    window.showToast('Address saved! ✨', 'success');
+                    renderAccountShipping(newProfiles);
+                } catch (err) {
+                    console.error(err);
+                    window.showToast('Failed to save. Please try again.', 'error');
+                    submitBtn.textContent = orig;
+                    submitBtn.disabled = false;
+                }
+            });
+        }
+    };
+
+    // ── Load from Firestore ───────────────────────────────────────────────────
     try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
         let profiles = [];
         let selectedIndex = 0;
 
         if (userDoc.exists()) {
             const data = userDoc.data();
-            // Support both new array format and old single-object format
             if (Array.isArray(data.shippingProfiles) && data.shippingProfiles.length > 0) {
                 profiles = data.shippingProfiles;
                 selectedIndex = typeof data.lastSelectedProfile === 'number' ? data.lastSelectedProfile : 0;
             } else if (data.shippingInfo) {
-                // Migrate old single profile to array format
                 profiles = [{ label: 'Default', ...data.shippingInfo }];
-                selectedIndex = 0;
             }
         }
 
-        // Store profiles on window so selectShippingProfile can access them
         window._dodchShippingProfiles = profiles;
         window._dodchSelectedProfileIndex = selectedIndex;
         window._dodchCurrentUser = user;
 
-        // Define the profile selector function
+        // Account page actions
+        window.__acctEditProfile = (index) => renderAccountShipping(window._dodchShippingProfiles, index, false);
+        window.__acctStartAdd = () => renderAccountShipping(window._dodchShippingProfiles, null, true);
+        window.__acctDeleteProfile = async (index) => {
+            if (!confirm('Remove this address?')) return;
+            const newProfiles = window._dodchShippingProfiles.filter((_, i) => i !== index);
+            try {
+                await setDoc(doc(db, 'users', user.uid), {
+                    shippingProfiles: newProfiles,
+                    shippingInfo: newProfiles[0] || null
+                }, { merge: true });
+                window._dodchShippingProfiles = newProfiles;
+                window.showToast('Address removed.', 'info');
+                renderAccountShipping(newProfiles);
+            } catch (err) {
+                window.showToast('Failed to delete. Try again.', 'error');
+            }
+        };
+
+        // Checkout page selector
         window.selectShippingProfile = async (index) => {
             window._dodchSelectedProfileIndex = index;
-            const profile = window._dodchShippingProfiles[index];
-            fillFormFromProfile(profile);
-            // Update card selection visually
+            fillCheckoutForm(window._dodchShippingProfiles[index]);
             document.querySelectorAll('.shipping-profile-card').forEach((card, i) => {
                 card.classList.toggle('selected', i === index);
                 const checkDiv = card.querySelector('.profile-card-check');
@@ -10079,81 +10833,25 @@ async function initShippingInfo(user) {
                     checkDiv.remove();
                 }
             });
-            // Persist last selected profile index
-            try {
-                await setDoc(doc(db, "users", user.uid), { lastSelectedProfile: index }, { merge: true });
-            } catch (e) { /* non-critical */ }
-            // Close "new profile" form if open
+            try { await setDoc(doc(db, 'users', user.uid), { lastSelectedProfile: index }, { merge: true }); } catch(e) {}
             const wrapper = document.getElementById('new-profile-form-wrapper');
-            if (wrapper && wrapper.style.display !== 'none') window.toggleNewProfileForm();
+            if (wrapper && wrapper.style.display !== 'none') window.toggleNewProfileForm?.();
         };
 
-        // Render the profiles panel
-        renderProfilesPanel(profiles, selectedIndex);
+        // Render both sides
+        renderCheckoutProfilesPanel(profiles, selectedIndex);
+        renderAccountShipping(profiles);
 
-        // Auto-fill the form with the selected profile
-        if (profiles.length > 0) {
-            fillFormFromProfile(profiles[selectedIndex]);
-        }
+        // Auto-fill checkout form with selected profile
+        if (profiles.length > 0 && profilesPanel) fillCheckoutForm(profiles[selectedIndex] || profiles[0]);
 
-        // Fill profile page form (My Account) if present
-        if (profileForm && profiles.length > 0) {
-            const p = profiles[selectedIndex] || profiles[0];
-            const pEmail = document.getElementById('profile-shipping-email');
-            const pName = document.getElementById('profile-shipping-name');
-            const pPhone = document.getElementById('profile-shipping-phone');
-            const pAddress = document.getElementById('profile-shipping-address');
-            const pCity = document.getElementById('profile-shipping-city');
-            const pPostal = document.getElementById('profile-shipping-postal');
-            if (pEmail) pEmail.value = p.email || '';
-            if (pName) pName.value = p.fullName || '';
-            if (pPhone) pPhone.value = p.phone || '';
-            if (pAddress) pAddress.value = p.address || '';
-            if (pCity) pCity.value = p.city || '';
-            if (pPostal) pPostal.value = p.postalCode || '';
-        }
     } catch (err) {
-        console.error("Error loading shipping profiles:", err);
-    }
-
-    // Profile page form submit handler
-    if (profileForm) {
-        if (profileForm.dataset.listener) return;
-        profileForm.dataset.listener = "true";
-
-        profileForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = profileForm.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerText;
-            submitBtn.innerText = "Saving...";
-            submitBtn.disabled = true;
-
-            const newProfile = {
-                label: 'Default',
-                email: document.getElementById('profile-shipping-email').value.trim(),
-                fullName: document.getElementById('profile-shipping-name').value.trim(),
-                phone: document.getElementById('profile-shipping-phone').value.trim(),
-                address: document.getElementById('profile-shipping-address').value.trim(),
-                city: document.getElementById('profile-shipping-city').value,
-                postalCode: document.getElementById('profile-shipping-postal').value.trim(),
-                updatedAt: serverTimestamp()
-            };
-
-            try {
-                const profiles = window._dodchShippingProfiles || [];
-                profiles[0] = newProfile; // Update the first/default profile
-                await setDoc(doc(db, "users", user.uid), { shippingProfiles: profiles, shippingInfo: newProfile }, { merge: true });
-                window.showToast("Shipping details saved successfully!", "success");
-            } catch (err) {
-                console.error("Error saving shipping info:", err);
-                window.showToast("Failed to save. Please try again.", "error");
-            } finally {
-                submitBtn.innerText = originalText;
-                submitBtn.disabled = false;
-            }
-        });
+        console.error('Error loading shipping profiles:', err);
+        if (accountRoot) accountRoot.innerHTML = `<p style="color:#e74c3c;font-size:0.9rem;">Failed to load addresses. Please refresh.</p>`;
     }
 }
+
+
 
 window.saveShippingFromCheckout = async function (userId) {
     if (!userId || userId === 'guest') return;

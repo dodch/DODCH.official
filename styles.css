@@ -9301,6 +9301,42 @@ button[type="submit"]:hover,
     }
 }
 
+/* --- Mobile Account Page --- */
+@media (max-width: 640px) {
+    .account-container {
+        padding: var(--space-20) var(--space-4) var(--space-12) !important;
+    }
+    .account-header h1 {
+        font-size: 2rem !important;
+    }
+    /* Tabs: scroll horizontally, smaller font */
+    .account-tabs {
+        gap: var(--space-5) !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: var(--space-3) !important;
+    }
+    .account-tabs::-webkit-scrollbar { display: none; }
+    .account-tab-btn {
+        font-size: 1rem !important;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    /* Show short label on mobile, hide full label */
+    .tab-label-full { display: none; }
+    .tab-label-short { display: inline; }
+    /* Account shipping form: collapse 2-col grids */
+    .acct-profile-form [style*="grid-template-columns:1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+@media (min-width: 641px) {
+    /* On desktop show full label, hide short */
+    .tab-label-short { display: none; }
+    .tab-label-full { display: inline; }
+}
+
 /* --- Mobile Full-Width Footer & Contact Alignment --- */
 @media (max-width: 767px) {
     #contact {

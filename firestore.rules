@@ -65,6 +65,13 @@ service cloud.firestore {
              && resource.data.status == 'Pending'
              && request.resource.data.status == 'Cancelled'
              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+            ||
+            // Case C: User reporting a problem with an item in a delivered order
+            (resource.data.userId == request.auth.uid 
+             && resource.data.status == 'Delivered'
+             && resource.data.get('hasReports', false) == false
+             && request.resource.data.diff(resource.data).affectedKeys().hasAny(['items'])
+             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['items', 'hasReports', 'hasUnseenReport']))
           )
         );
         
@@ -83,7 +90,7 @@ service cloud.firestore {
         && isVerifiedApp()
         && request.resource.data.userId == request.auth.uid
         && isValidString(request.resource.data.text, 1, 3000)
-        && (request.resource.data.images is list ? request.resource.data.images.size() <= 2 : true)
+        && (!('images' in request.resource.data) || request.resource.data.images.size() == 0)
         && exists(/databases/$(database)/documents/orders/$(request.resource.data.orderId))
         && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status == 'Delivered'
         && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.userId == request.auth.uid;
@@ -92,8 +99,25 @@ service cloud.firestore {
         || (request.auth != null 
           && resource.data.userId == request.auth.uid 
           && request.resource.data.userId == request.auth.uid 
-          && isValidString(request.resource.data.text, 1, 3000));
+          && isValidString(request.resource.data.text, 1, 3000)
+          && (!('images' in request.resource.data) || request.resource.data.images.size() == 0)
+          && (
+            // Normal update (not refunded)
+            resource.data.get('refunded', false) == false
+            ||
+            // Post-refund one-time edit (refunded but not yet reviewed after refund)
+            (resource.data.get('refunded', false) == true
+             && resource.data.get('reviewedAfterRefund', false) == false
+             && request.resource.data.get('reviewedAfterRefund', false) == true)
+          )
+        );
       allow delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      
+      match /private_data/{docId} {
+        allow create: if request.auth != null && isVerifiedApp() && get(/databases/$(database)/documents/product_reviews/$(reviewId)).data.userId == request.auth.uid;
+        allow read: if isAdmin();
+        allow update, delete: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/product_reviews/$(reviewId)).data.userId == request.auth.uid);
+      }
     }
     
     match /newsletter/{document=**} {
@@ -119,11 +143,18 @@ service cloud.firestore {
     }
 
     match /back_in_stock_subscriptions/{subscriptionId} {
-      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      // Admin can read all. Auth'd users can read their own.
+      // Guest subs (userId == null) are readable so the client can verify subscription status.
+      allow read: if isAdmin()
+        || (request.auth != null && resource.data.userId == request.auth.uid)
+        || resource.data.userId == null;
       allow create: if isVerifiedApp() && (
-        request.resource.data.userId == null || (request.auth != null && request.resource.data.userId == request.auth.uid)
+        request.resource.data.userId == null
+        || (request.auth != null && request.resource.data.userId == request.auth.uid)
       );
-      allow update, delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      // Admin or the owning user can update/delete (e.g. to cancel notification).
+      allow update, delete: if isAdmin()
+        || (request.auth != null && resource.data.userId == request.auth.uid);
     }
 
     match /messages/{messageId} {
