@@ -8,7 +8,7 @@
     <link rel="icon" href="favicon-solid-white.png?v=6" type="image/png">
     <link rel="apple-touch-icon" href="IMG_3355.webp?v=4">
     <meta name="description"
-        content="DODCHmello: The Marshmallow Cloud Shampoo. Sulfate-Free, Silk-Polymer Infusion, pH 5.5. Experience the texture transformation and Néroli-Sucre fragrance.">
+        content="DODCHmello: The Marshmallow Cloud Shampoo. Sulfate-Free, Niacinamide & Caffeine, Silk-Polymer, pH 5.5. Experience scalp care and texture transformation.">
     <meta name="keywords"
         content="DODCHmello, Marshmallow Shampoo, Néroli-Sucre, Sulfate-Free Shampoo, Silk-Polymer, DODCH">
     <link rel="canonical" href="https://dodch.com/dodchmellow-pro-v.html" />
@@ -161,6 +161,32 @@
     <!-- Dynamic SEO Injection -->
     <script type="module" src="seo.js"></script>
     <meta name="view-transition" content="same-origin">
+    <style>
+        .ingredient-hover-card:hover .ing-img {
+            transform: scale(1.08);
+        }
+        .ingredient-hover-card:hover .hover-overlay {
+            background: rgba(0, 0, 0, 0.7) !important;
+            backdrop-filter: blur(8px);
+        }
+        .ingredient-hover-card:hover .hover-details {
+            max-height: 120px !important;
+            opacity: 1 !important;
+            margin-top: 0.5rem;
+        }
+        .scalp-img:hover {
+            transform: scale(1.05);
+        }
+        @media (max-width: 992px) {
+            .highlight-grid {
+                grid-template-columns: 1fr !important;
+                gap: 2rem !important;
+            }
+            .ingredient-hover-card {
+                height: 250px !important;
+            }
+        }
+    </style>
 </head>
 
 <body class="pro-v-page">
@@ -231,7 +257,7 @@
             <div class="hero-overlay"></div>
             <div class="hero-content reveal">
                 <h1>DODCHmello: The Marshmallow Cloud Shampoo</h1>
-                <p class="sub-headline">Sulfate-Free | Silk-Polymer Infusion | pH 5.5</p>
+                <p class="sub-headline">Sulfate-Free | Niacinamide & Caffeine | Silk-Polymer | pH 5.5</p>
                 <a href="#purchase" class="cta-button">Experience The Cloud</a>
             </div>
         </section>
@@ -412,7 +438,7 @@
                             deeply hydrated and silky, yet remains light, bouncy, and full of life.</p>
 
                         <h3 style="margin-bottom: 1.5rem; font-family: var(--font-serif);">The
-                            Triple-Action Effect</h3>
+                            Quad-Action Effect</h3>
                         <div class="features-grid">
                             <div class="feature-card">
                                 <div class="feature-card-header">
@@ -458,6 +484,18 @@
                                     pH of 5.5, we ensure hair's natural scales stay closed and flat, reflecting light
                                     like a mirror with zero static or frizz.</p>
                             </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-icon-wrapper">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                        </svg>
+                                    </div>
+                                    <h4 class="feature-title">Scalp & Root Boost</h4>
+                                </div>
+                                <p class="feature-description"><strong>The Active Phase:</strong> Niacinamide strengthens the scalp barrier while Caffeine energizes roots to stimulate microcirculation and reduce shedding.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -492,32 +530,52 @@
             </div>
         </section>
 
-        <!-- Fragrance Profile Section -->
-        <section class="section-padding bg-white">
+        <!-- Active Scalp & Fiber Science Section -->
+        <section class="section-padding bg-cream">
             <div class="container">
-                <div class="highlight-grid" style="grid-template-columns: 1.1fr 0.9fr;">
-                    <div class="reveal">
-                        <h2 class="section-title accent-line-title">Néroli-Sucre Fragrance</h2>
-                        <p style="font-size: 1.1rem; line-height: 1.8; margin-bottom: 1.5rem;">Our signature
-                            Néroli-Sucre blend is a masterpiece of contrast. From the moment it touches water, the
-                            fragrance blooms, filling your shower with a nostalgic, comforting warmth that lingers on
-                            your hair like a delicate silk veil.</p>
-                        <p style="font-size: 1.1rem; line-height: 1.8;">It opens with a sophisticated, fresh floral
-                            "white-petal" elegance and settles into a warm, creamy, toasted-sugar base. It is the scent
-                            of a Mediterranean summer evening—sweet, airy, and completely addictive.</p>
+                <div class="text-center" style="margin-bottom: 4rem;">
+                    <span style="font-family: var(--font-serif); font-size: 0.9rem; letter-spacing: 2px; color: var(--accent-gold); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 0.5rem;">SCIENTIFIC EXCELLENCE</span>
+                    <h2 class="section-title text-center" style="margin-bottom: 1rem;">Active Scalp & Fiber Science</h2>
+                    <p style="max-width: 750px; margin: 0 auto; font-size: 1.1rem; line-height: 1.8; color: #444;">
+                        DODCHmello combines micro-molecular hair restoration with high-performance scalp therapeutics. By focusing on both the root and the shaft, we deliver a complete ecosystem for hair vitality.
+                    </p>
+                </div>
+                
+                <div class="highlight-grid" style="grid-template-columns: 1.1fr 0.9fr; align-items: stretch; gap: 3rem;">
+                    <!-- Scalp Image Card -->
+                    <div class="reveal" style="position: relative; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: flex; flex-direction: column; min-height: 380px; background: #000;">
+                        <img loading="lazy" src="healthy_scalp_zoom.png" alt="Healthy Scalp Close-up" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease;" class="scalp-img">
+                        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.85)); padding: 2rem; color: #fff;">
+                            <h3 style="font-family: var(--font-serif); font-size: 1.6rem; margin: 0 0 0.4rem 0; color: #fff;">Scalp Health Effect</h3>
+                            <p style="margin: 0; font-size: 0.95rem; color: #ddd; line-height: 1.5; font-family: var(--font-sans);">Advanced micro-circulation and root-activation for healthier, stronger hair follicles from the source.</p>
+                        </div>
                     </div>
-                    <div class="reveal" style="display: flex; align-items: center; justify-content: center;">
-                        <div class="fragrance-blob"
-                            style="width: 100%; aspect-ratio: 1; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, rgba(255,255,255,0) 70%); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative;">
-                            <div
-                                style="font-family: var(--font-serif); font-style: italic; font-size: 2rem; color: var(--accent-gold); text-align: center;">
-                                Néroli-Sucre</div>
-                            <!-- Small decorative elements -->
-                            <div
-                                style="position: absolute; width: 10px; height: 10px; background: var(--accent-gold); border-radius: 50%; top: 20%; left: 20%; opacity: 0.5;">
+                    
+                    <!-- Ingredient Hover Cards Column -->
+                    <div style="display: flex; flex-direction: column; gap: 2rem; justify-content: space-between;">
+                        <!-- Niacinamide Card -->
+                        <div class="reveal ingredient-hover-card" style="position: relative; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); height: calc(50% - 1rem); min-height: 170px; background: #000; cursor: pointer;">
+                            <img loading="lazy" src="niacinamide_pure.png" alt="Niacinamide" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease;" class="ing-img">
+                            <div class="hover-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; padding: 1.5rem; transition: background 0.4s ease;">
+                                <div style="color: #fff; width: 100%;">
+                                    <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin: 0 0 0.2rem 0; color: #fff;">Niacinamide</h3>
+                                    <div class="hover-details" style="max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.4s ease, opacity 0.4s ease;">
+                                        <p style="margin: 0; font-size: 0.9rem; color: #eee; line-height: 1.45;">Deeply strengthens the scalp's moisture barrier, locks in hydration, and protects against environmental irritants that dull hair growth.</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div
-                                style="position: absolute; width: 6px; height: 6px; background: var(--accent-gold); border-radius: 50%; bottom: 30%; right: 15%; opacity: 0.3;">
+                        </div>
+
+                        <!-- Caffeine Card -->
+                        <div class="reveal ingredient-hover-card" style="position: relative; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); height: calc(50% - 1rem); min-height: 170px; background: #000; cursor: pointer;">
+                            <img loading="lazy" src="caffeine_scalp_boost.png" alt="Caffeine Boost" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease;" class="ing-img">
+                            <div class="hover-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; padding: 1.5rem; transition: background 0.4s ease;">
+                                <div style="color: #fff; width: 100%;">
+                                    <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin: 0 0 0.2rem 0; color: #fff;">Caffeine Boost</h3>
+                                    <div class="hover-details" style="max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.4s ease, opacity 0.4s ease;">
+                                        <p style="margin: 0; font-size: 0.9rem; color: #eee; line-height: 1.45;">Energizes hair roots directly, stimulates microcirculation, and extends the hair growth cycle to significantly reduce daily shedding.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -533,7 +591,7 @@
                     <div class="ritual-card">
                         <div class="ritual-icon">1</div>
                         <h3>Apply</h3>
-                        <p>Apply to clean, damp hair. Use 1–2 pumps depending on hair length.</p>
+                        <p>Apply to clean, damp hair. Use a coin-sized amount depending on hair length.</p>
                     </div>
                     <div class="ritual-card">
                         <div class="ritual-icon">2</div>

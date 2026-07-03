@@ -8,7 +8,7 @@
     <link rel="icon" href="favicon-solid-white.png?v=6" type="image/png">
     <link rel="apple-touch-icon" href="IMG_3355.webp?v=4">
     <meta name="description"
-        content="DODCH Pro-V Silk Therapy Mask. A deep conditioning hair mask infused with Hydrolyzed Silk and Vitamin B5. Repairs damage, adds glass-like shine, and hydrates all hair types.">
+        content="DODCH Pro-V Silk Therapy Mask. A deep conditioning hair mask infused with Hydrolyzed Silk, Jojoba Oil, Prickly Pear Seed Oil & Vitamin B5. Repairs damage, adds glass-like shine, and hydrates.">
     <link rel="canonical" href="https://dodch.com/silk-mask.html" />
 
     <!-- Open Graph / Google Rich Results -->
@@ -180,6 +180,178 @@
     <!-- Dynamic SEO Injection -->
     <script type="module" src="seo.js"></script>
     <meta name="view-transition" content="same-origin">
+    <style>
+        .ingredient-hover-card:hover .ing-img {
+            transform: scale(1.08);
+        }
+        .ingredient-hover-card:hover .hover-overlay {
+            background: rgba(0, 0, 0, 0.7) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+        }
+        .ingredient-hover-card:hover .hover-details {
+            max-height: 120px !important;
+            opacity: 1 !important;
+            margin-top: 0.5rem;
+        }
+        .scalp-img:hover {
+            transform: scale(1.05);
+        }
+        @media (max-width: 992px) {
+            .highlight-grid {
+                grid-template-columns: 1fr !important;
+                gap: 2rem !important;
+            }
+            .ingredient-hover-card {
+                height: 250px !important;
+            }
+        }
+        /* Architecture of Silk section responsive */
+        @media (max-width: 900px) {
+            .silk-ing-hero-card {
+                min-height: 240px !important;
+            }
+        }
+        @media (max-width: 768px) {
+            #ingredients [style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+            #ingredients [style*="grid-template-columns: 1fr 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* ─── Premium CTA Button Animations & Styles ─── */
+        #sticky-cta {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, var(--accent-gold, #C5A059) 0%, #a47e3b 100%);
+            color: #fff !important;
+            padding: 0.75rem 1.8rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-radius: 50px;
+            box-shadow: 0 8px 22px rgba(197, 160, 89, 0.35);
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            overflow: hidden;
+        }
+        #sticky-cta::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: none;
+        }
+        #sticky-cta.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            animation: pulse-gold-glow 2s infinite;
+        }
+        #sticky-cta.visible::after {
+            left: 100%;
+            transition: all 1.4s ease infinite;
+            animation: shine-sweep 3s infinite;
+        }
+        #sticky-cta:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(197, 160, 89, 0.55);
+            background: linear-gradient(135deg, #d3b06a 0%, #b58d4a 100%);
+        }
+        
+        /* Static Purchase Button styling */
+        #purchase-cta .cta-button.primary {
+            background: linear-gradient(135deg, var(--accent-gold, #C5A059) 0%, #a47e3b 100%) !important;
+            color: #fff !important;
+            padding: 1.2rem 3.5rem !important;
+            font-size: 1.05rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 2px !important;
+            text-transform: uppercase !important;
+            border-radius: 50px !important;
+            box-shadow: 0 10px 30px rgba(197, 160, 89, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+        #purchase-cta .cta-button.primary::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+        }
+        #purchase-cta .cta-button.primary:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(197, 160, 89, 0.5);
+        }
+        #purchase-cta .cta-button.primary:hover::after {
+            left: 100%;
+            transition: all 0.8s ease;
+        }
+
+        @keyframes pulse-gold-glow {
+            0% {
+                box-shadow: 0 10px 30px rgba(197, 160, 89, 0.35);
+            }
+            50% {
+                box-shadow: 0 10px 30px rgba(197, 160, 89, 0.65), 0 0 0 10px rgba(197, 160, 89, 0.15);
+            }
+            100% {
+                box-shadow: 0 10px 30px rgba(197, 160, 89, 0.35);
+            }
+        }
+        @keyframes shine-sweep {
+            0% { left: -100%; }
+            30% { left: 100%; }
+            100% { left: 100%; }
+        }
+        
+        /* Mobile responsiveness: make sticky CTA full-width at the very bottom */
+        @media (max-width: 768px) {
+            #sticky-cta {
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                border-radius: 0 !important;
+                width: 100% !important;
+                padding: 1.3rem !important;
+                font-size: 1rem !important;
+                box-shadow: 0 -5px 25px rgba(0,0,0,0.15) !important;
+                border: none !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+                transform: translateY(100%);
+            }
+            #sticky-cta.visible {
+                transform: translateY(0);
+            }
+            #sticky-cta:hover {
+                transform: none;
+            }
+        }
+    </style>
 </head>
 
 <body class="silk-mask-page">
@@ -280,13 +452,13 @@
         <!-- Hero Section -->
         <section id="hero-silk" class="hero-mask">
             <div class="hero-bg-parallax">
-                <img src="IMG_4194.webp" alt="Silk Therapy Mask" class="hero-image-background">
+                <img src="IMG_4249.webp" alt="Silk Therapy Mask" class="hero-image-background">
             </div>
             <div class="hero-overlay"></div>
             <div class="hero-content reveal">
                 <span class="hero-pre-title">TREATMENT MASTERPIECE</span>
                 <h1 class="parallax-el" data-speed="0.03">Silk-smooth, strong, and hydrated hair — anytime, for every type.</h1>
-                <p class="sub-headline">Discover the dual-use power of Pro-Vitamin B5 and Hydrolyzed Silk.</p>
+                <p class="sub-headline">Infused with Prickly Pear Seed Oil, Jojoba Oil & Hydrolyzed Silk.</p>
                 <div class="hero-cta-group">
                     <a href="#hair-type-selector" class="cta-button">Discover Your Hair Type Benefits</a>
                 </div>
@@ -429,9 +601,7 @@
                     <div class="overview-text">
                         <h2 class="section-title">The Multi-Dimensional Repair</h2>
                         <p class="description">
-                            DODCH Pro-V Silk Therapy Mask is infused with Pro-Vitamin B5 and hydrolyzed silk for deep
-                            conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for
-                            silky, frizz-free hair — suitable for all hair types.
+                            DODCH Pro-V Silk Therapy Mask is infused with Hydrolyzed Silk, organic Jojoba Oil, Prickly Pear Seed Oil, and Pro-Vitamin B5 for multi-dimensional conditioning, lipid repair, and fiber strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.
                         </p>
                         <div class="benefit-icons">
                             <div class="benefit-item">
@@ -493,6 +663,62 @@
                     </div>
                     <div class="overview-image img-frame reveal parallax-el" data-speed="-0.06" style="order: -1;">
                         <img loading="lazy" src="1777590156c4d2.png" alt="The DODCH Phenomenon - Liquid Glass Hair" class="img-frame-img" style="border-radius: 12px; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Active Fiber & Botanical Science Section -->
+        <section class="section-padding bg-cream" style="border-top: 1px solid rgba(0,0,0,0.05);">
+            <div class="container">
+                <div class="text-center" style="margin-bottom: 4rem;">
+                    <span style="font-family: var(--font-serif); font-size: 0.9rem; letter-spacing: 2px; color: var(--accent-gold); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 0.5rem;">BOTANICAL CHEMISTRY</span>
+                    <h2 class="section-title text-center" style="margin-bottom: 1rem;">Active Fiber & Botanical Science</h2>
+                    <p style="max-width: 750px; margin: 0 auto; font-size: 1.1rem; line-height: 1.8; color: #444;">
+                        DODCH Pro-V Silk Therapy combines molecular silk structure protection with botanical lipid restoration to deliver ultimate strength and mirror-like shine.
+                    </p>
+                </div>
+
+                <div class="highlight-grid" style="display: grid; grid-template-columns: 1.1fr 0.9fr; align-items: stretch; gap: 3rem;">
+                    <!-- Hair Fiber Science Card -->
+                    <div class="reveal" style="position: relative; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: flex; flex-direction: column; min-height: 340px; background: #000;">
+                        <img loading="lazy" src="healthy_hair_zoom.png" alt="Healthy Hair Fiber Zoom" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease;" class="scalp-img">
+                        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.85)); padding: 2rem; color: white;">
+                            <span style="font-family: var(--font-sans); font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-gold); font-weight: 600; margin-bottom: 0.5rem;">Structural Glaze</span>
+                            <h3 style="font-family: var(--font-serif); font-size: 1.8rem; margin: 0 0 0.4rem 0; color: white;">The Silk-Glass Coating</h3>
+                            <p style="margin: 0; font-size: 0.95rem; color: #ddd; line-height: 1.5; font-family: var(--font-sans);">
+                                Our dual-action treatment forms an invisible glass-like crystalline layer around the hair fiber. It seals cuticles flat and locks in active moisture.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Ingredients Grid -->
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; justify-content: space-between;">
+                        <!-- Prickly Pear Seed Oil Card -->
+                        <div class="reveal ingredient-hover-card" style="position: relative; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); height: calc(50% - 0.75rem); min-height: 150px; background: #000; cursor: pointer;">
+                            <img loading="lazy" src="prickly_pear_oil.png" class="ing-img" alt="Prickly Pear Seed Oil" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease;">
+                            <div class="hover-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; padding: 1.5rem; transition: background 0.4s ease;">
+                                <div style="color: #fff; width: 100%;">
+                                    <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin: 0 0 0.2rem 0; color: #fff;">Prickly Pear Seed Oil</h3>
+                                    <div class="hover-details" style="max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.4s ease, opacity 0.4s ease;">
+                                        <p style="margin: 0; font-size: 0.9rem; color: #eee; line-height: 1.45;">One of the most luxurious beauty oils. Rich in Vitamin E, it deeply conditions and restores elasticity.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Jojoba Oil Card -->
+                        <div class="reveal ingredient-hover-card" style="position: relative; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); height: calc(50% - 0.75rem); min-height: 150px; background: #000; cursor: pointer;">
+                            <img loading="lazy" src="jojoba_oil_seeds.png" class="ing-img" alt="Jojoba Oil" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease;">
+                            <div class="hover-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; padding: 1.5rem; transition: background 0.4s ease;">
+                                <div style="color: #fff; width: 100%;">
+                                    <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin: 0 0 0.2rem 0; color: #fff;">Jojoba Oil</h3>
+                                    <div class="hover-details" style="max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.4s ease, opacity 0.4s ease;">
+                                        <p style="margin: 0; font-size: 0.9rem; color: #eee; line-height: 1.45;">Mimics natural hair lipids. It coats the hair shaft to seal in hydration and supply a protective barrier.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -641,29 +867,41 @@
                     <line x1="16" y1="8" x2="2" y2="22"></line>
                     <line x1="17.5" y1="15" x2="9" y2="15"></line>
                 </svg>
-                <h2 class="section-title parallax-el" data-speed="0.04" style="color: #fff;">The Feather Cloud: Weightless Softness & Defiant Volume</h2>
-                
-                <div class="grid-3 grid-reveal reveal" style="margin-top: 3rem; text-align: left; gap: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
-                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">Ethereal Suppleness</h4>
-                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">Experience the "Feather Cloud" effect—a texture so plush and light it feels weightless to the touch. While the surface reflects a <strong>shattering gloss</strong>, the interior remains soft, bouncy, and incredibly resilient.</p>
+                <h2 class="section-title parallax-el" data-speed="0.04" style="color: #fff;">The Feather Cloud: Weightless Softness & Defiant Volume</h2>                <div class="highlight-grid" style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 4rem; margin-top: 3rem; text-align: left;">
+                    <!-- Left Side: Image -->
+                    <div class="reveal" style="position: relative; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.3); min-height: 380px;">
+                        <img loading="lazy" src="weightless_feather_cloud.png" alt="Weightless Feather Cloud" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;">
+                        <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(26,26,26,0.9) 0%, rgba(26,26,26,0.3) 60%, rgba(26,26,26,0) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 2.5rem;">
+                            <span style="font-family: var(--font-sans); font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-gold); font-weight: 600; margin-bottom: 0.5rem;">Leave-In Science</span>
+                            <h3 style="font-family: var(--font-serif); font-size: 1.6rem; margin: 0 0 0.5rem 0; color: white;">Zero-Grease. Instant Melt.</h3>
+                            <p style="font-size: 0.9rem; line-height: 1.5; color: #ddd; margin: 0;">
+                                Our fast micro-dispersion process instantly melts into the hair fiber, leaving no heavy coating or greasy residue.
+                            </p>
+                        </div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
-                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">Gravity-Defying Fluidity</h4>
-                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">Unlike heavy, waxy treatments that weigh hair down, <strong>DODCH</strong> provides a high-performance, frictionless glide. Your hair maintains <strong>dramatic movement</strong> and airy volume, flowing like silk with every turn.</p>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; backdrop-filter: blur(10px); transition: transform 0.3s ease;">
-                        <h4 style="color: var(--accent-gold, #C5A059); margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1.2rem;">The Invisible Shield</h4>
-                        <p style="font-size: 0.95rem; line-height: 1.6; color: #e0e0e0;">A microscopically thin protective veil seals in hydration while repelling environmental stressors. This ensures your <strong>dramatic hair shine</strong> remains crisp, aligned, and frizz-free from morning until night.</p>
+
+                    <!-- Right Side: Clean Bullet/Features List -->
+                    <div style="display: flex; flex-direction: column; gap: 2rem;">
+                        <div style="border-left: 3px solid var(--accent-gold); padding-left: 1.5rem;">
+                            <h4 style="color: var(--accent-gold); font-family: var(--font-serif); font-size: 1.3rem; margin-bottom: 0.5rem;">Ethereal Suppleness</h4>
+                            <p style="font-size: 0.95rem; line-height: 1.6; color: #ccc; margin: 0;">
+                                A texture so plush and light it feels weightless to the touch. While the surface reflects a shattering gloss, the interior remains soft and bouncy.
+                            </p>
+                        </div>
+                        <div style="border-left: 3px solid var(--accent-gold); padding-left: 1.5rem;">
+                            <h4 style="color: var(--accent-gold); font-family: var(--font-serif); font-size: 1.3rem; margin-bottom: 0.5rem;">Gravity-Defying Fluidity</h4>
+                            <p style="font-size: 0.95rem; line-height: 1.6; color: #ccc; margin: 0;">
+                                High-performance, frictionless glide. Hair maintains dramatic movement and airy volume, flowing like silk with every turn.
+                            </p>
+                        </div>
+                        <div style="border-left: 3px solid var(--accent-gold); padding-left: 1.5rem;">
+                            <h4 style="color: var(--accent-gold); font-family: var(--font-serif); font-size: 1.3rem; margin-bottom: 0.5rem;">The Invisible Shield</h4>
+                            <p style="font-size: 0.95rem; line-height: 1.6; color: #ccc; margin: 0;">
+                                A microscopically thin protective veil seals in active hydration while repelling humidity and environmental frizz.
+                            </p>
+                        </div>
                     </div>
                 </div>
-
-                <div class="parallax-el" data-speed="0.02" style="margin-top: 3rem; background: linear-gradient(135deg, rgba(197, 160, 89, 0.1) 0%, rgba(197, 160, 89, 0.02) 100%); border: 1px solid rgba(197, 160, 89, 0.3); padding: 2.5rem; border-radius: 12px; text-align: left; max-width: 900px; margin-left: auto; margin-right: auto; position: relative;">
-                    <div style="position: absolute; top: -15px; left: 30px; background: #1A1A1A; padding: 0 15px; color: var(--accent-gold, #C5A059); font-family: var(--font-serif); font-weight: 600; font-style: italic; font-size: 1.1rem; border: 1px solid rgba(197, 160, 89, 0.3); border-radius: 20px;">The Leave-In Experience</div>
-                    <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin-bottom: 1rem; color: #fff;">Zero-Grease. Instant Melt. Professional Results.</h3>
-                    <p style="font-size: 1rem; line-height: 1.7; color: #e0e0e0; margin-bottom: 0;">
-                        When applied as a leave-in therapy, the DODCH formula undergoes a rapid micro-dispersion process. It <strong>melts instantly</strong> into the hair fiber and dries as if it were never there, leaving absolutely <strong>no greasy residue or heavy coating</strong>. You receive the full transformative power and professional, salon-quality repair of an intensive mask, wrapped in a weightless finish that simply makes your hair feel incredibly healthy, soft, and alive.
-                    </p>
                 </div>
 
                 <div style="margin-top: 4rem;">
@@ -705,71 +943,214 @@
             </div>
         </section>
 
-        <!-- Features & Key Ingredients Section -->
-        <section id="ingredients" class="section-padding bg-cream">
-            <div class="container">
-                <h2 class="section-title text-center reveal">The Architecture of Silk</h2>
-                <div class="ingredient-grid reveal">
-                    <div class="ingredient-card parallax-el" data-speed="0.04">
-                        <div class="ing-header">
-                            <h3>BTMS</h3>
+        <!-- Architecture of Silk -->
+        <section id="ingredients" class="section-padding" style="background: #0d0d0d; color: #fff; position: relative; overflow: hidden;">
+            <div style="position: absolute; inset: 0; background: radial-gradient(ellipse at 15% 60%, rgba(197,160,89,0.06) 0%, transparent 55%), radial-gradient(ellipse at 85% 20%, rgba(138,180,248,0.04) 0%, transparent 50%); pointer-events: none;"></div>
+
+            <div class="container reveal" style="position: relative; z-index: 1;">
+
+                <!-- ─── Header ─── -->
+                <div style="text-align: center; margin-bottom: 3.5rem;">
+                    <span style="font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; color: var(--accent-gold); font-weight: 700; display: block; margin-bottom: 0.5rem;">PRECISION FORMULA</span>
+                    <h2 class="section-title" style="color: #fff; margin-bottom: 1rem;">The Architecture of Silk</h2>
+                    <p style="max-width: 580px; margin: 0 auto 1.8rem; font-size: 1rem; line-height: 1.8; color: #999;">Five clinically selected actives — each at its real, effective concentration — fusing advanced biotechnology with the richness of Mediterranean nature.</p>
+
+                    <!-- 3-pill banner -->
+                    <div style="display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); border-radius: 50px; overflow: hidden; background: rgba(255,255,255,0.03); flex-wrap: wrap; justify-content: center;">
+                        <div style="display: flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.2rem; border-right: 1px solid rgba(255,255,255,0.08);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#8ab4f8" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                            <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #8ab4f8; white-space: nowrap;">Advanced Technology</span>
                         </div>
-                        <p>A plant-derived, eco-friendly conditioning agent that provides unparalleled detangling and a
-                            silky sensory feel without buildup.</p>
-                        <span class="ing-label">Conditioning</span>
+                        <div style="display: flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.2rem; border-right: 1px solid rgba(255,255,255,0.08);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#7ec87e" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #7ec87e; white-space: nowrap;">Pure Nature</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.2rem;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold)" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent-gold); white-space: nowrap;">Mediterranean Soul</span>
+                        </div>
                     </div>
-                    <div class="ingredient-card parallax-el" data-speed="-0.02">
-                        <div class="ing-header">
-                            <h3>Hydrolyzed Silk</h3>
-                        </div>
-                        <p>Natural silk proteins that form a breathable shield on the hair cuticle, reflecting light for
-                            mirror-like shine and smooth texture.</p>
-                        <span class="ing-label">Strengthening</span>
-                    </div>
-                    <div class="ingredient-card parallax-el" data-speed="0.06">
-                        <div class="ing-header">
-                            <h3>Pro-Vitamin B5</h3>
-                        </div>
-                        <p>Also known as Panthenol, it penetrates deep into the hair shaft to bind moisture, increasing
-                            thickness and resilience.</p>
-                        <span class="ing-label">Hydration</span>
+
+                    <!-- Effective-concentration promise strip -->
+                    <div style="margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.6rem; background: rgba(197,160,89,0.07); border: 1px solid rgba(197,160,89,0.2); border-radius: 8px; padding: 0.6rem 1.2rem;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold)" stroke-width="2" style="width:15px;height:15px;flex-shrink:0;"><path d="M9 12l2 2 4-4"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+                        <span style="font-size: 0.82rem; color: #c5a059; font-weight: 600;">Every ingredient at its real, scientifically effective concentration — no token doses, no compromises.</span>
                     </div>
                 </div>
-                <div class="customization-note reveal">
-                    <p><strong>Founder's Note:</strong> For the most dramatic Liquid Glass reflection, apply a pea-sized amount to towel-dried hair rather than soaking wet strands. This ensures the protective shield bonds directly to the fiber without being diluted by excess water, locking in that signature Feather Cloud bounce.</p>
+
+                <!-- ─── FEATURED: Advanced Urea — Image + Text Split ─── -->
+                <div class="reveal" style="border-radius: 24px; background: rgba(255,255,255,0.02); border: 1px solid rgba(138,180,248,0.15); margin-bottom: 2rem; display: flex; flex-wrap: wrap; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+                    <!-- Image Half -->
+                    <div style="flex: 1 1 450px; min-height: 350px; background: url('advanced_urea_science.png') center/cover no-repeat; position: relative;">
+                         <div style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8,15,26,0.2) 0%, rgba(8,15,26,0.8) 100%); pointer-events: none;"></div>
+                         <div style="position: absolute; bottom: 2rem; left: 2rem; background: rgba(0,0,0,0.5); padding: 0.5rem 1.2rem; border-radius: 50px; border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(12px);">
+                             <span style="font-size: 0.75rem; font-weight: 700; color: #fff; letter-spacing: 1px; text-transform: uppercase;">Real Concentration</span>
+                         </div>
+                    </div>
+                    
+                    <!-- Text Half -->
+                    <div style="flex: 1 1 400px; padding: 3.5rem 3rem; background: linear-gradient(120deg, #0a111c 0%, #162032 100%); display: flex; flex-direction: column; justify-content: center;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.2rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.68rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #8ab4f8; background: rgba(138,180,248,0.08); border: 1px solid rgba(138,180,248,0.2); border-radius: 50px; padding: 0.3rem 0.9rem;">Advanced Humectant</span>
+                            <span style="font-size: 0.65rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-gold); background: rgba(197,160,89,0.06); border: 1px solid rgba(197,160,89,0.15); border-radius: 50px; padding: 0.3rem 0.9rem;">✦ Featured Active</span>
+                        </div>
+                        <h3 style="font-family: var(--font-serif); font-size: 2.4rem; color: #fff; margin: 0 0 1rem; line-height: 1.1;">Advanced Urea</h3>
+                        <p style="font-size: 1rem; color: #b0b8c4; line-height: 1.7; margin: 0 0 1.5rem;">A clinically proven keratolytic humectant that penetrates deep into the cortex — breaking hydrogen bonds in compacted, dehydrated fiber to restore suppleness, elasticity, and reverse brittleness at the molecular level.</p>
+                        
+                        <!-- Innovation Callout -->
+                        <div style="background: rgba(138,180,248,0.04); border: 1px solid rgba(138,180,248,0.12); border-left: 3px solid #8ab4f8; border-radius: 6px 14px 14px 6px; padding: 1.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#8ab4f8" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3M6.343 6.343l-.707-.707M10.34 17.66a5 5 0 1 1 3.32 0"/></svg>
+                                <span style="font-size: 0.7rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #8ab4f8;">DODCH Innovation</span>
+                            </div>
+                            <p style="font-size: 0.95rem; color: #cfd6e0; line-height: 1.6; margin: 0 0 0.8rem;">We developed a proprietary delivery system that makes urea <strong style="color: #fff;">more active, precisely targeted, molecularly stable, and safe for repeated use</strong>. Dosed at its real effective concentration, it releases gradually for zero compromise on hair integrity.</p>
+                            <p style="font-size: 0.85rem; color: #7a869a; line-height: 1.6; margin: 0; font-style: italic;">Unlike formulas that use token amounts, ours is measured to actually work — not just appear on the label.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─── Grid for other ingredients (Responsive image cards) ─── -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.8rem; margin-bottom: 2.5rem;">
+
+                    <!-- Hydrolyzed Silk -->
+                    <div class="reveal" style="border-radius: 20px; background: rgba(26,20,10,0.6); border: 1px solid rgba(197,160,89,0.15); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s; box-shadow: 0 10px 30px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 20px 40px rgba(197,160,89,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.2)';">
+                        <!-- Image Area -->
+                        <div style="height: 220px; background: url('hydrolyzed_silk_shield.png') center/cover no-repeat; position: relative;">
+                            <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(26,20,10,1) 0%, rgba(26,20,10,0) 100%);"></div>
+                        </div>
+                        <!-- Content Area -->
+                        <div style="padding: 0 1.8rem 1.8rem 1.8rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem; margin-top: -1rem; position: relative; z-index: 2;">
+                            <span style="font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-gold); font-weight: 800;">Strengthening</span>
+                            <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: #fff; margin: 0; line-height: 1.2;">Hydrolyzed Silk</h3>
+                            <p style="font-size: 0.9rem; color: #a5a5a5; line-height: 1.7; margin: 0; flex: 1;">Silk amino acids form a crystalline shield on every cuticle — filling surface gaps, flattening the fiber, and amplifying light for mirror-like shine.</p>
+                            <div style="padding-top: 1rem; border-top: 1px solid rgba(197,160,89,0.1); font-size: 0.75rem; color: #888; font-weight: 600;">Cuticle Sealing · Mirror Shine</div>
+                        </div>
+                    </div>
+
+                    <!-- Conditioning Complex (BTMS + PQ39 + Coco Silicone) -->
+                    <div class="reveal" style="border-radius: 20px; background: rgba(20,22,26,0.6); border: 1px solid rgba(255,255,255,0.08); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s; box-shadow: 0 10px 30px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 20px 40px rgba(255,255,255,0.05)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.2)';">
+                        <div style="height: 220px; background: url('conditioning_slip_complex.png') center/cover no-repeat; position: relative;">
+                            <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(20,22,26,1) 0%, rgba(20,22,26,0) 100%);"></div>
+                        </div>
+                        <div style="padding: 0 1.8rem 1.8rem 1.8rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem; margin-top: -1rem; position: relative; z-index: 2;">
+                            <span style="font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; color: #ddd; font-weight: 800;">Conditioning Matrix</span>
+                            <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: #fff; margin: 0; line-height: 1.2;">Slip & Detangle</h3>
+                            <p style="font-size: 0.9rem; color: #a5a5a5; line-height: 1.7; margin: 0; flex: 1;">A synergistic blend of <strong>BTMS</strong>, <strong>Polyquaternium-39 (PQ-39)</strong>, and <strong>Coco Natural Silicone</strong>. This trio creates a positively charged, weightless film that instantly melts away tangles and delivers unrivalled silky slip with zero buildup.</p>
+                            <div style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem; color: #888; font-weight: 600;">Weightless Slip · Instant Detangle</div>
+                        </div>
+                    </div>
+
+                    <!-- Pro-Vitamin B5 -->
+                    <div class="reveal" style="border-radius: 20px; background: rgba(20,22,26,0.6); border: 1px solid rgba(255,255,255,0.08); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s; box-shadow: 0 10px 30px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 20px 40px rgba(255,255,255,0.05)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.2)';">
+                        <div style="height: 220px; background: url('provitamin_b5_hydration.png') center/cover no-repeat; position: relative;">
+                            <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(20,22,26,1) 0%, rgba(20,22,26,0) 100%);"></div>
+                        </div>
+                        <div style="padding: 0 1.8rem 1.8rem 1.8rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem; margin-top: -1rem; position: relative; z-index: 2;">
+                            <span style="font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; color: #ddd; font-weight: 800;">Deep Penetrant</span>
+                            <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: #fff; margin: 0; line-height: 1.2;">Pro-Vitamin B5</h3>
+                            <p style="font-size: 0.9rem; color: #a5a5a5; line-height: 1.7; margin: 0; flex: 1;">Panthenol at effective concentration converts inside the cortex, binding moisture from within — thickening strands and preventing hygral fatigue without over-saturation.</p>
+                            <div style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem; color: #888; font-weight: 600;">Moisture Binding · Volume</div>
+                        </div>
+                    </div>
+
+                    <!-- Lactic Acid -->
+                    <div class="reveal" style="border-radius: 20px; background: rgba(20,28,20,0.6); border: 1px solid rgba(140,220,140,0.2); overflow: hidden; display: flex; flex-direction: column; position: relative; transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s; box-shadow: 0 10px 30px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 20px 40px rgba(140,220,140,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.2)';">
+                        <div style="position: absolute; top: 1.2rem; right: 1.2rem; background: linear-gradient(90deg, #4CAF50, #8bc34a); color: #fff; font-size: 0.65rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 0.3rem 0.8rem; border-radius: 50px; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">NEW</div>
+                        <div style="height: 220px; background: url('lactic_acid_ph_seal.png') center/cover no-repeat; position: relative;">
+                            <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(20,28,20,1) 0%, rgba(20,28,20,0) 100%);"></div>
+                        </div>
+                        <div style="padding: 0 1.8rem 1.8rem 1.8rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem; margin-top: -1rem; position: relative; z-index: 2;">
+                            <span style="font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; color: #7ec87e; font-weight: 800;">pH Optimizer · AHA</span>
+                            <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: #fff; margin: 0; line-height: 1.2;">Lactic Acid</h3>
+                            <p style="font-size: 0.9rem; color: #a5a5a5; line-height: 1.7; margin: 0; flex: 1;">A gentle AHA that acts as a precision pH adjuster — triggering immediate cuticle contraction for the glass-finish seal, and as an NMF humectant drawing lasting moisture into the cortex.</p>
+                            <div style="padding-top: 1rem; border-top: 1px solid rgba(140,220,140,0.15); font-size: 0.75rem; color: #888; font-weight: 600;">Cuticle Seal · NMF Humectant</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─── Founder's Note ─── -->
+                <div class="customization-note reveal" style="background: rgba(197,160,89,0.04); border: 1px solid rgba(197,160,89,0.15); border-radius: 16px; margin-top: 0; padding: 1.8rem 2.2rem; display: flex; gap: 1.5rem; align-items: flex-start;">
+                    <div style="flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: rgba(197,160,89,0.1); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(197,160,89,0.3);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold)" stroke-width="2" style="width:18px;height:18px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    </div>
+                    <p style="color: #c4cdd5; margin: 0; font-size: 0.95rem; line-height: 1.8;"><strong style="color: var(--accent-gold); font-size: 1rem; display: block; margin-bottom: 0.3rem;">Founder's Note:</strong> For the most dramatic Liquid Glass reflection, apply a pea-sized amount to towel-dried hair. Our Advanced Urea and Lactic Acid — both at effective doses — bond best to a slightly dehydrated fiber, ensuring deep re-hydration, cuticle sealing, and the signature Feather Cloud bounce without water dilution.</p>
                 </div>
             </div>
         </section>
 
         <!-- How to Use Section -->
-        <section id="how-to-use" class="section-padding bg-white">
+        <section id="how-to-use" class="section-padding" style="background: #faf9f6; color: #1a1a1a;">
             <div class="container">
-                <h2 class="section-title text-center reveal">The Ritual of Choice</h2>
-                <div class="ritual-dual-grid reveal">
-                    <div class="ritual-option">
-                        <div class="ritual-details">
-                            <h3>1. The Rinse-Off Mask</h3>
-                            <p>For deep restoration and intensive treatment.</p>
-                            <ol>
-                                <li>Apply generously to clean, damp hair.</li>
-                                <li>Massage through mid-lengths to ends.</li>
-                                <li>Leave for 5-15 minutes (relax and enjoy).</li>
-                                <li>Rinse thoroughly with cool water.</li>
+                <div style="text-align: center; margin-bottom: 4rem;">
+                    <span style="font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; color: var(--accent-gold); font-weight: 700; display: block; margin-bottom: 0.5rem;">APPLICATION METRICS</span>
+                    <h2 class="section-title" style="color: #1a1a1a; margin-bottom: 1rem;">The Ritual of Choice</h2>
+                    <p style="max-width: 580px; margin: 0 auto; font-size: 1rem; line-height: 1.8; color: #666;">DODCH Silk Mask adapts to your hair's immediate needs. Select your method of transformation.</p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2.5rem;">
+                    
+                    <!-- Ritual 1: Rinse-Off -->
+                    <div class="reveal" style="background: #fff; border-radius: 24px; border: 1px solid rgba(197,160,89,0.15); overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.05); transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
+                        <div style="height: 250px; background: url('ritual_rinse_off.png') center/cover no-repeat; position: relative;">
+                            <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 80%);"></div>
+                            <div style="position: absolute; top: 1.5rem; left: 1.5rem; background: var(--accent-gold); color: #fff; font-size: 0.65rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 0.4rem 1rem; border-radius: 50px;">Ritual I</div>
+                        </div>
+                        <div style="padding: 2rem 2.5rem 2.5rem; flex: 1; display: flex; flex-direction: column;">
+                            <h3 style="font-family: var(--font-serif); font-size: 1.6rem; color: #1a1a1a; margin: 0 0 0.5rem;">The Rinse-Off Mask</h3>
+                            <p style="font-size: 0.92rem; color: #666; margin: 0 0 2rem; line-height: 1.6; font-style: italic;">For deep cuticle restoration, cortex repair, and intensive weekly treatment.</p>
+                            
+                            <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.2rem;">
+                                <li style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <span style="font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; color: var(--accent-gold); line-height: 1;">01</span>
+                                    <span style="font-size: 0.95rem; color: #333; line-height: 1.5;">Apply generously to clean, damp hair, focusing mid-lengths to ends.</span>
+                                </li>
+                                <li style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <span style="font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; color: var(--accent-gold); line-height: 1;">02</span>
+                                    <span style="font-size: 0.95rem; color: #333; line-height: 1.5;">Massage evenly through strands, smoothing the cuticle downward.</span>
+                                </li>
+                                <li style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <span style="font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; color: var(--accent-gold); line-height: 1;">03</span>
+                                    <span style="font-size: 0.95rem; color: #333; line-height: 1.5;">Leave for 5–15 minutes, allowing active proteins to bond with fiber.</span>
+                                </li>
+                                <li style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <span style="font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; color: var(--accent-gold); line-height: 1;">04</span>
+                                    <span style="font-size: 0.95rem; color: #333; line-height: 1.5;">Rinse thoroughly with cool water to lock in active humectants and shine.</span>
+                                </li>
                             </ol>
                         </div>
                     </div>
-                    <div class="ritual-option">
-                        <div class="ritual-details">
-                            <h3>2. The Leave-In Therapy</h3>
-                            <p>For daily protection, shine, and frizz control.</p>
-                            <ol>
-                                <li>Apply a pea-sized amount to damp hair.</li>
-                                <li>Concentrate on the lower half/ends.</li>
-                                <li>Do not rinse. Style as usual.</li>
-                                <li>Apply to dry ends to tame flyaways.</li>
+
+                    <!-- Ritual 2: Leave-In -->
+                    <div class="reveal" style="background: #fff; border-radius: 24px; border: 1px solid rgba(197,160,89,0.15); overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.05); transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
+                        <div style="height: 250px; background: url('feather_cloud_hair.png') center/cover no-repeat; position: relative;">
+                            <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 80%);"></div>
+                            <div style="position: absolute; top: 1.5rem; left: 1.5rem; background: var(--accent-gold); color: #fff; font-size: 0.65rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 0.4rem 1rem; border-radius: 50px;">Ritual II</div>
+                        </div>
+                        <div style="padding: 2rem 2.5rem 2.5rem; flex: 1; display: flex; flex-direction: column;">
+                            <h3 style="font-family: var(--font-serif); font-size: 1.6rem; color: #1a1a1a; margin: 0 0 0.5rem;">The Leave-In Therapy</h3>
+                            <p style="font-size: 0.92rem; color: #666; margin: 0 0 2rem; line-height: 1.6; font-style: italic;">For daily heat protection, frizz block, and the signature feather cloud bounce.</p>
+                            
+                            <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1.2rem;">
+                                <li style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <span style="font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; color: var(--accent-gold); line-height: 1;">01</span>
+                                    <span style="font-size: 0.95rem; color: #333; line-height: 1.5;">Apply a tiny pea-sized amount to clean, towel-dried hair.</span>
+                                </li>
+                                <li style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <span style="font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; color: var(--accent-gold); line-height: 1;">02</span>
+                                    <span style="font-size: 0.95rem; color: #333; line-height: 1.5;">Distribute evenly through damp lower half, detangling ends with fingers.</span>
+                                </li>
+                                <li style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <span style="font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; color: var(--accent-gold); line-height: 1;">03</span>
+                                    <span style="font-size: 0.95rem; color: #333; line-height: 1.5;">Do not rinse. Style normally to activate advanced thermal barriers.</span>
+                                </li>
+                                <li style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <span style="font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; color: var(--accent-gold); line-height: 1;">04</span>
+                                    <span style="font-size: 0.95rem; color: #333; line-height: 1.5;">Smooth a trace drop over dry styled hair to seal stray flyaways.</span>
+                                </li>
                             </ol>
                         </div>
                     </div>
+
                 </div>
             </div>
         </section>
@@ -849,6 +1230,41 @@
     <a href="product.html?id=silk-therapy-mask" id="sticky-cta" class="sticky-cta-btn text-center" style="display: flex; align-items: center; justify-content: center; text-decoration: none;">Buy Now</a>
     <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script><script type="module" src="script.js?v=5"></script>
     <script type="module" src="silk-mask.js"></script>
+    <script>
+        // Override sticky-cta logic: also hide when purchase section is visible
+        (function () {
+            const stickyCTA = document.getElementById('sticky-cta');
+            const hero = document.getElementById('hero-silk') || document.getElementById('hero');
+            const purchaseSection = document.getElementById('purchase-cta');
+
+            if (!stickyCTA) return;
+
+            function updateStickyCTA() {
+                const scrollY = window.scrollY;
+                const heroHeight = hero ? hero.offsetHeight : 400;
+
+                // Check if purchase section is in view
+                let purchaseVisible = false;
+                if (purchaseSection) {
+                    const rect = purchaseSection.getBoundingClientRect();
+                    purchaseVisible = rect.top < window.innerHeight && rect.bottom > 0;
+                }
+
+                // Check if footer is visible
+                const footer = document.querySelector('footer');
+                const footerVisible = footer ? footer.getBoundingClientRect().top < window.innerHeight : false;
+
+                if (scrollY > heroHeight && !purchaseVisible && !footerVisible) {
+                    stickyCTA.classList.add('visible');
+                } else {
+                    stickyCTA.classList.remove('visible');
+                }
+            }
+
+            window.addEventListener('scroll', updateStickyCTA, { passive: true });
+            updateStickyCTA();
+        })();
+    </script>
 </body>
 
 </html>

@@ -712,6 +712,22 @@ p {
     pointer-events: none;
 }
 
+/* Static base dim — always visible, unaffected by scroll JS */
+.pro-v-hero::before,
+.hero-mask::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        120deg,
+        rgba(0, 0, 0, 0.42) 0%,
+        rgba(0, 0, 0, 0.18) 55%,
+        rgba(0, 0, 0, 0.04) 100%
+    );
+    z-index: 0;
+    pointer-events: none;
+}
+
 .hero-content {
     position: relative;
     z-index: 2;
@@ -4505,6 +4521,14 @@ footer {
 
     body.has-sidebar {
         padding-left: 328px; /* Restored: Sidebar width (280px) + Gap (48px) */
+    }
+
+    /* Expand hero sections behind the static desktop sidebar */
+    body.has-sidebar .pro-v-hero,
+    body.has-sidebar .hero-mask {
+        margin-left: -328px;
+        width: calc(100% + 328px);
+        padding-left: calc(8% + 328px); /* Keep the text contents aligned by counteracting the shift */
     }
 
     body.has-sidebar #navbar {
@@ -9417,6 +9441,15 @@ button[type="submit"]:hover,
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center center;
     z-index: 0; /* Behind overlay and content */
+}
+
+/* On mobile, shift hero image to show the right side (where bottles are placed) */
+@media (max-width: 768px) {
+    .pro-v-hero .hero-image-background,
+    .hero-mask .hero-image-background {
+        object-position: right center;
+    }
 }
     

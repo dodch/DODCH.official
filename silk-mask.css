@@ -397,6 +397,34 @@
     color: var(--accent-gold);
 }
 
+/* Buy Now button — compact pill, not full-width */
+.purchase-box .cta-button {
+    width: auto !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 3rem !important;
+    font-size: 0.9rem !important;
+    font-weight: 700;
+    letter-spacing: 2px;
+    border-radius: 50px !important;
+    background: linear-gradient(135deg, var(--accent-gold, #C5A059) 0%, #a47e3b 100%) !important;
+    color: #fff !important;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(197, 160, 89, 0.35) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+    position: relative;
+    overflow: hidden;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+.purchase-box .cta-button:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 14px 32px rgba(197, 160, 89, 0.5) !important;
+}
+
 .trust-badges {
     display: flex;
     justify-content: center;
