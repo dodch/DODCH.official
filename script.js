@@ -999,6 +999,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const activeCat = urlParams.get('cat');
             const activeSub = urlParams.get('sub');
+
+            const heroSection = document.querySelector('.hero-carousel-container');
+            const scrollIndicator = document.getElementById('scroll-indicator');
+            const isMainPage = (!activeCat || activeCat === 'all') && (!activeSub || activeSub === 'all');
+
+            if (heroSection) {
+                if (isMainPage) {
+                    heroSection.classList.remove('collapsed');
+                } else {
+                    heroSection.classList.add('collapsed');
+                }
+            }
+            if (scrollIndicator) {
+                if (isMainPage) {
+                    scrollIndicator.classList.remove('collapsed');
+                } else {
+                    scrollIndicator.classList.add('collapsed');
+                }
+            }
+
             const generateCardHTML = (id, product, index = 0) => {
                 const staggerDelay = `${(index % 4) * 0.15}s`;
                 const primaryImg = getProductPrimaryImage(product);
@@ -1766,6 +1786,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleLogin();
             }
         });
+        
+        const heroLoginBtn = document.getElementById('hero-login-google-btn');
+        if (heroLoginBtn) {
+            heroLoginBtn.addEventListener('click', (e) => {
+                window.triggerHaptic('light');
+                e.preventDefault();
+                if (currentUser) {
+                    window.location.href = 'my-account.html';
+                } else {
+                    handleLogin();
+                }
+            });
+        }
+
+        const heroLoginBtnCloned = document.getElementById('hero-login-google-btn-cloned');
+        if (heroLoginBtnCloned) {
+            heroLoginBtnCloned.addEventListener('click', (e) => {
+                window.triggerHaptic('light');
+                e.preventDefault();
+                if (currentUser) {
+                    window.location.href = 'my-account.html';
+                } else {
+                    handleLogin();
+                }
+            });
+        }
     }
 
     // --- Login Page Logic ---
@@ -1855,7 +1901,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const FREE_SHIPPING_THRESHOLD = 100;
         const isFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
         const currentShipping = isFreeShipping ? 0 : SHIPPING_FEE;
-        const total = subtotal + currentShipping;
+        
+        // --- Rewards Calculation ---
+        const useRewardsCheckbox = document.getElementById('use-rewards-checkbox');
+        const checkoutRewardsDiscountEl = document.getElementById('checkout-rewards-discount');
+        let creditsUsed = 0;
+        let baseTotal = subtotal + currentShipping;
+
+        if (useRewardsCheckbox && useRewardsCheckbox.checked && window._dodchUserCredits > 0) {
+            creditsUsed = Math.min(window._dodchUserCredits, baseTotal);
+            if (checkoutRewardsDiscountEl) {
+                checkoutRewardsDiscountEl.innerText = `-${creditsUsed.toFixed(2)} TND`;
+            }
+        } else {
+            if (checkoutRewardsDiscountEl) checkoutRewardsDiscountEl.innerText = `-0.00 TND`;
+        }
+        window._dodchCreditsUsedForOrder = creditsUsed; // Store for order creation
+
+        const total = Math.max(0, baseTotal - creditsUsed);
 
         if (checkoutSubtotalEl) checkoutSubtotalEl.innerText = `${subtotal.toFixed(2)} TND`;
 
@@ -1886,6 +1949,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateCartUI();
             });
         });
+        
+        // Ensure listener is added to checkbox
+        if (useRewardsCheckbox && !useRewardsCheckbox.hasAttribute('data-listener-attached')) {
+            useRewardsCheckbox.addEventListener('change', () => {
+                updateCheckoutUI();
+            });
+            useRewardsCheckbox.setAttribute('data-listener-attached', 'true');
+        }
     };
 
     const openCart = () => {
@@ -2704,6 +2775,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg><span class="login-text">Login</span>`;
             }
         }
+        
+        const updateHeroButton = (btn) => {
+            if (!btn) return;
+            if (user) {
+                btn.innerHTML = `Go to My Account`;
+            } else {
+                btn.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Continue with Google
+                `;
+            }
+        };
+        updateHeroButton(document.getElementById('hero-login-google-btn'));
+        updateHeroButton(document.getElementById('hero-login-google-btn-cloned'));
         if (sidebarUserName) {
             const profileIcon = document.querySelector('.profile-icon');
             if (user) {
@@ -2931,6 +3021,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }).join('');
 
                                 const orderTotal = String(total).includes('TND') ? total : `${total} TND`;
+                                
+                                let rewardsHtml = '';
+                                if (order.creditsUsed > 0) {
+                                    rewardsHtml += `<span style="font-size: 0.75rem; color: #e74c3c; background: #fdecea; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Spent: ${order.creditsUsed} TND Rewards</span>`;
+                                }
+                                if (order.creditsGranted > 0) {
+                                    rewardsHtml += `<span style="font-size: 0.75rem; color: #27ae60; background: #eafaf1; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Earned: ${order.creditsGranted} TND Rewards</span>`;
+                                }
+                                if (rewardsHtml !== '') {
+                                    rewardsHtml = `<div style="margin-top: 5px;">${rewardsHtml}</div>`;
+                                }
 
                                 const orderCard = document.createElement('div');
                                 orderCard.classList.add('order-card', 'reveal', 'active');
@@ -2950,7 +3051,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                             ${cancelButtonHtml}
                                             ${reviewButtonHtml}
                                         </div>
-                                        <span style="color: var(--accent-gold-text);">${orderTotal}</span>
+                                        <div style="text-align: right;">
+                                            <span style="color: var(--accent-gold-text); font-weight: 700;">${orderTotal}</span>
+                                            ${rewardsHtml}
+                                        </div>
                                     </div>
                                 `;
                                 ordersList.appendChild(orderCard);
@@ -3384,7 +3488,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const SHIPPING_FEE = 7;
                     const FREE_SHIPPING_THRESHOLD = 100;
                     const shippingFee = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-                    const finalTotal = calculatedSubtotal + shippingFee;
+                    let finalTotal = calculatedSubtotal + shippingFee;
+                    
+                    const creditsUsed = window._dodchCreditsUsedForOrder || 0;
+                    finalTotal = Math.max(0, finalTotal - creditsUsed);
 
                     const orderData = {
                         orderReference: orderReference,
@@ -3399,6 +3506,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         },
                         subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
                         shippingFee: shippingFee,
+                        creditsUsed: parseFloat(creditsUsed.toFixed(2)),
                         total: parseFloat(finalTotal.toFixed(2)),
                         status: 'Pending',
                         userId: currentUser ? currentUser.uid : 'guest',
@@ -3408,8 +3516,29 @@ document.addEventListener('DOMContentLoaded', () => {
                         await appCheckReady;
                     }
                     // --- DIRECT FIRESTORE SAVE (Spark Plan Support) ---
-                    const docRef = await addDoc(collection(db, "orders"), orderData);
-                    const orderId = docRef.id;
+                    let orderId;
+                    if (creditsUsed > 0 && currentUser) {
+                        const { writeBatch } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+                        const batch = writeBatch(db);
+                        const orderRef = doc(collection(db, "orders"));
+                        batch.set(orderRef, orderData);
+                        
+                        const userRef = doc(db, "users", currentUser.uid);
+                        // Decrement the credits
+                        // We must fetch the current credits to ensure we don't go below 0 (though our UI limits it)
+                        batch.update(userRef, {
+                             credits: window._dodchUserCredits - creditsUsed
+                        });
+                        
+                        await batch.commit();
+                        orderId = orderRef.id;
+                        
+                        // Update local cache to reflect immediate deduction
+                        window._dodchUserCredits -= creditsUsed;
+                    } else {
+                        const docRef = await addDoc(collection(db, "orders"), orderData);
+                        orderId = docRef.id;
+                    }
                     const finalOrderReference = orderReference;
                     // --- END DIRECT SAVE ---
 
@@ -5475,11 +5604,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                             const hasPending = items.some(it => it.report && it.report.status === 'Pending');
                                             
-                                            await updateDoc(orderRef, {
+                                            const { writeBatch, increment } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+                                            const batch = writeBatch(db);
+                                            
+                                            const orderUpdateData = {
                                                 items: items,
                                                 hasUnseenReport: hasPending,
                                                 hasUnseenUpdate: true // Notify the user
-                                            });
+                                            };
+                                            
+                                            if (isRefund && orderData.userId && orderData.userId !== 'guest' && (orderData.status === 'Delivered' || orderData.status === 'Local Order')) {
+                                                // Recalculate credits
+                                                let validSubtotal = 0;
+                                                items.forEach(item => {
+                                                    const isRef = item.refunded === true || item.refunded === 'true';
+                                                    if (!isRef) {
+                                                        let price = parseFloat(item.price) || 0;
+                                                        let qty = parseInt(item.quantity) || 1;
+                                                        validSubtotal += price * qty;
+                                                    }
+                                                });
+                                                const creditsUsed = parseFloat(orderData.creditsUsed) || 0;
+                                                const targetCreditsGranted = Math.floor(Math.max(0, validSubtotal - creditsUsed) / 10);
+                                                const currentGranted = parseFloat(orderData.creditsGranted) || 0;
+                                                
+                                                if (targetCreditsGranted !== currentGranted) {
+                                                    const delta = targetCreditsGranted - currentGranted;
+                                                    orderUpdateData.creditsGranted = targetCreditsGranted;
+                                                    
+                                                    const userRef = doc(db, "users", orderData.userId);
+                                                    batch.update(userRef, { credits: increment(delta) });
+                                                    console.log(`Admin refund adjusting credits by ${delta}`);
+                                                }
+                                            }
+                                            
+                                            batch.update(orderRef, orderUpdateData);
+                                            await batch.commit();
 
                                             // Sync review refund state when admin approves a refund
                                             if (isRefund && orderData.userId) {
@@ -5576,6 +5736,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const status = order.status || 'Pending';
                         const isExported = order.exported === true;
                         const isLocalOrder = order.type === 'local';
+                        const isLocked = status === 'Delivered' || status === 'Cancelled';
                         
                         // Badge priority: Exported > Local Order > New
                         let badgeHTML = isExported 
@@ -5602,7 +5763,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="admin-order-actions">
                             <span class="status-badge status-${status.toLowerCase().replace(/\s/g, '-')}">${status}</span>
                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <select class="admin-status-select" data-id="${order.id}" ${isExported ? 'disabled title="Exported orders cannot be modified"' : ''} style="margin: 0; min-width: 140px;">
+                                <select class="admin-status-select" data-id="${order.id}" ${(isExported || isLocked) ? 'disabled title="Order cannot be modified in this status"' : ''} style="margin: 0; min-width: 140px;">
                                     <option value="" disabled selected>Update Status</option>
                                 <option value="Confirmed">Confirmed</option>
                                 <option value="In Delivery">In Delivery</option>
@@ -5662,11 +5823,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (await window.showConfirm(`Change order status to ${newStatus}?`, "Update Order")) {
                             try {
-                                await updateDoc(doc(db, "orders", orderId), { status: newStatus, hasUnseenUpdate: true });
+                                const order = orders.find(o => o.id === orderId);
+                                
+                                // --- Rewards System (Admin Side Processing) ---
+                                let deltaCredits = 0;
+                                let newGranted = order.creditsGranted || 0;
+                                
+                                if (order && order.userId && order.userId !== 'guest') {
+                                    if (newStatus === 'Cancelled') {
+                                        // Handle refunding spent credits
+                                        const creditsUsed = parseFloat(order.creditsUsed) || 0;
+                                        if (creditsUsed > 0 && !order.creditsRefunded) {
+                                            deltaCredits += creditsUsed;
+                                            // Mark as refunded on order document (handled in batch below)
+                                        }
+                                        
+                                        // Revoke earned credits if previously granted
+                                        const currentGranted = parseFloat(order.creditsGranted) || 0;
+                                        if (currentGranted > 0) {
+                                            deltaCredits -= currentGranted;
+                                            newGranted = 0;
+                                        }
+                                    } else {
+                                        // Calculate earned credits
+                                        let targetCreditsGranted = 0;
+                                        if (newStatus === 'Delivered' || newStatus === 'Local Order') {
+                                            let validSubtotal = 0;
+                                            if (order.items && Array.isArray(order.items)) {
+                                                order.items.forEach(item => {
+                                                    const isRefunded = item.refunded === true || item.refunded === 'true';
+                                                    if (!isRefunded) {
+                                                        let price = parseFloat(item.price) || 0;
+                                                        let qty = parseInt(item.quantity) || 1;
+                                                        validSubtotal += price * qty;
+                                                    }
+                                                });
+                                            }
+                                            const creditsUsed = parseFloat(order.creditsUsed) || 0;
+                                            targetCreditsGranted = Math.floor(Math.max(0, validSubtotal - creditsUsed) / 10);
+                                        }
+                                        
+                                        const currentGranted = parseFloat(order.creditsGranted) || 0;
+                                        if (targetCreditsGranted !== currentGranted) {
+                                            deltaCredits += (targetCreditsGranted - currentGranted);
+                                            newGranted = targetCreditsGranted;
+                                        }
+                                    }
+                                }
+                                
+                                const { writeBatch, increment } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+                                const batch = writeBatch(db);
+                                const orderRef = doc(db, "orders", orderId);
+                                
+                                const orderUpdateData = { status: newStatus, hasUnseenUpdate: true };
+                                
+                                if (order && order.userId && order.userId !== 'guest') {
+                                    if (newStatus === 'Cancelled' && (parseFloat(order.creditsUsed) || 0) > 0 && !order.creditsRefunded) {
+                                        orderUpdateData.creditsRefunded = true;
+                                    }
+                                    if (newGranted !== (order.creditsGranted || 0)) {
+                                        orderUpdateData.creditsGranted = newGranted;
+                                    }
+                                    
+                                    if (deltaCredits !== 0) {
+                                        const userRef = doc(db, "users", order.userId);
+                                        batch.update(userRef, { credits: increment(deltaCredits) });
+                                        console.log(`Admin adjusting credits for user ${order.userId} by ${deltaCredits}`);
+                                    }
+                                }
+                                
+                                batch.update(orderRef, orderUpdateData);
+                                await batch.commit();
+                                
                                 window.showToast("Order status updated", "success");
                                 checkExportEligibility(); // Re-evaluate export button state
-
-                                const order = orders.find(o => o.id === orderId);
 
                                 // --- Automated Target Push Notification ---
                                 if (order && order.userId && order.userId !== 'guest' && typeof window.sendTargetedPushNotification === 'function') {
@@ -9666,6 +9896,26 @@ async function initShippingInfo(user) {
             } else if (data.shippingInfo) {
                 profiles = [{ label: 'Default', ...data.shippingInfo }];
             }
+            
+            // --- Rewards / Credits System ---
+            const credits = typeof data.credits === 'number' ? data.credits : 0;
+            window._dodchUserCredits = credits;
+            
+            // Update Account UI
+            const accountRewardsBadge = document.getElementById('account-rewards-badge');
+            const accountRewardsBalance = document.getElementById('account-rewards-balance');
+            if (accountRewardsBadge && accountRewardsBalance) {
+                accountRewardsBadge.style.display = 'block';
+                accountRewardsBalance.innerText = `${credits.toFixed(2)} TND`;
+            }
+
+            // Update Checkout UI
+            const checkoutRewardsRow = document.getElementById('checkout-rewards-row');
+            const availableRewardsDisplay = document.getElementById('available-rewards-display');
+            if (checkoutRewardsRow && availableRewardsDisplay && credits > 0) {
+                checkoutRewardsRow.style.display = 'flex';
+                availableRewardsDisplay.innerText = credits.toFixed(2);
+            }
         }
 
         window._dodchShippingProfiles = profiles;
@@ -9836,5 +10086,240 @@ if (initialSearch) {
 
 MotionBlurEngine.init();
 window.addEventListener('load', initPushNotifications);
+
+// --- SPRING SCROLL INDICATOR (Index page only) ---
+(() => {
+    const indicator = document.getElementById('scroll-indicator');
+    const productGrid = document.getElementById('product-grid-start');
+    const container = document.querySelector('.hero-carousel-container');
+    if (!indicator || !productGrid || !container) return;
+
+    let springUsed = false;
+    let isScrolling = false;
+
+    const scrollToProducts = (callback) => {
+        if (isScrolling || springUsed) return;
+        isScrolling = true;
+        productGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => {
+            isScrolling = false;
+            if (callback) callback();
+        }, 700);
+    };
+
+    const doSpringDown = () => {
+        scrollToProducts(() => {
+            springUsed = true;
+            indicator.style.opacity = '0.3';
+            indicator.style.pointerEvents = 'none';
+        });
+    };
+
+    indicator.addEventListener('click', doSpringDown);
+
+    let lastScrollY = window.scrollY;
+    const getThreshold = () => container.offsetTop + container.offsetHeight * 0.5;
+
+    window.addEventListener('scroll', () => {
+        if (isScrolling) return;
+        const currentY = window.scrollY;
+        const up = currentY < lastScrollY;
+
+        if (springUsed && currentY > getThreshold() + 100) {
+            indicator.style.opacity = '1';
+            indicator.style.pointerEvents = 'auto';
+        }
+
+        if (springUsed && up && currentY <= getThreshold() && currentY > 0) {
+            springUsed = false;
+            indicator.style.opacity = '1';
+            indicator.style.pointerEvents = 'auto';
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        lastScrollY = currentY;
+    }, { passive: true });
+})();
+
+// --- HERO CAROUSEL CONTROLLER ---
+(() => {
+    const wrapper = document.querySelector('.hero-carousel-wrapper');
+    const dots = document.querySelectorAll('.hero-dot');
+    const hairDuoBg = document.getElementById('hair-duo-bg');
+    const hairDuoHero = document.getElementById('hair-duo-hero');
+    const container = document.querySelector('.hero-carousel-container');
+    if (!wrapper || dots.length === 0 || !container) return;
+
+    let currentSlide = 0;
+    let slideInterval;
+    let isTransitioning = false;
+    const slideDuration = 6000; // 6 seconds auto-slide
+
+    const startProgressAnimation = (index) => {
+        // Reset all progress spans
+        dots.forEach(dot => {
+            const p = dot.querySelector('.hero-dot-progress');
+            if (p) {
+                p.style.transition = 'none';
+                p.style.width = '0%';
+            }
+        });
+
+        // Trigger transition on the active slide's dot
+        const dotIndex = index % 2;
+        const activeDot = dots[dotIndex];
+        if (activeDot) {
+            const p = activeDot.querySelector('.hero-dot-progress');
+            if (p) {
+                // Force reflow
+                activeDot.offsetHeight;
+                p.style.transition = `width ${slideDuration}ms linear`;
+                p.style.width = '100%';
+            }
+        }
+    };
+
+    const updateActiveSlide = (index) => {
+        if (isTransitioning) return;
+        currentSlide = index;
+
+        wrapper.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.25, 1)';
+        wrapper.style.transform = `translateX(-${index * 33.3333}%)`;
+
+        const dotIndex = index % 2;
+        // Update dots active class
+        dots.forEach((dot, idx) => {
+            if (idx === dotIndex) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+
+        // Trigger animations for the hair duo hero slide when active
+        if (hairDuoHero) {
+            if (dotIndex === 1) {
+                hairDuoHero.classList.add('in-view');
+            } else {
+                hairDuoHero.classList.remove('in-view');
+            }
+        }
+
+        // Animate the progress bars
+        startProgressAnimation(index);
+
+        // Snap back to Slide 0 instantly after Slide 2 transition completes
+        if (index === 2) {
+            isTransitioning = true;
+            setTimeout(() => {
+                wrapper.style.transition = 'none';
+                wrapper.style.transform = 'translateX(0%)';
+                currentSlide = 0;
+                wrapper.offsetHeight; // Reflow
+                isTransitioning = false;
+                startProgressAnimation(0);
+            }, 800); // 800ms transition duration
+        }
+    };
+
+    const startAutoSlide = () => {
+        stopAutoSlide();
+        startProgressAnimation(currentSlide);
+        slideInterval = setInterval(() => {
+            if (isTransitioning) return;
+            const nextSlide = currentSlide + 1;
+            updateActiveSlide(nextSlide);
+        }, slideDuration);
+    };
+
+    const stopAutoSlide = () => {
+        if (slideInterval) clearInterval(slideInterval);
+        // Reset progress animation
+        dots.forEach(dot => {
+            const p = dot.querySelector('.hero-dot-progress');
+            if (p) {
+                p.style.transition = 'none';
+                p.style.width = '0%';
+            }
+        });
+    };
+
+    dots.forEach(dot => {
+        dot.addEventListener('click', () => {
+            if (isTransitioning) return;
+            const targetSlide = parseInt(dot.getAttribute('data-slide'));
+            updateActiveSlide(targetSlide);
+            startAutoSlide(); // Reset interval
+        });
+    });
+
+    // Start auto slide on page load
+    startAutoSlide();
+
+    // Pause on hover
+    container.addEventListener('mouseenter', stopAutoSlide);
+    container.addEventListener('mouseleave', startAutoSlide);
+
+    // Swipe Gestures
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    container.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    container.addEventListener('touchend', (e) => {
+        if (isTransitioning) return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchStartX - touchEndX;
+        const diffY = touchStartY - touchEndY;
+
+        // Verify swipe is primarily horizontal and passes threshold of 50px
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+            if (diffX > 0) {
+                // Swipe left -> Next slide
+                updateActiveSlide(currentSlide + 1);
+                startAutoSlide();
+            } else {
+                // Swipe right -> Previous slide
+                let prevSlide = currentSlide - 1;
+                if (prevSlide < 0) {
+                    isTransitioning = true;
+                    wrapper.style.transition = 'none';
+                    wrapper.style.transform = `translateX(-66.6666%)`;
+                    currentSlide = 2;
+                    wrapper.offsetHeight; // Reflow
+                    isTransitioning = false;
+                    
+                    setTimeout(() => {
+                        updateActiveSlide(1);
+                    }, 50);
+                } else {
+                    updateActiveSlide(prevSlide);
+                }
+                startAutoSlide();
+            }
+        }
+    }, { passive: true });
+
+    // Scroll Parallax effect on the Hair Duo background image (Slide 2)
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+            const rect = container.getBoundingClientRect();
+            const visible = rect.bottom > 0 && rect.top < window.innerHeight;
+            if (visible && (currentSlide % 2 === 1)) {
+                const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
+                const shift = (progress - 0.5) * 80;
+                hairDuoBg.style.transform = `translateY(${shift}px)`;
+            }
+            ticking = false;
+        });
+    }, { passive: true });
+})();
 
 // import "./admin-edit.js"; // Conflict resolved: logic centralized in Inventory Dashboard

@@ -90,8 +90,16 @@
     <main>
         <div class="account-container">
             <div class="account-header reveal">
-                <h1>My Account</h1>
-                <p>Welcome back, <span id="account-user-name">Guest</span>.</p>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+                    <div>
+                        <h1>My Account</h1>
+                        <p>Welcome back, <span id="account-user-name">Guest</span>.</p>
+                    </div>
+                    <div id="account-rewards-badge" style="display: none; background: linear-gradient(135deg, #d4af37, #f3e5ab); padding: 0.8rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2); text-align: center; border: 1px solid rgba(212, 175, 55, 0.5);">
+                        <span style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #5a4a1c; font-weight: 600;">Available Rewards</span>
+                        <span id="account-rewards-balance" style="font-size: 1.5rem; font-weight: 700; color: #2c240b;">0 TND</span>
+                    </div>
+                </div>
             </div>
 
             <div class="account-tabs">
