@@ -205,12 +205,13 @@
             <div class="hero-carousel-wrapper" style="display: flex; width: 300%; height: 100%; transition: transform 0.8s cubic-bezier(0.25, 1, 0.25, 1); will-change: transform;">
                 
                 <!-- Slide 1: Rewards Hero -->
-                <section class="hero-rewards-section" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 33.333%; min-height: 55vh; padding: 4rem 2rem 6rem 2rem; background: url('hero_rewards_bg.png') center/cover no-repeat; flex-shrink: 0;">
+                <section class="hero-rewards-section" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 33.333%; min-height: 55vh; padding: 4rem 2rem 6rem 2rem; background-color: #f0f0f0; flex-shrink: 0;">
+                    <div class="hero-rewards-bg" style="position: absolute; inset: -15%; background: url('hero_rewards_bg.png') center/cover no-repeat; will-change: transform; transition: transform 0.05s linear;"></div>
                     <div style="position: absolute; inset: 0; background: linear-gradient(to right, rgba(255,255,255,0.95), rgba(255,255,255,0.7), transparent); pointer-events: none;"></div>
                     <div class="hero-content reveal" style="position: relative; z-index: 2; max-width: 600px; text-align: left; margin-right: auto; margin-left: 5%;">
-                        <span style="display: inline-block; padding: 0.4rem 1rem; background: linear-gradient(135deg, #d4af37, #f3e5ab); color: #2c240b; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; border-radius: 50px; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">DODCH Rewards</span>
-                        <h1 style="font-family: 'Playfair Display', serif; font-size: clamp(2.2rem, 5vw, 3.5rem); color: #1a1a1a; margin-bottom: 1rem; line-height: 1.1;">Unlock Luxury,<br>Earn Cashback.</h1>
-                        <p style="font-size: clamp(0.9rem, 2vw, 1.1rem); color: #555; margin-bottom: 2rem; line-height: 1.6;">Join the DODCH Rewards program. Log in with Google today and earn <strong>1 TND</strong> in rewards for every <strong>10 TND</strong> you spend on our premium Mediterranean collections.</p>
+                        <span class="hero-eyebrow">DODCH Rewards</span>
+                        <h1 class="hero-title-modern">Luxury, Rewarded.</h1>
+                        <p class="hero-subtitle-modern">Join our exclusive rewards program. Earn <strong>1 TND</strong> in cashback for every <strong>10 TND</strong> spent.</p>
                         <button id="hero-login-google-btn" style="display: inline-flex; align-items: center; gap: 0.75rem; background: #fff; color: #333; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 1rem 2rem; border-radius: 8px; font-family: var(--font-sans); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
                             <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -227,9 +228,9 @@
                 <section class="hair-duo-hero" id="hair-duo-hero" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 33.333%; min-height: 55vh; padding: 4rem 2rem 6rem 2rem; flex-shrink: 0;">
                     <div class="hair-duo-hero__bg" id="hair-duo-bg" style="position: absolute; inset: -15%; background: url('hair_duo_hero_bg.png') center/cover no-repeat; will-change: transform; transition: transform 0.05s linear;"></div>
                     <div class="hair-duo-hero__overlay" style="position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.45) 100%);"></div>
-                    <div class="hair-duo-hero__content" style="position: relative; z-index: 2; text-align: center; padding: 2rem; max-width: 750px;">
-                        <span class="hair-duo-hero__eyebrow">The DODCH Hair Ritual</span>
-                        <h2 class="hair-duo-hero__title" style="margin-bottom: 1.5rem;">Unlock Your Hair Potential<br>with Our Salon-Grade Duo</h2>
+                    <div class="hair-duo-hero__content" style="position: relative; z-index: 2; text-align: center; padding: 2rem; max-width: 650px;">
+                        <span class="hair-duo-hero__eyebrow">The Hair Ritual</span>
+                        <h2 class="hair-duo-hero__title">The Art of Transformation.</h2>
                         <a href="index.html?cat=hair-care" class="hair-duo-hero__cta">
                             Shop Hair Care
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -238,12 +239,13 @@
                 </section>
 
                 <!-- Slide 3: Cloned Rewards Hero (For Infinite loop) -->
-                <section class="hero-rewards-section cloned-rewards-slide" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 33.333%; min-height: 55vh; padding: 4rem 2rem 6rem 2rem; background: url('hero_rewards_bg.png') center/cover no-repeat; flex-shrink: 0;">
+                <section class="hero-rewards-section cloned-rewards-slide" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 33.333%; min-height: 55vh; padding: 4rem 2rem 6rem 2rem; background-color: #f0f0f0; flex-shrink: 0;">
+                    <div class="hero-rewards-bg" style="position: absolute; inset: -15%; background: url('hero_rewards_bg.png') center/cover no-repeat; will-change: transform; transition: transform 0.05s linear;"></div>
                     <div style="position: absolute; inset: 0; background: linear-gradient(to right, rgba(255,255,255,0.95), rgba(255,255,255,0.7), transparent); pointer-events: none;"></div>
                     <div class="hero-content reveal" style="position: relative; z-index: 2; max-width: 600px; text-align: left; margin-right: auto; margin-left: 5%;">
-                        <span style="display: inline-block; padding: 0.4rem 1rem; background: linear-gradient(135deg, #d4af37, #f3e5ab); color: #2c240b; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; border-radius: 50px; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">DODCH Rewards</span>
-                        <h1 style="font-family: 'Playfair Display', serif; font-size: clamp(2.2rem, 5vw, 3.5rem); color: #1a1a1a; margin-bottom: 1rem; line-height: 1.1;">Unlock Luxury,<br>Earn Cashback.</h1>
-                        <p style="font-size: clamp(0.9rem, 2vw, 1.1rem); color: #555; margin-bottom: 2rem; line-height: 1.6;">Join the DODCH Rewards program. Log in with Google today and earn <strong>1 TND</strong> in rewards for every <strong>10 TND</strong> you spend on our premium Mediterranean collections.</p>
+                        <span class="hero-eyebrow">DODCH Rewards</span>
+                        <h1 class="hero-title-modern">Luxury, Rewarded.</h1>
+                        <p class="hero-subtitle-modern">Join our exclusive rewards program. Earn <strong>1 TND</strong> in cashback for every <strong>10 TND</strong> spent.</p>
                         <button id="hero-login-google-btn-cloned" style="display: inline-flex; align-items: center; gap: 0.75rem; background: #fff; color: #333; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 1rem 2rem; border-radius: 8px; font-family: var(--font-sans); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
                             <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

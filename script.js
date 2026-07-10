@@ -545,6 +545,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('desktop-sidebar');
     if (sidebar) {
         document.body.classList.add('has-sidebar');
+ 
+        // Staggered load-in animations for desktop
+        if (window.matchMedia("(min-width: 768px)").matches) {
+            const heroContent = document.querySelector('#hero .hero-content');
+            const heroBg = document.querySelector('#hero .hero-bg');
+            const navLogo = document.querySelector('.logo');
+            const navItems = document.querySelectorAll('.nav-links li:last-child > *, .nav-search-item');
+ 
+            // 1. Sidebar animates in
+            sidebar.classList.add('sidebar-load-in');
+ 
+            // 2. Hero background reveals with a slow fade and scale
+            if (heroBg) {
+                heroBg.classList.add('hero-bg-fade-in');
+            }
+ 
+            // 3. Hero text elements animate in after a delay
+            if (heroContent) {
+                heroContent.classList.add('hero-content-load-in');
+                heroContent.querySelectorAll('h1, .sub-headline, .cta-button').forEach((el, index) => {
+                    el.style.animationDelay = `${1.4 + index * 0.25}s`;
+                });
+            }
+ 
+            // 4. Navbar logo zooms in
+            if (navLogo) {
+                navLogo.classList.add('nav-logo-load-in');
+            }
+ 
+            // 5. Staggered navbar items drop in
+            if (navItems.length > 0) {
+                navItems.forEach((item, index) => {
+                    item.classList.add('nav-item-load-in');
+                    item.style.animationDelay = `${0.8 + index * 0.2}s`;
+                });
+            }
+
+            // 6. Staggered sidebar items animation
+            const sidebarItems = sidebar.querySelectorAll('.sidebar-menu > *, .sidebar-bottom > *');
+            sidebarItems.forEach((item, index) => {
+                item.classList.add('sidebar-item-load-in');
+                // Start this animation slightly after the sidebar itself slides in
+                item.style.animationDelay = `${0.5 + index * 0.1}s`;
+            });
+        }
     }
 
     const sidebarOverlay = document.querySelector('.sidebar-overlay');
@@ -1064,10 +1109,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 let priceHTML = '';
                 if (displayPrice) {
                     priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
-                } else {
+                } else if (!firestoreSynced) {
                     priceHTML = `<span class="price-shimmer"></span>`;
                 }
-
+                
                 return `
                     <div class="product-card reveal" style="--anim-delay: ${staggerDelay};" data-product-id="${id}">
                         <a ${linkAttributes}>
@@ -10175,12 +10220,20 @@ window.addEventListener('load', initPushNotifications);
     const hairDuoBg = document.getElementById('hair-duo-bg');
     const hairDuoHero = document.getElementById('hair-duo-hero');
     const container = document.querySelector('.hero-carousel-container');
+    const rewardsBg = document.querySelector('.hero-rewards-bg'); // Get the new rewards background
     if (!wrapper || dots.length === 0 || !container) return;
 
     let currentSlide = 0;
     let slideInterval;
     let isTransitioning = false;
     const slideDuration = 6000; // 6 seconds auto-slide
+    
+    // Parallax effect for the first hero slide
+    const handleRewardsParallax = (rect) => {
+        const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
+        const shift = (progress - 0.5) * -60; // Negative value for upward movement
+        if (rewardsBg) rewardsBg.style.transform = `translateY(${shift}px) scale(1.2)`;
+    };
 
     const startProgressAnimation = (index) => {
         // Reset all progress spans
@@ -10339,10 +10392,13 @@ window.addEventListener('load', initPushNotifications);
         requestAnimationFrame(() => {
             const rect = container.getBoundingClientRect();
             const visible = rect.bottom > 0 && rect.top < window.innerHeight;
-            if (visible && (currentSlide % 2 === 1)) {
-                const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
-                const shift = (progress - 0.5) * 80;
-                hairDuoBg.style.transform = `translateY(${shift}px)`;
+            if (visible) {
+                if (currentSlide % 2 === 1) { // Hair Duo slide
+                    const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
+                    const shift = (progress - 0.5) * 80;
+                    if (hairDuoBg) hairDuoBg.style.transform = `translateY(${shift}px)`;
+                }
+                handleRewardsParallax(rect); // Always apply to the rewards hero
             }
             ticking = false;
         });
