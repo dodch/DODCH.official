@@ -1,4 +1,4 @@
-// Universal Image WebP Fallback Fix
+﻿// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -3488,9 +3488,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     const SHIPPING_FEE = 7;
                     const FREE_SHIPPING_THRESHOLD = 100;
                     const shippingFee = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-                    let finalTotal = calculatedSubtotal + shippingFee;
                     
-                    const creditsUsed = window._dodchCreditsUsedForOrder || 0;
+                    // --- REAL-TIME CREDIT VALIDATION ---
+                    let creditsUsed = 0;
+                    const useRewardsCheckbox = document.getElementById('use-rewards-checkbox');
+                    if (useRewardsCheckbox && useRewardsCheckbox.checked && currentUser) {
+                        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+                        const liveCredits = userDoc.exists() ? (userDoc.data().credits || 0) : 0;
+                        
+                        const baseTotalForCreditCalc = calculatedSubtotal + shippingFee;
+                        creditsUsed = Math.min(liveCredits, baseTotalForCreditCalc);
+                    } else {
+                        creditsUsed = 0;
+                    }
+                    // --- END REAL-TIME CREDIT VALIDATION ---
+
+                    let finalTotal = (calculatedSubtotal + shippingFee);
                     finalTotal = Math.max(0, finalTotal - creditsUsed);
 
                     const orderData = {
@@ -3526,8 +3539,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const userRef = doc(db, "users", currentUser.uid);
                         // Decrement the credits
                         // We must fetch the current credits to ensure we don't go below 0 (though our UI limits it)
+                        const userDoc = await getDoc(userRef);
+                        const liveCredits = userDoc.exists() ? (userDoc.data().credits || 0) : 0;
                         batch.update(userRef, {
-                             credits: window._dodchUserCredits - creditsUsed
+                             credits: liveCredits - creditsUsed
                         });
                         
                         await batch.commit();
@@ -3535,6 +3550,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Update local cache to reflect immediate deduction
                         window._dodchUserCredits -= creditsUsed;
+                        updateCheckoutUI(); // Re-render UI with new credit balance
                     } else {
                         const docRef = await addDoc(collection(db, "orders"), orderData);
                         orderId = docRef.id;
@@ -3671,6 +3687,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <span>Subtotal</span>
                                             <span>${calculatedSubtotal.toFixed(2)} TND</span>
                                         </div>
+                                        ${creditsUsed > 0 ? `
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 0.95rem; color: #e74c3c;">
+                                            <span>Rewards Discount</span>
+                                            <span>-${creditsUsed.toFixed(2)} TND</span>
+                                        </div>` : ''}
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 1.2rem; font-size: 0.95rem; color: #666;">
                                             <span>Shipping</span>
                                             <span>${shippingFee === 0 ? 'Free' : shippingFee.toFixed(2) + ' TND'}</span>
@@ -5356,6 +5377,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span>Subtotal</span>
                                 <span>${parseFloat(subtotal).toFixed(2)} TND</span>
                             </div>
+                            ${order.creditsUsed > 0 ? `
+                            <div class="total-row" style="color: #e74c3c; font-weight: 500;">
+                                <span>Rewards Discount</span>
+                                <span>-${parseFloat(order.creditsUsed).toFixed(2)} TND</span>
+                            </div>` : ''}
                             <div class="total-row">
                                 <span>Shipping</span>
                                 <span>${shipping === 0 ? 'Free' : shipping.toFixed(2) + ' TND'}</span>
@@ -5756,6 +5782,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p><strong>Email:</strong> ${escapeHTML(order.shipping?.email || 'N/A')}</p>
                             <p><strong>Address:</strong> ${escapeHTML(order.shipping?.address || 'N/A')}, ${escapeHTML(order.shipping?.city || '')}</p>
                             <p><strong>Total:</strong> <span style="color: var(--accent-gold-text); font-weight: 700;">${order.total} TND</span></p>
+                            ${order.creditsUsed > 0 ? `<p style="color: #e74c3c; font-weight: 500;"><strong>Discount:</strong> -${order.creditsUsed.toFixed(2)} TND</p>` : ''}
                             <div class="admin-order-items">
                                 ${order.items.map(i => `<div>• ${i.quantity}x ${escapeHTML(i.name)} (${escapeHTML(i.size)})</div>`).join('')}
                             </div>

@@ -38,8 +38,21 @@ service cloud.firestore {
     match /orders/{orderId} {
       // 1. Creation: Admin can create Local Orders; Verified App can create Pending online orders.
       allow create: if (isAdmin() && request.resource.data.get('type', '') == 'local')
-        || (isVerifiedApp() && request.resource.data.status == 'Pending' 
-            && (!('creditsUsed' in request.resource.data) || request.resource.data.creditsUsed >= 0));
+        || (
+          isVerifiedApp() && request.resource.data.status == 'Pending'
+          // --- Secure Credit Validation ---
+          && (
+            // Case 1: No credits are being used. This is always allowed.
+            request.resource.data.get('creditsUsed', 0) == 0
+            ||
+            // Case 2: Credits ARE being used. We must verify the user has enough.
+            ( request.auth != null
+              && request.resource.data.userId == request.auth.uid
+              // Perform a live lookup to the user's document and check their credit balance.
+              && request.resource.data.creditsUsed <= get(/databases/$(database)/documents/users/$(request.auth.uid)).data.credits
+            )
+          )
+        );
         
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       
