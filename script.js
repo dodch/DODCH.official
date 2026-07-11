@@ -96,13 +96,20 @@ const auth = getAuth(app);
 // Intelligent Caching: Enable persistent local cache so products load instantly on repeat visits
 let db;
 try {
-    // UNIFIED CACHING STRATEGY: Enable persistent cache for all modern browsers.
-    // This resolves the sync issue on mobile/Safari where data would fail to load.
-    db = initializeFirestore(app, {
-        localCache: persistentLocalCache(),
-        experimentalForceLongPolling: true
-    });
-    console.info("⚡ Firestore: single-tab persistent cache and long polling enabled.");
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isInAppBrowser = /FBAN|FBAV|Instagram|Snapchat|TikTok|Twitter|Line/i.test(navigator.userAgent);
+
+    if (isInAppBrowser || isIOS || isSafari) {
+        console.info("⚡ Firestore: iOS/Safari/In-App browser detected. Using memory cache to prevent IndexedDB hangs.");
+        db = getFirestore(app);
+    } else {
+        db = initializeFirestore(app, {
+            localCache: persistentLocalCache(),
+            experimentalForceLongPolling: true
+        });
+        console.info("⚡ Firestore: single-tab persistent cache and long polling enabled.");
+    }
 } catch (e) {
     console.warn("⚠️ Firestore: persistent cache failed, falling back to memory cache:", e);
     db = getFirestore(app);
