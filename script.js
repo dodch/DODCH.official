@@ -96,20 +96,13 @@ const auth = getAuth(app);
 // Intelligent Caching: Enable persistent local cache so products load instantly on repeat visits
 let db;
 try {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    const isInAppBrowser = /FBAN|FBAV|Instagram|Snapchat|TikTok|Twitter|Line/i.test(navigator.userAgent);
-
-    if (isInAppBrowser || isIOS || isSafari) {
-        console.info("⚡ Firestore: iOS/Safari/In-App browser detected. Using memory cache to prevent IndexedDB hangs.");
-        db = getFirestore(app);
-    } else {
-        db = initializeFirestore(app, {
-            localCache: persistentLocalCache(),
-            experimentalForceLongPolling: true
-        });
-        console.info("⚡ Firestore: single-tab persistent cache and long polling enabled.");
-    }
+    // UNIFIED CACHING STRATEGY: Enable persistent cache for all modern browsers.
+    // This resolves the sync issue on mobile/Safari where data would fail to load.
+    db = initializeFirestore(app, {
+        localCache: persistentLocalCache(),
+        experimentalForceLongPolling: true
+    });
+    console.info("⚡ Firestore: single-tab persistent cache and long polling enabled.");
 } catch (e) {
     console.warn("⚠️ Firestore: persistent cache failed, falling back to memory cache:", e);
     db = getFirestore(app);
@@ -1026,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const shopLayout = document.querySelector('.shop-layout');
         if (!shopLayout) return;
 
-        const renderContent = () => {
+        const renderContent = (loading = false) => {
             const sortedCatalog = Object.entries(productCatalog).sort(([idA, a], [idB, b]) => {
                 const indexA = LOCAL_INVENTORY.indexOf(idA);
                 const indexB = LOCAL_INVENTORY.indexOf(idB);
@@ -1248,12 +1241,12 @@ document.addEventListener('DOMContentLoaded', () => {
             shopLayout.classList.add('fade-out');
             if (shopTransitionTimeout) clearTimeout(shopTransitionTimeout);
 
-            shopTransitionTimeout = setTimeout(() => {
-                renderContent();
+            shopTransitionTimeout = setTimeout(() => { // Pass loading state
+                renderContent(loading);
                 shopLayout.classList.remove('fade-out');
             }, 300);
         } else {
-            renderContent();
+            renderContent(loading);
         }
     };
     async function loadProductCatalog() {
@@ -1431,7 +1424,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                             const isActuallyOOS = data.sizes && data.sizes.length > 0
                                                 ? data.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                                                 : (productCatalog[productId].outOfStock === true || String(productCatalog[productId].outOfStock).toLowerCase() === 'true');
-
+                                
+                                // Apply/remove grayscale effect based on the new stock status
+                                const cardImg = card.querySelector('.product-card-img');
+                                if (cardImg) {
+                                    if (isActuallyOOS) {
+                                        cardImg.style.opacity = '0.55';
+                                        cardImg.style.filter = 'grayscale(60%)';
+                                    } else {
+                                        cardImg.style.opacity = '';
+                                        cardImg.style.filter = '';
+                                    }
+                                }
                                             if (productCatalog[productId].isPermanentlyUnavailable) {
                                                 imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>');
                                             } else if (isActuallyOOS) {
