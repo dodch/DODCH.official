@@ -8,13 +8,13 @@
   },
   "dodchmellow-pro-v": {
     "sku": "DODCH-DMW-005",
-    "price": "35.00",
+    "price": "32.50",
     "currency": "TND",
     "availability": "in_stock"
   },
   "foaming-cleanser": {
     "sku": "DODCH-FOAM-001",
-    "price": "24.00",
+    "price": "23.00",
     "currency": "TND",
     "availability": "out_of_stock"
   },
@@ -32,7 +32,7 @@
   },
   "silk-therapy-mask": {
     "sku": "DODCH-STM-004",
-    "price": "39.00",
+    "price": "36.00",
     "currency": "TND",
     "availability": "in_stock"
   },
