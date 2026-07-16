@@ -9672,3 +9672,31 @@ body.is-scrolling * {
     -webkit-backdrop-filter: blur(10px);
     will-change: opacity;
 }
+
+/* Hero Carousel & Navbar Optimizations */
+.hero-carousel-container {
+    touch-action: pan-y;
+}
+.hero-carousel-wrapper {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    perspective: 1000px;
+    -webkit-perspective: 1000px;
+}
+.hero-carousel-wrapper > section {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+}
+
+/* Ensure Search & Cart buttons inherit contrast correctly when text-dark is set */
+#navbar.text-dark #search-toggle-btn,
+#navbar.text-dark #cart-toggle {
+    color: var(--text-charcoal) !important;
+}
+#navbar.text-dark #search-toggle-btn svg,
+#navbar.text-dark #cart-toggle svg {
+    stroke: var(--text-charcoal) !important;
+}
+

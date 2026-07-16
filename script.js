@@ -435,7 +435,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 navbar.classList.remove('text-dark');
             } else {
                 navbar.classList.remove('scrolled');
-                navbar.classList.remove('text-dark');
+                if (window._activeHeroSlideIsDark) {
+                    navbar.classList.remove('text-dark');
+                } else {
+                    navbar.classList.add('text-dark');
+                }
             }
         } else {
             if (scrollY > 50) {
@@ -10274,6 +10278,22 @@ window.addEventListener('load', initPushNotifications);
         }
     };
 
+    // Dynamic Navbar Contrast based on Slide Background
+    const updateNavbarContrastForSlide = (index) => {
+        const dotIndex = index % 2;
+        const isDarkSlide = (dotIndex === 1);
+        window._activeHeroSlideIsDark = isDarkSlide;
+        
+        const navbar = document.getElementById('navbar');
+        if (navbar && !navbar.classList.contains('scrolled')) {
+            if (isDarkSlide) {
+                navbar.classList.remove('text-dark');
+            } else {
+                navbar.classList.add('text-dark');
+            }
+        }
+    };
+
     const updateActiveSlide = (index) => {
         if (isTransitioning) return;
         currentSlide = index;
@@ -10302,6 +10322,9 @@ window.addEventListener('load', initPushNotifications);
 
         // Animate the progress bars
         startProgressAnimation(index);
+        
+        // Update navbar contrast dynamically
+        updateNavbarContrastForSlide(index);
 
         // Snap back to Slide 0 instantly after Slide 2 transition completes
         if (index === 2) {
@@ -10313,6 +10336,7 @@ window.addEventListener('load', initPushNotifications);
                 wrapper.offsetHeight; // Reflow
                 isTransitioning = false;
                 startProgressAnimation(0);
+                updateNavbarContrastForSlide(0);
             }, 800); // 800ms transition duration
         }
     };
@@ -10355,30 +10379,35 @@ window.addEventListener('load', initPushNotifications);
     container.addEventListener('mouseenter', stopAutoSlide);
     container.addEventListener('mouseleave', startAutoSlide);
 
-    // Swipe Gestures
-    let touchStartX = 0;
-    let touchStartY = 0;
+    // Pointer-based Gestures (Mouse Drag + Mobile Swiping)
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let isDragging = false;
 
-    container.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-    }, { passive: true });
+    container.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        pointerStartX = e.clientX;
+        pointerStartY = e.clientY;
+        isDragging = true;
+        try { container.setPointerCapture(e.pointerId); } catch(err) {}
+    });
 
-    container.addEventListener('touchend', (e) => {
-        if (isTransitioning) return;
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        const diffX = touchStartX - touchEndX;
-        const diffY = touchStartY - touchEndY;
+    container.addEventListener('pointerup', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        try { container.releasePointerCapture(e.pointerId); } catch(err) {}
+
+        const pointerEndX = e.clientX;
+        const pointerEndY = e.clientY;
+        const diffX = pointerStartX - pointerEndX;
+        const diffY = pointerStartY - pointerEndY;
 
         // Verify swipe is primarily horizontal and passes threshold of 50px
         if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
             if (diffX > 0) {
-                // Swipe left -> Next slide
                 updateActiveSlide(currentSlide + 1);
                 startAutoSlide();
             } else {
-                // Swipe right -> Previous slide
                 let prevSlide = currentSlide - 1;
                 if (prevSlide < 0) {
                     isTransitioning = true;
@@ -10397,7 +10426,47 @@ window.addEventListener('load', initPushNotifications);
                 startAutoSlide();
             }
         }
-    }, { passive: true });
+    });
+
+    container.addEventListener('pointercancel', (e) => {
+        isDragging = false;
+        try { container.releasePointerCapture(e.pointerId); } catch(err) {}
+    });
+
+    // Touchpad Two-finger horizontal swipe handling
+    let wheelAccumulator = 0;
+    let wheelDebounce = false;
+    container.addEventListener('wheel', (e) => {
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+            e.preventDefault();
+            if (wheelDebounce) return;
+            wheelAccumulator += e.deltaX;
+            if (Math.abs(wheelAccumulator) > 35) {
+                wheelDebounce = true;
+                if (wheelAccumulator > 0) {
+                    updateActiveSlide(currentSlide + 1);
+                } else {
+                    let prevSlide = currentSlide - 1;
+                    if (prevSlide < 0) {
+                        isTransitioning = true;
+                        wrapper.style.transition = 'none';
+                        wrapper.style.transform = `translateX(-66.6666%)`;
+                        currentSlide = 2;
+                        wrapper.offsetHeight;
+                        isTransitioning = false;
+                        setTimeout(() => updateActiveSlide(1), 50);
+                    } else {
+                        updateActiveSlide(prevSlide);
+                    }
+                }
+                startAutoSlide();
+                setTimeout(() => {
+                    wheelDebounce = false;
+                    wheelAccumulator = 0;
+                }, 800);
+            }
+        }
+    }, { passive: false });
 
     // Scroll Parallax effect on the Hair Duo background image (Slide 2)
     let ticking = false;
