@@ -10239,7 +10239,7 @@ window.addEventListener('load', initPushNotifications);
     const hairDuoBg = document.getElementById('hair-duo-bg');
     const hairDuoHero = document.getElementById('hair-duo-hero');
     const container = document.querySelector('.hero-carousel-container');
-    const rewardsBg = document.querySelector('.hero-rewards-bg'); // Get the new rewards background
+    const rewardsBgs = document.querySelectorAll('.hero-rewards-bg'); // Get all rewards backgrounds (including cloned)
     if (!wrapper || dots.length === 0 || !container) return;
 
     let currentSlide = 0;
@@ -10250,8 +10250,10 @@ window.addEventListener('load', initPushNotifications);
     // Parallax effect for the first hero slide
     const handleRewardsParallax = (rect) => {
         const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
-        const shift = (progress - 0.5) * -60; // Negative value for upward movement
-        if (rewardsBg) rewardsBg.style.transform = `translateY(${shift}px) scale(1.2)`;
+        const shift = (progress - 0.5) * 80; // Unified shift speed (80) and direction
+        rewardsBgs.forEach(bg => {
+            bg.style.transform = `translateY(${shift}px)`;
+        });
     };
 
     const startProgressAnimation = (index) => {

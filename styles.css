@@ -9700,3 +9700,16 @@ body.is-scrolling * {
     stroke: var(--text-charcoal) !important;
 }
 
+/* Google Login Button Hover contrast fix */
+#hero-login-google-btn:hover,
+#hero-login-google-btn-cloned:hover {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
+}
+#hero-login-google-btn:hover svg path,
+#hero-login-google-btn-cloned:hover svg path {
+    fill: #000 !important;
+}
+
+
