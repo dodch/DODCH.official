@@ -419,20 +419,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const scrollY = window.scrollY;
         const isSerumPage = document.body.classList.contains('serum-page');
         const serumHero = document.querySelector('.scrollytelling-container');
+        const heroCarousel = document.querySelector('.hero-carousel-container');
 
         if (isSerumPage && serumHero) {
             const threshold = serumHero.offsetHeight - 80;
             if (scrollY > threshold) {
                 navbar.classList.add('scrolled');
-                navbar.classList.remove('text-dark');
+                navbar.classList.add('text-dark');
             } else {
                 navbar.classList.remove('scrolled');
                 navbar.classList.remove('text-dark');
             }
-        } else if (hero) {
+        } else if (hero || heroCarousel) {
             if (scrollY > 50) {
                 navbar.classList.add('scrolled');
-                navbar.classList.remove('text-dark');
+                navbar.classList.add('text-dark');
             } else {
                 navbar.classList.remove('scrolled');
                 if (window._activeHeroSlideIsDark) {
@@ -444,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             if (scrollY > 50) {
                 navbar.classList.add('scrolled');
-                navbar.classList.remove('text-dark');
+                navbar.classList.add('text-dark');
             } else {
                 navbar.classList.remove('scrolled');
                 navbar.classList.add('text-dark');
@@ -10388,16 +10389,16 @@ window.addEventListener('load', initPushNotifications);
 
     container.addEventListener('pointerdown', (e) => {
         if (e.button !== 0 && e.pointerType === 'mouse') return;
+        // Don't intercept clicks on buttons or links
+        if (e.target.closest('button') || e.target.closest('a')) return;
         pointerStartX = e.clientX;
         pointerStartY = e.clientY;
         isDragging = true;
-        try { container.setPointerCapture(e.pointerId); } catch(err) {}
     });
 
-    container.addEventListener('pointerup', (e) => {
+    document.addEventListener('pointerup', (e) => {
         if (!isDragging) return;
         isDragging = false;
-        try { container.releasePointerCapture(e.pointerId); } catch(err) {}
 
         const pointerEndX = e.clientX;
         const pointerEndY = e.clientY;
@@ -10430,9 +10431,8 @@ window.addEventListener('load', initPushNotifications);
         }
     });
 
-    container.addEventListener('pointercancel', (e) => {
+    document.addEventListener('pointercancel', () => {
         isDragging = false;
-        try { container.releasePointerCapture(e.pointerId); } catch(err) {}
     });
 
     // Touchpad Two-finger horizontal swipe handling
