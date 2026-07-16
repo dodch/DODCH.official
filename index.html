@@ -4,6 +4,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Page load overlay: covers broken paint, fades out once DOM ready -->
+    <style>
+        #page-loader {
+            position: fixed; inset: 0; background: #fff;
+            z-index: 99999; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.6s ease 0.2s; /* slightly delayed fade out for logo */
+        }
+        #page-loader .loader-logo {
+            font-family: var(--font-serif);
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            color: #111; letter-spacing: 0.1em;
+            opacity: 1; transition: opacity 0.4s ease, transform 0.6s ease;
+        }
+        #page-loader.fade-out { opacity: 0; }
+        #page-loader.fade-out .loader-logo { opacity: 0; transform: scale(0.95); }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loader = document.getElementById('page-loader');
+            if (loader) requestAnimationFrame(() => loader.classList.add('fade-out'));
+        });
+    </script>
     <title>DODCH | Luxury Mediterranean Hair & Skincare Official Store</title>
     <link rel="icon" href="favicon-black-on-white.webp?v=7" type="image/webp">
     <link rel="apple-touch-icon" href="IMG_3355.webp?v=4">
@@ -199,14 +222,15 @@
         </div>
     </nav>
 
+    <div id="page-loader"><span class="loader-logo">DODCH</span></div>
     <main>
         
         <!-- Hero Carousel Container -->
-        <div class="hero-carousel-container" style="position: relative; overflow: hidden; width: 100%; min-height: 55vh; border-bottom: 1px solid #eaeaea;">
+        <div class="hero-carousel-container" style="position: relative; overflow: hidden; width: 100%; min-height: 42vh; border-bottom: 1px solid #eaeaea;">
             <div class="hero-carousel-wrapper" style="display: flex; width: 300%; height: 100%; transition: transform 0.8s cubic-bezier(0.25, 1, 0.25, 1); will-change: transform;">
                 
                 <!-- Slide 1: Rewards Hero -->
-                <section class="hero-rewards-section" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 33.333%; min-height: 55vh; padding: 4rem 2rem 6rem 2rem; background-color: #f0f0f0; flex-shrink: 0;">
+                                <section class="hero-rewards-section" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 33.333%; min-height: 42vh; padding: 3rem 2rem 4rem 2rem; background-color: #f0f0f0; flex-shrink: 0;">
                     <div class="hero-rewards-bg" style="position: absolute; inset: -15%; background: url('hero_rewards_bg.png') center/cover no-repeat; will-change: transform; transition: transform 0.05s linear;"></div>
                     <div style="position: absolute; inset: 0; background: linear-gradient(to right, rgba(255,255,255,0.95), rgba(255,255,255,0.7), transparent); pointer-events: none;"></div>
                     <div class="hero-content reveal" style="position: relative; z-index: 2; max-width: 600px; text-align: left; margin-right: auto; margin-left: 5%;">
@@ -226,7 +250,7 @@
                 </section>
 
                 <!-- Slide 2: Hair Duo Hero -->
-                <section class="hair-duo-hero" id="hair-duo-hero" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 33.333%; min-height: 55vh; padding: 4rem 2rem 6rem 2rem; flex-shrink: 0;">
+                <section class="hair-duo-hero" id="hair-duo-hero" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 33.333%; min-height: 42vh; padding: 3rem 2rem 4rem 2rem; flex-shrink: 0;">
                     <div class="hair-duo-hero__bg" id="hair-duo-bg" style="position: absolute; inset: -15%; background: url('hair_duo_hero_bg.png') center/cover no-repeat; will-change: transform; transition: transform 0.05s linear;"></div>
                     <div class="hair-duo-hero__overlay" style="position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.45) 100%);"></div>
                     <div class="hair-duo-hero__content" style="position: relative; z-index: 2; text-align: center; padding: 2rem; max-width: 650px;">
@@ -332,11 +356,11 @@
                 pointer-events: none;
             }
             .hero-carousel-container:not(.collapsed) ~ .shop-layout {
-                padding-top: 0.75rem !important;
+                padding-top: 0 !important;
             }
             @media (min-width: 768px) {
                 .hero-carousel-container:not(.collapsed) ~ .shop-layout {
-                    padding-top: 1rem !important;
+                    padding-top: 0 !important;
                 }
             }
             
@@ -411,14 +435,14 @@
         </style>
 
         <!-- Scroll Indicator — between hero and products -->
-        <div id="scroll-indicator" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.5rem 0 0.2rem; cursor: pointer; user-select: none;">
+        <div id="scroll-indicator" style="display: none;">
             <span style="font-family: var(--font-sans); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 3px; color: #aaa; margin-bottom: 0.3rem;">Explore Collection</span>
             <svg id="scroll-arrow-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="animation: scrollBounce 2s ease-in-out infinite;">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
         </div>
 
-        <div id="product-grid-start" class="container shop-layout" style="margin-top: 0;">
+        <div id="product-grid-start" class="container shop-layout" style="margin-top: 0; padding-top: 1rem;">
             <!-- Product Grid -->
             <div class="shop-category-section">
                 <h2 class="shop-category-title">Hair Care</h2>

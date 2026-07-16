@@ -1,4 +1,4 @@
-﻿// Universal Image WebP Fallback Fix
+// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -415,13 +415,61 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('#purchase-cta .buy-now-btn') ||
         document.querySelector('.product-info .add-to-cart-btn');
 
+    // Cache hero dark/light state — detect once, update on resize
+    const detectAndCacheHeroDark = () => {
+        if (document.querySelector('.hero-carousel-container')) {
+            window._pageHeroDark = !!window._activeHeroSlideIsDark;
+            return;
+        }
+        const navH = navbar.offsetHeight;
+        const el = document.elementFromPoint(window.innerWidth / 2, navH + 30);
+        if (!el) { window._pageHeroDark = false; return; }
+        let node = el;
+        while (node && node !== document.body) {
+            const style = window.getComputedStyle(node);
+            const bg = style.backgroundColor;
+            if (style.backgroundImage && style.backgroundImage !== 'none') {
+                // Has background image — check for dark overlay child
+                const darkOverlay = [...(node.querySelectorAll('*'))].find(c => {
+                    const cs = window.getComputedStyle(c);
+                    const rgb = cs.backgroundColor.match(/\d+/g);
+                    return rgb && parseFloat(rgb[3] || 1) > 0.2 &&
+                        (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 80;
+                });
+                window._pageHeroDark = !!darkOverlay;
+                return;
+            }
+            const rgb = bg.match(/\d+/g);
+            if (rgb && !bg.includes('rgba(0, 0, 0, 0)')) {
+                const a = rgb[3] !== undefined ? parseFloat(rgb[3]) : 1;
+                if (a > 0.1) {
+                    window._pageHeroDark = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 140;
+                    return;
+                }
+            }
+            node = node.parentElement;
+        }
+        window._pageHeroDark = false;
+    };
+    // Detect on load and resize
+    window.addEventListener('load', detectAndCacheHeroDark);
+    window.addEventListener('resize', detectAndCacheHeroDark);
+    setTimeout(detectAndCacheHeroDark, 200);
+
     const updateNavbar = () => {
         const scrollY = window.scrollY;
         const isSerumPage = document.body.classList.contains('serum-page');
         const serumHero = document.querySelector('.scrollytelling-container');
         const heroCarousel = document.querySelector('.hero-carousel-container');
+        
+        // A hero is active if it exists and is not collapsed/hidden
+        const isHeroCarouselActive = heroCarousel && !heroCarousel.classList.contains('collapsed');
+        const isSerumHeroActive = serumHero && !serumHero.classList.contains('collapsed');
 
-        if (isSerumPage && serumHero) {
+        // Check if there's an active (visible) hero section at the top
+        const hasHeroAtTop = isHeroCarouselActive || isSerumHeroActive;
+
+        if (isSerumPage && isSerumHeroActive) {
             const threshold = serumHero.offsetHeight - 80;
             if (scrollY > threshold) {
                 navbar.classList.add('scrolled');
@@ -430,25 +478,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 navbar.classList.remove('scrolled');
                 navbar.classList.remove('text-dark');
             }
-        } else if (hero || heroCarousel) {
+        } else if (!hasHeroAtTop) {
+            // Normal page without a hero (e.g., Shop) - always dark text
             if (scrollY > 50) {
                 navbar.classList.add('scrolled');
-                navbar.classList.add('text-dark');
             } else {
                 navbar.classList.remove('scrolled');
-                if (window._activeHeroSlideIsDark) {
-                    navbar.classList.remove('text-dark');
-                } else {
-                    navbar.classList.add('text-dark');
-                }
             }
+            navbar.classList.add('text-dark');
+        } else if (scrollY > 50) {
+            // Scrolled past hero
+            navbar.classList.add('scrolled');
+            navbar.classList.add('text-dark');
         } else {
-            if (scrollY > 50) {
-                navbar.classList.add('scrolled');
-                navbar.classList.add('text-dark');
+            // At the top of a hero page
+            navbar.classList.remove('scrolled');
+            // For carousel, always use slide-based state
+            if (isHeroCarouselActive) {
+                window._activeHeroSlideIsDark ? navbar.classList.remove('text-dark') : navbar.classList.add('text-dark');
             } else {
-                navbar.classList.remove('scrolled');
-                navbar.classList.add('text-dark');
+                window._pageHeroDark ? navbar.classList.remove('text-dark') : navbar.classList.add('text-dark');
             }
         }
     };
@@ -545,7 +594,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: true });
     updateNavbar();
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+    // Delay reveal animations until after the page loader overlay fades out (500ms)
+    setTimeout(() => {
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+        const heroCarousel = document.querySelector('.hero-carousel-container');
+        if (heroCarousel) {
+            heroCarousel.classList.add('active'); // trigger hero specific intro animations
+        }
+    }, 500);
     const hamburger = document.querySelector('.hamburger');
     const sidebar = document.getElementById('desktop-sidebar');
     if (sidebar) {
@@ -10283,6 +10339,9 @@ window.addEventListener('load', initPushNotifications);
 
     // Dynamic Navbar Contrast based on Slide Background
     const updateNavbarContrastForSlide = (index) => {
+        const heroContainer = document.querySelector('.hero-carousel-container');
+        if (!heroContainer || heroContainer.classList.contains('collapsed')) return;
+
         const dotIndex = index % 2;
         const isDarkSlide = (dotIndex === 1);
         window._activeHeroSlideIsDark = isDarkSlide;

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | DODCH</title>
+    <link rel="icon" href="favicon-black-on-white.webp?v=7" type="image/webp">
+    <link rel="apple-touch-icon" href="IMG_3355.webp?v=4">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=4">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+    <meta name="view-transition" content="same-origin">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav id="navbar" class="scrolled">
+        <div class="nav-container">
+            <div class="hamburger">
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+                <span style="background-color: var(--text-charcoal);"></span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" style="color: var(--text-charcoal);">Shop</a></li>
+                <li><a href="index.html#contact" style="color: var(--text-charcoal);">Contact</a></li>
+                <li><a href="#" id="login-btn" style="color: var(--text-charcoal);">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg><span class="login-text">Login</span>
+                    </a></li>
+                <li class="nav-search-item">
+                    <div class="search-container">
+                        <input type="text" id="navbar-search-input" class="search-input" placeholder="Search...">
+                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg></button>
+                    </div>
+                </li>
+                <li><a href="#" id="cart-toggle" style="color: var(--text-charcoal);">
+                        <svg class="nav-icon" viewBox="0 0 24 24">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        <span id="cart-count-badge">0</span>
+                    </a></li>
+            </ul>
+            <a href="index.html" class="logo">DODCH</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="admin-container">
+            <header class="admin-header reveal">
+                <h1>Admin Dashboard</h1>
+                <p>Manage orders and product inventory.</p>
+            </header>
+
+            <div class="admin-stats-row reveal">
+                <div class="admin-stat-card">
+                    <h3>Total Revenue (All Time)</h3>
+                    <p id="total-revenue-display">Loading...</p>
+                </div>
+                <div class="admin-stat-card">
+                    <h3>Total Orders</h3>
+                    <p id="total-orders-display">Loading...</p>
+                </div>
+            </div>
+
+            <section class="admin-section reveal" id="admin-chart-section" style="margin-bottom: 3rem;">
+                <h2>Revenue Overview (Last 30 Days)</h2>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </section>
+
+            <div class="admin-tabs reveal">
+                <button class="admin-tab-btn active" data-tab="orders">Orders</button>
+                <button class="admin-tab-btn" data-tab="inventory">Inventory</button>
+                <button class="admin-tab-btn" data-tab="messages">Messages <span id="unread-messages-badge"
+                        class="badge"
+                        style="display:none; background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; margin-left: 5px; vertical-align: top;">0</span></button>
+                <button class="admin-tab-btn" data-tab="reports">Reports <span id="unread-reports-badge"
+                        class="badge"
+                        style="display:none; background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; margin-left: 5px; vertical-align: top;">0</span></button>
+                <button class="admin-tab-btn" data-tab="push">Push Notifications</button>
+            </div>
+
+            <div class="admin-content-wrapper">
+                <section id="tab-orders" class="tab-pane active admin-section">
+                    <div class="admin-controls">
+                        <input type="text" id="admin-order-search" class="admin-search-input"
+                            placeholder="Search orders...">
+                        <select id="admin-filter-status" class="admin-select">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="In Delivery">In Delivery</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        <select id="admin-sort-date" class="admin-select">
+                            <option value="desc">Newest First</option>
+                            <option value="asc">Oldest First</option>
+                        </select>
+                        <button id="admin-export-btn" class="admin-btn">Export CSV</button>
+                    </div>
+                    <div id="admin-orders-list" class="admin-list">Loading orders...</div>
+                </section>
+
+                <section id="tab-inventory" class="tab-pane admin-section">
+                    <h2>Inventory Management</h2>
+                    <button id="admin-add-product-btn" class="admin-btn"
+                        style="margin-bottom: 1.5rem; background-color: #2ecc71; border-color: #2ecc71;">Add New
+                        Product</button>
+                    <div id="admin-products-list" class="admin-list">Loading products...</div>
+                </section>
+
+                <section id="tab-messages" class="tab-pane admin-section">
+                    <h2>Customer Messages</h2>
+                    <div id="admin-messages-list" class="admin-list">Loading messages...</div>
+                </section>
+
+                <section id="tab-reports" class="tab-pane admin-section">
+                    <h2>Customer Reports & Complaints</h2>
+                    <div id="admin-reports-list" class="admin-list">Loading reports...</div>
+                </section>
+
+                <section id="tab-push" class="tab-pane admin-section">
+                    <h2>Send Push Notification</h2>
+                    <p style="margin-bottom: 2rem; color: #666;">Broadcast a message to all subscribed customers.</p>
+
+                    <div
+                        style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid #eaeaea; margin-bottom: 2rem;">
+                        <h3 style="margin-bottom: 1rem; font-family: var(--font-heading); color: var(--text-charcoal);">
+                            1. Setup Credentials (Secure)</h3>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Paste your Firebase Service
+                            Account JSON here to securely authorize sending. This is only stored locally on this device.
+                        </p>
+                        <textarea id="push-credentials-input" class="admin-search-input" rows="4"
+                            placeholder='{"type": "service_account", "project_id": "dodch-96b15", ...}'
+                            style="font-family: monospace; font-size: 0.8rem;"></textarea>
+                        <button id="save-push-creds-btn" class="admin-btn"
+                            style="margin-top: 10px; background-color: #2c3e50; border-color: #2c3e50;">Save Credentials
+                            to Browser</button>
+                        <span id="push-creds-status"
+                            style="margin-left: 10px; font-size: 0.9rem; font-weight: 500;"></span>
+                    </div>
+
+                    <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid #eaeaea;">
+                        <h3 style="margin-bottom: 1rem; font-family: var(--font-heading); color: var(--text-charcoal);">
+                            2. Compose Message</h3>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Title</label>
+                            <input type="text" id="push-title" class="admin-search-input"
+                                placeholder="e.g., Back in Stock: Face Serum!">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Message Body</label>
+                            <textarea id="push-body" class="admin-search-input" rows="3"
+                                placeholder="Get 20% off today only using code LUMI20..."></textarea>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Target URL
+                                (Optional)</label>
+                            <input type="text" id="push-url" class="admin-search-input"
+                                placeholder="e.g., /face-serum.html">
+                            <span style="font-size: 0.8rem; color: #888;">Where should users be taken when they click
+                                the notification? (Default: Homepage)</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Image URL
+                                (Optional)</label>
+                            <input type="text" id="push-image" class="admin-search-input"
+                                placeholder="https://your-site.com/IMG_3399.webp">
+                        </div>
+                        <button id="send-push-btn" class="admin-btn"
+                            style="background-color: #2ecc71; border-color: #2ecc71; font-size: 1.1rem; padding: 12px 24px; width: 100%;">🚀
+                            Blast Notification</button>
+                    </div>
+                </section>
+
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <div id="add-product-modal" class="confirm-overlay" style="display: none;">
+        <div class="confirm-box admin-modern-modal">
+            <div class="modal-header">
+                <h3 class="confirm-title" id="product-modal-title">Add New Product</h3>
+                <button type="button" id="close-modal-top-btn" class="close-modal-btn">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="add-product-form">
+                    <input type="hidden" id="product-id-input">
+                    
+                    <div class="form-section">
+                        <h4>General Information</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="new-prod-name">Product Name</label>
+                                <input type="text" id="new-prod-name" class="modern-input" placeholder="e.g., Glass Glow Shampoo" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-prod-subtitle">Subtitle</label>
+                                <input type="text" id="new-prod-subtitle" class="modern-input" placeholder="e.g., The Elixir of 10,000 Seeds" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-prod-desc">Description</label>
+                            <textarea id="new-prod-desc" class="modern-input" rows="3" placeholder="Describe the product..." required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-prod-inci">INCI Ingredients (Full List)</label>
+                            <textarea id="new-prod-inci" class="modern-input" rows="3" placeholder="Full ingredients list..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>Media</h4>
+                        <div class="form-group">
+                            <label for="new-prod-image-paths">Product Images</label>
+                            <textarea id="new-prod-image-paths" class="modern-input" rows="4" placeholder="Enter repo-relative image paths, one per line. Example: images/product-1.jpg" required></textarea>
+                            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin-top:0.5rem;">
+                                <button type="button" id="add-image-path-btn" class="modern-btn-outline">Add another image path</button>
+                                <span style="font-size:0.85rem;color:#555;">Use one repo-relative path per line, e.g. <code>images/product-1.jpg</code></span>
+                            </div>
+                            <div id="image-preview-gallery" class="modern-image-preview" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-header-row">
+                            <h4>Sizes & Pricing</h4>
+                            <button type="button" id="add-size-btn" class="admin-btn-sm">+ Add Size</button>
+                        </div>
+                        <div id="new-prod-sizes-container" class="modern-sizes-container">
+                            <!-- Dynamic size inputs will go here -->
+                        </div>
+                    </div>
+
+                    <div class="form-section" id="batch-history-section" style="display: none;">
+                        <h4>Batch History</h4>
+                        <div id="batch-history-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 12px; padding: 1rem; background: #fafafa;">
+                            <!-- Dynamic history list will go here -->
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" id="cancel-product-edit" class="modern-btn-outline">Cancel</button>
+                <button type="submit" form="add-product-form" class="modern-btn-primary">Save Product</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dedicated Batch History Modal -->
+    <div id="batch-history-modal" class="confirm-overlay">
+        <div class="confirm-box admin-modern-modal" style="max-width: 650px; width: 90%;">
+            <div class="modal-header">
+                <h3 class="confirm-title" id="history-modal-title">Batch History</h3>
+                <button type="button" id="close-history-modal-btn" class="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="history-modal-body" style="padding: 1.5rem; max-height: 400px; overflow-y: auto;">
+                <!-- Table will be dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <footer></footer>
+    <div id="cart-overlay"></div>
+    <div id="cart-drawer">
+        <div class="cart-header">
+            <h3>Your Cart</h3><button id="close-cart-btn" class="close-btn">&times;</button>
+        </div>
+        <div class="cart-body" id="cart-items-container"></div>
+        <div class="cart-footer">
+            <div class="subtotal-row"><strong>Subtotal</strong><span id="cart-subtotal">$0.00</span></div><a
+                href="checkout.html" class="cta-button checkout-btn">Proceed to Checkout</a>
+        </div>
+    </div>
+    <!-- Admin Push Script handles jose locally -->
+    <script src="https://unpkg.com/lenis@1.1.2/dist/lenis.min.js"></script>
+    <script type="module" src="script.js?v=6"></script>
+    <script type="module" src="admin-push.js"></script>
+</body>
+
+</html>
