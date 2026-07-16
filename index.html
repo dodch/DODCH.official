@@ -332,11 +332,11 @@
                 pointer-events: none;
             }
             .hero-carousel-container:not(.collapsed) ~ .shop-layout {
-                padding-top: 2rem !important;
+                padding-top: 0.75rem !important;
             }
             @media (min-width: 768px) {
                 .hero-carousel-container:not(.collapsed) ~ .shop-layout {
-                    padding-top: 3rem !important;
+                    padding-top: 1rem !important;
                 }
             }
             
@@ -411,14 +411,14 @@
         </style>
 
         <!-- Scroll Indicator — between hero and products -->
-        <div id="scroll-indicator" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.2rem 0 0.4rem; cursor: pointer; user-select: none;">
+        <div id="scroll-indicator" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.5rem 0 0.2rem; cursor: pointer; user-select: none;">
             <span style="font-family: var(--font-sans); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 3px; color: #aaa; margin-bottom: 0.3rem;">Explore Collection</span>
             <svg id="scroll-arrow-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="animation: scrollBounce 2s ease-in-out infinite;">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
         </div>
 
-        <div id="product-grid-start" class="container shop-layout" style="margin-top: 0.5rem;">
+        <div id="product-grid-start" class="container shop-layout" style="margin-top: 0;">
             <!-- Product Grid -->
             <div class="shop-category-section">
                 <h2 class="shop-category-title">Hair Care</h2>
