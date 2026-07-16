@@ -1483,7 +1483,7 @@ The DODCH Team`;window.location.href=`mailto:${C.shipping.email}?subject=${encod
                 <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Address Label</label>
                 <input type="text" id="acct-label" value="${f.label||""}" placeholder='e.g. "Home", "Work"' style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:0.75rem;margin-bottom:0.75rem;">
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Full Name</label>
                     <input type="text" id="acct-name" value="${f.fullName||""}" placeholder="Nom Complet" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
@@ -1501,7 +1501,7 @@ The DODCH Team`;window.location.href=`mailto:${C.shipping.email}?subject=${encod
                 <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Address</label>
                 <input type="text" id="acct-address" value="${f.address||""}" placeholder="Rue, Appartement, Bureau..." required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:0.75rem;margin-bottom:1.25rem;">
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Governorate</label>
                     <select id="acct-city" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
