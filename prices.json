@@ -2,19 +2,19 @@
   "_comment": "Single source of truth for product prices. Automatically updated by GitHub Actions. Run 'node build.js' after manual changes.",
   "advanced-ha-serum": {
     "sku": "DODCH-HAS-002",
-    "price": "68.00",
+    "price": "43.00",
     "currency": "TND",
     "availability": "out_of_stock"
   },
   "dodchmellow-pro-v": {
     "sku": "DODCH-DMW-005",
-    "price": "35.00",
+    "price": "27.50",
     "currency": "TND",
     "availability": "in_stock"
   },
   "foaming-cleanser": {
     "sku": "DODCH-FOAM-001",
-    "price": "24.00",
+    "price": "23.00",
     "currency": "TND",
     "availability": "out_of_stock"
   },
@@ -26,13 +26,13 @@
   },
   "retinol-night-cream": {
     "sku": "DODCH-RETINOL-NIGHT-CREAM",
-    "price": "79.00",
+    "price": "57.00",
     "currency": "TND",
     "availability": "in_stock"
   },
   "silk-therapy-mask": {
     "sku": "DODCH-STM-004",
-    "price": "39.00",
+    "price": "28.00",
     "currency": "TND",
     "availability": "in_stock"
   },
