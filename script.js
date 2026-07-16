@@ -1,4 +1,4 @@
-﻿// Universal Image WebP Fallback Fix
+// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -9608,6 +9608,49 @@ async function triggerBackInStockNotifications(productId, sizeLabel, productName
 
 async function initPushNotifications() {
     if (window.location.protocol === 'file:') return;
+
+    // Auth listener - runs regardless of push support so shipping info + credits load on mobile
+    const authObj = getAuth(app);
+    onAuthStateChanged(authObj, async (user) => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            syncPushTokenToUser(user);
+        }
+        if (user) {
+            initShippingInfo(user);
+            if (window.location.pathname.includes('my-account.html')) {
+                const q = query(collection(db, "orders"), where("userId", "==", user.uid), where("hasUnseenUpdate", "==", true));
+                const snap = await getDocs(q);
+                snap.forEach(async (orderDoc) => {
+                    await updateDoc(doc(db, "orders", orderDoc.id), { hasUnseenUpdate: false });
+                });
+                document.body.classList.remove('has-notification');
+                const tabBtns = document.querySelectorAll('.account-tab-btn');
+                const tabContents = document.querySelectorAll('.tab-content');
+
+                tabBtns.forEach(btn => {
+                    if (btn.dataset.tabBound) return;
+                    btn.dataset.tabBound = "true";
+
+                    btn.addEventListener('click', () => {
+                        const targetTab = btn.getAttribute('data-tab');
+                        tabBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        tabContents.forEach(content => {
+                            if (content.id === `${targetTab}-tab-content`) {
+                                content.classList.add('active');
+                                if (targetTab === 'shipping') initShippingInfo(user);
+                            } else {
+                                content.classList.remove('active');
+                            }
+                        });
+                    });
+                });
+                setTimeout(() => initUserReviewsHistory(user), 500);
+            }
+        }
+    });
+
+    // Push notification setup - only if the browser supports it
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
 
     try {
@@ -9624,45 +9667,6 @@ async function initPushNotifications() {
         });
 
         const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
-        const authObj = getAuth(app);
-        onAuthStateChanged(authObj, async (user) => {
-            if (Notification.permission === 'granted') {
-                syncPushTokenToUser(user);
-            }
-            if (user) {
-                initShippingInfo(user);
-                if (window.location.pathname.includes('my-account.html')) {
-                    const q = query(collection(db, "orders"), where("userId", "==", user.uid), where("hasUnseenUpdate", "==", true));
-                    const snap = await getDocs(q);
-                    snap.forEach(async (orderDoc) => {
-                        await updateDoc(doc(db, "orders", orderDoc.id), { hasUnseenUpdate: false });
-                    });
-                    document.body.classList.remove('has-notification');
-                    const tabBtns = document.querySelectorAll('.account-tab-btn');
-                    const tabContents = document.querySelectorAll('.tab-content');
-
-                    tabBtns.forEach(btn => {
-                        if (btn.dataset.tabBound) return;
-                        btn.dataset.tabBound = "true";
-
-                        btn.addEventListener('click', () => {
-                            const targetTab = btn.getAttribute('data-tab');
-                            tabBtns.forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
-                            tabContents.forEach(content => {
-                                if (content.id === `${targetTab}-tab-content`) {
-                                    content.classList.add('active');
-                                    if (targetTab === 'shipping') initShippingInfo(user);
-                                } else {
-                                    content.classList.remove('active');
-                                }
-                            });
-                        });
-                    });
-                    setTimeout(() => initUserReviewsHistory(user), 500);
-                }
-            }
-        });
         const showBell = () => {
             if (document.getElementById('push-bell-container')) return;
             const bell = document.createElement('div');
@@ -10417,3 +10421,15 @@ window.addEventListener('load', initPushNotifications);
 })();
 
 // import "./admin-edit.js"; // Conflict resolved: logic centralized in Inventory Dashboard
+
+// Scroll performance optimization
+let scrollTimeout;
+window.addEventListener('scroll', function() {
+    if (!document.body.classList.contains('is-scrolling')) {
+        document.body.classList.add('is-scrolling');
+    }
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(function() {
+        document.body.classList.remove('is-scrolling');
+    }, 150);
+}, { passive: true });

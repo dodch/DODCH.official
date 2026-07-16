@@ -207,6 +207,7 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    contain: layout; /* Isolates internal reflows (like letter-spacing) from the rest of the page */
 }
 
 /* Feature Cards Hover - Refined */
@@ -279,6 +280,7 @@
     animation: cardFadeZoom 0.9s cubic-bezier(0.215, 0.61, 0.355, 1) backwards;
     animation-delay: var(--anim-delay, 0s);
     opacity: 1;
+    transform: translateZ(0);
 }
 
 /* Sequential text animation within cards - Improved Stacking */
@@ -295,14 +297,14 @@
 @keyframes textStackRevealPremium {
     0% {
         opacity: 0;
-        transform: translateY(25px);
+        transform: translateY(25px) translateZ(0);
         filter: blur(8px);
         letter-spacing: 2px;
     }
 
     100% {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) translateZ(0);
         filter: blur(0);
         letter-spacing: normal;
     }
@@ -310,6 +312,8 @@
 
 .feature-card.reveal {
     opacity: 0;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
 }
 
 /* Comparison Slider */
