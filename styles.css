@@ -6725,9 +6725,30 @@ body.has-notification #login-btn::after {
     font-size: 0.95rem;
     line-height: 1.6;
     color: var(--text-charcoal);
+}
+
+.product-notice-text-wrap {
+    display: block;
+    max-height: 5.2em;
+    overflow: hidden;
     white-space: pre-wrap;
     overflow-wrap: break-word;
     word-break: break-word;
+    transition: max-height 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    margin-bottom: 0.25rem;
+}
+.product-notice-text-wrap.expanded {
+    max-height: 200em;
+}
+.notice-text-inner {
+    display: block;
+}
+.notice-text-inner.notice-animate-in {
+    animation: noticeLineIn 0.45s ease both;
+}
+@keyframes noticeLineIn {
+    from { opacity: 0; transform: translateY(7px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .product-notice-title {

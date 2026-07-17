@@ -2549,15 +2549,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 const titleHtml = `<div class="product-notice-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Important Notice</div>`;
                 
                 if (product.notice.length > MAX_NOTICE_LENGTH) {
-                    const truncated = product.notice.substring(0, MAX_NOTICE_LENGTH).trim() + '...';
-                    noticeContainer.innerHTML = `${titleHtml}<span class="notice-content-text">${truncated}</span> <button class="read-more-notice-btn" style="background:none; border:none; color:var(--accent-gold-text); font-weight:600; cursor:pointer; font-family:inherit; font-size:0.85rem; text-decoration:underline; padding:0; display:inline;">Read More</button>`;
+                    noticeContainer.innerHTML = `${titleHtml}<div class="product-notice-text-wrap"><span>${product.notice}</span></div><button class="read-more-notice-btn" style="background:none;border:none;color:var(--accent-gold-text);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.85rem;text-decoration:underline;padding:0;display:block;margin-top:8px;">Read More</button>`;
                     
-                    noticeContainer.querySelector('.read-more-notice-btn').onclick = (e) => {
-                        noticeContainer.querySelector('.notice-content-text').textContent = product.notice;
-                        e.target.remove();
+                    const btn = noticeContainer.querySelector('.read-more-notice-btn');
+                    const wrap = noticeContainer.querySelector('.product-notice-text-wrap');
+                    btn.onclick = () => {
+                        const isExpanded = wrap.classList.toggle('expanded');
+                        btn.textContent = isExpanded ? 'Read Less' : 'Read More';
+
+                        if (isExpanded) {
+                            // Retrigger span fade-in animation
+                            const inner = wrap.querySelector('span');
+                            if (inner) {
+                                inner.style.animation = 'none';
+                                void inner.offsetWidth;
+                                inner.style.animation = '';
+                            }
+                            // Scroll notice into view as it starts opening
+                            setTimeout(() => {
+                                noticeContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }, 60);
+                        } else {
+                            // After collapse finishes (500ms CSS duration), scroll notice centered
+                            setTimeout(() => {
+                                noticeContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 520);
+                        }
                     };
                 } else {
-                    noticeContainer.innerHTML = `${titleHtml}${product.notice}`;
+                    noticeContainer.innerHTML = `${titleHtml}<span>${product.notice}</span>`;
                 }
                 noticeContainer.style.display = 'block';
             }
