@@ -10,13 +10,11 @@
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <meta name="view-transition" content="same-origin">
 
-    <!-- Page load overlay: covers broken paint, fades out once DOM ready -->
+    <!-- Page load overlay -->
     <style>
         #page-loader {
             position: fixed; inset: 0; background: #fff;
@@ -32,6 +30,414 @@
         }
         #page-loader.fade-out { opacity: 0; }
         #page-loader.fade-out .loader-logo { opacity: 0; transform: scale(0.95); }
+
+        /* ── Modern Checkout UI ── */
+        :root {
+            --co-bg: #f7f7f5;
+            --co-card: #ffffff;
+            --co-border: rgba(0,0,0,0.07);
+            --co-gold: #C5A059;
+            --co-gold-text: #a8863a;
+            --co-charcoal: #1a1a1a;
+            --co-muted: #888;
+            --co-radius: 20px;
+            --co-radius-sm: 12px;
+            --co-radius-pill: 9999px;
+        }
+
+        body {
+            background: var(--co-bg);
+        }
+
+        /* Checkout layout */
+        .co-page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 24px 60px;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .co-page {
+                grid-template-columns: 1fr;
+                padding: 90px 16px 80px;
+                gap: 24px;
+            }
+        }
+
+        /* ── Left: Form Panel ── */
+        .co-form-panel {
+            background: var(--co-card);
+            border-radius: var(--co-radius);
+            padding: 40px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+            border: 1px solid var(--co-border);
+        }
+
+        @media (max-width: 500px) {
+            .co-form-panel { padding: 24px 20px; }
+        }
+
+        .co-section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--co-gold-text);
+            font-family: var(--font-sans);
+            margin-bottom: 6px;
+        }
+
+        .co-section-title {
+            font-family: var(--font-serif);
+            font-size: 1.8rem;
+            color: var(--co-charcoal);
+            margin-bottom: 32px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        /* Shipping profiles */
+        #shipping-profiles-panel {
+            margin-bottom: 24px;
+            display: none;
+        }
+
+        /* Form fields */
+        .co-field {
+            margin-bottom: 20px;
+        }
+
+        .co-field label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--co-charcoal);
+            margin-bottom: 8px;
+            font-family: var(--font-sans);
+        }
+
+        .co-field input,
+        .co-field select {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1.5px solid var(--co-border);
+            border-radius: var(--co-radius-sm);
+            font-family: var(--font-sans);
+            font-size: 0.95rem;
+            color: var(--co-charcoal);
+            background: #fafafa;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+            outline: none;
+            box-sizing: border-box;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .co-field input:focus,
+        .co-field select:focus {
+            border-color: var(--co-gold);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(197,160,89,0.12);
+        }
+
+        .co-field input::placeholder {
+            color: #bbb;
+            font-size: 0.9rem;
+        }
+
+        .co-field .co-hint {
+            margin-top: 6px;
+            font-size: 0.75rem;
+            color: var(--co-muted);
+        }
+
+        /* Select arrow */
+        .co-field-select-wrap {
+            position: relative;
+        }
+        .co-field-select-wrap::after {
+            content: '';
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 6px solid var(--co-muted);
+            pointer-events: none;
+        }
+
+        .co-field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 480px) {
+            .co-field-row { grid-template-columns: 1fr; gap: 0; }
+        }
+
+        /* Save profile checkbox */
+        .co-checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .co-checkbox-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--co-gold);
+            cursor: pointer;
+            flex-shrink: 0;
+            border-radius: 4px;
+        }
+        .co-checkbox-row label {
+            font-size: 0.85rem;
+            color: var(--co-muted);
+            cursor: pointer;
+            font-family: var(--font-sans);
+        }
+
+        /* ── Right: Order Summary Panel ── */
+        .co-summary-panel {
+            background: var(--co-card);
+            border-radius: var(--co-radius);
+            padding: 36px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+            border: 1px solid var(--co-border);
+            position: sticky;
+            top: 90px;
+        }
+
+        @media (max-width: 900px) {
+            .co-summary-panel {
+                position: static;
+                /* Summary appears AFTER form on mobile */
+                order: 2;
+            }
+            .co-form-panel {
+                order: 1;
+            }
+        }
+        @media (max-width: 500px) {
+            .co-summary-panel { padding: 24px 20px; }
+        }
+
+        .co-summary-title {
+            font-family: var(--font-serif);
+            font-size: 1.4rem;
+            color: var(--co-charcoal);
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        /* Scrollable items area */
+        .co-items-scroll {
+            max-height: 280px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--co-gold) transparent;
+            margin-bottom: 8px;
+            padding-right: 4px;
+        }
+        .co-items-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .co-items-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .co-items-scroll::-webkit-scrollbar-thumb {
+            background: var(--co-gold);
+            border-radius: 10px;
+        }
+
+        /* Item row */
+        .co-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--co-border);
+        }
+        .co-item:last-child { border-bottom: none; }
+
+        .co-item-img {
+            width: 56px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 10px;
+            background: #f0f0f0;
+            flex-shrink: 0;
+        }
+
+        /* Override any global summary-item styles inside co-item */
+        .co-item.summary-item { display: flex; align-items: center; }
+        .co-item .summary-item-info { text-align: left !important; justify-content: flex-start !important; align-items: flex-start !important; }
+
+        .co-item-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+            text-align: left;
+            align-items: flex-start;
+        }
+        .co-item-name {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--co-charcoal);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: var(--font-sans);
+            line-height: 1.3;
+        }
+        .co-item-meta {
+            font-size: 0.76rem;
+            color: var(--co-muted);
+            line-height: 1.3;
+        }
+        .co-item-remove {
+            font-size: 0.72rem;
+            color: #e74c3c;
+            background: none;
+            border: none;
+            padding: 0;
+            text-decoration: underline;
+            cursor: pointer;
+            font-family: inherit;
+            text-align: left;
+        }
+
+        .co-item-price {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--co-charcoal);
+            font-family: var(--font-sans);
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        /* Divider */
+        .co-divider {
+            height: 1px;
+            background: var(--co-border);
+            margin: 20px 0;
+        }
+
+        /* Totals */
+        .co-totals { display: flex; flex-direction: column; gap: 10px; }
+
+        .co-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            font-family: var(--font-sans);
+            color: var(--co-charcoal);
+        }
+        .co-total-row .co-label { color: var(--co-muted); }
+
+        .co-total-row.is-total {
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding-top: 12px;
+            border-top: 2px solid var(--co-border);
+            margin-top: 4px;
+        }
+        .co-total-row.is-total .co-amount {
+            color: var(--co-gold-text);
+        }
+
+        /* Rewards row */
+        .co-rewards-row {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            background: rgba(197,160,89,0.06);
+            border: 1px dashed rgba(197,160,89,0.3);
+            border-radius: var(--co-radius-sm);
+            gap: 12px;
+        }
+        .co-rewards-row.visible { display: flex; }
+        .co-rewards-row .co-rewards-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--co-gold-text);
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .co-rewards-row .co-rewards-label input[type="checkbox"] {
+            accent-color: var(--co-gold);
+            width: 16px; height: 16px;
+        }
+        .co-rewards-discount {
+            color: #e74c3c;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* CTA Button */
+        .co-place-btn {
+            width: 100%;
+            padding: 18px 24px;
+            background: var(--co-charcoal);
+            color: #fff;
+            border: none;
+            border-radius: var(--co-radius-pill);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        .co-place-btn:hover {
+            background: var(--co-gold);
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px rgba(197,160,89,0.35);
+        }
+        .co-place-btn:active { transform: translateY(0); }
+
+        .co-trust-badges {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .co-trust-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.72rem;
+            color: var(--co-muted);
+            font-family: var(--font-sans);
+        }
+        .co-trust-badge svg {
+            width: 14px;
+            height: 14px;
+            color: var(--co-gold);
+        }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -39,18 +445,17 @@
             if (loader) requestAnimationFrame(() => loader.classList.add('fade-out'));
         });
     </script>
-
 </head>
 
 <body>
     <div id="page-loader"><span class="loader-logo">DODCH</span></div>
+
     <!-- Desktop Sidebar -->
     <aside id="desktop-sidebar">
         <button class="sidebar-close-btn">&times;</button>
         <div class="sidebar-header">
             <div class="profile-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                    stroke-linejoin="round" style="width: 30px; height: 30px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                 </svg>
@@ -60,7 +465,7 @@
         </div>
         <nav class="sidebar-menu">
             <a href="index.html">Shop</a>
-            <a href="#contact">Contact</a>
+            <a href="index.html#contact">Contact</a>
         </nav>
         <div class="sidebar-bottom">
             <button id="sidebar-logout-btn" style="display: none;">Logout</button>
@@ -70,10 +475,8 @@
 
     <div id="scroll-progress"></div>
 
-
-
     <!-- Navigation -->
-    <nav id="navbar" class="scrolled">
+    <nav id="navbar" class="scrolled text-dark">
         <div class="nav-container">
             <div class="hamburger">
                 <span style="background-color: var(--text-charcoal);"></span>
@@ -82,139 +485,153 @@
             </div>
             <ul class="nav-links">
                 <li><a href="index.html" style="color: var(--text-charcoal);">Shop</a></li>
-
-                <li><a href="#contact" style="color: var(--text-charcoal);">Contact</a></li>
+                <li><a href="index.html#contact" style="color: var(--text-charcoal);">Contact</a></li>
                 <li><a href="#" id="login-btn" style="color: var(--text-charcoal);">
-                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg><span class="login-text">Login</span>
-                    </a></li>
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg><span class="login-text">Login</span>
+                </a></li>
                 <li class="nav-search-item">
                     <div class="search-container">
                         <input type="text" id="navbar-search-input" class="search-input" placeholder="Search...">
-                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                            </svg></button>
+                        <button id="search-toggle-btn" aria-label="Search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg></button>
                     </div>
                 </li>
                 <li><a href="#" id="cart-toggle" style="color: var(--text-charcoal);">
-                        <svg class="nav-icon" viewBox="0 0 24 24">
-                            <circle cx="9" cy="21" r="1"></circle>
-                            <circle cx="20" cy="21" r="1"></circle>
-                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                        </svg>
-                        <span id="cart-count-badge">0</span>
-                    </a></li>
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    <span id="cart-count-badge">0</span>
+                </a></li>
             </ul>
             <a href="index.html" class="logo">DODCH</a>
         </div>
     </nav>
 
     <main>
-        <div class="checkout-container">
-            <!-- Left Column: Shipping Info -->
-            <div class="checkout-form reveal">
-                <h2>Shipping Information</h2>
-                
-                <!-- Shipping Profiles Panel (populated by JS for logged-in users) -->
-                <div id="shipping-profiles-panel" style="display:none; margin-bottom: 1.5rem;"></div>
-                
+        <div class="co-page">
+
+            <!-- Left: Shipping Form -->
+            <div class="co-form-panel reveal">
+                <p class="co-section-label">Step 1</p>
+                <h2 class="co-section-title">Shipping Details</h2>
+
+                <!-- Saved profiles panel (JS populated) -->
+                <div id="shipping-profiles-panel"></div>
+
                 <form id="checkout-shipping-form">
-                    <div class="form-group">
-                        <label>Email Address</label>
+                    <div class="co-field">
+                        <label for="checkout-email">Email Address</label>
                         <input type="email" id="checkout-email" placeholder="nom@exemple.tn" required>
                     </div>
-                    <div class="form-group">
-                        <label>Full Name</label>
+
+                    <div class="co-field">
+                        <label for="checkout-name">Full Name</label>
                         <input type="text" id="checkout-name" placeholder="Nom Complet" required>
                     </div>
-                    <div class="form-group">
-                        <label>Phone Number (Tunisia)</label>
+
+                    <div class="co-field">
+                        <label for="checkout-phone">Phone Number</label>
                         <input type="tel" id="checkout-phone" placeholder="8 digits (e.g. 21654321)" required pattern="[24579][0-9]{7}">
-                        <small style="opacity: 0.6; font-size: 0.8rem;">Must be 8 digits starting with 2, 4, 5, 7, or 9.</small>
+                        <span class="co-hint">Must be 8 digits starting with 2, 4, 5, 7, or 9.</span>
                     </div>
-                    <div class="form-group">
-                        <label>Address</label>
+
+                    <div class="co-field">
+                        <label for="checkout-address">Street Address</label>
                         <input type="text" id="checkout-address" placeholder="Rue, Appartement, Bureau..." required>
                     </div>
-                    <div class="form-group">
-                        <label>Governorate (Gouvernorat)</label>
-                        <select id="checkout-city" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: #fff; font-family: inherit;">
-                            <option value="" disabled selected>Select your region</option>
-                            <option value="Ariana">Ariana</option>
-                            <option value="Béja">Béja</option>
-                            <option value="Ben Arous">Ben Arous</option>
-                            <option value="Bizerte">Bizerte</option>
-                            <option value="Gabès">Gabès</option>
-                            <option value="Gafsa">Gafsa</option>
-                            <option value="Jendouba">Jendouba</option>
-                            <option value="Kairouan">Kairouan</option>
-                            <option value="Kasserine">Kasserine</option>
-                            <option value="Kebili">Kébili</option>
-                            <option value="Kef">Le Kef</option>
-                            <option value="Mahdia">Mahdia</option>
-                            <option value="Manouba">Manouba</option>
-                            <option value="Medenine">Médenine</option>
-                            <option value="Monastir">Monastir</option>
-                            <option value="Nabeul">Nabeul</option>
-                            <option value="Sfax">Sfax</option>
-                            <option value="Sidi Bouzid">Sidi Bouzid</option>
-                            <option value="Siliana">Siliana</option>
-                            <option value="Sousse">Sousse</option>
-                            <option value="Tataouine">Tataouine</option>
-                            <option value="Tozeur">Tozeur</option>
-                            <option value="Tunis">Tunis</option>
-                            <option value="Zaghouan">Zaghouan</option>
-                        </select>
+
+                    <div class="co-field-row">
+                        <div class="co-field">
+                            <label for="checkout-city">Governorate</label>
+                            <div class="co-field-select-wrap">
+                                <select id="checkout-city" required>
+                                    <option value="" disabled selected>Select region</option>
+                                    <option value="Ariana">Ariana</option>
+                                    <option value="Béja">Béja</option>
+                                    <option value="Ben Arous">Ben Arous</option>
+                                    <option value="Bizerte">Bizerte</option>
+                                    <option value="Gabès">Gabès</option>
+                                    <option value="Gafsa">Gafsa</option>
+                                    <option value="Jendouba">Jendouba</option>
+                                    <option value="Kairouan">Kairouan</option>
+                                    <option value="Kasserine">Kasserine</option>
+                                    <option value="Kebili">Kébili</option>
+                                    <option value="Kef">Le Kef</option>
+                                    <option value="Mahdia">Mahdia</option>
+                                    <option value="Manouba">Manouba</option>
+                                    <option value="Medenine">Médenine</option>
+                                    <option value="Monastir">Monastir</option>
+                                    <option value="Nabeul">Nabeul</option>
+                                    <option value="Sfax">Sfax</option>
+                                    <option value="Sidi Bouzid">Sidi Bouzid</option>
+                                    <option value="Siliana">Siliana</option>
+                                    <option value="Sousse">Sousse</option>
+                                    <option value="Tataouine">Tataouine</option>
+                                    <option value="Tozeur">Tozeur</option>
+                                    <option value="Tunis">Tunis</option>
+                                    <option value="Zaghouan">Zaghouan</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="co-field">
+                            <label for="checkout-postal-code">Postal Code</label>
+                            <input type="text" id="checkout-postal-code" placeholder="e.g. 1000" required>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Postal Code</label>
-                        <input type="text" id="checkout-postal-code" placeholder="Code Postal (e.g. 1000)" required>
-                    </div>
-                    
-                    <div class="form-group checkbox-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;" id="save-profile-row">
-                        <input type="checkbox" id="save-shipping-info" style="width: auto;" checked>
-                        <label for="save-shipping-info" style="margin-bottom: 0;">Save as a shipping profile</label>
+
+                    <div class="co-checkbox-row" id="save-profile-row">
+                        <input type="checkbox" id="save-shipping-info" checked>
+                        <label for="save-shipping-info">Save as a shipping profile</label>
                     </div>
                 </form>
             </div>
 
-            <!-- Right Column: Order Summary -->
-            <div class="order-summary reveal">
-                <h2>Order Summary</h2>
-                <div id="checkout-items-container">
+            <!-- Right: Order Summary -->
+            <div class="co-summary-panel reveal">
+                <h2 class="co-summary-title">Order Summary</h2>
+
+                <!-- Scrollable items list -->
+                <div class="co-items-scroll" id="checkout-items-container">
                     <!-- Items injected via JS -->
                 </div>
 
-                <div class="summary-totals">
-                    <div class="summary-row">
-                        <span>Subtotal</span>
-                        <span id="checkout-subtotal">0.00 TND</span>
+                <div class="co-divider"></div>
+
+                <div class="co-totals">
+                    <div class="co-total-row">
+                        <span class="co-label">Subtotal</span>
+                        <span class="co-amount" id="checkout-subtotal">0.00 TND</span>
                     </div>
-                    <div class="summary-row">
-                        <span>Shipping</span>
-                        <span id="checkout-shipping">7.00 TND</span>
+                    <div class="co-total-row">
+                        <span class="co-label">Shipping</span>
+                        <span class="co-amount" id="checkout-shipping">7.00 TND</span>
                     </div>
-                    <div class="summary-row" id="checkout-rewards-row" style="display: none; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" id="use-rewards-checkbox" style="width: auto; margin: 0; accent-color: var(--accent-gold);">
-                            <label for="use-rewards-checkbox" style="margin: 0; font-size: 0.9rem; font-weight: 500; cursor: pointer; color: var(--accent-gold-text);">Use Rewards (<span id="available-rewards-display">0</span> TND)</label>
-                        </div>
-                        <span id="checkout-rewards-discount" style="color: #e74c3c; font-weight: 600;">-0.00 TND</span>
+
+                    <!-- Rewards row (shown by JS) -->
+                    <div class="co-rewards-row" id="checkout-rewards-row">
+                        <label class="co-rewards-label" for="use-rewards-checkbox">
+                            <input type="checkbox" id="use-rewards-checkbox">
+                            Use Rewards (<span id="available-rewards-display">0</span> TND)
+                        </label>
+                        <span class="co-rewards-discount" id="checkout-rewards-discount">-0.00 TND</span>
                     </div>
-                    <div class="summary-row total">
+
+                    <div class="co-total-row is-total">
                         <span>Total</span>
-                        <span id="checkout-total">0.00 TND</span>
+                        <span class="co-amount" id="checkout-total">0.00 TND</span>
                     </div>
                 </div>
 
-                <button class="place-order-btn" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;" aria-label="Confirm and place your order">
-                    <svg class="truck-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                <button class="co-place-btn place-order-btn" aria-label="Confirm and place your order">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
                         <rect x="1" y="3" width="15" height="13"></rect>
                         <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
                         <circle cx="5.5" cy="18.5" r="2.5"></circle>
@@ -222,13 +639,28 @@
                     </svg>
                     Place Order
                 </button>
+
+                <div class="co-trust-badges">
+                    <span class="co-trust-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Secure Checkout
+                    </span>
+                    <span class="co-trust-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Fast Delivery
+                    </span>
+                    <span class="co-trust-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                        Guaranteed
+                    </span>
+                </div>
             </div>
         </div>
     </main>
 
     <footer></footer>
 
-    <!-- Cart Drawer (Hidden but functional for consistency) -->
+    <!-- Cart Drawer (functional for consistency) -->
     <div id="cart-overlay"></div>
     <div id="cart-drawer">
         <div class="cart-header">
@@ -246,4 +678,3 @@
 </body>
 
 </html>
-

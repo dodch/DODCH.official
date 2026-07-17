@@ -1716,7 +1716,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h4 class="cart-item-title">${item.name}</h4>
                 <p class="cart-item-details">Size: ${item.size}</p>
                 <div class="cart-item-quantity">
-                    <button class="qty-btn minus" type="button" data-index="${index}" aria-label="Decrease quantity">-</button>
+                    <button class="qty-btn minus" type="button" data-index="${index}" aria-label="Decrease quantity" ${item.quantity <= 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed; pointer-events: none;"' : ''}>-</button>
                     <span class="qty-display" data-index="${index}" data-editable="true" title="Click to edit">${item.quantity}</span>
                     <button class="qty-btn plus" type="button" data-index="${index}" aria-label="Increase quantity">+</button>
                 </div>
@@ -1771,6 +1771,21 @@ document.addEventListener('DOMContentLoaded', () => {
             animateQtyChange(displayEl);
         }
 
+        const minusBtn = cartItemsContainer.querySelector(`.cart-item[data-index="${index}"] .qty-btn.minus`);
+        if (minusBtn) {
+            if (item.quantity <= 1) {
+                minusBtn.disabled = true;
+                minusBtn.style.opacity = "0.4";
+                minusBtn.style.cursor = "not-allowed";
+                minusBtn.style.pointerEvents = "none";
+            } else {
+                minusBtn.disabled = false;
+                minusBtn.style.opacity = "";
+                minusBtn.style.cursor = "";
+                minusBtn.style.pointerEvents = "";
+            }
+        }
+
         updateCartTotals();
         saveCart();
     };
@@ -1808,6 +1823,22 @@ document.addEventListener('DOMContentLoaded', () => {
             newSpan.addEventListener('click', handleQtyDisplayEdit);
             
             input.replaceWith(newSpan);
+
+            const minusBtn = cartItemsContainer.querySelector(`.cart-item[data-index="${index}"] .qty-btn.minus`);
+            if (minusBtn) {
+                if (qty <= 1) {
+                    minusBtn.disabled = true;
+                    minusBtn.style.opacity = "0.4";
+                    minusBtn.style.cursor = "not-allowed";
+                    minusBtn.style.pointerEvents = "none";
+                } else {
+                    minusBtn.disabled = false;
+                    minusBtn.style.opacity = "";
+                    minusBtn.style.cursor = "";
+                    minusBtn.style.pointerEvents = "";
+                }
+            }
+
             updateCartTotals();
             saveCart();
         };
@@ -2017,17 +2048,15 @@ document.addEventListener('DOMContentLoaded', () => {
             subtotal += itemTotal;
 
             const el = document.createElement('div');
-            el.classList.add('summary-item');
+            el.classList.add('summary-item', 'co-item');
             el.innerHTML = `
-                <div class="summary-item-info">
-                    <img src="${item.image}" alt="${item.name}">
-                    <div>
-                        <h4>${item.name}</h4>
-                        <p>Size: ${item.size} | Qty: ${item.quantity}</p>
-                        <button class="checkout-remove-btn" data-index="${index}" style="color: #ff4d4d; background: none; border: none; padding: 0; font-size: 0.8rem; text-decoration: underline; cursor: pointer; margin-top: 5px;">Remove</button>
-                    </div>
+                <img class="co-item-img" src="${item.image}" alt="${item.name}" onerror="this.style.background='#f0f0f0'">
+                <div class="co-item-info summary-item-info">
+                    <div class="co-item-name">${item.name}</div>
+                    <div class="co-item-meta">Size: ${item.size} · Qty: ${item.quantity}</div>
+                    <button class="checkout-remove-btn co-item-remove" data-index="${index}">Remove</button>
                 </div>
-                <div class="summary-item-price">${itemTotal.toFixed(2)} TND</div>
+                <div class="co-item-price summary-item-price">${itemTotal.toFixed(2)} TND</div>
             `;
             checkoutItemsContainer.appendChild(el);
         });
@@ -2202,8 +2231,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sizeBtns.length > 0) {
         sizeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                window.triggerHaptic('light');
                 const clickedBtn = e.currentTarget;
+                if (clickedBtn.classList.contains('active')) return;
+                window.triggerHaptic('light');
                 const container = findProductContainer(clickedBtn);
                 if (container) {
                     const containerBtns = container.querySelectorAll('.size-btn');
@@ -2417,17 +2447,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const productInfo = document.querySelector('.product-info');
         const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
 
+        const updateWithFade = (el, newHtmlOrText, isHtml = false) => {
+            if (!el) return;
+            const hasShimmer = el.querySelector('.price-shimmer');
+            if (isHtml) {
+                el.innerHTML = newHtmlOrText;
+            } else {
+                el.textContent = newHtmlOrText;
+            }
+            if (hasShimmer) {
+                el.classList.remove('fade-in-load');
+                void el.offsetWidth; // Force reflow
+                el.classList.add('fade-in-load');
+            }
+        };
+
         if (titleEl) {
             if (activeId) titleEl.style.viewTransitionName = `prod-title-${activeId}`;
             if (firestoreSynced) {
-                titleEl.textContent = product.name;
+                updateWithFade(titleEl, product.name);
             } else {
                 titleEl.innerHTML = `<span class="price-shimmer" style="width: 250px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>`;
             }
         }
         if (subtitleEl) {
             if (firestoreSynced) {
-                subtitleEl.textContent = product.subtitle;
+                updateWithFade(subtitleEl, product.subtitle);
             } else {
                 subtitleEl.innerHTML = `<span class="price-shimmer" style="width: 180px; height: 1.2em; display: inline-block; border-radius: 6px;"></span>`;
             }
@@ -2440,11 +2485,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
 
             const priceVal = product.price ? `${product.price} TND` : '';
-            if (isActuallyOOS) {
-                priceEl.innerHTML = `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span> <span style="opacity: 0.7;">${priceVal}</span>`;
-            } else if (product.price) {
-                priceEl.textContent = priceVal;
-                priceEl.style.color = "";
+            if (firestoreSynced) {
+                if (isActuallyOOS) {
+                    updateWithFade(priceEl, `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span> <span style="opacity: 0.7;">${priceVal}</span>`, true);
+                } else if (product.price) {
+                    updateWithFade(priceEl, priceVal);
+                    priceEl.style.color = "";
+                }
             } else {
                 // No price yet — Firestore hasn't synced. Show shimmer.
                 priceEl.innerHTML = `<span class="price-shimmer" style="width: 110px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>`;
@@ -2461,12 +2508,17 @@ document.addEventListener('DOMContentLoaded', () => {
             batchEl.id = 'product-batch-display';
             batchEl.style.cssText = 'font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem; font-family: var(--font-sans);';
             batchEl.textContent = `Batch: ${defaultSize.batchNumber}`;
-            if (subtitleEl) subtitleEl.after(batchEl);
+            if (subtitleEl) {
+                subtitleEl.after(batchEl);
+                if (titleEl && titleEl.classList.contains('fade-in-load')) {
+                    batchEl.classList.add('fade-in-load');
+                }
+            }
         }
 
         if (descEl) {
             if (firestoreSynced) {
-                descEl.textContent = product.description;
+                updateWithFade(descEl, product.description);
             } else {
                 descEl.innerHTML = `
                     <span class="price-shimmer" style="width: 100%; height: 1.2em; display: inline-block; border-radius: 4px; margin-bottom: 6px;"></span>
@@ -2516,25 +2568,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const productImages = getProductImages(product);
         const primaryImage = productImages[0] || '';
         if (imgEl) {
+            const isPlaceholder = imgEl.src.includes('placeholder-glow.webp') || imgEl.getAttribute('src') === 'placeholder-glow.webp';
             if (activeId) imgEl.style.viewTransitionName = `prod-img-${activeId}`;
             imgEl.src = primaryImage;
             if (product.style) imgEl.style = product.style;
+
+            if (isPlaceholder && firestoreSynced) {
+                imgEl.classList.remove('fade-in-load');
+                void imgEl.offsetWidth; // Force reflow
+                imgEl.classList.add('fade-in-load');
+            }
 
             // Inject Product Page Tinted Shadow
             const windowEl = imgEl.closest('.product-image-window');
             if (windowEl) {
                 let tintedShadow = windowEl.parentElement.querySelector('.product-page-tinted-shadow');
+                const isNewShadow = !tintedShadow;
                 if (!tintedShadow) {
                     tintedShadow = document.createElement('div');
                     tintedShadow.className = 'tinted-shadow product-page-tinted-shadow';
                     windowEl.before(tintedShadow);
                 }
                 tintedShadow.style.backgroundImage = `url('${primaryImage}')`;
+                if (isNewShadow && firestoreSynced) {
+                    tintedShadow.classList.add('fade-in-load');
+                }
             }
         }
 
         const thumbnailsContainer = document.getElementById('product-thumbnails');
         if (thumbnailsContainer) {
+            const thumbsWereEmpty = !thumbnailsContainer.querySelector('button');
             thumbnailsContainer.innerHTML = '';
             productImages.forEach((imageSrc, index) => {
                 const thumb = document.createElement('button');
@@ -2562,6 +2626,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 thumbnailsContainer.appendChild(thumb);
             });
+            if (thumbsWereEmpty && firestoreSynced) thumbnailsContainer.classList.add('fade-in-load');
 
             const switchProductImage = () => {
                 const activeBtn = thumbnailsContainer.querySelector('.product-thumbnail-btn.active');
@@ -2600,13 +2665,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const sizeOptionsContainer = document.querySelector('.size-options');
         const sizeSelector = document.querySelector('.size-selector');
+        const isFirstSizeSync = firestoreSynced && sizeOptionsContainer && !sizeOptionsContainer.dataset.synced;
 
         if (sizeOptionsContainer && product.sizes) {
+            if (isFirstSizeSync) sizeOptionsContainer.dataset.synced = '1';
             sizeOptionsContainer.innerHTML = '';
 
             if (product.sizes && product.sizes.length > 0) {
                 // Firestore data is loaded — render real size buttons
                 if (sizeSelector) sizeSelector.style.display = 'block';
+                if (isFirstSizeSync && sizeSelector) sizeSelector.classList.add('fade-in-load');
 
                 const sortedSizes = product.sizes.map((s, i) => ({ ...s, i })).sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
                 const firstInStock = sortedSizes.find(s => !s.outOfStock);
@@ -2666,6 +2734,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
 
                                 atcBtn.before(notifyBtn);
+                                if (isFirstSizeSync) notifyBtn.classList.add('fade-in-load');
                                 
                                 notifyBtn.addEventListener('click', async () => {
                                     if (notifyBtn.disabled) return;
@@ -2681,6 +2750,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
                                 try { localStorage.removeItem(getNotifyStorageKey(productId, sizeObj.label)); } catch(e) {}
                                 atcBtn.style.display = 'block';
+                                if (isFirstSizeSync) atcBtn.classList.add('fade-in-load');
                                 const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
                                 atcBtn.disabled = false;
                                 atcBtn.innerHTML = cartIcon + "Add to Cart";
@@ -2691,6 +2761,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     btn.addEventListener('click', () => {
+                        if (btn.classList.contains('active')) return;
                         window.triggerHaptic('light');
                         sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
@@ -2847,7 +2918,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 storyBtn.className = 'qv-view-details-btn';
                 storyBtn.style.marginBottom = '1rem';
                 storyBtn.style.display = 'block'; // Ensure it takes full width if qv-view-details-btn uses inline-block
-                storyBtn.textContent = 'View Full Details';
+                storyBtn.textContent = 'View Story Page';
                 storyBtn.href = product.storyUrl;
                 addToCartBtn.after(storyBtn);
             }
@@ -3436,7 +3507,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartUI(); // Initial call to set empty state
     updateCheckoutUI(); // Initial call for checkout page
     const placeOrderBtn = document.querySelector('.place-order-btn');
-    const checkoutForm = document.querySelector('.checkout-form form');
+    const checkoutForm = document.querySelector('.checkout-form form, .co-form-panel form, #checkout-shipping-form');
 
     if (placeOrderBtn && checkoutForm) {
         placeOrderBtn.addEventListener('click', async (e) => {
@@ -3579,7 +3650,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     };
 
-                    const checkoutContainer = document.querySelector('.checkout-container');
+                    const checkoutContainer = document.querySelector('.checkout-container, .co-page');
                     if (checkoutContainer) {
                         checkoutContainer.insertBefore(panel, checkoutContainer.firstChild);
                         panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -3742,7 +3813,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         localStorage.setItem('dodch_cart', JSON.stringify(cart));
                         updateCartUI();
 
-                        const checkoutContainer = document.querySelector('.checkout-container');
+                        const checkoutContainer = document.querySelector('.checkout-container, .co-page');
 
                         if (checkoutContainer) {
                             let guestMessage = '';
@@ -6796,7 +6867,7 @@ The DODCH Team`;
                         <p id="qv-desc" class="qv-product-desc"></p>
                         
                         <div class="qv-button-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem;">
-                            <a id="qv-learn-more" href="#" class="qv-view-details-btn" style="flex: 1; margin: 0;">View Full Details</a>
+                            <a id="qv-learn-more" href="#" class="qv-view-details-btn" style="flex: 1; margin: 0;">View Story Page</a>
                             <a id="qv-expand-page" href="#" class="qv-expand-btn" title="Open Product Page">
                                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="expand-svg">
                                     <g class="arrow-tr"><polyline points="15 3 21 3 21 9"></polyline><line x1="21" y1="3" x2="14" y2="10"></line></g>
@@ -6890,7 +6961,7 @@ The DODCH Team`;
 
                 if (qvLearnMore) {
                     const hasStory = hasStandaloneStoryPage(product);
-                    qvLearnMore.textContent = hasStory ? 'View Full Details' : '';
+                    qvLearnMore.textContent = hasStory ? 'View Story Page' : '';
                     qvLearnMore.href = hasStory ? product.storyUrl : '#';
                     qvLearnMore.style.display = hasStory ? 'inline-block' : 'none';
                     if (qvExpandPage) {
@@ -6989,6 +7060,7 @@ The DODCH Team`;
                         btn.textContent = sizeObj.label;
 
                         btn.addEventListener('click', () => {
+                            if (btn.classList.contains('active')) return;
                             window.triggerHaptic('light');
                             sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
                             btn.classList.add('active');

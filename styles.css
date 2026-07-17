@@ -323,6 +323,15 @@ p {
     100% { background-position: -200% 0; }
 }
 
+/* Smooth load fade-in animation from shimmer state */
+.fade-in-load {
+    animation: fadeInLoad 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+@keyframes fadeInLoad {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 @keyframes dodch-spin {
     to { transform: rotate(360deg); }
 }
