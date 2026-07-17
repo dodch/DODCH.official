@@ -36,8 +36,34 @@
     <!-- Dynamic SEO Injection -->
     <script type="module" src="seo.js" defer></script>
     <meta name="view-transition" content="same-origin">
+
+    <!-- Page load overlay: covers broken paint, fades out once DOM ready -->
+    <style>
+        #page-loader {
+            position: fixed; inset: 0; background: #fff;
+            z-index: 99999; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.6s ease 0.2s;
+        }
+        #page-loader .loader-logo {
+            font-family: var(--font-serif, 'Playfair Display', serif);
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            color: #111; letter-spacing: 0.1em;
+            opacity: 1; transition: opacity 0.4s ease, transform 0.6s ease;
+        }
+        #page-loader.fade-out { opacity: 0; }
+        #page-loader.fade-out .loader-logo { opacity: 0; transform: scale(0.95); }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loader = document.getElementById('page-loader');
+            if (loader) requestAnimationFrame(() => loader.classList.add('fade-out'));
+        });
+    </script>
+
 </head>
 <body>
+    <div id="page-loader"><span class="loader-logo">DODCH</span></div>
     <!-- Navigation -->
     <nav id="navbar" class="scrolled">
         <div class="nav-container">

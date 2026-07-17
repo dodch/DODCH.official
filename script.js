@@ -417,39 +417,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cache hero dark/light state — detect once, update on resize
     const detectAndCacheHeroDark = () => {
-        if (document.querySelector('.hero-carousel-container')) {
-            window._pageHeroDark = !!window._activeHeroSlideIsDark;
-            return;
-        }
-        const navH = navbar.offsetHeight;
-        const el = document.elementFromPoint(window.innerWidth / 2, navH + 30);
-        if (!el) { window._pageHeroDark = false; return; }
-        let node = el;
-        while (node && node !== document.body) {
-            const style = window.getComputedStyle(node);
-            const bg = style.backgroundColor;
-            if (style.backgroundImage && style.backgroundImage !== 'none') {
-                // Has background image — check for dark overlay child
-                const darkOverlay = [...(node.querySelectorAll('*'))].find(c => {
-                    const cs = window.getComputedStyle(c);
-                    const rgb = cs.backgroundColor.match(/\d+/g);
-                    return rgb && parseFloat(rgb[3] || 1) > 0.2 &&
-                        (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 80;
-                });
-                window._pageHeroDark = !!darkOverlay;
-                return;
+        const detect = () => {
+            if (document.querySelector('.hero-carousel-container')) {
+                return !!window._activeHeroSlideIsDark;
             }
-            const rgb = bg.match(/\d+/g);
-            if (rgb && !bg.includes('rgba(0, 0, 0, 0)')) {
-                const a = rgb[3] !== undefined ? parseFloat(rgb[3]) : 1;
-                if (a > 0.1) {
-                    window._pageHeroDark = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 140;
-                    return;
+            // Product/Story pages have dark heroes by design
+            const isProductPage = document.body.classList.contains('pro-v-page') || 
+                                  document.body.classList.contains('silk-mask-page') || 
+                                  document.body.classList.contains('serum-page');
+            if (isProductPage) {
+                return true;
+            }
+            const navH = navbar.offsetHeight;
+            const el = document.elementFromPoint(window.innerWidth / 2, navH + 30);
+            if (!el) return false;
+            let node = el;
+            while (node && node !== document.body) {
+                const style = window.getComputedStyle(node);
+                const bg = style.backgroundColor;
+                if (style.backgroundImage && style.backgroundImage !== 'none') {
+                    // Has background image — check for dark overlay child
+                    const darkOverlay = [...(node.querySelectorAll('*'))].find(c => {
+                        const cs = window.getComputedStyle(c);
+                        const rgb = cs.backgroundColor.match(/\d+/g);
+                        return rgb && parseFloat(rgb[3] || 1) > 0.2 &&
+                            (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 80;
+                    });
+                    return !!darkOverlay;
                 }
+                const rgb = bg.match(/\d+/g);
+                if (rgb && !bg.includes('rgba(0, 0, 0, 0)')) {
+                    const a = rgb[3] !== undefined ? parseFloat(rgb[3]) : 1;
+                    if (a > 0.1) {
+                        return (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 140;
+                    }
+                }
+                node = node.parentElement;
             }
-            node = node.parentElement;
+            return false;
+        };
+        window._pageHeroDark = detect();
+        if (typeof updateNavbar === 'function') {
+            updateNavbar();
         }
-        window._pageHeroDark = false;
     };
     // Detect on load and resize
     window.addEventListener('load', detectAndCacheHeroDark);
@@ -461,13 +471,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSerumPage = document.body.classList.contains('serum-page');
         const serumHero = document.querySelector('.scrollytelling-container');
         const heroCarousel = document.querySelector('.hero-carousel-container');
+        const hairDuoHero = document.querySelector('.hair-duo-hero');
+        const pageHero = document.getElementById('hero') || document.querySelector('.foam-hero') || document.getElementById('hero-silk') || document.querySelector('.pro-v-hero');
         
         // A hero is active if it exists and is not collapsed/hidden
         const isHeroCarouselActive = heroCarousel && !heroCarousel.classList.contains('collapsed');
         const isSerumHeroActive = serumHero && !serumHero.classList.contains('collapsed');
+        const isPageHeroActive = pageHero && !pageHero.classList.contains('collapsed');
 
         // Check if there's an active (visible) hero section at the top
-        const hasHeroAtTop = isHeroCarouselActive || isSerumHeroActive;
+        const hasHeroAtTop = isHeroCarouselActive || isSerumHeroActive || isPageHeroActive;
 
         if (isSerumPage && isSerumHeroActive) {
             const threshold = serumHero.offsetHeight - 80;
@@ -1123,6 +1136,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     scrollIndicator.classList.add('collapsed');
                 }
+            }
+            
+            // Force navbar update to fix contrast when hero collapses
+            if (typeof updateNavbar === 'function') {
+                updateNavbar();
             }
 
             const generateCardHTML = (id, product, index = 0) => {
