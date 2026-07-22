@@ -2714,12 +2714,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                                 : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
                             const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
-                            const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+                            const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
 
                             if (sizeObj.originalPrice) {
-                                priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
+                                priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
                             } else {
-                                priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
+                                priceEl.innerHTML = `<span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
                                 priceEl.style.color = "";
                             }
                         }
@@ -2792,22 +2792,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         animTargets.forEach(el => el.classList.add('text-switch-anim', 'text-switch-blur'));
 
                         setTimeout(() => {
+                            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
                             if (priceEl) {
-                                const isActuallyOOS = product.sizes && product.sizes.length > 0
-                                    ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                                    : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
                                 const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
-                                const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+                                const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
 
                                 if (sizeObj.originalPrice) {
-                                    priceEl.innerHTML = `${outOfStockLabel} <span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
+                                    priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
                                 } else {
-                                    priceEl.innerHTML = `${outOfStockLabel} <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span>`;
+                                    priceEl.innerHTML = `<span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
                                     priceEl.style.color = "";
                                 }
                             }
 
                             // Handle stock notification button dynamic injection
+                            const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
                             let notifyBtn = document.getElementById('back-in-stock-notify-btn');
                             if (notifyBtn) notifyBtn.remove();
 
@@ -2861,7 +2863,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     batchDisplay.style.display = 'block';
                                 } else { batchDisplay.style.display = 'none'; }
                             }
-                            animTargets.forEach(el => el.classList.remove('text-switch-blur'));
+                            animTargets.forEach(el => el.classList.remove('text-switch-blur', 'text-switch-anim'));
                         }, 250);
                     });
 
@@ -7093,16 +7095,16 @@ The DODCH Team`;
                                     ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                                     : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
                                 const isOOS = isActuallyOOS || sizeObj.outOfStock;
-                                const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+                                const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
 
                                 if (sizeObj.originalPrice) {
-                                    qvPrice.innerHTML = `${outOfStockLabel}<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND`;
+                                    qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND ${outOfStockLabel}`;
                                 } else {
-                                    qvPrice.innerHTML = `${outOfStockLabel}${sizeObj.price} TND`;
+                                    qvPrice.innerHTML = `${sizeObj.price} TND ${outOfStockLabel}`;
                                 }
 
                                 updateQuickViewATC(sizeObj);
-                                animTargets.forEach(el => el.classList.remove('text-switch-blur'));
+                                animTargets.forEach(el => el.classList.remove('text-switch-blur', 'text-switch-anim'));
                             }, 250);
                         });
 
@@ -7118,19 +7120,19 @@ The DODCH Team`;
                         ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
                         : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
                     const isOOS = isActuallyOOS || initialSize.outOfStock;
-                    const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
+                    const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
 
                     if (initialSize.originalPrice) {
-                        qvPrice.innerHTML = `${outOfStockLabel}<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND`;
+                        qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND ${outOfStockLabel}`;
                     } else {
-                        qvPrice.innerHTML = `${outOfStockLabel}${initialSize.price} TND`;
+                        qvPrice.innerHTML = `${initialSize.price} TND ${outOfStockLabel}`;
                     }
                     updateQuickViewATC(initialSize);
                 } else {
                     sizeSelector.style.display = 'none';
                     const isActuallyOOS = (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                    const outOfStockLabel = isActuallyOOS ? `<span style="color: #ff4d4d; font-weight: 600; display: block; width: 100%; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span>` : '';
-                    qvPrice.innerHTML = `${outOfStockLabel}${price} TND`;
+                    const outOfStockLabel = isActuallyOOS ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
+                    qvPrice.innerHTML = `${price} TND ${outOfStockLabel}`;
                     updateQuickViewATC(null);
                 }
 
@@ -7726,40 +7728,110 @@ const initProductReviews = () => {
         reviewsContainer.innerHTML = '';
         reviews.forEach(review => {
             const reviewEl = document.createElement('div');
-            reviewEl.style.cssText = 'padding: 1.5rem; border-bottom: 1px solid #eee; margin-bottom: 1rem;';
-            const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#e0e0e0'}; font-size: 1.2rem;">★</span>`).join('');
-            const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : 'Just now';
+            reviewEl.style.cssText = `
+                padding: 1.5rem;
+                background: var(--card-white, #ffffff);
+                border: 1px solid rgba(0, 0, 0, 0.06);
+                border-radius: 16px;
+                margin-bottom: 1.25rem;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            `;
+            reviewEl.onmouseenter = () => {
+                reviewEl.style.transform = 'translateY(-2px)';
+                reviewEl.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.06)';
+            };
+            reviewEl.onmouseleave = () => {
+                reviewEl.style.transform = 'none';
+                reviewEl.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.03)';
+            };
+
+            const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#E4E4E7'}; font-size: 1.15rem; margin-right: 1px;">★</span>`).join('');
+            const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Just now';
             const authorName = review.authorName || 'Verified Buyer';
 
             const isAuthor = auth.currentUser && review.userId === auth.currentUser.uid;
             const isAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_UID;
 
-            // Admin-only: show order reference info
+            // Admin-only: show order reference info with sleek modern badge styling & copy button
             let adminInfoHtml = '';
             if (isAdmin) {
-                const refundedBadge = review.refunded ? '<span style="background:#fdecea;color:#e74c3c;padding:1px 6px;border-radius:4px;font-size:0.75rem;margin-left:6px;">Refunded</span>' : '';
-                const refs = review.orderReferences && review.orderReferences.length > 0
+                const refundedBadge = review.refunded ? '<span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;margin-left:4px;border:1px solid #FCA5A5;">Refunded</span>' : '';
+                const rawRefs = review.orderReferences && review.orderReferences.length > 0
+                    ? review.orderReferences.join(', ')
+                    : (review.orderReference || '');
+                const displayRefs = review.orderReferences && review.orderReferences.length > 0
                     ? review.orderReferences.map(r => `#${r}`).join(', ')
                     : (review.orderReference ? `#${review.orderReference}` : 'N/A');
-                adminInfoHtml = `<div style="margin-top:0.5rem;padding:0.4rem 0.6rem;background:#f9f9f9;border-radius:4px;font-size:0.75rem;color:#666;border:1px dashed #ddd;">🔑 Admin: Order Ref ${refs}${refundedBadge}</div>`;
+
+                adminInfoHtml = `
+                    <div style="padding: 0.4rem 0.8rem; background: #F3F4F6; border-radius: 12px; font-size: 0.75rem; color: #4B5563; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 8px; font-weight: 500;">
+                        <span style="font-size: 0.85rem;">🔑</span>
+                        <span>Order Ref: <strong style="color: #1F2937;">${displayRefs}</strong></span>
+                        ${rawRefs ? `<button onclick="window.copyOrderRefToClipboard('${rawRefs}', this)" title="Copy Order Reference" style="background: #FFFFFF; border: 1px solid #D1D5DB; color: #374151; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s ease;" onmouseenter="this.style.borderColor='#9CA3AF'" onmouseleave="this.style.borderColor='#D1D5DB'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>` : ''}
+                        ${refundedBadge}
+                    </div>
+                `;
             }
 
             let deleteBtnHtml = '';
-            if (isAuthor || isAdmin) {
-                deleteBtnHtml = `<button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')">Delete</button>`;
+            // Delete button ONLY for the author of the review
+            if (isAuthor) {
+                deleteBtnHtml = `<button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')" style="background:none;border:none;color:#EF4444;font-size:0.78rem;font-weight:500;cursor:pointer;padding:4px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Delete</button>`;
             }
 
+            const batchHtml = review.batch ? `<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${review.batch}</span>` : '';
+
+            const initialLetter = (authorName || 'V').charAt(0).toUpperCase();
+            const avatarHtml = review.authorPhoto 
+                ? `<img src="${review.authorPhoto}" alt="${authorName}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #F3F4F6; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" />`
+                : `<div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #18181B 0%, #3F3F46 100%); color: #FFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; text-transform: uppercase; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">${initialLetter}</div>`;
+
+            const likesArray = review.likedBy || [];
+            const likesCount = review.likesCount || likesArray.length || 0;
+            const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
+            const isLikedByCurrentUser = currentUserId && likesArray.includes(currentUserId);
+            
+            const likeBtnStyle = isLikedByCurrentUser 
+                ? 'background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE;' 
+                : 'background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB;';
+            const thumbsColor = isLikedByCurrentUser ? '#4F46E5' : 'currentColor';
+            const thumbsFill = isLikedByCurrentUser ? '#4F46E5' : 'none';
+
             reviewEl.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
-                    <div style="font-weight: 600;">${authorName} <span style="background: #e6f4ea; color: #1e8e3e; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px;">✓ Verified Buyer</span></div>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div style="color: #888; font-size: 0.85rem;">${date}</div>
-                        ${deleteBtnHtml}
+                <div style="display: flex; gap: 16px; align-items: flex-start;">
+                    ${avatarHtml}
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 0.4rem;">
+                            <div>
+                                <div style="font-weight: 700; font-size: 1rem; color: #18181B; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span>${authorName}</span>
+                                    <span style="background: #ECFDF5; color: #059669; padding: 3px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 3px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        Verified Buyer
+                                    </span>
+                                    ${batchHtml}
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <div style="color: #9CA3AF; font-size: 0.82rem; font-weight: 400;">${date}</div>
+                                ${deleteBtnHtml}
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+                            <div>${starsHtml}</div>
+                        </div>
+                        <p style="margin: 0 0 1rem 0; line-height: 1.65; color: #374151; font-size: 0.95rem; font-weight: 400; word-break: break-word;">${review.text}</p>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 0.8rem; padding-top: 0.75rem; border-top: 1px solid #F3F4F6;">
+                            <button onclick="window.handleReviewLike('${review.id}', this)" data-liked="${isLikedByCurrentUser ? 'true' : 'false'}" style="${likeBtnStyle} font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="${thumbsFill}" stroke="${thumbsColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                                <span>Helpful (${likesCount})</span>
+                            </button>
+                            ${adminInfoHtml}
+                        </div>
                     </div>
                 </div>
-                <div style="margin-bottom: 0.8rem;">${starsHtml}</div>
-                <p style="margin: 0; line-height: 1.6;">${review.text}</p>
-                ${adminInfoHtml}
             `;
 
             reviewsContainer.appendChild(reviewEl);
@@ -7949,6 +8021,7 @@ const initProductReviews = () => {
             userState.allOrderReferences = allOrderRefs;
             userState.orderId = latestNonRefunded ? latestNonRefunded.id : null;
             userState.orderReference = latestOrderRef;
+            userState.batch = latestNonRefunded && latestNonRefunded.matchingItem ? (latestNonRefunded.matchingItem.batch || latestNonRefunded.matchingItem.batchNumber || latestNonRefunded.matchingItem.batchNo || null) : null;
 
             // Decision tree
             if (allDeliveredOrders.length === 0) {
@@ -8111,7 +8184,9 @@ const initProductReviews = () => {
                     productId: productId,
                     userId: userState.user.uid,
                     orderId: userState.orderId,
+                    batch: userState.batch || null,
                     authorName: userState.user.displayName || 'Verified Buyer',
+                    authorPhoto: userState.user.photoURL || null,
                     rating: rating,
                     text: text,
                     images: [],
@@ -8148,6 +8223,27 @@ const initProductReviews = () => {
         });
     }
 };
+window.copyOrderRefToClipboard = (text, btn) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        window.showToast("Order Reference copied to clipboard!", "success");
+        if (btn) {
+            const originalSvg = btn.innerHTML;
+            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            btn.style.borderColor = '#A7F3D0';
+            btn.style.background = '#ECFDF5';
+            setTimeout(() => {
+                btn.innerHTML = originalSvg;
+                btn.style.borderColor = '#D1D5DB';
+                btn.style.background = '#FFFFFF';
+            }, 1800);
+        }
+    }).catch(err => {
+        console.error("Copy failed", err);
+        window.showToast("Failed to copy text.", "error");
+    });
+};
+
 window.handleReviewDelete = async (reviewId) => {
     const confirmation = prompt("To delete your review, please type 'DELETE' (all caps):");
     if (confirmation !== 'DELETE') {
@@ -8162,6 +8258,74 @@ window.handleReviewDelete = async (reviewId) => {
     } catch (error) {
         console.error("Error deleting review:", error);
         window.showToast("Failed to delete review.", "error");
+    }
+};
+
+window.handleReviewLike = async (reviewId, btnElement) => {
+    const user = auth.currentUser;
+    if (!user) {
+        window.showToast("Please log in to react to reviews.", "warning");
+        return;
+    }
+
+    const btn = btnElement || (event ? event.currentTarget : null);
+    if (!btn) return;
+
+    // Optimistic UI toggle
+    const span = btn.querySelector('span');
+    const svg = btn.querySelector('svg');
+    const currentText = span ? span.textContent : '';
+    const match = currentText.match(/\d+/);
+    let count = match ? parseInt(match[0]) : 0;
+
+    const isCurrentlyLiked = btn.dataset.liked === 'true' || btn.style.color === 'rgb(79, 70, 229)';
+    const nextLiked = !isCurrentlyLiked;
+    const nextCount = nextLiked ? count + 1 : Math.max(0, count - 1);
+
+    // Apply immediate UI state
+    btn.dataset.liked = nextLiked ? 'true' : 'false';
+    if (span) span.textContent = `Helpful (${nextCount})`;
+    btn.style.cssText = nextLiked 
+        ? 'background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;' 
+        : 'background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;';
+    if (svg) {
+        svg.setAttribute('fill', nextLiked ? '#4F46E5' : 'none');
+        svg.setAttribute('stroke', nextLiked ? '#4F46E5' : 'currentColor');
+    }
+
+    try {
+        const reviewRef = doc(db, "product_reviews", reviewId);
+        const reviewSnap = await getDoc(reviewRef);
+        if (!reviewSnap.exists()) return;
+
+        const data = reviewSnap.data();
+        let likedBy = Array.isArray(data.likedBy) ? data.likedBy : [];
+
+        if (likedBy.includes(user.uid)) {
+            likedBy = likedBy.filter(uid => uid !== user.uid);
+        } else {
+            likedBy.push(user.uid);
+        }
+
+        await updateDoc(reviewRef, {
+            likedBy: likedBy,
+            likesCount: likedBy.length
+        });
+
+        window.showToast(nextLiked ? "Marked review as helpful!" : "Unmarked as helpful.", nextLiked ? "success" : "info");
+    } catch (error) {
+        console.error("Error updating review reaction:", error);
+        // Rollback UI state if failed
+        btn.dataset.liked = isCurrentlyLiked ? 'true' : 'false';
+        if (span) span.textContent = `Helpful (${count})`;
+        btn.style.cssText = isCurrentlyLiked 
+            ? 'background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;' 
+            : 'background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;';
+        if (svg) {
+            svg.setAttribute('fill', isCurrentlyLiked ? '#4F46E5' : 'none');
+            svg.setAttribute('stroke', isCurrentlyLiked ? '#4F46E5' : 'currentColor');
+        }
+        window.showToast("Failed to register reaction.", "error");
     }
 };
 
@@ -8199,7 +8363,24 @@ const initUserReviewsHistory = async (user) => {
             chunk.forEach((review) => {
                 const reviewEl = document.createElement('div');
                 reviewEl.className = 'review-card-item content-fade visible';
-                reviewEl.style.cssText = 'padding: 1.5rem; border: 1px solid #eee; border-radius: 12px; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.02);';
+                reviewEl.style.cssText = `
+                    padding: 1.5rem;
+                    background: #FFFFFF;
+                    border: 1px solid rgba(0, 0, 0, 0.06);
+                    border-radius: 16px;
+                    margin-bottom: 1.25rem;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                `;
+                reviewEl.onmouseenter = () => {
+                    reviewEl.style.transform = 'translateY(-2px)';
+                    reviewEl.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.06)';
+                };
+                reviewEl.onmouseleave = () => {
+                    reviewEl.style.transform = 'none';
+                    reviewEl.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.03)';
+                };
+
                 let productName = 'Product';
                 let productLink = '#';
                 let productImg = 'placeholder-glow.webp';
@@ -8229,21 +8410,25 @@ const initUserReviewsHistory = async (user) => {
                     productName = `Product (${review.productId || 'Unknown'})`;
                 }
 
-                const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#e0e0e0'}; font-size: 1.1rem;">★</span>`).join('');
-                const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : 'Recent';
+                const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#E4E4E7'}; font-size: 1.15rem; margin-right: 1px;">★</span>`).join('');
+                const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recent';
+                const accountBatchBadge = review.batch ? `<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${review.batch}</span>` : '';
 
                 reviewEl.innerHTML = `
-                <div style="display: flex; gap: 15px; align-items: flex-start; margin-bottom: 1.5rem;">
-                    <img src="${productImg}" class="account-item-mini-img" alt="${productName}">
-                    <div style="flex: 1;">
-                        <a href="${productLink}" style="text-decoration: none; color: var(--text-charcoal); font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 600;">${productName}</a>
-                        <div style="color: #888; font-size: 0.8rem; margin-top: 2px;">Reviewed on ${date}</div>
+                <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 1rem;">
+                    <img src="${productImg}" class="account-item-mini-img" alt="${productName}" style="width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 1px solid #F3F4F6;">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <a href="${productLink}" style="text-decoration: none; color: #18181B; font-family: var(--font-serif, 'Playfair Display', serif); font-size: 1.1rem; font-weight: 700;">${productName}</a>
+                            ${accountBatchBadge}
+                        </div>
+                        <div style="color: #9CA3AF; font-size: 0.82rem; margin-top: 3px;">Reviewed on ${date}</div>
                     </div>
                 </div>
-                <div style="margin-bottom: 0.8rem;">${starsHtml}</div>
-                <p style="font-size: 0.95rem; line-height: 1.6; color: #444; margin-bottom: 1.5rem;">${review.text}</p>
-                <div style="display: flex; justify-content: flex-end; border-top: 1px solid #eee; padding-top: 1rem; margin-top: auto;">
-                    <button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')" style="margin-top: 1rem;">Delete My Review</button>
+                <div style="margin-bottom: 0.75rem;">${starsHtml}</div>
+                <p style="font-size: 0.95rem; line-height: 1.65; color: #374151; margin-bottom: 1.25rem;">${review.text}</p>
+                <div style="display: flex; justify-content: flex-end; border-top: 1px solid #F3F4F6; padding-top: 0.75rem;">
+                    <button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')" style="background: none; border: none; color: #EF4444; font-size: 0.82rem; font-weight: 500; cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'">Delete My Review</button>
                 </div>
             `;
                 listContainer.appendChild(reviewEl);

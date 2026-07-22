@@ -46,7 +46,8 @@
 
 <body>
     <div id="page-loader"><span class="loader-logo">DODCH</span></div>
-    <!-- Desktop Sidebar -->    <aside id="desktop-sidebar">
+    <!-- Desktop Sidebar -->
+    <aside id="desktop-sidebar">
         <button class="sidebar-close-btn">&times;</button>
         <div class="sidebar-header">
             <div class="profile-icon">
@@ -92,8 +93,6 @@
 
     <div id="custom-cursor"></div>
     <div id="scroll-progress"></div>
-
-
 
     <!-- Navigation -->
     <nav id="navbar" class="scrolled">
@@ -216,28 +215,29 @@
                                 </div>
 
                                 <!-- Review Modal Overlay -->
-                                <div id="review-modal" class="review-modal-overlay">
-                                    <div class="review-modal-content">
-                                        <button class="close-modal" id="close-review-modal">&times;</button>
-                                        <h3 style="margin-bottom: 1.5rem; color: #000; font-family: var(--font-serif);">Share Your Experience</h3>
+                                <div id="review-modal" class="review-modal-overlay" style="backdrop-filter: blur(8px); background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;">
+                                    <div class="review-modal-content" style="background: #FFFFFF; border-radius: 24px; padding: 2.2rem; max-width: 520px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid rgba(255,255,255,0.8); transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+                                        <button class="close-modal" id="close-review-modal" style="top: 1.2rem; right: 1.2rem; background: #F3F4F6; border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #4B5563; cursor: pointer; transition: background 0.2s ease;" onmouseenter="this.style.background='#E5E7EB'" onmouseleave="this.style.background='#F3F4F6'">&times;</button>
+                                        <h3 style="margin-bottom: 0.4rem; color: #18181B; font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700;">Share Your Experience</h3>
+                                        <p style="color: #6B7280; font-size: 0.88rem; margin-bottom: 1.5rem;">Your review helps other buyers make informed choices.</p>
                                         <form id="product-review-form">
-                                            <div class="form-group" style="margin-bottom: 1.2rem;">
-                                                <label for="review-rating" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Rating</label>
-                                                <select id="review-rating" required style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;">
+                                            <div class="form-group" style="margin-bottom: 1.4rem;">
+                                                <label for="review-rating" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #374151;">Overall Rating</label>
+                                                <select id="review-rating" required style="width: 100%; padding: 0.85rem 1rem; border: 1px solid #D1D5DB; border-radius: 12px; font-family: inherit; font-size: 0.95rem; background: #F9FAFB; color: #111827; outline: none; transition: border-color 0.2s ease;" onfocus="this.style.borderColor='#18181B'" onblur="this.style.borderColor='#D1D5DB'">
                                                     <option value="" disabled selected>Select a rating</option>
-                                                    <option value="5">★★★★★ - Excellent</option>
-                                                    <option value="4">★★★★☆ - Very Good</option>
-                                                    <option value="3">★★★☆☆ - Average</option>
-                                                    <option value="2">★★☆☆☆ - Below Average</option>
-                                                    <option value="1">★☆☆☆☆ - Poor</option>
+                                                    <option value="5">★★★★★ - Excellent (5/5)</option>
+                                                    <option value="4">★★★★☆ - Very Good (4/5)</option>
+                                                    <option value="3">★★★☆☆ - Average (3/5)</option>
+                                                    <option value="2">★★☆☆☆ - Below Average (2/5)</option>
+                                                    <option value="1">★☆☆☆☆ - Poor (1/5)</option>
                                                 </select>
                                             </div>
-                                            <div class="form-group" style="margin-bottom: 1.5rem;">
-                                                <label for="review-text" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Your Review</label>
-                                                <textarea id="review-text" rows="5" required style="width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;" placeholder="Tell us what you think about this product..."></textarea>
+                                            <div class="form-group" style="margin-bottom: 1.8rem;">
+                                                <label for="review-text" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #374151;">Your Review</label>
+                                                <textarea id="review-text" rows="5" required style="width: 100%; padding: 0.85rem 1rem; border: 1px solid #D1D5DB; border-radius: 12px; font-family: inherit; font-size: 0.95rem; background: #F9FAFB; color: #111827; resize: vertical; outline: none; transition: border-color 0.2s ease;" placeholder="What did you love or dislike about this product?" onfocus="this.style.borderColor='#18181B'" onblur="this.style.borderColor='#D1D5DB'"></textarea>
                                             </div>
-    
-                                            <button type="submit" class="cta-button eligible" style="width: 100%; text-align: center;" id="submit-review-btn">Submit Review</button>
+
+                                            <button type="submit" class="cta-button eligible" style="width: 100%; text-align: center; border-radius: 12px; padding: 0.9rem 1.5rem; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(0,0,0,0.12);" id="submit-review-btn">Submit Review</button>
                                         </form>
                                     </div>
                                 </div>
@@ -264,4 +264,3 @@
 </body>
 
 </html>
-

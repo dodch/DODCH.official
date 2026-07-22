@@ -125,6 +125,13 @@ service cloud.firestore {
              && resource.data.get('reviewedAfterRefund', false) == false
              && request.resource.data.get('reviewedAfterRefund', false) == true)
           )
+        )
+        || (
+          // Authenticated users toggling helpful/likes on reviews
+          request.auth != null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likesCount'])
+          && request.resource.data.likedBy is list
+          && request.resource.data.likesCount is int
         );
       allow delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       
