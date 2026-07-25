@@ -15,7 +15,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
 import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot, deleteField } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { getMessaging, getToken as getMessagingToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
@@ -279,6 +279,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .local-order-summary .total { font-weight: 700; font-size: 1.25rem; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 2px solid #eee; color: var(--text-charcoal); }
             .local-order-actions { display: flex; gap: 1rem; margin-top: 1rem; }
             .local-order-product-search-wrapper { position: relative; margin-bottom: 1.5rem; }
+
+            /* Batch number display */
+            .batch-info-container { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem; font-family: var(--font-sans); line-height: 1; }
+            .batch-tooltip-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+            .batch-tooltip-icon svg { display: block; }
+            .batch-tooltip-content { display: none; position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); background: #1a1a1a; color: #fff; font-size: 0.75rem; padding: 8px 12px; border-radius: 8px; width: 220px; line-height: 1.4; z-index: 100; pointer-events: none; }
+            .batch-tooltip-icon:hover .batch-tooltip-content,
+            .batch-tooltip-icon:focus .batch-tooltip-content { display: block; }
         `;
         const s = document.createElement('style');
         s.id = 'cart-fixes-style';
@@ -2498,21 +2506,111 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Shared batch display renderer
+        const renderBatchDisplay = (sizeObj, afterEl) => {
+            let el = document.getElementById('product-batch-display');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'product-batch-display';
+                el.className = 'product-batch-display';
+                afterEl.after(el);
+            } else {
+                el.style.display = 'inline-flex';
+            }
+
+            const batchNum = typeof sizeObj === 'object' ? (sizeObj.batchNumber || 'Batch #001') : (sizeObj || 'Batch #001');
+            const expiryDate = typeof sizeObj === 'object' ? sizeObj.expiryDate : null;
+            const formulaVersion = typeof sizeObj === 'object' ? (sizeObj.formulaVersion || null) : null;
+
+            el.innerHTML = `
+                <span>Batch:</span>
+                <span class="batch-num-tag">${batchNum}</span>
+                <button type="button" class="batch-tooltip-trigger" aria-label="Batch details and info">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <div class="batch-tooltip-popup" role="tooltip">
+                        <div class="batch-tooltip-header">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <span>Quality & Traceability</span>
+                        </div>
+                        <div class="batch-tooltip-detail">
+                            <span class="label">Batch Code:</span>
+                            <span class="val">${batchNum}</span>
+                        </div>
+                        ${formulaVersion ? `
+                        <div class="batch-tooltip-detail">
+                            <span class="label">Formula Version:</span>
+                            <span class="val">${formulaVersion}</span>
+                        </div>` : ''}
+                        ${expiryDate ? `
+                        <div class="batch-tooltip-detail">
+                            <span class="label">Expiry Date:</span>
+                            <span class="val">${expiryDate}</span>
+                        </div>` : ''}
+                        <div class="batch-tooltip-footer">
+                            <p style="margin-bottom:4px; font-weight:500;">Hand-poured in small artisanal batches following strict laboratory QA standards.</p>
+                            <p style="color:#BBB; font-style:italic;">Each batch may feature subtle variations in INCI composition, expiry date, texture, or performance. Please refer to your product packaging label or contact client care for exact specifications regarding your order.</p>
+                        </div>
+                    </div>
+                </button>
+            `;
+
+            const triggerBtn = el.querySelector('.batch-tooltip-trigger');
+            if (triggerBtn) {
+                const adjustPosition = () => {
+                    const popup = triggerBtn.querySelector('.batch-tooltip-popup');
+                    if (!popup) return;
+                    popup.style.left = '50%';
+                    popup.style.transform = 'translateX(-50%)';
+                    const rect = popup.getBoundingClientRect();
+                    const margin = 14;
+                    if (rect.left < margin) {
+                        const shift = margin - rect.left;
+                        popup.style.left = `calc(50% + ${shift}px)`;
+                    } else if (rect.right > window.innerWidth - margin) {
+                        const shift = rect.right - (window.innerWidth - margin);
+                        popup.style.left = `calc(50% - ${shift}px)`;
+                    }
+                };
+
+                triggerBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const wasActive = triggerBtn.classList.contains('active');
+                    document.querySelectorAll('.batch-tooltip-trigger.active').forEach(b => b.classList.remove('active'));
+                    if (!wasActive) {
+                        triggerBtn.classList.add('active');
+                        adjustPosition();
+                        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+                    }
+                });
+
+                triggerBtn.addEventListener('mouseenter', adjustPosition);
+            }
+
+            if (!window._batchTooltipGlobalListener) {
+                window._batchTooltipGlobalListener = true;
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.batch-tooltip-trigger')) {
+                        document.querySelectorAll('.batch-tooltip-trigger.active').forEach(b => b.classList.remove('active'));
+                    }
+                });
+            }
+
+            return el;
+        };
+
         // Add batch number display
         const existingBatch = document.getElementById('product-batch-display');
         if (existingBatch) existingBatch.remove();
         const sortedSizes = product.sizes && product.sizes.length > 0 ? [...product.sizes].sort((a, b) => parseFloat(a.price) - parseFloat(b.price)) : [];
         const defaultSize = sortedSizes.find(s => !s.outOfStock) || sortedSizes[0];
-        if (defaultSize?.batchNumber) {
-            const batchEl = document.createElement('p');
-            batchEl.id = 'product-batch-display';
-            batchEl.style.cssText = 'font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem; font-family: var(--font-sans);';
-            batchEl.textContent = `Batch: ${defaultSize.batchNumber}`;
-            if (subtitleEl) {
-                subtitleEl.after(batchEl);
-                if (titleEl && titleEl.classList.contains('fade-in-load')) {
-                    batchEl.classList.add('fade-in-load');
-                }
+        if (defaultSize?.batchNumber && subtitleEl) {
+            renderBatchDisplay(defaultSize, subtitleEl);
+            if (titleEl && titleEl.classList.contains('fade-in-load')) {
+                document.getElementById('product-batch-display')?.classList.add('fade-in-load');
             }
         }
 
@@ -2859,8 +2957,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             if (batchDisplay) {
                                 if (sizeObj.batchNumber) {
-                                    batchDisplay.textContent = `Batch: ${sizeObj.batchNumber}`;
-                                    batchDisplay.style.display = 'block';
+                                    renderBatchDisplay(sizeObj, subtitleEl || batchDisplay.previousElementSibling);
                                 } else { batchDisplay.style.display = 'none'; }
                             }
                             animTargets.forEach(el => el.classList.remove('text-switch-blur', 'text-switch-anim'));
@@ -5063,62 +5160,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (addProductModal) {
                 addProductModal.style.display = 'flex';
                 setTimeout(() => addProductModal.classList.add('active'), 10);
-
-                // Remove global batch fields if they were added dynamically previously
-                const oldBatch = document.getElementById('new-prod-batch');
-                const oldExpiry = document.getElementById('new-prod-expiry');
-                if (oldBatch) oldBatch.closest('.form-group').remove();
-                if (oldExpiry) oldExpiry.closest('.form-group').remove();
-
-                if (addProductForm && !document.getElementById('new-prod-notice-container')) {
-                    const noticeSection = document.createElement('div');
-                    noticeSection.className = 'form-group';
-                    noticeSection.id = 'new-prod-notice-container';
-                    noticeSection.innerHTML = `
-                        <label for="new-prod-notice">Product Notice (Optional)</label>
-                        <textarea id="new-prod-notice" rows="3" class="modern-input" placeholder="Precautions, limited batch info, etc."></textarea>
-                    `;
-                    const descField = document.getElementById('new-prod-desc')?.closest('.form-group');
-                    if (descField) descField.after(noticeSection);
-                }
-
-                if (addProductForm && !document.getElementById('new-prod-story-url-container')) {
-                    const storyUrlSection = document.createElement('div');
-                    storyUrlSection.className = 'form-group';
-                    storyUrlSection.id = 'new-prod-story-url-container';
-                    storyUrlSection.innerHTML = `
-                        <label for="new-prod-story-url">Story Page URL (Optional)</label>
-                        <input type="text" id="new-prod-story-url" class="modern-input" placeholder="e.g. glass-glow-shampoo.html">
-                    `;
-                    const noticeField = document.getElementById('new-prod-notice-container')?.closest('.form-group');
-                    if (noticeField) noticeField.after(storyUrlSection);
-                }
-
-                if (addProductForm && !document.getElementById('new-prod-performance-container')) {
-                    const section = document.createElement('div');
-                    section.className = 'form-section';
-                    section.innerHTML = `
-                        <div class="section-header-row">
-                            <h4>Performance Metrics</h4>
-                            <button type="button" id="add-metric-btn" class="admin-btn-sm">+ Add Metric</button>
-                        </div>
-                        <div id="new-prod-performance-container" class="modern-performance-container"></div>
-                    `;
-                    const footer = addProductForm.querySelector('.modal-footer');
-                    if (footer) addProductForm.insertBefore(section, footer);
-                    else addProductForm.appendChild(section);
-
-                    document.getElementById('add-metric-btn').addEventListener('click', () => {
-                        addPerformanceMetricRow();
-                        checkModalChanges();
-                    });
-
-                    // Pre-populate defaults for entirely new products
-                    const title = document.getElementById('product-modal-title');
-                    if (title && title.textContent === 'Add New Product') {
-                        addPerformanceMetricRow({ label: 'Hydration', value: 3, levels: ['Dry', 'Normal', 'Hydrated', 'Intense'] });
-                        addPerformanceMetricRow({ label: 'Shine', value: 2, levels: ['Matte', 'Natural', 'Glow', 'Glass-like'] });
-                    }
+                // Reset to General tab
+                addProductModal.querySelectorAll('.aem-tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'general'));
+                addProductModal.querySelectorAll('.aem-tab-pane').forEach(pane => pane.classList.toggle('active', pane.dataset.tab === 'general'));
+                // Pre-populate default metrics for brand-new products
+                const title = document.getElementById('product-modal-title');
+                const perfContainer = document.getElementById('new-prod-performance-container');
+                if (title && title.textContent === 'Add New Product' && perfContainer && perfContainer.children.length === 0) {
+                    addPerformanceMetricRow({ label: 'Hydration', value: 3, levels: ['Dry', 'Normal', 'Hydrated', 'Intense'] });
+                    addPerformanceMetricRow({ label: 'Shine', value: 2, levels: ['Matte', 'Natural', 'Glow', 'Glass-like'] });
                 }
             }
         };
@@ -5129,7 +5179,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentModalProductId = null;
                 setTimeout(() => {
                     addProductModal.style.display = 'none';
-                    // Manually clear fields instead of form.reset() to avoid unexpected behavior with dynamic elements
                     if (document.getElementById('new-prod-name')) document.getElementById('new-prod-name').value = '';
                     if (document.getElementById('new-prod-subtitle')) document.getElementById('new-prod-subtitle').value = '';
                     if (document.getElementById('new-prod-desc')) document.getElementById('new-prod-desc').value = '';
@@ -5137,11 +5186,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (document.getElementById('new-prod-notice')) document.getElementById('new-prod-notice').value = '';
                     if (document.getElementById('new-prod-story-url')) document.getElementById('new-prod-story-url').value = '';
                     if (document.getElementById('new-prod-performance-container')) document.getElementById('new-prod-performance-container').innerHTML = '';
-                    if (sizesContainer) sizesContainer.innerHTML = ''; // Clear sizes
-                    const historySection = document.getElementById('batch-history-section');
-                    const historyContainer = document.getElementById('batch-history-container');
-                    if (historySection) historySection.style.display = 'none';
-                    if (historyContainer) historyContainer.innerHTML = '';
+                    if (sizesContainer) sizesContainer.innerHTML = '';
+                    if (document.getElementById('batch-history-container')) document.getElementById('batch-history-container').innerHTML = '';
+                    // Hide history tab, reset to General
+                    const historyTabBtn = document.getElementById('aem-history-tab-btn');
+                    if (historyTabBtn) historyTabBtn.style.display = 'none';
+                    addProductModal.querySelectorAll('.aem-tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'general'));
+                    addProductModal.querySelectorAll('.aem-tab-pane').forEach(pane => pane.classList.toggle('active', pane.dataset.tab === 'general'));
                     const productIdInput = document.getElementById('product-id-input');
                     if (productIdInput) productIdInput.value = '';
                     if (imagePathInput) imagePathInput.value = '';
@@ -5166,83 +5217,114 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        const addSizeInputRow = (size = { label: '', price: '', originalPrice: '', batchNumber: '', expiryDate: '' }) => {
-            if (sizesContainer) {
+        const addSizeInputRow = (size = { label: '', price: '', originalPrice: '', batchNumber: '', expiryDate: '', formulaVersion: '' }) => {
+            if (!sizesContainer) return;
             const sizeRow = document.createElement('div');
-            sizeRow.className = 'size-input-row';
-            sizeRow.style.cssText = 'display: flex; flex-direction: column; gap: 10px; background: #fafafa; padding: 1.25rem; border-radius: 12px; border: 1px solid #eee; margin-bottom: 1rem;';
+            sizeRow.className = 'size-card';
             sizeRow.innerHTML = `
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px;">
-                    <div class="form-group" style="margin: 0;">
-                        <input type="text" class="size-label-input modern-input" placeholder="Size (e.g., 50ml)" value="${size.label}" required>
+                <div class="size-card-header">
+                    <div class="size-card-chip">
+                        <span class="size-card-chip-dot"></span>
+                        <span class="size-card-chip-label">${size.label || 'New Size'}</span>
                     </div>
-                    <div class="form-group" style="margin: 0;">
-                        <input type="number" step="0.01" class="size-price-input modern-input" placeholder="Price" value="${size.price}" required>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <input type="number" step="0.01" class="size-original-price-input modern-input" placeholder="Old Price" value="${size.originalPrice || ''}">
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: center;">
-                    <div class="form-group" style="margin: 0;">
-                        <input type="text" class="size-batch-input modern-input" placeholder="Batch #" value="${size.batchNumber || ''}">
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <input type="date" class="size-expiry-input modern-input" value="${size.expiryDate || ''}">
-                    </div>
-                    <button type="button" class="remove-size-btn remove-btn" style="position: relative; top: 0; right: 0; width: 32px; height: 32px; background: #ffebee; color: #c62828;">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <button type="button" class="size-card-remove" aria-label="Remove size">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
+                <div class="size-card-body">
+                    <div class="size-row-primary">
+                        <div class="form-group" style="margin:0;">
+                            <label class="size-field-label">Size Label <span class="badge-required">*</span></label>
+                            <input type="text" class="size-label-input modern-input" placeholder="e.g., 50ml" value="${size.label}" required>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label class="size-field-label">Price (TND) <span class="badge-required">*</span></label>
+                            <input type="number" step="0.01" class="size-price-input modern-input" placeholder="0.00" value="${size.price}" required>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label class="size-field-label">Old Price</label>
+                            <input type="number" step="0.01" class="size-original-price-input modern-input" placeholder="—" value="${size.originalPrice || ''}">
+                        </div>
+                    </div>
+                    <div class="size-row-batch">
+                        <div class="form-group" style="margin:0;">
+                            <label class="size-field-label">Batch #</label>
+                            <input type="text" class="size-batch-input modern-input" placeholder="e.g. 001" value="${size.batchNumber || ''}">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label class="size-field-label">Expiry Date</label>
+                            <input type="date" class="size-expiry-input modern-input" value="${size.expiryDate || ''}">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label class="size-field-label">Formula Version</label>
+                            <input type="text" class="size-formula-input modern-input" placeholder="e.g. v2.1" value="${size.formulaVersion || ''}">
+                        </div>
+                    </div>
+                </div>
             `;
-            sizesContainer.appendChild(sizeRow);
-            
+            // Live chip label update
+            const labelInput = sizeRow.querySelector('.size-label-input');
+            const chipLabel = sizeRow.querySelector('.size-card-chip-label');
+            labelInput.addEventListener('input', () => {
+                chipLabel.textContent = labelInput.value || 'New Size';
+            });
             sizeRow.querySelectorAll('input').forEach(inp => inp.addEventListener('input', checkModalChanges));
-
-            sizeRow.querySelector('.remove-size-btn').addEventListener('click', async () => {
+            sizeRow.querySelector('.size-card-remove').addEventListener('click', async () => {
                 if (await window.showConfirm("Are you sure you want to remove this size option?", "Remove Size")) {
                     sizeRow.remove();
                     checkModalChanges();
                 }
             });
-            }
+            sizesContainer.appendChild(sizeRow);
         };
 
         const addPerformanceMetricRow = (metric = { label: '', value: 3, levels: ['Low', 'Moderate', 'High', 'Intense'] }) => {
             const container = document.getElementById('new-prod-performance-container');
             if (!container) return;
-            
             const row = document.createElement('div');
-            row.className = 'performance-input-row';
-            row.style.cssText = 'background: #fafafa; padding: 1.25rem; border-radius: 12px; border: 1px solid #eee; margin-bottom: 1rem;';
+            row.className = 'metric-card';
             row.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <div class="form-group" style="margin: 0; flex: 1;">
-                        <input type="text" class="metric-label-input modern-input" placeholder="Metric Name (e.g. Hydration)" value="${metric.label}" required>
+                <div class="metric-card-header">
+                    <div class="size-card-chip">
+                        <span class="size-card-chip-dot" style="background:#6c63ff;"></span>
+                        <span class="metric-chip-label size-card-chip-label">${metric.label || 'New Metric'}</span>
                     </div>
-                    <button type="button" class="remove-metric-btn remove-btn" style="position: relative; top: 0; right: 0; margin-left: 1rem; width: 32px; height: 32px; background: #ffebee; color: #c62828;">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <button type="button" class="size-card-remove remove-metric-btn" aria-label="Remove metric">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                    <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.7rem;">Active Level (1-4)</label>
-                        <input type="number" min="1" max="4" class="metric-value-input modern-input" value="${metric.value}">
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                    ${[0, 1, 2, 3].map(i => `
-                        <div class="form-group" style="margin: 0;">
-                            <label style="font-size: 0.7rem; color: #888;">Lvl ${i + 1} Label</label>
-                            <input type="text" class="metric-level-label-input modern-input" data-index="${i}" value="${metric.levels ? (metric.levels[i] || '') : ''}" placeholder="Level ${i + 1} label">
+                <div class="metric-card-body">
+                    <div class="form-grid" style="gap:8px;margin-bottom:0;">
+                        <div class="form-group" style="margin:0;">
+                            <label class="size-field-label">Metric Name <span class="badge-required">*</span></label>
+                            <input type="text" class="metric-label-input modern-input" placeholder="e.g. Hydration" value="${metric.label}" required>
                         </div>
-                    `).join('')}
+                        <div class="form-group" style="margin:0;">
+                            <label class="size-field-label">Active Level (1–4)</label>
+                            <input type="number" min="1" max="4" class="metric-value-input modern-input" value="${metric.value}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="size-field-label" style="margin-bottom:6px;">Level Labels</label>
+                        <div class="metric-levels-grid">
+                            ${[0, 1, 2, 3].map(i => `
+                                <div class="form-group" style="margin:0;">
+                                    <label class="size-field-label">Level ${i + 1}</label>
+                                    <input type="text" class="metric-level-label-input modern-input" data-index="${i}" value="${metric.levels ? (metric.levels[i] || '') : ''}" placeholder="Level ${i + 1}">
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
                 </div>
             `;
             container.appendChild(row);
-            
+            // Live chip label update
+            const metricLabelInput = row.querySelector('.metric-label-input');
+            const metricChipLabel = row.querySelector('.metric-chip-label');
+            metricLabelInput.addEventListener('input', () => {
+                metricChipLabel.textContent = metricLabelInput.value || 'New Metric';
+            });
             row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', checkModalChanges));
-
             row.querySelector('.remove-metric-btn').addEventListener('click', async () => {
                 if (await window.showConfirm("Are you sure you want to remove this performance metric?", "Remove Metric")) {
                     row.remove();
@@ -5253,6 +5335,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const closeModalTopBtn = document.getElementById('close-modal-top-btn');
         if (closeModalTopBtn) closeModalTopBtn.addEventListener('click', closeProductModal);
+
+        // Tab switching for admin edit modal (set up once)
+        if (addProductModal) {
+            addProductModal.querySelectorAll('.aem-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabName = btn.dataset.tab;
+                    addProductModal.querySelectorAll('.aem-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+                    addProductModal.querySelectorAll('.aem-tab-pane').forEach(p => p.classList.toggle('active', p.dataset.tab === tabName));
+                });
+            });
+        }
+
+        // Add Metric btn is now static in HTML
+        const addMetricBtn = document.getElementById('add-metric-btn');
+        if (addMetricBtn) addMetricBtn.addEventListener('click', () => { addPerformanceMetricRow(); checkModalChanges(); });
 
         if (addSizeBtn) addSizeBtn.addEventListener('click', () => { addSizeInputRow(); checkModalChanges(); });
 
@@ -5296,6 +5393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
                     batchNumber: row.querySelector('.size-batch-input').value.trim(),
                     expiryDate: row.querySelector('.size-expiry-input').value,
+                    formulaVersion: row.querySelector('.size-formula-input')?.value.trim() || '',
                     outOfStock: false // Default to false, will be preserved below if editing
                 }));
 
@@ -5333,6 +5431,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 size: newSize.label,
                                 batchNumber: newBatch,
                                 expiryDate: newSize.expiryDate || '',
+                                formulaVersion: newSize.formulaVersion || '',
                                 timestamp: new Date().toISOString(),
                                 inci: currentInci
                             });
@@ -5347,6 +5446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 size: newSize.label,
                                 batchNumber: newBatch,
                                 expiryDate: newSize.expiryDate || '',
+                                formulaVersion: newSize.formulaVersion || '',
                                 timestamp: new Date().toISOString(),
                                 inci: currentInci
                             });
@@ -6365,9 +6465,10 @@ The DODCH Team`;
                                     <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-size-stock-check" data-index="${index}" ${size.outOfStock ? 'checked' : ''}> OOS</label>
                                 </div>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                                    <input type="text" class="admin-size-batch-input" data-index="${index}" value="${size.batchNumber || ''}" placeholder="Batch #" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;">
-                                    <input type="date" class="admin-size-expiry-input" data-index="${index}" value="${size.expiryDate || ''}" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;">
+                                    <input type="text" class="admin-size-batch-input" data-index="${index}" value="${size.batchNumber || ''}" placeholder="Batch #" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Batch Number">
+                                    <input type="date" class="admin-size-expiry-input" data-index="${index}" value="${size.expiryDate || ''}" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Expiry Date">
+                                    <input type="text" class="admin-size-formula-input" data-index="${index}" value="${size.formulaVersion || ''}" placeholder="Formula v" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Formula Version">
                                 </div>
                             </div>
                         `;
@@ -6452,8 +6553,10 @@ The DODCH Team`;
                             const originalOp = original.originalPrice ? parseFloat(original.originalPrice).toFixed(2) : null;
                             if (currentOp !== originalOp) hasChanged = true;
                             if (sCheck.checked !== (original.outOfStock === true)) hasChanged = true;
+                            const fInput = row.querySelector('.admin-size-formula-input');
                             if ((bInput.value || '') !== (original.batchNumber || '')) hasChanged = true;
                             if ((eInput.value || '') !== (original.expiryDate || '')) hasChanged = true;
+                            if (fInput && (fInput.value || '') !== (original.formulaVersion || '')) hasChanged = true;
                         });
                     } else {
                         const pInput = el.querySelector('.admin-price-input');
@@ -6513,12 +6616,12 @@ The DODCH Team`;
                         product.performance.forEach(m => addPerformanceMetricRow(m));
                     }
 
-                    // Render Batch History
-                    const historySection = document.getElementById('batch-history-section');
+                    // Render Batch History in tabbed modal
+                    const historyTabBtn = document.getElementById('aem-history-tab-btn');
                     const historyContainer = document.getElementById('batch-history-container');
-                    if (historySection && historyContainer) {
+                    if (historyTabBtn && historyContainer) {
                         if (product.batchHistory && product.batchHistory.length > 0) {
-                            historySection.style.display = 'block';
+                            historyTabBtn.style.display = '';
                             const sortedHistory = [...product.batchHistory].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                             historyContainer.innerHTML = `
                                 <table style="width: 100%; border-collapse: collapse; font-family: var(--font-sans); font-size: 0.85rem; text-align: left;">
@@ -6526,6 +6629,7 @@ The DODCH Team`;
                                         <tr style="border-bottom: 2px solid #eee; font-weight: 600; color: #333;">
                                             <th style="padding: 8px;">Size</th>
                                             <th style="padding: 8px;">Batch #</th>
+                                            <th style="padding: 8px;">Formula</th>
                                             <th style="padding: 8px;">Expiry</th>
                                             <th style="padding: 8px;">Date Set</th>
                                             <th style="padding: 8px;">INCI List</th>
@@ -6536,6 +6640,7 @@ The DODCH Team`;
                                             <tr style="border-bottom: 1px solid #eee;">
                                                 <td style="padding: 8px; font-weight: 500;">${h.size}</td>
                                                 <td style="padding: 8px; color: var(--accent-gold-text); font-weight: 600;">${h.batchNumber}</td>
+                                                <td style="padding: 8px; color: #555;">${h.formulaVersion || '—'}</td>
                                                 <td style="padding: 8px; color: #666;">${h.expiryDate || 'N/A'}</td>
                                                 <td style="padding: 8px; color: #666; font-size: 0.8rem;">${new Date(h.timestamp).toLocaleString()}</td>
                                                 <td style="padding: 8px; position: relative;">
@@ -6548,7 +6653,8 @@ The DODCH Team`;
                                 </table>
                             `;
                         } else {
-                            historySection.style.display = 'none';
+                            historyTabBtn.style.display = 'none';
+                            historyContainer.innerHTML = '';
                         }
                     }
 
@@ -6581,6 +6687,8 @@ The DODCH Team`;
                                 const newBatch = batchInput ? batchInput.value.trim() : '';
                                 const expiryInput = card.querySelector(`.admin-size-expiry-input[data-index="${index}"]`);
                                 const expiryDateVal = expiryInput ? expiryInput.value : '';
+                                const formulaInput = card.querySelector(`.admin-size-formula-input[data-index="${index}"]`);
+                                const formulaVersionVal = formulaInput ? formulaInput.value.trim() : '';
 
                                 const oldSize = productCatalog[id].sizes[index];
                                 const oldBatch = oldSize ? (oldSize.batchNumber || '') : '';
@@ -6590,6 +6698,7 @@ The DODCH Team`;
                                         size: oldSize.label,
                                         batchNumber: newBatch,
                                         expiryDate: expiryDateVal,
+                                        formulaVersion: formulaVersionVal,
                                         timestamp: new Date().toISOString(),
                                         inci: productCatalog[id].inci || ''
                                     });
@@ -6605,6 +6714,7 @@ The DODCH Team`;
                                 productCatalog[id].sizes[index].outOfStock = isOutOfStock;
                                 productCatalog[id].sizes[index].batchNumber = newBatch;
                                 productCatalog[id].sizes[index].expiryDate = expiryDateVal;
+                                productCatalog[id].sizes[index].formulaVersion = formulaVersionVal;
                             });
                             const prices = productCatalog[id].sizes.map(s => parseFloat(s.price));
                             productCatalog[id].price = Math.min(...prices).toFixed(2);
@@ -7634,10 +7744,11 @@ const listenForAdminNotifications = () => {
 };
 
 const listenForUserNotifications = (userId) => {
-    const q = query(collection(db, "orders"), where("userId", "==", userId), orderBy("timestamp", "desc"));
+    // --- Listener 1: Order status updates ---
+    const ordersQ = query(collection(db, "orders"), where("userId", "==", userId), orderBy("timestamp", "desc"));
     let isInitialLoad = true;
 
-    onSnapshot(q, (snapshot) => {
+    onSnapshot(ordersQ, (snapshot) => {
         const hasUnseen = snapshot.docs.some(doc => doc.data().hasUnseenUpdate === true);
 
         if (hasUnseen) {
@@ -7662,7 +7773,77 @@ const listenForUserNotifications = (userId) => {
     }, (error) => {
         console.error("User notification listener failed:", error);
     });
+
+    // --- Listener 2: DODCH / general notifications (replies, announcements, etc.) ---
+    const notifQ = query(
+        collection(db, "notifications"),
+        where("userId", "==", userId)
+    );
+    let notifInitialLoad = true;
+
+    onSnapshot(notifQ, (snapshot) => {
+        if (!notifInitialLoad) {
+            snapshot.docChanges().forEach(async (change) => {
+                if (change.type === "added") {
+                    const n = change.doc.data();
+                    // Only show toast for unseen notifications
+                    if (n.isSeen === true) return;
+
+                    const notifId = change.doc.id;
+                    const title = n.title || "New Notification";
+                    const message = n.message || "";
+                    const link = n.link || null;
+
+                    // Show a custom toast that navigates on click
+                    const toastEl = document.createElement('div');
+                    toastEl.style.cssText = `
+                        position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+                        background: linear-gradient(135deg, #18181B 0%, #27272A 100%);
+                        color: #FDFBF7; padding: 1rem 1.4rem;
+                        border-radius: 14px; border-left: 4px solid #D4AF37;
+                        box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+                        z-index: 99999; max-width: 360px; width: calc(100% - 2rem);
+                        cursor: ${link ? 'pointer' : 'default'};
+                        display: flex; align-items: flex-start; gap: 12px;
+                        animation: toastSlideIn 0.35s ease forwards;
+                        font-family: var(--font-sans, sans-serif);
+                    `;
+                    toastEl.innerHTML = `
+                        <span style="font-size:1.4rem; flex-shrink:0;">✨</span>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:0.9rem; margin-bottom:3px; color:#FDFBF7;">${title}</div>
+                            <div style="font-size:0.82rem; color:#D1D5DB; line-height:1.45;">${message}</div>
+                            ${link ? `<div style="margin-top:6px; font-size:0.78rem; color:#D4AF37; font-weight:600;">Tap to view →</div>` : ''}
+                        </div>
+                        <button style="background:none;border:none;color:#9CA3AF;font-size:1.2rem;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" onclick="this.parentElement.remove(); event.stopPropagation();">×</button>
+                    `;
+                    if (link) {
+                        toastEl.addEventListener('click', (e) => {
+                            if (e.target.tagName !== 'BUTTON') {
+                                window.location.href = link;
+                            }
+                        });
+                    }
+                    document.body.appendChild(toastEl);
+
+                    // Auto-dismiss after 8s
+                    setTimeout(() => { if (toastEl.parentNode) toastEl.remove(); }, 8000);
+
+                    // Mark as seen in Firestore
+                    try {
+                        await updateDoc(doc(db, "notifications", notifId), { isSeen: true });
+                    } catch (e) {
+                        console.warn("Could not mark notification as seen:", e);
+                    }
+                }
+            });
+        }
+        notifInitialLoad = false;
+    }, (error) => {
+        console.error("Notification listener error:", error);
+    });
 };
+
 if (window.location.pathname.includes('my-account.html')) {
 }
 const initProductReviews = () => {
@@ -7728,6 +7909,8 @@ const initProductReviews = () => {
         reviewsContainer.innerHTML = '';
         reviews.forEach(review => {
             const reviewEl = document.createElement('div');
+            reviewEl.id = `review-${review.id}`;
+            reviewEl.className = 'review-card-item content-fade visible';
             reviewEl.style.cssText = `
                 padding: 1.5rem;
                 background: var(--card-white, #ffffff);
@@ -7798,6 +7981,57 @@ const initProductReviews = () => {
             const thumbsColor = isLikedByCurrentUser ? '#4F46E5' : 'currentColor';
             const thumbsFill = isLikedByCurrentUser ? '#4F46E5' : 'none';
 
+            // Render DODCH Official Reply if present (simple clean indented thread line)
+            let adminReplyDisplayHtml = '';
+            if (review.adminReply) {
+                const rText = typeof review.adminReply === 'object' ? (review.adminReply.text || '') : String(review.adminReply);
+                const rTimestamp = typeof review.adminReply === 'object' && review.adminReply.updatedAt ? review.adminReply.updatedAt : null;
+                const rDateStr = rTimestamp ? new Date(rTimestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+                if (rText.trim()) {
+                    adminReplyDisplayHtml = `
+                        <div class="dodch-reply-thread-wrap" style="margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;">
+                            <div class="dodch-reply-card" style="padding: 0.9rem 1.1rem; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 12px; border-left: 3.5px solid #D4AF37; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%); color: #000; font-weight: 800; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Official</span>
+                                        <strong style="color: #FDFBF7; font-size: 0.9rem; font-family: var(--font-sans);">DODCH Reply</strong>
+                                    </div>
+                                    ${rDateStr ? `<span style="font-size: 0.74rem; color: #9CA3AF;">${rDateStr}</span>` : ''}
+                                </div>
+                                <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${rText}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Admin-only controls to publish / edit / delete DODCH reply
+            let adminReplyControlHtml = '';
+            if (isAdmin) {
+                const hasReply = !!(review.adminReply && (typeof review.adminReply === 'object' ? review.adminReply.text : review.adminReply));
+                const currentReplyText = hasReply ? (typeof review.adminReply === 'object' ? review.adminReply.text : review.adminReply) : '';
+
+                adminReplyControlHtml = `
+                    <div class="admin-reply-wrapper" style="margin-top: 0.75rem; width: 100%;">
+                        <button type="button" class="admin-btn-reply-toggle" onclick="window.toggleAdminReplyForm('${review.id}')" style="background: #27272A; color: #D4AF37; border: 1px solid #3F3F46; padding: 5px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            <span>${hasReply ? 'Edit DODCH Reply' : '💬 Reply as DODCH'}</span>
+                        </button>
+                        <div id="admin-reply-form-${review.id}" style="display: none; margin-top: 0.6rem; background: #27272A; padding: 1rem; border-radius: 12px; border: 1px solid #3F3F46;">
+                            <label style="display: block; color: #D4AF37; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem;">
+                                DODCH Official Reply
+                            </label>
+                            <textarea id="admin-reply-input-${review.id}" class="modern-input" rows="3" placeholder="Write an official response as DODCH..." style="background: #18181B; color: #FFF; border-color: #3F3F46; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0.6rem;">${currentReplyText}</textarea>
+                            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                                ${hasReply ? `<button type="button" onclick="window.handleDeleteAdminReply('${review.id}')" style="background: #7F1D1D; color: #FCA5A5; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Delete Reply</button>` : ''}
+                                <button type="button" onclick="window.toggleAdminReplyForm('${review.id}')" style="background: transparent; color: #A1A1AA; border: 1px solid #52525B; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer;">Cancel</button>
+                                <button type="button" onclick="window.handleSaveAdminReply('${review.id}')" style="background: #D4AF37; color: #000; border: none; padding: 5px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">Publish DODCH Reply</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             reviewEl.innerHTML = `
                 <div style="display: flex; gap: 16px; align-items: flex-start;">
                     ${avatarHtml}
@@ -7821,15 +8055,19 @@ const initProductReviews = () => {
                         <div style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
                             <div>${starsHtml}</div>
                         </div>
-                        <p style="margin: 0 0 1rem 0; line-height: 1.65; color: #374151; font-size: 0.95rem; font-weight: 400; word-break: break-word;">${review.text}</p>
+                        <div class="review-text-bubble" style="background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 4px 14px 14px 14px; padding: 0.9rem 1.1rem; margin-bottom: 0.85rem; color: #212529; font-size: 0.95rem; line-height: 1.65; word-break: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                            ${review.text}
+                        </div>
                         
-                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 0.8rem; padding-top: 0.75rem; border-top: 1px solid #F3F4F6;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid #F3F4F6;">
                             <button onclick="window.handleReviewLike('${review.id}', this)" data-liked="${isLikedByCurrentUser ? 'true' : 'false'}" style="${likeBtnStyle} font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="${thumbsFill}" stroke="${thumbsColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
                                 <span>Helpful (${likesCount})</span>
                             </button>
                             ${adminInfoHtml}
                         </div>
+                        ${adminReplyDisplayHtml}
+                        ${adminReplyControlHtml}
                     </div>
                 </div>
             `;
@@ -7870,6 +8108,20 @@ const initProductReviews = () => {
 
             renderReviews(reviews);
             updateDynamicRatings(reviews);
+
+            // Auto-scroll & highlight target review if opened from a reply notification
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetReviewId = urlParams.get('reviewId');
+            if (targetReviewId) {
+                setTimeout(() => {
+                    const targetEl = document.getElementById(`review-${targetReviewId}`);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetEl.classList.add('review-highlight-pulse');
+                        setTimeout(() => targetEl.classList.remove('review-highlight-pulse'), 3500);
+                    }
+                }, 500);
+            }
         } catch (error) {
             console.error("Error fetching reviews:", error);
             reviewsContainer.innerHTML = '<p class="text-center" style="color: red;">Failed to load reviews.</p>';
@@ -8329,6 +8581,174 @@ window.handleReviewLike = async (reviewId, btnElement) => {
     }
 };
 
+window.toggleAdminReplyForm = (reviewId) => {
+    const form = document.getElementById(`admin-reply-form-${reviewId}`);
+    if (form) {
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+};
+
+window.handleSaveAdminReply = async (reviewId) => {
+    const input = document.getElementById(`admin-reply-input-${reviewId}`);
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) {
+        window.showToast("Please enter reply text.", "error");
+        return;
+    }
+
+    try {
+        const reviewRef = doc(db, "product_reviews", reviewId);
+        const now = Date.now();
+        await updateDoc(reviewRef, {
+            adminReply: {
+                text: text,
+                updatedAt: now
+            }
+        });
+
+        // Live DOM Update — No Page Reload required
+        const reviewCard = document.getElementById(`review-${reviewId}`);
+        if (reviewCard) {
+            const dateStr = new Date(now).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            let threadWrap = reviewCard.querySelector('.dodch-reply-thread-wrap');
+
+            if (threadWrap) {
+                // Update existing reply text & date
+                const replyPara = threadWrap.querySelector('p');
+                if (replyPara) replyPara.textContent = text;
+                const dateSpan = threadWrap.querySelector('.reply-date');
+                if (dateSpan) dateSpan.textContent = dateStr;
+            } else {
+                // Create new reply element dynamically
+                threadWrap = document.createElement('div');
+                threadWrap.className = 'dodch-reply-thread-wrap';
+                threadWrap.style.cssText = 'margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;';
+                threadWrap.innerHTML = `
+                    <div class="dodch-reply-card" style="padding: 0.9rem 1.1rem; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 12px; border-left: 3.5px solid #D4AF37; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%); color: #000; font-weight: 800; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Official</span>
+                                <strong style="color: #FDFBF7; font-size: 0.9rem; font-family: var(--font-sans);">DODCH Reply</strong>
+                            </div>
+                            <span class="reply-date" style="font-size: 0.74rem; color: #9CA3AF;">${dateStr}</span>
+                        </div>
+                        <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${text}</p>
+                    </div>
+                `;
+
+                const adminReplyWrap = reviewCard.querySelector('.admin-reply-wrapper');
+                const contentCol = reviewCard.querySelector('div[style*="flex: 1"]');
+                if (contentCol && adminReplyWrap) {
+                    contentCol.insertBefore(threadWrap, adminReplyWrap);
+                } else if (contentCol) {
+                    contentCol.appendChild(threadWrap);
+                } else {
+                    reviewCard.appendChild(threadWrap);
+                }
+            }
+
+            // Update toggle button label to 'Edit DODCH Reply'
+            const toggleBtnSpan = reviewCard.querySelector('.admin-btn-reply-toggle span');
+            if (toggleBtnSpan) toggleBtnSpan.textContent = 'Edit DODCH Reply';
+
+            // Ensure delete button exists in form
+            const formBtnRow = reviewCard.querySelector(`#admin-reply-form-${reviewId} div[style*="justify-content: flex-end"]`);
+            if (formBtnRow && !formBtnRow.querySelector('button[onclick*="handleDeleteAdminReply"]')) {
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.setAttribute('onclick', `window.handleDeleteAdminReply('${reviewId}')`);
+                delBtn.style.cssText = 'background: #7F1D1D; color: #FCA5A5; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;';
+                delBtn.textContent = 'Delete Reply';
+                formBtnRow.insertBefore(delBtn, formBtnRow.firstChild);
+            }
+
+            // Close form
+            window.toggleAdminReplyForm(reviewId);
+        }
+
+        // Notify user in background
+        try {
+            const reviewSnap = await getDoc(reviewRef);
+            if (reviewSnap.exists()) {
+                const rData = reviewSnap.data();
+                const targetUserId = rData.userId;
+                const productId = rData.productId;
+                let prodName = "your product";
+                if (window.productCatalog && window.productCatalog[productId]) {
+                    prodName = window.productCatalog[productId].name || "your product";
+                }
+                const redirectUrl = `product.html?id=${productId}&reviewId=${reviewId}`;
+
+                if (targetUserId && targetUserId !== auth.currentUser?.uid) {
+                    await addDoc(collection(db, "notifications"), {
+                        userId: targetUserId,
+                        title: "DODCH Replied to Your Review ✨",
+                        message: `We've responded to your review for ${prodName}. Tap to view!`,
+                        link: redirectUrl,
+                        productId: productId,
+                        reviewId: reviewId,
+                        isSeen: false,
+                        createdAt: serverTimestamp()
+                    });
+
+                    if (typeof window.sendTargetedPushNotification === 'function') {
+                        window.sendTargetedPushNotification(
+                            db,
+                            targetUserId,
+                            "DODCH Replied to Your Review ✨",
+                            `We've responded to your review for ${prodName}. Tap to view!`,
+                            redirectUrl
+                        ).catch(pErr => console.warn("Push notification error:", pErr));
+                    }
+                }
+            }
+        } catch (nErr) {
+            console.warn("Notification dispatch error:", nErr);
+        }
+
+        window.showToast("DODCH reply published & notification sent!", "success");
+    } catch (e) {
+        console.error("Error saving admin reply:", e);
+        window.showToast("Failed to save reply: " + e.message, "error");
+    }
+};
+
+window.handleDeleteAdminReply = async (reviewId) => {
+    if (!await window.showConfirm("Are you sure you want to delete this DODCH reply?", "Delete Reply")) return;
+
+    try {
+        const reviewRef = doc(db, "product_reviews", reviewId);
+        await updateDoc(reviewRef, {
+            adminReply: deleteField()
+        });
+
+        // Live DOM Update — No Page Reload
+        const reviewCard = document.getElementById(`review-${reviewId}`);
+        if (reviewCard) {
+            const threadWrap = reviewCard.querySelector('.dodch-reply-thread-wrap');
+            if (threadWrap) threadWrap.remove();
+
+            const toggleBtnSpan = reviewCard.querySelector('.admin-btn-reply-toggle span');
+            if (toggleBtnSpan) toggleBtnSpan.textContent = '💬 Reply as DODCH';
+
+            const delBtn = reviewCard.querySelector(`button[onclick*="handleDeleteAdminReply('${reviewId}')"]`);
+            if (delBtn) delBtn.remove();
+
+            const input = document.getElementById(`admin-reply-input-${reviewId}`);
+            if (input) input.value = '';
+
+            const form = document.getElementById(`admin-reply-form-${reviewId}`);
+            if (form) form.style.display = 'none';
+        }
+
+        window.showToast("DODCH reply removed.", "info");
+    } catch (e) {
+        console.error("Error deleting admin reply:", e);
+        window.showToast("Failed to delete reply: " + e.message, "error");
+    }
+};
+
 const initUserReviewsHistory = async (user) => {
     const listContainer = document.getElementById('user-reviews-list');
     const reviewsLoader = document.getElementById('reviews-loader');
@@ -8362,6 +8782,7 @@ const initUserReviewsHistory = async (user) => {
 
             chunk.forEach((review) => {
                 const reviewEl = document.createElement('div');
+                reviewEl.id = `review-${review.id}`;
                 reviewEl.className = 'review-card-item content-fade visible';
                 reviewEl.style.cssText = `
                     padding: 1.5rem;
@@ -8414,6 +8835,30 @@ const initUserReviewsHistory = async (user) => {
                 const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recent';
                 const accountBatchBadge = review.batch ? `<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${review.batch}</span>` : '';
 
+                // Render DODCH Official Reply on user account page if present (simple clean indented thread line)
+                let accountAdminReplyHtml = '';
+                if (review.adminReply) {
+                    const rText = typeof review.adminReply === 'object' ? (review.adminReply.text || '') : String(review.adminReply);
+                    const rTimestamp = typeof review.adminReply === 'object' && review.adminReply.updatedAt ? review.adminReply.updatedAt : null;
+                    const rDateStr = rTimestamp ? new Date(rTimestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+                    if (rText.trim()) {
+                        accountAdminReplyHtml = `
+                            <div class="dodch-reply-thread-wrap" style="margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;">
+                                <div class="dodch-reply-card" style="padding: 0.9rem 1.1rem; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 12px; border-left: 3.5px solid #D4AF37; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%); color: #000; font-weight: 800; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Official</span>
+                                            <strong style="color: #FDFBF7; font-size: 0.9rem; font-family: var(--font-sans);">DODCH Reply</strong>
+                                        </div>
+                                        ${rDateStr ? `<span style="font-size: 0.74rem; color: #9CA3AF;">${rDateStr}</span>` : ''}
+                                    </div>
+                                    <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${rText}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
                 reviewEl.innerHTML = `
                 <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 1rem;">
                     <img src="${productImg}" class="account-item-mini-img" alt="${productName}" style="width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 1px solid #F3F4F6;">
@@ -8426,8 +8871,11 @@ const initUserReviewsHistory = async (user) => {
                     </div>
                 </div>
                 <div style="margin-bottom: 0.75rem;">${starsHtml}</div>
-                <p style="font-size: 0.95rem; line-height: 1.65; color: #374151; margin-bottom: 1.25rem;">${review.text}</p>
-                <div style="display: flex; justify-content: flex-end; border-top: 1px solid #F3F4F6; padding-top: 0.75rem;">
+                <div class="review-text-bubble" style="background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 4px 14px 14px 14px; padding: 0.9rem 1.1rem; margin-bottom: 0.85rem; color: #212529; font-size: 0.95rem; line-height: 1.65; word-break: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    ${review.text}
+                </div>
+                ${accountAdminReplyHtml}
+                <div style="display: flex; justify-content: flex-end; border-top: 1px solid #F3F4F6; padding-top: 0.75rem; margin-top: 0.75rem;">
                     <button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')" style="background: none; border: none; color: #EF4444; font-size: 0.82rem; font-weight: 500; cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'">Delete My Review</button>
                 </div>
             `;
@@ -8445,6 +8893,20 @@ const initUserReviewsHistory = async (user) => {
             if (reviewsLoader) reviewsLoader.classList.remove('active');
             listContainer.classList.add('visible');
             renderReviewChunk();
+
+            // Auto-scroll & highlight target review if opened from notification
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetReviewId = urlParams.get('reviewId');
+            if (targetReviewId) {
+                setTimeout(() => {
+                    const targetEl = document.getElementById(`review-${targetReviewId}`);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetEl.classList.add('review-highlight-pulse');
+                        setTimeout(() => targetEl.classList.remove('review-highlight-pulse'), 3500);
+                    }
+                }, 400);
+            }
         }, 800);
 
         if (loadMoreBtn) {

@@ -17,15 +17,22 @@ service cloud.firestore {
     }
 
     // Products & Overrides: Public read, Admin write.
-    // Product documents contain: name, subtitle, description, inci, price, sizes (with batchNumber, expiryDate),
-    // batchHistory (array of {size, batchNumber, expiryDate, timestamp, inci}), images, outOfStock, etc.
+    // Product documents contain: name, subtitle, description, inci, price,
+    // sizes (with batchNumber, expiryDate, formulaVersion),
+    // batchHistory (array of {size, batchNumber, expiryDate, formulaVersion, timestamp, inci}),
+    // images, outOfStock, etc.
     match /products/{productId} {
       allow read: if true;
-      // Only the admin can write products, including updating batch history records.
+      // Only the admin can write products, including updating batch history records
+      // and the new formulaVersion field per size.
       allow write: if isAdmin()
         && (
           !('batchHistory' in request.resource.data)
           || request.resource.data.batchHistory is list
+        )
+        && (
+          !('sizes' in request.resource.data)
+          || request.resource.data.sizes is list
         );
     }
 
@@ -106,6 +113,7 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid
         && isValidString(request.resource.data.text, 1, 3000)
         && (!('images' in request.resource.data) || request.resource.data.images.size() == 0)
+        && (!('adminReply' in request.resource.data))
         && exists(/databases/$(database)/documents/orders/$(request.resource.data.orderId))
         && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status == 'Delivered'
         && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.userId == request.auth.uid;
@@ -116,6 +124,7 @@ service cloud.firestore {
           && request.resource.data.userId == request.auth.uid 
           && isValidString(request.resource.data.text, 1, 3000)
           && (!('images' in request.resource.data) || request.resource.data.images.size() == 0)
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['adminReply']))
           && (
             // Normal update (not refunded)
             resource.data.get('refunded', false) == false
