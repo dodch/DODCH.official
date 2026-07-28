@@ -1,4 +1,4 @@
-// Universal Image WebP Fallback Fix
+﻿// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -5056,7 +5056,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 3. Sizes
             if (!hasChanged) {
-                const currentSizes = Array.from(sizesContainer.querySelectorAll('.size-input-row')).map(row => ({
+                const currentSizes = Array.from(sizesContainer.querySelectorAll('.size-card')).map(row => ({
                     label: row.querySelector('.size-label-input').value,
                     price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
                     originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
@@ -5076,7 +5076,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 4. Performance
             if (!hasChanged) {
-                const currentPerf = Array.from(document.querySelectorAll('.performance-input-row')).map(row => ({
+                const currentPerf = Array.from(document.querySelectorAll('.metric-card')).map(row => ({
                     label: row.querySelector('.metric-label-input').value.trim(),
                     value: parseInt(row.querySelector('.metric-value-input').value) || 0,
                     levels: Array.from(row.querySelectorAll('.metric-level-label-input')).map(inp => inp.value.trim())
@@ -5387,7 +5387,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                const sizes = Array.from(sizesContainer.querySelectorAll('.size-input-row')).map(row => ({
+                const sizes = Array.from(sizesContainer.querySelectorAll('.size-card')).map(row => ({
                     label: row.querySelector('.size-label-input').value,
                     price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
                     originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
@@ -5397,7 +5397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     outOfStock: false // Default to false, will be preserved below if editing
                 }));
 
-                const performanceMetrics = Array.from(document.querySelectorAll('.performance-input-row')).map(row => ({
+                const performanceMetrics = Array.from(document.querySelectorAll('.metric-card')).map(row => ({
                     label: row.querySelector('.metric-label-input').value.trim(),
                     value: parseInt(row.querySelector('.metric-value-input').value) || 0,
                     levels: Array.from(row.querySelectorAll('.metric-level-label-input')).map(inp => inp.value.trim())
