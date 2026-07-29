@@ -1,4 +1,4 @@
-// Universal Image WebP Fallback Fix
+﻿// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
