@@ -11149,6 +11149,11 @@ window.addEventListener('load', initPushNotifications);
         if (index === 2) {
             isTransitioning = true;
             setTimeout(() => {
+                const clonedBg = document.querySelector('#hero-rewards-hero-cloned .hero-rewards-bg');
+                const realBg = document.querySelector('#hero-rewards-hero .hero-rewards-bg');
+                if (clonedBg && realBg) {
+                    realBg.style.transform = clonedBg.style.transform;
+                }
                 wrapper.style.transition = 'none';
                 wrapper.style.transform = 'translateX(0%)';
                 currentSlide = 0;
@@ -11324,51 +11329,29 @@ window.addEventListener('scroll', function() {
 // --- Liquid Glass WebGL Engine Integration ---
 (async () => {
     try {
-            // --- Rewards Hero (Slide 1) ---
-            const rewardsRootEl = document.querySelector('#hero-rewards-hero') || document.querySelector('.hero-rewards-section');
-            const rewardsGlassEl = document.querySelector('#hero-rewards-hero .liquid-glass-btn') || document.querySelector('#hero-login-google-btn');
-
-            if (rewardsRootEl && rewardsGlassEl) {
-                let LiquidGlass;
-                try {
-                    const mod = await import('./liquidglass.js');
-                    LiquidGlass = mod.LiquidGlass;
-                } catch (e) {
-                    const mod = await import('https://cdn.jsdelivr.net/npm/@ybouane/liquidglass/dist/index.js');
-                    LiquidGlass = mod.LiquidGlass;
-                }
-
-                if (LiquidGlass && typeof LiquidGlass.init === 'function') {
-                    window.liquidGlassRewardsInstance = await LiquidGlass.init({
-                        root: rewardsRootEl,
-                        glassElements: [rewardsGlassEl],
-                        defaults: {
-                            button: true,
-                            blurAmount: 0.11,
-                            refraction: 0.76,
-                            chromAberration: 0.21,
-                            edgeHighlight: 0.05,
-                            specular: 0,
-                            fresnel: 1,
-                            distortion: 0,
-                            cornerRadius: 40,
-                            zRadius: 40,
-                            opacity: 1,
-                            saturation: 0,
-                            brightness: 0,
-                            shadowOpacity: 0.3,
-                            shadowSpread: 10,
-                            bevelMode: 0
-                        }
-                    });
-                    console.log('✨ Liquid Glass initialized on Rewards hero button.');
-                }
+        const glassElementsConfig = [
+            {
+                // Original Rewards Button
+                rootSelector: '#hero-rewards-hero',
+                glassSelector: '#hero-login-google-btn',
+                instanceName: 'liquidGlassRewardsInstance',
+                logMessage: '✨ Liquid Glass initialized on Rewards hero button.'
+            },
+            {
+                // Cloned Rewards Button
+                rootSelector: '#hero-rewards-hero-cloned',
+                glassSelector: '#hero-login-google-btn-cloned',
+                instanceName: 'liquidGlassRewardsClonedInstance',
+                logMessage: '✨ Liquid Glass initialized on CLONED Rewards hero button.'
+            },
+            {
+                // Hair Duo Button
+                rootSelector: '#hair-duo-hero',
+                glassSelector: '#hair-duo-hero .liquid-glass-btn',
+                instanceName: 'liquidGlassInstance',
+                logMessage: '✨ Liquid Glass WebGL Engine initialized successfully on Shop Hair Care button'
             }
-
-            // --- Hair Duo Hero (Slide 2) ---
-        const rootEl = document.querySelector('#hair-duo-hero');
-        const glassEl = document.querySelector('#hair-duo-hero .liquid-glass-btn');
-        if (!rootEl || !glassEl) return;
+        ];
 
         let LiquidGlass;
         try {
@@ -11379,30 +11362,43 @@ window.addEventListener('scroll', function() {
             LiquidGlass = mod.LiquidGlass;
         }
 
-        if (LiquidGlass && typeof LiquidGlass.init === 'function') {
-            window.liquidGlassInstance = await LiquidGlass.init({
-                root: rootEl,
-                glassElements: [glassEl],
-                defaults: {
-                    button: true,
-                    blurAmount: 0.11,
-                    refraction: 0.76,
-                    chromAberration: 0.21,
-                    edgeHighlight: 0.05,
-                    specular: 0,
-                    fresnel: 1,
-                    distortion: 0,
-                    cornerRadius: 40,
-                    zRadius: 40,
-                    opacity: 1,
-                    saturation: 0,
-                    brightness: 0,
-                    shadowOpacity: 0.3,
-                    shadowSpread: 10,
-                    bevelMode: 0
-                }
-            });
-            console.log('✨ Liquid Glass WebGL Engine initialized successfully on Shop Hair Care button');
+        if (!LiquidGlass || typeof LiquidGlass.init !== 'function') {
+            throw new Error('LiquidGlass library not available or invalid.');
+        }
+
+        for (const config of glassElementsConfig) {
+            const rootEl = document.querySelector(config.rootSelector);
+            const glassEl = document.querySelector(config.glassSelector);
+
+            if (rootEl && glassEl) {
+                // Check if an instance already exists on this element to avoid re-initialization
+                if (glassEl.dataset.liquidglassInitialized) continue;
+
+                window[config.instanceName] = await LiquidGlass.init({
+                    root: rootEl,
+                    glassElements: [glassEl],
+                    defaults: {
+                        button: true,
+                        blurAmount: 0.11,
+                        refraction: 0.76,
+                        chromAberration: 0.21,
+                        edgeHighlight: 0.05,
+                        specular: 0,
+                        fresnel: 1,
+                        distortion: 0,
+                        cornerRadius: 40,
+                        zRadius: 40,
+                        opacity: 1,
+                        saturation: 0,
+                        brightness: 0,
+                        shadowOpacity: 0.3,
+                        shadowSpread: 10,
+                        bevelMode: 0
+                    }
+                });
+                glassEl.dataset.liquidglassInitialized = 'true'; // Mark as initialized
+                console.log(config.logMessage);
+            }
         }
     } catch (err) {
         console.warn('⚠️ Liquid Glass WebGL initialization skipped or failed:', err);

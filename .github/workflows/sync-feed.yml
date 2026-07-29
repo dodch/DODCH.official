@@ -18,7 +18,7 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: 📦 Install only required build tools
         run: npm install esbuild firebase-admin --no-save
@@ -39,4 +39,3 @@ jobs:
           git commit -m "chore: auto-sync database prices and update feed" || echo "No changes to commit"
           git push origin main
           echo "✅ Push complete — GitHub Pages will now rebuild dodch.com with the new prices."
-
