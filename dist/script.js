@@ -1,7 +1,157 @@
-window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG"){const o=p.target.getAttribute("src")||"";o.match(/\.(png|jpg|jpeg)(\?.*)?$/i)&&(p.target.dataset.webpRetried||(p.target.dataset.webpRetried="true",p.target.src=o.replace(/\.(png|jpg|jpeg)(\?.*)?$/i,".webp$2")))}},!0);import{initializeApp as gi}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";import{getAnalytics as hi}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";import{initializeAppCheck as yi,ReCaptchaV3Provider as bi,getToken as vi}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";import{getAuth as So,signInWithPopup as wi,GoogleAuthProvider as xi,signOut as ki,onAuthStateChanged as Vt,signInWithEmailAndPassword as Si,createUserWithEmailAndPassword as Ei}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";import{getFirestore as Xo,initializeFirestore as Li,persistentLocalCache as Ii,collection as Re,addDoc as to,doc as Ae,setDoc as at,getDoc as ft,query as We,where as rt,getDocs as nt,serverTimestamp as Et,updateDoc as gt,limit as Ti,orderBy as oo,startAfter as Ci,deleteDoc as Eo,onSnapshot as io}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";import{getFunctions as Bi}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";import{getStorage as $i}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";import{getMessaging as Lo,getToken as Ko,onMessage as zi,isSupported as Io}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";import{firebaseConfig as Ai}from"./firebase-config.js";import{WebHaptics as Pi}from"https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/+esm";const Qo=new Pi({debug:!0});window.triggerHaptic=(p="light")=>{p==="quickview"?Qo.trigger([30,50,30]):Qo.trigger(p)};const Gt="4JAqYb2fnEhpqaBv7xWwsFDUXun2",Ge={TUNISIA_GOVERNORATES:["Ariana","B\xE9ja","Ben Arous","Bizerte","Gab\xE8s","Gafsa","Jendouba","Kairouan","Kasserine","Kebili","Kef","Mahdia","Manouba","Medenine","Monastir","Nabeul","Sfax","Sidi Bouzid","Siliana","Sousse","Tataouine","Tozeur","Tunis","Zaghouan"],MAX_NAME_LENGTH:100,MAX_MESSAGE_LENGTH:3e3,validatePhone:p=>{const o=p.replace(/[^0-9]/g,"");return/^[24579]\d{7}$/.test(o)},PROFANITY_LIST:["fuck","shit","asshole","bitch","nigger","cunt","dick","pussy","putain","merde","connard","salope","encule","bite","chatte","zbi","z*bi","nek","n**k","mnyek","zab","kahba","asba","kr*z","ms*k"],isProfane:p=>{if(!p)return!1;const o=p.toLowerCase();return Ge.PROFANITY_LIST.some(s=>o.includes(s)||o.replace(/[*#@!]/g,"").includes(s))},isGibberish:p=>p?!!(/(.)\1{5,}/.test(p)||p.length>30&&!p.includes(" ")&&!p.includes(`
-`)):!1,validateEmail:p=>/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(p)},lt=gi(Ai),Lr=hi(lt);(location.hostname==="localhost"||location.hostname==="127.0.0.1")&&(console.info("\u{1F6E1}\uFE0F App Check: Localhost detected. Enabling Debug Mode..."),self.FIREBASE_APPCHECK_DEBUG_TOKEN=!0);const qi=yi(lt,{provider:new bi("6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy"),isTokenAutoRefreshEnabled:!0}),Ft=vi(qi).then(()=>{console.log("\u{1F6E1}\uFE0F App Check: Token ready.")}).catch(p=>{console.warn("\u26A0\uFE0F App Check: Token exchange failed.",p)}),tt=So(lt);let ae;try{const p=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream,o=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);/FBAN|FBAV|Instagram|Snapchat|TikTok|Twitter|Line/i.test(navigator.userAgent)||p||o?(console.info("\u26A1 Firestore: iOS/Safari/In-App browser detected. Using memory cache to prevent IndexedDB hangs."),ae=Xo(lt)):(ae=Li(lt,{localCache:Ii(),experimentalForceLongPolling:!0}),console.info("\u26A1 Firestore: single-tab persistent cache and long polling enabled."))}catch(p){console.warn("\u26A0\uFE0F Firestore: persistent cache failed, falling back to memory cache:",p),ae=Xo(lt)}const Ir=Bi(lt,"europe-west1"),Tr=$i(lt),Di=new xi;let xt=null,w={};const Ue=p=>p?String(p).replace(/[&<>'"]/g,o=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[o]||o):"";window.printCheckoutReceipt=p=>{const o=document.querySelector(".order-receipt-sheet");if(!o)return;const s=o.cloneNode(!0),d=s.querySelector(".receipt-actions");d&&d.remove();const l=s.innerHTML,c=window.open("","_blank","width=960,height=800");if(!c){window.showToast("Please allow popups to save the receipt.","warning");return}c.document.write(`<!DOCTYPE html><html><head>
+// Universal Image WebP Fallback Fix
+window.addEventListener('error', function (e) {
+    if (e.target && e.target.tagName === 'IMG') {
+        const src = e.target.getAttribute('src') || '';
+        if (src.match(/\.(png|jpg|jpeg)(\?.*)?$/i)) {
+            if (!e.target.dataset.webpRetried) {
+                e.target.dataset.webpRetried = 'true';
+                e.target.src = src.replace(/\.(png|jpg|jpeg)(\?.*)?$/i, '.webp$2');
+            }
+        }
+    }
+}, true);
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot, deleteField } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { getMessaging, getToken as getMessagingToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+import { firebaseConfig } from "./firebase-config.js";
+import { WebHaptics } from 'https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/+esm';
+// import "./admin-edit.js"; // Moved to bottom
+
+const haptics = new WebHaptics({ debug: true });
+window.triggerHaptic = (type = 'light') => {
+    if (type === 'quickview') {
+        haptics.trigger([30, 50, 30]);
+    } else {
+        haptics.trigger(type);
+    }
+};
+
+const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
+// --- SECURITY & VALIDATION ENGINE ---
+const SecurityValidator = {
+    TUNISIA_GOVERNORATES: ["Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa", "Jendouba", "Kairouan", "Kasserine", "Kebili", "Kef", "Mahdia", "Manouba", "Medenine", "Monastir", "Nabeul", "Sfax", "Sidi Bouzid", "Siliana", "Sousse", "Tataouine", "Tozeur", "Tunis", "Zaghouan"],
+
+    MAX_NAME_LENGTH: 100,
+    MAX_MESSAGE_LENGTH: 3000,
+    validatePhone: (num) => {
+        const cleaned = num.replace(/[^0-9]/g, '');
+        return /^[24579]\d{7}$/.test(cleaned);
+    },
+    PROFANITY_LIST: [
+        "fuck", "shit", "asshole", "bitch", "nigger", "cunt", "dick", "pussy",
+        "putain", "merde", "connard", "salope", "encule", "bite", "chatte",
+        "zbi", "z*bi", "nek", "n**k", "mnyek", "zab", "kahba", "asba", "kr*z", "ms*k"
+    ],
+
+    isProfane: (text) => {
+        if (!text) return false;
+        const normalized = text.toLowerCase();
+        return SecurityValidator.PROFANITY_LIST.some(word =>
+            normalized.includes(word) ||
+            normalized.replace(/[*#@!]/g, '').includes(word)
+        );
+    },
+
+    isGibberish: (text) => {
+        if (!text) return false;
+        if (/(.)\1{5,}/.test(text)) return true;
+        if (text.length > 30 && !text.includes(' ') && !text.includes('\n')) return true;
+        return false;
+    },
+
+    validateEmail: (email) => {
+        return /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email);
+    }
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+    console.info("🛡️ App Check: Localhost detected. Enabling Debug Mode...");
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
+const appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider('6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy'),
+    isTokenAutoRefreshEnabled: true
+});
+// Store the AppCheck token promise so we can race it before Firestore calls.
+// The SDK attaches tokens internally, but on first load the token may not be ready
+// in time — causing permission-denied errors from Firestore.
+const appCheckReady = getToken(appCheck)
+    .then(() => {
+        console.log("🛡️ App Check: Token ready.");
+    })
+    .catch((err) => {
+        console.warn("⚠️ App Check: Token exchange failed.", err);
+    });
+
+const auth = getAuth(app);
+// Intelligent Caching: Enable persistent local cache so products load instantly on repeat visits
+let db;
+try {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isInAppBrowser = /FBAN|FBAV|Instagram|Snapchat|TikTok|Twitter|Line/i.test(navigator.userAgent);
+
+    if (isInAppBrowser || isIOS || isSafari) {
+        console.info("⚡ Firestore: iOS/Safari/In-App browser detected. Using memory cache to prevent IndexedDB hangs.");
+        db = getFirestore(app);
+    } else {
+        db = initializeFirestore(app, {
+            localCache: persistentLocalCache(),
+            experimentalForceLongPolling: true
+        });
+        console.info("⚡ Firestore: single-tab persistent cache and long polling enabled.");
+    }
+} catch (e) {
+    console.warn("⚠️ Firestore: persistent cache failed, falling back to memory cache:", e);
+    db = getFirestore(app);
+}
+const functions = getFunctions(app, "europe-west1");
+const storage = getStorage(app);
+const provider = new GoogleAuthProvider();
+
+let messaging = null;
+let productCatalog = {};
+const escapeHTML = (str) => {
+    if (!str) return "";
+    return String(str).replace(/[&<>'"]/g,
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+};
+
+window.printCheckoutReceipt = (fileName) => {
+    const receiptEl = document.querySelector('.order-receipt-sheet');
+    if (!receiptEl) return;
+
+    // Create a clone to strip UI elements
+    const clone = receiptEl.cloneNode(true);
+    const actions = clone.querySelector('.receipt-actions');
+    if (actions) actions.remove();
+    const receiptHTML = clone.innerHTML;
+
+    const win = window.open('', '_blank', 'width=960,height=800');
+    if (!win) {
+        window.showToast("Please allow popups to save the receipt.", "warning");
+        return;
+    }
+
+    win.document.write(`<!DOCTYPE html><html><head>
         <meta charset='UTF-8'>
-        <title>${p}</title>
+        <title>${fileName}</title>
         <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700&display=swap' rel='stylesheet'>
         <style>
             :root { --gold: #D4AF37; --gold-text: #866F00; --charcoal: #1a1a1a; }
@@ -32,8 +182,50 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
         </style>
         </head><body>
         <div class='receipt-brand'>DODCH</div>
-        ${l}
-        </body></html>`),c.document.close(),c.document.title=p,c.focus(),setTimeout(()=>{c.print()},800)};const To=p=>{if(!p)return[];let o=[];if(Array.isArray(p.images)&&p.images.length>0)o=[...p.images];else if(p.image)o=[p.image];else return[];return o.map(s=>s&&typeof s=="string"&&!s.startsWith("http")&&!s.startsWith("data:")?window.location.origin+"/"+s.replace(/^\/+/,""):s)},kt=p=>{const o=To(p);return o.length>0?o[0]:""},Cr=p=>new Promise((o,s)=>{const d=new FileReader;d.onload=()=>o(d.result),d.onerror=()=>s(new Error("Failed to read file")),d.readAsDataURL(p)});document.addEventListener("DOMContentLoaded",()=>{try{const a=`
+        ${receiptHTML}
+        </body></html>`);
+    win.document.close();
+    win.document.title = fileName;
+    win.focus();
+    setTimeout(() => { win.print(); }, 800);
+};
+
+const getProductImages = (product) => {
+    if (!product) return [];
+    let images = [];
+    if (Array.isArray(product.images) && product.images.length > 0) {
+        images = [...product.images];
+    } else if (product.image) {
+        images = [product.image];
+    } else {
+        return [];
+    }
+    return images.map(img => {
+        if (img && typeof img === 'string' && !img.startsWith('http') && !img.startsWith('data:')) {
+            return window.location.origin + '/' + img.replace(/^\/+/, '');
+        }
+        return img;
+    });
+};
+
+const getProductPrimaryImage = (product) => {
+    const images = getProductImages(product);
+    return images.length > 0 ? images[0] : '';
+};
+
+const fileToDataUrl = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject cart layout fixes so they apply even when pages load the minified CSS
+    try {
+        const cartFixCss = `
             /* Cart fixes injected at runtime */
             #cart-drawer .cart-footer .checkout-btn { border-radius: 9999px; padding: 1.25rem 1.75rem; display: inline-flex; align-items: center; justify-content: center; min-width: 160px; background-color: var(--text-charcoal); color: #fff; font-weight:700; box-shadow: 0 12px 30px rgba(0,0,0,0.15); transition: transform 0.18s ease, box-shadow 0.18s ease; }
             @media (max-width: 480px) { #cart-drawer .cart-footer .checkout-btn { min-width: 120px; padding: 0.9rem 1.2rem; } }
@@ -95,35 +287,960 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
             .batch-tooltip-content { display: none; position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); background: #1a1a1a; color: #fff; font-size: 0.75rem; padding: 8px 12px; border-radius: 8px; width: 220px; line-height: 1.4; z-index: 100; pointer-events: none; }
             .batch-tooltip-icon:hover .batch-tooltip-content,
             .batch-tooltip-icon:focus .batch-tooltip-content { display: block; }
-        `,i=document.createElement("style");i.id="cart-fixes-style",i.appendChild(document.createTextNode(a)),document.head.appendChild(i)}catch(a){console.warn("Failed to inject cart fixes CSS",a)}document.body.classList.add("page-ready");const p=window.location.hash;window.showToast=(a,i="info",e=4e3)=>{let t=document.getElementById("toast-container");t||(t=document.createElement("div"),t.id="toast-container",document.body.appendChild(t));const n=document.createElement("div");n.className=`custom-toast ${i}`,n.innerHTML=`
+        `;
+        const s = document.createElement('style');
+        s.id = 'cart-fixes-style';
+        s.appendChild(document.createTextNode(cartFixCss));
+        document.head.appendChild(s);
+    } catch (err) { console.warn('Failed to inject cart fixes CSS', err); }
+    // FIX: Reveal the body now that CSS is guaranteed to be applied (prevents FOUC).
+    document.body.classList.add('page-ready');
+    const initialHash = window.location.hash;
+
+    window.showToast = (message, type = 'info', duration = 4000) => {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `custom-toast ${type}`;
+        toast.innerHTML = `
             <div class="toast-content">
-                <span class="toast-message">${a}</span>
+                <span class="toast-message">${message}</span>
             </div>
             <div class="toast-progress"></div>
-        `;const r=[...t.querySelectorAll(".custom-toast")],H=r.map(b=>b.getBoundingClientRect());t.insertBefore(n,t.firstChild),r.forEach((b,y)=>{const S=b.getBoundingClientRect(),E=H[y].top-S.top;E!==0&&(b.style.transition="none",b.style.transform=`translateX(0) translateY(${E}px)`)}),requestAnimationFrame(()=>{r.forEach(b=>{b.style.transition="",b.style.transform="translateX(0) translateY(0)"}),setTimeout(()=>n.classList.add("active"),10)});const v=b=>{if(!b.parentNode)return;const S=[...document.getElementById("toast-container").querySelectorAll(".custom-toast")].filter(A=>A!==b),E=S.map(A=>A.getBoundingClientRect());b.classList.remove("active"),setTimeout(()=>{b.parentNode&&b.remove();const A=S.map(N=>N.getBoundingClientRect());S.forEach((N,J)=>{const D=E[J].top-A[J].top;D!==0&&(N.style.transition="none",N.style.transform=`translateX(0) translateY(${D}px)`,requestAnimationFrame(()=>{N.style.transition="",N.style.transform="translateX(0) translateY(0)"}))})},550)};setTimeout(()=>v(n),e)},window.showConfirm=(a,i="Confirm Action")=>new Promise(e=>{document.body.style.overflow="hidden";const t=document.createElement("div");t.className="confirm-overlay",window.triggerHaptic("medium"),t.innerHTML=`
+        `;
+
+        const existingToasts = [...container.querySelectorAll('.custom-toast')];
+        const firstRects = existingToasts.map(t => t.getBoundingClientRect());
+
+        container.insertBefore(toast, container.firstChild);
+
+        existingToasts.forEach((t, i) => {
+            const lastRect = t.getBoundingClientRect();
+            const dy = firstRects[i].top - lastRect.top;
+            if (dy !== 0) {
+                t.style.transition = 'none';
+                t.style.transform = `translateX(0) translateY(${dy}px)`;
+            }
+        });
+
+        requestAnimationFrame(() => {
+            existingToasts.forEach(t => {
+                t.style.transition = '';
+                t.style.transform = 'translateX(0) translateY(0)';
+            });
+            setTimeout(() => toast.classList.add('active'), 10);
+        });
+
+        const removeToast = (t) => {
+            if (!t.parentNode) return;
+            const container = document.getElementById('toast-container');
+            const others = [...container.querySelectorAll('.custom-toast')].filter(x => x !== t);
+            const beforeRects = others.map(x => x.getBoundingClientRect());
+
+            t.classList.remove('active');
+            setTimeout(() => {
+                if (t.parentNode) t.remove();
+                const afterRects = others.map(x => x.getBoundingClientRect());
+                others.forEach((x, i) => {
+                    const dy = beforeRects[i].top - afterRects[i].top;
+                    if (dy !== 0) {
+                        x.style.transition = 'none';
+                        x.style.transform = `translateX(0) translateY(${dy}px)`;
+                        requestAnimationFrame(() => {
+                            x.style.transition = '';
+                            x.style.transform = 'translateX(0) translateY(0)';
+                        });
+                    }
+                });
+            }, 550);
+        };
+
+        setTimeout(() => removeToast(toast), duration);
+    };
+
+    window.showConfirm = (message, title = "Confirm Action") => {
+        return new Promise((resolve) => {
+            document.body.style.overflow = 'hidden'; // Lock scroll
+            const overlay = document.createElement('div');
+            overlay.className = 'confirm-overlay';
+            window.triggerHaptic('medium');
+            overlay.innerHTML = `
                 <div class="confirm-box">
-                    <h3 class="confirm-title">${i}</h3>
-                    <p class="confirm-message">${a}</p>
+                    <h3 class="confirm-title">${title}</h3>
+                    <p class="confirm-message">${message}</p>
                     <div class="confirm-actions">
                         <button class="confirm-btn cancel">Cancel</button>
                         <button class="confirm-btn confirm">Confirm</button>
                     </div>
                 </div>
-            `,document.body.appendChild(t),setTimeout(()=>t.classList.add("active"),10);const n=r=>{t.classList.remove("active"),setTimeout(()=>t.remove(),300),document.querySelector("#cart-drawer.active, #desktop-sidebar.active, #qv-modal.active, #contact-popup.active")||(document.body.style.overflow=""),e(r)};t.querySelector(".confirm-btn.confirm").addEventListener("click",()=>n(!0)),t.querySelector(".confirm-btn.cancel").addEventListener("click",()=>n(!1)),t.addEventListener("click",r=>{r.target===t&&n(!1)})}),"scrollRestoration"in history&&(history.scrollRestoration="manual"),document.documentElement.style.scrollBehavior="auto",window.scrollTo(0,0),window.location.hash&&history.replaceState(null,null,window.location.pathname),setTimeout(()=>{document.documentElement.style.scrollBehavior="smooth"},50);const o=document.getElementById("navbar"),s=document.getElementById("hero")||document.querySelector(".foam-hero")||document.getElementById("hero-silk")||document.querySelector(".pro-v-hero"),d=document.querySelector(".hero-overlay"),l=document.querySelector(".hero-bg-parallax"),c=document.querySelectorAll(".experience-image"),O=document.querySelectorAll(".parallax-el"),le=document.querySelectorAll(".promise-icon"),fe=document.getElementById("scroll-progress"),_=document.getElementById("sticky-cta"),m=document.querySelector("footer"),re=document.querySelector("#purchase .add-to-cart-btn")||document.querySelector("#purchase-cta .buy-now-btn")||document.querySelector(".product-info .add-to-cart-btn"),ce=()=>{const a=()=>{if(document.querySelector(".hero-carousel-container"))return!!window._activeHeroSlideIsDark;if(document.body.classList.contains("pro-v-page")||document.body.classList.contains("silk-mask-page")||document.body.classList.contains("serum-page"))return!0;const e=o.offsetHeight,t=document.elementFromPoint(window.innerWidth/2,e+30);if(!t)return!1;let n=t;for(;n&&n!==document.body;){const r=window.getComputedStyle(n),H=r.backgroundColor;if(r.backgroundImage&&r.backgroundImage!=="none")return!![...n.querySelectorAll("*")].find(y=>{const E=window.getComputedStyle(y).backgroundColor.match(/\d+/g);return E&&parseFloat(E[3]||1)>.2&&.299*E[0]+.587*E[1]+.114*E[2]<80});const v=H.match(/\d+/g);if(v&&!H.includes("rgba(0, 0, 0, 0)")&&(v[3]!==void 0?parseFloat(v[3]):1)>.1)return .299*v[0]+.587*v[1]+.114*v[2]<140;n=n.parentElement}return!1};window._pageHeroDark=a(),typeof U=="function"&&U()};window.addEventListener("load",ce),window.addEventListener("resize",ce),setTimeout(ce,200);const U=()=>{const a=window.scrollY,i=document.body.classList.contains("serum-page"),e=document.querySelector(".scrollytelling-container"),t=document.querySelector(".hero-carousel-container"),n=document.querySelector(".hair-duo-hero"),r=document.getElementById("hero")||document.querySelector(".foam-hero")||document.getElementById("hero-silk")||document.querySelector(".pro-v-hero"),H=t&&!t.classList.contains("collapsed"),v=e&&!e.classList.contains("collapsed"),b=r&&!r.classList.contains("collapsed"),y=H||v||b;if(i&&v){const S=e.offsetHeight-80;a>S?(o.classList.add("scrolled"),o.classList.add("text-dark")):(o.classList.remove("scrolled"),o.classList.remove("text-dark"))}else y?a>50?(o.classList.add("scrolled"),o.classList.add("text-dark")):(o.classList.remove("scrolled"),H?window._activeHeroSlideIsDark?o.classList.remove("text-dark"):o.classList.add("text-dark"):window._pageHeroDark?o.classList.remove("text-dark"):o.classList.add("text-dark")):(a>50?o.classList.add("scrolled"):o.classList.remove("scrolled"),o.classList.add("text-dark"))},ie=new IntersectionObserver((a,i)=>{a.forEach(e=>{e.isIntersecting&&(e.target.classList.add("active"),i.unobserve(e.target))})},{threshold:.1,rootMargin:"0px 0px -50px 0px"});let Y=!1;window.addEventListener("scroll",()=>{Y||(window.requestAnimationFrame(()=>{const a=window.scrollY;if(U(),s&&d){const i=s.offsetHeight;let e=a/(i*.8);e>1&&(e=1),d.style.opacity=e,d.style.backdropFilter=`blur(${e*10}px)`,d.style.webkitBackdropFilter=`blur(${e*10}px)`}if(_&&s){const i=m?m.getBoundingClientRect():null,e=i?i.top<window.innerHeight:!1;let t=!1;if(re){const n=re.getBoundingClientRect();t=n.top<window.innerHeight&&n.bottom>0}a>s.offsetHeight&&!e&&!t?_.classList.add("visible"):_.classList.remove("visible")}if(s&&l&&a<s.offsetHeight&&(l.style.transform=`translateY(${a*.1}px)`),c.length>0&&c.forEach(i=>{const e=i.getBoundingClientRect(),t=window.innerHeight;if(e.top<t&&e.bottom>0){const n=e.top+e.height/2,r=t/2-n,H=.1;i.style.transform=`translateY(${r*H}px)`}}),O.length>0&&O.forEach(i=>{const e=i.getBoundingClientRect(),t=window.innerHeight;if(e.top<t&&e.bottom>0){const n=parseFloat(i.getAttribute("data-speed"))||.05,r=e.top+e.height/2,H=t/2-r;i.style.transform=`translateY(${H*n}px)`}}),le.length>0&&le.forEach(i=>{const e=i.getBoundingClientRect(),t=window.innerHeight;if(e.top<t&&e.bottom>0){const n=e.top+e.height/2,r=t/2-n,H=-.08;i.style.transform=`translateY(${r*H}px)`}}),fe){const i=document.documentElement.scrollHeight-window.innerHeight,e=a/i*100;fe.style.width=`${e}%`}Ce(),Y=!1}),Y=!0)},{passive:!0}),U(),setTimeout(()=>{document.querySelectorAll(".reveal").forEach(i=>ie.observe(i));const a=document.querySelector(".hero-carousel-container");a&&a.classList.add("active")},500);const G=document.querySelector(".hamburger"),z=document.getElementById("desktop-sidebar");if(z&&(document.body.classList.add("has-sidebar"),window.matchMedia("(min-width: 768px)").matches)){const a=document.querySelector("#hero .hero-content"),i=document.querySelector("#hero .hero-bg"),e=document.querySelector(".logo"),t=document.querySelectorAll(".nav-links li:last-child > *, .nav-search-item");z.classList.add("sidebar-load-in"),i&&i.classList.add("hero-bg-fade-in"),a&&(a.classList.add("hero-content-load-in"),a.querySelectorAll("h1, .sub-headline, .cta-button").forEach((r,H)=>{r.style.animationDelay=`${1.4+H*.25}s`})),e&&e.classList.add("nav-logo-load-in"),t.length>0&&t.forEach((r,H)=>{r.classList.add("nav-item-load-in"),r.style.animationDelay=`${.8+H*.2}s`}),z.querySelectorAll(".sidebar-menu > *, .sidebar-bottom > *").forEach((r,H)=>{r.classList.add("sidebar-item-load-in"),r.style.animationDelay=`${.5+H*.1}s`})}const B=document.querySelector(".sidebar-overlay"),F=document.querySelector(".sidebar-close-btn"),X=()=>{document.body.style.overflow="",z&&z.classList.remove("active"),B&&B.classList.remove("active"),G&&G.classList.remove("active"),o&&o.classList.remove("menu-open")},te=()=>{document.body.style.overflow="hidden",z&&z.classList.add("active"),B&&B.classList.add("active"),G&&G.classList.add("active"),o&&o.classList.add("menu-open"),setTimeout(()=>{const a=z.querySelector(".sidebar-menu a.active");a&&a.scrollIntoView({behavior:"smooth",block:"center"})},300)};if(G&&z){G.addEventListener("click",()=>{window.triggerHaptic("light"),z.classList.contains("active")?X():te()}),B&&B.addEventListener("click",X),F&&F.addEventListener("click",X),z.querySelectorAll("a").forEach(e=>e.addEventListener("click",X));const i=document.querySelector(".logo");i&&i.addEventListener("click",e=>{(window.location.pathname.endsWith("index.html")||window.location.pathname==="/"||window.location.pathname==="")&&(e.preventDefault(),window.history.pushState({},"","index.html"),typeof Je=="function"&&Je(!0),typeof At=="function"&&At(),typeof Lt=="function"&&Lt(),X(),window.scrollTo({top:0,behavior:"smooth"}))})}const V=document.querySelector(".testimonial-slider-container");if(V){let S=function(){if(n)for(let ue=0;ue<H;ue++){const Q=document.createElement("div");Q.classList.add("pagination-dot"),Q.addEventListener("click",()=>{r=ue,A(),D()}),n.appendChild(Q),y.push(Q)}},E=function(){y.forEach((Q,ve)=>{Q.classList.remove("active")});const ue=y[r];ue&&(ue.offsetWidth,ue.classList.add("active"))},A=function(){a.style.transform=`translateX(-${r*100}%)`,i.forEach((ue,Q)=>{ue.classList.toggle("active",Q===r)}),n&&E()},N=function(){r=(r+1)%H,A()},J=function(){r=(r-1+H)%H,A()},D=function(){clearInterval(v),b||(v=setInterval(N,5e3))};var nr=S,sr=E,ar=A,lr=N,cr=J,dr=D;const a=document.querySelector(".testimonial-slider-wrapper"),i=document.querySelectorAll(".testimonial-slide"),e=document.querySelector(".slider-nav.prev"),t=document.querySelector(".slider-nav.next"),n=document.querySelector(".slider-pagination");let r=0;const H=i.length;let v,b=!1,y=[];t.addEventListener("click",()=>{N(),D()}),e.addEventListener("click",()=>{J(),D()}),V.addEventListener("mouseenter",()=>{b=!0,clearInterval(v)}),V.addEventListener("mouseleave",()=>{b=!1,D()});let R=0,f=0,L=0;const Z=50;let xe=!1;V.addEventListener("touchstart",ue=>{R=ue.changedTouches[0].screenX,f=ue.changedTouches[0].screenY,xe=!1},{passive:!0}),V.addEventListener("touchmove",ue=>{if(xe)return;const Q=ue.changedTouches[0].screenX,ve=ue.changedTouches[0].screenY,be=Math.abs(Q-R),ke=Math.abs(ve-f);be>ke&&be>10&&(xe=!0,clearInterval(v))},{passive:!0}),V.addEventListener("touchend",ue=>{if(!xe)return;L=ue.changedTouches[0].screenX;const Q=L-R;Math.abs(Q)>Z&&(Q>0?J():N()),b=!1,D()}),S(),A(),D()}if("ontouchstart"in window||navigator.maxTouchPoints>0){const a=document.querySelectorAll(".action-card, .promise-item, .pillar-card, .inci-list span");a.forEach(i=>{i.addEventListener("click",function(e){i.matches(".inci-list span")&&e.preventDefault();const t=this.classList.contains("mobile-hover");a.forEach(n=>{n!==this&&n.classList.remove("mobile-hover")}),this.classList.toggle("mobile-hover"),e.stopPropagation()})}),document.addEventListener("click",function(i){a.forEach(e=>{e.classList.remove("mobile-hover")})})}const Te=document.querySelectorAll(".counter"),Ce=()=>{Te.forEach(a=>{const i=a.getBoundingClientRect(),e=window.innerHeight;if(i.top<e-50&&i.bottom>0){if(a.classList.contains("counted"))return;a.classList.add("counted");const t=+a.getAttribute("data-target"),n=3500,r=performance.now(),H=v=>{const b=v-r,y=Math.min(b/n,1),S=y===1?1:1-Math.pow(2,-10*y),E=Math.floor(S*t);a.innerText=E.toLocaleString("en-US"),y<1?requestAnimationFrame(H):(a.innerText=t.toLocaleString("en-US"),a.classList.add("shine"))};requestAnimationFrame(H)}})};Ce();let qe=document.title;window.addEventListener("blur",()=>{document.title="Come back to radiance... \u2728"}),window.addEventListener("focus",()=>{document.title=qe});const Ye=document.querySelector("#hero .cta-button"),Qe=document.getElementById("hero");Ye&&Qe&&window.matchMedia("(hover: hover) and (pointer: fine)").matches&&(Qe.addEventListener("mousemove",e=>{const t=Ye.getBoundingClientRect(),n=t.left+t.width/2,r=t.top+t.height/2,H=e.clientX-n,v=e.clientY-r;if(Math.sqrt(H*H+v*v)<120){const y=H*.4,S=v*.4;Ye.style.transform=`translate(${y}px, ${S}px)`}else Ye.style.transform="translate(0, 0)"}),Qe.addEventListener("mouseleave",()=>{Ye.style.transform="translate(0, 0)"})),Ye&&Ye.addEventListener("click",()=>{const a=window.AudioContext||window.webkitAudioContext;if(!a)return;const i=new a,e=i.createOscillator(),t=i.createGain();e.connect(t),t.connect(i.destination),e.type="sine",e.frequency.setValueAtTime(600,i.currentTime),e.frequency.exponentialRampToValueAtTime(100,i.currentTime+.1),t.gain.setValueAtTime(.04,i.currentTime),t.gain.exponentialRampToValueAtTime(.001,i.currentTime+.1),e.start(),e.stop(i.currentTime+.1),setTimeout(()=>{i.close()},200)});const Me=["dodchmellow-pro-v","silk-therapy-mask","foaming-cleanser","advanced-ha-serum","retinol-night-cream","sooth-repair"],ct={"glass-glow-shampoo":{name:"Glass Glow Shampoo",category:"hair-care",subCategory:"shampoo",subtitle:"The Elixir of 10,000 Seeds",price:null,image:"IMG_3357.webp",description:"THIS PRODUCT IS NO LONGER AVAILABLE. Experience the legacy of our original Glass Glow formula. While this specific treatment has been retired from our permanent collection, its spirit lives on in our newer innovations.",style:"",storyUrl:"glass-glow-shampoo.html",orderIndex:0,outOfStock:!0,isPermanentlyUnavailable:!0,sizes:[]},"dodchmellow-pro-v":{name:"DODCHmellow",category:"hair-care",subCategory:"shampoo",subtitle:"The Marshmallow Cloud Shampoo",price:null,image:"IMG_4184.webp",images:["IMG_4184.webp"],description:"Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5 | Panthenol B5 | Glycerin Complex. Fragrance: N\xE9roli-Sucre.",style:"",storyUrl:"dodchmellow-pro-v.html",orderIndex:1,sizes:[]},"foaming-cleanser":{name:"DODCH Foaming Cleanser",category:"skin-care",subCategory:"cleansers",subtitle:"Luminous Purity",price:null,image:"IMG_4241.webp",description:"A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",style:"filter: brightness(1.05);",storyUrl:"face-foam.html",orderIndex:3,sizes:[]},"silk-therapy-mask":{name:"DODCH Pro-V Silk Therapy Mask",category:"hair-care",subCategory:["masks","conditioners","leave-in"],subtitle:"Deep Repair & Glass Shine",price:null,image:"IMG_4188 (2).webp",description:"Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",style:"",storyUrl:"silk-mask.html",orderIndex:2,sizes:[]},"advanced-ha-serum":{name:"Advanced HA Serum",category:"skin-care",subCategory:"serums",subtitle:"Radiance & Deep Hydration",price:null,image:"IMG_3407.webp",description:"A concentrated Hyaluronic Acid serum that penetrates deep layers for instant plumping and long-lasting hydration.",style:"",storyUrl:"face-serum.html",orderIndex:4,sizes:[]},"retinol-night-cream":{name:"0.5 Retinol Night Cream",category:"skin-care",subCategory:"creams",subtitle:"Youth Renewing Overnight Treatment",price:null,image:"IMG_3783.webp",description:"A powerful overnight cream formulated with 0.5% active retinol to visibly reduce fine lines, refine skin texture, and promote a radiant, youthful complexion.",style:"",storyUrl:null,orderIndex:5,sizes:[]},"sooth-repair":{name:"DODCH Sooth & Repair",category:"skin-care",subCategory:"creams",subtitle:"Intensive Barrier Recovery",price:null,image:"IMG_3799.webp",description:"An intensive recovery treatment designed to soothe inflammation and repair the skin barrier. Formulated with Mediterranean botanicals to restore radiance to stressed skin.",style:"",storyUrl:null,orderIndex:6,sizes:[]}};w={...ct},window.productCatalog=w;let _e,Pe=!1;function Je(a=!1,i=!1){if(document.querySelector(".product-detail-container"))return;window.scrollTo({top:0,behavior:"smooth"}),typeof X=="function"&&X();const e=document.querySelector(".shop-layout");if(!e)return;const t=(n=!1)=>{const r=Object.entries(w).sort(([f,L],[Z,xe])=>{const ue=Me.indexOf(f),Q=Me.indexOf(Z);return ue!==-1&&Q!==-1?ue-Q:ue!==-1?-1:Q!==-1?1:L.name.localeCompare(xe.name)}),H=new URLSearchParams(window.location.search),v=H.get("cat"),b=H.get("sub"),y=document.querySelector(".hero-carousel-container"),S=document.getElementById("scroll-indicator"),E=(!v||v==="all")&&(!b||b==="all");y&&(E?y.classList.remove("collapsed"):y.classList.add("collapsed")),S&&(E?S.classList.remove("collapsed"):S.classList.add("collapsed")),typeof U=="function"&&U();const A=(f,L,Z=0)=>{const xe=`${Z%4*.15}s`,ue=kt(L);let Q=L.price,ve="",be=!1,ke=0;if(L.sizes&&L.sizes.length>0){const Ee=L.sizes.map($e=>parseFloat($e.price)),me=L.sizes.findIndex($e=>parseFloat($e.price)===Math.min(...Ee)),he=L.sizes[me]||L.sizes[0];Q=parseFloat(he.price).toFixed(2),he.originalPrice&&parseFloat(he.originalPrice)>parseFloat(he.price)&&(be=!0,ke=Math.round((parseFloat(he.originalPrice)-parseFloat(he.price))/parseFloat(he.originalPrice)*100),ve=`<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(he.originalPrice).toFixed(2)} TND</span>`)}let ne=`href="${`product.html?id=${f}`}"`;const P=L.sizes&&L.sizes.length>0?L.sizes.every(Ee=>Ee.outOfStock):L.outOfStock;let I="";L.isPermanentlyUnavailable?I='<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>':P?I='<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>':be&&ke>0&&(I=`<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${ke}%</span>`);let K=L.style||"";P&&(K+=" opacity: 0.55; filter: grayscale(60%); transition: all 0.3s ease;");let q="";return Q?q=`${ve}<span style="color: ${be?"var(--accent-gold-text)":"inherit"}; font-weight: ${be?"700":"500"};">${Q} TND</span>`:Pe||(q='<span class="price-shimmer"></span>'),`
-                    <div class="product-card reveal" style="--anim-delay: ${xe};" data-product-id="${f}">
-                        <a ${ne}>
-                            <div class="tinted-shadow" style="background-image: url('${ue}');"></div>
-                            <div class="product-image-wrapper" style="${P?"background-color: #f0f0f0;":""}">
-                                ${I}
-                                <img loading="lazy" src="${ue}" alt="${L.name}" class="product-card-img" style="${K}; view-transition-name: prod-img-${f};">
-                                <button class="quick-view-btn" data-id="${f}" data-title="${L.name}" data-price="${Q||""}" data-img="${ue}" data-style="${L.style||""}" data-desc="${L.description}">Quick View</button>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => overlay.classList.add('active'), 10);
+
+            const close = (result) => {
+                overlay.classList.remove('active');
+                setTimeout(() => overlay.remove(), 300);
+                if (!document.querySelector('#cart-drawer.active, #desktop-sidebar.active, #qv-modal.active, #contact-popup.active')) {
+                    document.body.style.overflow = '';
+                }
+                resolve(result);
+            };
+
+            overlay.querySelector('.confirm-btn.confirm').addEventListener('click', () => close(true));
+            overlay.querySelector('.confirm-btn.cancel').addEventListener('click', () => close(false));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) close(false);
+            });
+        });
+    };
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+    document.documentElement.style.scrollBehavior = 'auto';
+    window.scrollTo(0, 0);
+    if (window.location.hash) {
+        history.replaceState(null, null, window.location.pathname);
+    }
+    setTimeout(() => {
+        document.documentElement.style.scrollBehavior = 'smooth';
+    }, 50);
+    const navbar = document.getElementById('navbar');
+    const hero = document.getElementById('hero') || document.querySelector('.foam-hero') || document.getElementById('hero-silk') || document.querySelector('.pro-v-hero');
+    const heroOverlay = document.querySelector('.hero-overlay');
+    const heroBgParallax = document.querySelector('.hero-bg-parallax');
+    const experienceImageContainers = document.querySelectorAll('.experience-image');
+    const parallaxEls = document.querySelectorAll('.parallax-el');
+    const promiseIcons = document.querySelectorAll('.promise-icon');
+    const progressBar = document.getElementById('scroll-progress');
+    const stickyCTA = document.getElementById('sticky-cta');
+    const footer = document.querySelector('footer');
+    const staticCTA = document.querySelector('#purchase .add-to-cart-btn') ||
+        document.querySelector('#purchase-cta .buy-now-btn') ||
+        document.querySelector('.product-info .add-to-cart-btn');
+
+    // Cache hero dark/light state — detect once, update on resize
+    const detectAndCacheHeroDark = () => {
+        const detect = () => {
+            if (document.querySelector('.hero-carousel-container')) {
+                return !!window._activeHeroSlideIsDark;
+            }
+            // Product/Story pages have dark heroes by design
+            const isProductPage = document.body.classList.contains('pro-v-page') || 
+                                  document.body.classList.contains('silk-mask-page') || 
+                                  document.body.classList.contains('serum-page');
+            if (isProductPage) {
+                return true;
+            }
+            const navH = navbar.offsetHeight;
+            const el = document.elementFromPoint(window.innerWidth / 2, navH + 30);
+            if (!el) return false;
+            let node = el;
+            while (node && node !== document.body) {
+                const style = window.getComputedStyle(node);
+                const bg = style.backgroundColor;
+                if (style.backgroundImage && style.backgroundImage !== 'none') {
+                    // Has background image — check for dark overlay child
+                    const darkOverlay = [...(node.querySelectorAll('*'))].find(c => {
+                        const cs = window.getComputedStyle(c);
+                        const rgb = cs.backgroundColor.match(/\d+/g);
+                        return rgb && parseFloat(rgb[3] || 1) > 0.2 &&
+                            (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 80;
+                    });
+                    return !!darkOverlay;
+                }
+                const rgb = bg.match(/\d+/g);
+                if (rgb && !bg.includes('rgba(0, 0, 0, 0)')) {
+                    const a = rgb[3] !== undefined ? parseFloat(rgb[3]) : 1;
+                    if (a > 0.1) {
+                        return (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 140;
+                    }
+                }
+                node = node.parentElement;
+            }
+            return false;
+        };
+        window._pageHeroDark = detect();
+        if (typeof updateNavbar === 'function') {
+            updateNavbar();
+        }
+    };
+    // Detect on load and resize
+    window.addEventListener('load', detectAndCacheHeroDark);
+    window.addEventListener('resize', detectAndCacheHeroDark);
+    setTimeout(detectAndCacheHeroDark, 200);
+
+    const updateNavbar = () => {
+        const scrollY = window.scrollY;
+        const isSerumPage = document.body.classList.contains('serum-page');
+        const serumHero = document.querySelector('.scrollytelling-container');
+        const heroCarousel = document.querySelector('.hero-carousel-container');
+        const hairDuoHero = document.querySelector('.hair-duo-hero');
+        const pageHero = document.getElementById('hero') || document.querySelector('.foam-hero') || document.getElementById('hero-silk') || document.querySelector('.pro-v-hero');
+        
+        // A hero is active if it exists and is not collapsed/hidden
+        const isHeroCarouselActive = heroCarousel && !heroCarousel.classList.contains('collapsed');
+        const isSerumHeroActive = serumHero && !serumHero.classList.contains('collapsed');
+        const isPageHeroActive = pageHero && !pageHero.classList.contains('collapsed');
+
+        // Check if there's an active (visible) hero section at the top
+        const hasHeroAtTop = isHeroCarouselActive || isSerumHeroActive || isPageHeroActive;
+
+        if (isSerumPage && isSerumHeroActive) {
+            const threshold = serumHero.offsetHeight - 80;
+            if (scrollY > threshold) {
+                navbar.classList.add('scrolled');
+                navbar.classList.add('text-dark');
+            } else {
+                navbar.classList.remove('scrolled');
+                navbar.classList.remove('text-dark');
+            }
+        } else if (!hasHeroAtTop) {
+            // Normal page without a hero (e.g., Shop) - always dark text
+            if (scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+            navbar.classList.add('text-dark');
+        } else if (scrollY > 50) {
+            // Scrolled past hero
+            navbar.classList.add('scrolled');
+            navbar.classList.add('text-dark');
+        } else {
+            // At the top of a hero page
+            navbar.classList.remove('scrolled');
+            // For carousel, always use slide-based state
+            if (isHeroCarouselActive) {
+                window._activeHeroSlideIsDark ? navbar.classList.remove('text-dark') : navbar.classList.add('text-dark');
+            } else {
+                window._pageHeroDark ? navbar.classList.remove('text-dark') : navbar.classList.add('text-dark');
+            }
+        }
+    };
+    const revealObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+
+    let mainScrollTicking = false;
+    window.addEventListener('scroll', () => {
+        if (!mainScrollTicking) {
+            window.requestAnimationFrame(() => {
+                const scrollY = window.scrollY;
+
+                updateNavbar();
+                if (hero && heroOverlay) {
+                    const heroHeight = hero.offsetHeight;
+                    let ratio = scrollY / (heroHeight * 0.8);
+                    if (ratio > 1) ratio = 1;
+
+                    heroOverlay.style.opacity = ratio;
+                    heroOverlay.style.backdropFilter = `blur(${ratio * 10}px)`;
+                    heroOverlay.style.webkitBackdropFilter = `blur(${ratio * 10}px)`; // Safari support
+                }
+                if (stickyCTA && hero) {
+                    const footerRect = footer ? footer.getBoundingClientRect() : null;
+                    const isFooterVisible = footerRect ? footerRect.top < window.innerHeight : false;
+
+                    let isStaticBtnVisible = false;
+                    if (staticCTA) {
+                        const btnRect = staticCTA.getBoundingClientRect();
+                        isStaticBtnVisible = btnRect.top < window.innerHeight && btnRect.bottom > 0;
+                    }
+
+                    if (scrollY > hero.offsetHeight && !isFooterVisible && !isStaticBtnVisible) {
+                        stickyCTA.classList.add('visible');
+                    } else {
+                        stickyCTA.classList.remove('visible');
+                    }
+                }
+                if (hero && heroBgParallax && scrollY < hero.offsetHeight) {
+                    heroBgParallax.style.transform = `translateY(${scrollY * 0.1}px)`;
+                }
+                if (experienceImageContainers.length > 0) {
+                    experienceImageContainers.forEach(container => {
+                        const rect = container.getBoundingClientRect();
+                        const windowHeight = window.innerHeight;
+                        if (rect.top < windowHeight && rect.bottom > 0) {
+                            const elementCenter = rect.top + rect.height / 2;
+                            const difference = (windowHeight / 2) - elementCenter;
+                            const parallaxFactor = 0.1;
+                            container.style.transform = `translateY(${difference * parallaxFactor}px)`;
+                        }
+                    });
+                }
+                if (parallaxEls.length > 0) {
+                    parallaxEls.forEach(el => {
+                        const rect = el.getBoundingClientRect();
+                        const windowHeight = window.innerHeight;
+                        if (rect.top < windowHeight && rect.bottom > 0) {
+                            const speed = parseFloat(el.getAttribute('data-speed')) || 0.05;
+                            const elementCenter = rect.top + rect.height / 2;
+                            const difference = (windowHeight / 2) - elementCenter;
+                            el.style.transform = `translateY(${difference * speed}px)`;
+                        }
+                    });
+                }
+                if (promiseIcons.length > 0) {
+                    promiseIcons.forEach(icon => {
+                        const rect = icon.getBoundingClientRect();
+                        const windowHeight = window.innerHeight;
+                        if (rect.top < windowHeight && rect.bottom > 0) {
+                            const elementCenter = rect.top + rect.height / 2;
+                            const difference = (windowHeight / 2) - elementCenter;
+                            const parallaxFactor = -0.08;
+                            icon.style.transform = `translateY(${difference * parallaxFactor}px)`;
+                        }
+                    });
+                }
+                if (progressBar) {
+                    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                    const scrollPercent = (scrollY / docHeight) * 100;
+                    progressBar.style.width = `${scrollPercent}%`;
+                }
+                runCounterAnimation();
+
+                mainScrollTicking = false;
+            });
+            mainScrollTicking = true;
+        }
+    }, { passive: true });
+    updateNavbar();
+    // Delay reveal animations until after the page loader overlay fades out (500ms)
+    setTimeout(() => {
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+        const heroCarousel = document.querySelector('.hero-carousel-container');
+        if (heroCarousel) {
+            heroCarousel.classList.add('active'); // trigger hero specific intro animations
+        }
+    }, 500);
+    const hamburger = document.querySelector('.hamburger');
+    const sidebar = document.getElementById('desktop-sidebar');
+    if (sidebar) {
+        document.body.classList.add('has-sidebar');
+ 
+        // Staggered load-in animations for desktop
+        if (window.matchMedia("(min-width: 768px)").matches) {
+            const heroContent = document.querySelector('#hero .hero-content');
+            const heroBg = document.querySelector('#hero .hero-bg');
+            const navLogo = document.querySelector('.logo');
+            const navItems = document.querySelectorAll('.nav-links li:last-child > *, .nav-search-item');
+ 
+            // 1. Sidebar animates in
+            sidebar.classList.add('sidebar-load-in');
+ 
+            // 2. Hero background reveals with a slow fade and scale
+            if (heroBg) {
+                heroBg.classList.add('hero-bg-fade-in');
+            }
+ 
+            // 3. Hero text elements animate in after a delay
+            if (heroContent) {
+                heroContent.classList.add('hero-content-load-in');
+                heroContent.querySelectorAll('h1, .sub-headline, .cta-button').forEach((el, index) => {
+                    el.style.animationDelay = `${1.4 + index * 0.25}s`;
+                });
+            }
+ 
+            // 4. Navbar logo zooms in
+            if (navLogo) {
+                navLogo.classList.add('nav-logo-load-in');
+            }
+ 
+            // 5. Staggered navbar items drop in
+            if (navItems.length > 0) {
+                navItems.forEach((item, index) => {
+                    item.classList.add('nav-item-load-in');
+                    item.style.animationDelay = `${0.8 + index * 0.2}s`;
+                });
+            }
+
+            // 6. Staggered sidebar items animation
+            const sidebarItems = sidebar.querySelectorAll('.sidebar-menu > *, .sidebar-bottom > *');
+            sidebarItems.forEach((item, index) => {
+                item.classList.add('sidebar-item-load-in');
+                // Start this animation slightly after the sidebar itself slides in
+                item.style.animationDelay = `${0.5 + index * 0.1}s`;
+            });
+        }
+    }
+
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
+    const sidebarCloseBtn = document.querySelector('.sidebar-close-btn');
+
+    const closeSidebar = () => {
+        document.body.style.overflow = ''; // Restore scroll
+        if (sidebar) sidebar.classList.remove('active');
+        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+        if (hamburger) hamburger.classList.remove('active');
+        if (navbar) navbar.classList.remove('menu-open');
+    };
+
+    const openSidebar = () => {
+        document.body.style.overflow = 'hidden'; // Lock scroll
+        if (sidebar) sidebar.classList.add('active');
+        if (sidebarOverlay) sidebarOverlay.classList.add('active');
+        if (hamburger) hamburger.classList.add('active');
+        if (navbar) navbar.classList.add('menu-open');
+        setTimeout(() => {
+            const activeLink = sidebar.querySelector('.sidebar-menu a.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 300);
+    };
+
+    if (hamburger && sidebar) {
+        hamburger.addEventListener('click', () => {
+            window.triggerHaptic('light');
+            if (sidebar.classList.contains('active')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+
+        if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+        if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
+        const links = sidebar.querySelectorAll('a');
+        links.forEach(link => link.addEventListener('click', closeSidebar));
+
+        // Ensure logo click also resets state and closes sidebar
+        const logo = document.querySelector('.logo');
+        if (logo) {
+            logo.addEventListener('click', (e) => {
+                const isHomePage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '';
+                if (isHomePage) {
+                    e.preventDefault();
+                    window.history.pushState({}, '', 'index.html');
+                    if (typeof initShopPage === 'function') initShopPage(true);
+                    if (typeof updateSidebarActiveState === 'function') updateSidebarActiveState();
+                    // Recompute breadcrumbs after SPA-style navigation
+                    if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
+                    closeSidebar();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        }
+    }
+    const sliderContainer = document.querySelector('.testimonial-slider-container');
+    if (sliderContainer) {
+        const sliderWrapper = document.querySelector('.testimonial-slider-wrapper');
+        const slides = document.querySelectorAll('.testimonial-slide');
+        const prevButton = document.querySelector('.slider-nav.prev');
+        const nextButton = document.querySelector('.slider-nav.next');
+        const paginationContainer = document.querySelector('.slider-pagination');
+
+        let currentIndex = 0;
+        const totalSlides = slides.length;
+        let autoPlayInterval; // To hold the interval ID
+        let isHovering = false; // Track hover state
+        let paginationDots = [];
+
+        function createPaginationDots() {
+            if (!paginationContainer) return;
+            for (let i = 0; i < totalSlides; i++) {
+                const dot = document.createElement('div');
+                dot.classList.add('pagination-dot');
+                dot.addEventListener('click', () => {
+                    currentIndex = i;
+                    updateSliderPosition();
+                    startAutoPlay();
+                });
+                paginationContainer.appendChild(dot);
+                paginationDots.push(dot);
+            }
+        }
+
+        function updatePagination() {
+            paginationDots.forEach((dot, index) => {
+                dot.classList.remove('active');
+            });
+
+            const activeDot = paginationDots[currentIndex];
+            if (activeDot) {
+                void activeDot.offsetWidth;
+                activeDot.classList.add('active');
+            }
+        }
+
+        function updateSliderPosition() {
+            sliderWrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentIndex);
+            });
+            if (paginationContainer) updatePagination();
+        }
+
+        function goToNextSlide() {
+            currentIndex = (currentIndex + 1) % totalSlides;
+            updateSliderPosition();
+        }
+
+        function goToPrevSlide() {
+            currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
+            updateSliderPosition();
+        }
+
+        function startAutoPlay() {
+            clearInterval(autoPlayInterval);
+            if (!isHovering) {
+                autoPlayInterval = setInterval(goToNextSlide, 5000); // 5 seconds
+            }
+        }
+
+        nextButton.addEventListener('click', () => {
+            goToNextSlide();
+            startAutoPlay();
+        });
+
+        prevButton.addEventListener('click', () => {
+            goToPrevSlide();
+            startAutoPlay();
+        });
+        sliderContainer.addEventListener('mouseenter', () => {
+            isHovering = true;
+            clearInterval(autoPlayInterval);
+        });
+        sliderContainer.addEventListener('mouseleave', () => {
+            isHovering = false;
+            startAutoPlay();
+        });
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        const swipeThreshold = 50; // Min distance for a swipe
+        let isSwipeGesture = false; // Flag to track if the current touch is a swipe
+
+        sliderContainer.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+            isSwipeGesture = false; // Reset for each new touch
+        }, { passive: true });
+
+        sliderContainer.addEventListener('touchmove', e => {
+            if (isSwipeGesture) return; // Already determined to be a swipe
+
+            const touchCurrentX = e.changedTouches[0].screenX;
+            const touchCurrentY = e.changedTouches[0].screenY;
+            const deltaX = Math.abs(touchCurrentX - touchStartX);
+            const deltaY = Math.abs(touchCurrentY - touchStartY);
+            if (deltaX > deltaY && deltaX > 10) {
+                isSwipeGesture = true;
+                clearInterval(autoPlayInterval); // It's a swipe, so pause autoplay
+            }
+        }, { passive: true });
+
+        sliderContainer.addEventListener('touchend', e => {
+            if (!isSwipeGesture) {
+                return;
+            }
+
+            touchEndX = e.changedTouches[0].screenX;
+            const swipeDistance = touchEndX - touchStartX;
+
+            if (Math.abs(swipeDistance) > swipeThreshold) {
+                if (swipeDistance > 0) { goToPrevSlide(); } else { goToNextSlide(); }
+            }
+            isHovering = false;
+            startAutoPlay(); // Restart autoplay after swipe gesture ends
+        });
+        createPaginationDots();
+        updateSliderPosition(); // To set initial slide and active dot
+        startAutoPlay();
+    }
+    const isTouchDevice = () => ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+    if (isTouchDevice()) {
+        const tappableElements = document.querySelectorAll('.action-card, .promise-item, .pillar-card, .inci-list span');
+
+        tappableElements.forEach(el => {
+            el.addEventListener('click', function (e) {
+                if (el.matches('.inci-list span')) {
+                    e.preventDefault();
+                }
+
+                const isAlreadyActive = this.classList.contains('mobile-hover');
+                tappableElements.forEach(otherEl => {
+                    if (otherEl !== this) {
+                        otherEl.classList.remove('mobile-hover');
+                    }
+                });
+                this.classList.toggle('mobile-hover');
+                e.stopPropagation();
+            });
+        });
+        document.addEventListener('click', function (e) {
+            tappableElements.forEach(el => {
+                el.classList.remove('mobile-hover');
+            });
+        });
+    }
+    const counters = document.querySelectorAll('.counter');
+
+    const runCounterAnimation = () => {
+        counters.forEach(counter => {
+            const rect = counter.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+            if (rect.top < windowHeight - 50 && rect.bottom > 0) {
+                if (counter.classList.contains('counted')) return;
+
+                counter.classList.add('counted');
+
+                const target = +counter.getAttribute('data-target');
+                const duration = 3500; // 3.5 seconds for a gentler effect
+                const startTime = performance.now();
+
+                const step = (currentTime) => {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+
+                    const current = Math.floor(ease * target);
+                    counter.innerText = current.toLocaleString('en-US');
+
+                    if (progress < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        counter.innerText = target.toLocaleString('en-US');
+                        counter.classList.add('shine');
+                    }
+                };
+
+                requestAnimationFrame(step);
+            }
+        });
+    };
+
+    runCounterAnimation(); // Initial check on load
+    let docTitle = document.title;
+    window.addEventListener('blur', () => {
+        document.title = "Come back to radiance... ✨";
+    });
+    window.addEventListener('focus', () => {
+        document.title = docTitle;
+    });
+    const heroCTA = document.querySelector('#hero .cta-button');
+    const heroSection = document.getElementById('hero');
+
+    if (heroCTA && heroSection && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        const magnetism = 0.4; // How strong the pull is (0 to 1)
+        const distanceThreshold = 120; // Radius in pixels to activate effect
+
+        heroSection.addEventListener('mousemove', (e) => {
+            const rect = heroCTA.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            const deltaX = e.clientX - centerX;
+            const deltaY = e.clientY - centerY;
+
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            if (distance < distanceThreshold) {
+                const moveX = deltaX * magnetism;
+                const moveY = deltaY * magnetism;
+                heroCTA.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            } else {
+                heroCTA.style.transform = 'translate(0, 0)';
+            }
+        });
+
+        heroSection.addEventListener('mouseleave', () => {
+            heroCTA.style.transform = 'translate(0, 0)';
+        });
+    }
+    if (heroCTA) {
+        heroCTA.addEventListener('click', () => {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.04, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+            setTimeout(() => {
+                ctx.close();
+            }, 200);
+        });
+    }
+
+    // --- LOCAL INVENTORY ORDER ---
+    // Change the order of this array to reorder products in the shop grid
+    const LOCAL_INVENTORY = [
+        'dodchmellow-pro-v',
+        'silk-therapy-mask',
+        'foaming-cleanser',
+        'advanced-ha-serum',
+        'retinol-night-cream',
+        'sooth-repair'
+    ];
+
+    // --- PRODUCT CATALOG (Single Source of Truth) ---
+    const defaultProductCatalog = {
+        'glass-glow-shampoo': {
+            name: "Glass Glow Shampoo",
+            category: "hair-care",
+            subCategory: "shampoo",
+            subtitle: "The Elixir of 10,000 Seeds",
+            price: null,
+            image: "IMG_3357.webp",
+            description: "THIS PRODUCT IS NO LONGER AVAILABLE. Experience the legacy of our original Glass Glow formula. While this specific treatment has been retired from our permanent collection, its spirit lives on in our newer innovations.",
+            style: "",
+            storyUrl: "glass-glow-shampoo.html",
+            orderIndex: 0,
+            outOfStock: true,
+            isPermanentlyUnavailable: true,
+            sizes: []
+        },
+        'dodchmellow-pro-v': {
+            name: "DODCHmellow",
+            category: "hair-care",
+            subCategory: "shampoo",
+            subtitle: "The Marshmallow Cloud Shampoo",
+            price: null,
+            image: "IMG_4184.webp",
+            images: ["IMG_4184.webp"],
+            description: "Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5 | Panthenol B5 | Glycerin Complex. Fragrance: Néroli-Sucre.",
+            style: "",
+            storyUrl: "dodchmellow-pro-v.html",
+            orderIndex: 1,
+            sizes: []
+        },
+        'foaming-cleanser': {
+            name: "DODCH Foaming Cleanser",
+            category: "skin-care",
+            subCategory: "cleansers",
+            subtitle: "Luminous Purity",
+            price: null,
+            image: "IMG_4241.webp",
+            description: "A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",
+            style: "filter: brightness(1.05);",
+            storyUrl: "face-foam.html",
+            orderIndex: 3,
+            sizes: []
+        },
+        'silk-therapy-mask': {
+            name: "DODCH Pro-V Silk Therapy Mask",
+            category: "hair-care",
+            subCategory: ["masks", "conditioners", "leave-in"],
+            subtitle: "Deep Repair & Glass Shine",
+            price: null,
+            image: "IMG_4188 (2).webp",
+            description: "Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",
+            style: "",
+            storyUrl: "silk-mask.html",
+            orderIndex: 2,
+            sizes: []
+        },
+        'advanced-ha-serum': {
+            name: "Advanced HA Serum",
+            category: "skin-care",
+            subCategory: "serums",
+            subtitle: "Radiance & Deep Hydration",
+            price: null,
+            image: "IMG_3407.webp",
+            description: "A concentrated Hyaluronic Acid serum that penetrates deep layers for instant plumping and long-lasting hydration.",
+            style: "",
+            storyUrl: "face-serum.html",
+            orderIndex: 4,
+            sizes: []
+        },
+        'retinol-night-cream': {
+            name: "0.5 Retinol Night Cream",
+            category: "skin-care",
+            subCategory: "creams",
+            subtitle: "Youth Renewing Overnight Treatment",
+            price: null,
+            image: "IMG_3783.webp",
+            description: "A powerful overnight cream formulated with 0.5% active retinol to visibly reduce fine lines, refine skin texture, and promote a radiant, youthful complexion.",
+            style: "",
+            storyUrl: null,
+            orderIndex: 5,
+            sizes: []
+        },
+        'sooth-repair': {
+            name: "DODCH Sooth & Repair",
+            category: "skin-care",
+            subCategory: "creams",
+            subtitle: "Intensive Barrier Recovery",
+            price: null,
+            image: "IMG_3799.webp",
+            description: "An intensive recovery treatment designed to soothe inflammation and repair the skin barrier. Formulated with Mediterranean botanicals to restore radiance to stressed skin.",
+            style: "",
+            storyUrl: null,
+            orderIndex: 6,
+            sizes: []
+        }
+    };
+    productCatalog = { ...defaultProductCatalog };
+    window.productCatalog = productCatalog;
+    let shopTransitionTimeout;
+    let firestoreSynced = false;
+
+    function initShopPage(animate = false, loading = false) {
+        if (document.querySelector('.product-detail-container')) return;
+
+        // Reset UI state: scroll to top and close sidebar for a fresh section view
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (typeof closeSidebar === 'function') closeSidebar();
+
+        const shopLayout = document.querySelector('.shop-layout');
+        if (!shopLayout) return;
+
+        const renderContent = (loading = false) => {
+            const sortedCatalog = Object.entries(productCatalog).sort(([idA, a], [idB, b]) => {
+                const indexA = LOCAL_INVENTORY.indexOf(idA);
+                const indexB = LOCAL_INVENTORY.indexOf(idB);
+
+                // If both are in inventory, sort by inventory order
+                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                // If only A is in inventory, A comes first
+                if (indexA !== -1) return -1;
+                // If only B is in inventory, B comes first
+                if (indexB !== -1) return 1;
+
+                // Fallback to alphabetical sort if neither are in inventory
+                return a.name.localeCompare(b.name);
+            });
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeCat = urlParams.get('cat');
+            const activeSub = urlParams.get('sub');
+
+            const heroSection = document.querySelector('.hero-carousel-container');
+            const scrollIndicator = document.getElementById('scroll-indicator');
+            const isMainPage = (!activeCat || activeCat === 'all') && (!activeSub || activeSub === 'all');
+
+            if (heroSection) {
+                if (isMainPage) {
+                    heroSection.classList.remove('collapsed');
+                } else {
+                    heroSection.classList.add('collapsed');
+                }
+            }
+            if (scrollIndicator) {
+                if (isMainPage) {
+                    scrollIndicator.classList.remove('collapsed');
+                } else {
+                    scrollIndicator.classList.add('collapsed');
+                }
+            }
+            
+            // Force navbar update to fix contrast when hero collapses
+            if (typeof updateNavbar === 'function') {
+                updateNavbar();
+            }
+
+            const generateCardHTML = (id, product, index = 0) => {
+                const staggerDelay = `${(index % 4) * 0.15}s`;
+                const primaryImg = getProductPrimaryImage(product);
+                let displayPrice = product.price;
+                let originalPriceDisplay = '';
+                let hasDiscount = false;
+                let discountPercentage = 0;
+
+                if (product.sizes && product.sizes.length > 0) {
+                    const prices = product.sizes.map(s => parseFloat(s.price));
+                    const basePriceIndex = product.sizes.findIndex(s => parseFloat(s.price) === Math.min(...prices));
+                    const baseSize = product.sizes[basePriceIndex] || product.sizes[0];
+
+                    displayPrice = parseFloat(baseSize.price).toFixed(2);
+
+                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
+                        hasDiscount = true;
+                        discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
+                        originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
+                    }
+                }
+
+                let targetUrl = `product.html?id=${id}`;
+                let linkAttributes = `href="${targetUrl}"`;
+
+                const isActuallyOOS = product.sizes && product.sizes.length > 0
+                    ? product.sizes.every(s => s.outOfStock)
+                    : product.outOfStock;
+
+                let badgeHTML = '';
+                if (product.isPermanentlyUnavailable) {
+                    badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>';
+                } else if (isActuallyOOS) {
+                    badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>';
+                } else if (hasDiscount && discountPercentage > 0) {
+                    badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
+                }
+                let imgStyle = product.style || '';
+                if (isActuallyOOS) {
+                    imgStyle += ' opacity: 0.55; filter: grayscale(60%); transition: all 0.3s ease;';
+                }
+
+                let priceHTML = '';
+                if (displayPrice) {
+                    priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
+                } else if (!firestoreSynced) {
+                    priceHTML = `<span class="price-shimmer"></span>`;
+                }
+                
+                return `
+                    <div class="product-card reveal" style="--anim-delay: ${staggerDelay};" data-product-id="${id}">
+                        <a ${linkAttributes}>
+                            <div class="tinted-shadow" style="background-image: url('${primaryImg}');"></div>
+                            <div class="product-image-wrapper" style="${isActuallyOOS ? 'background-color: #f0f0f0;' : ''}">
+                                ${badgeHTML}
+                                <img loading="lazy" src="${primaryImg}" alt="${product.name}" class="product-card-img" style="${imgStyle}; view-transition-name: prod-img-${id};">
+                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${primaryImg}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
                             </div>
-                            <div class="product-card-info" style="${P?"opacity: 0.7;":""}">
-                                <h3 class="product-card-title" data-name-target="${f}" style="view-transition-name: prod-title-${f};">${Pe?L.name:'<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
-                                <p class="product-card-price" data-price-target="${f}">${q}</p>
+                            <div class="product-card-info" style="${isActuallyOOS ? 'opacity: 0.7;' : ''}">
+                                <h3 class="product-card-title" data-name-target="${id}" style="view-transition-name: prod-title-${id};">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
+                                <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
                             </div>
                         </a>
-                    </div>`};e.innerHTML="";const N=[{id:"hair-care",title:"Hair Care"},{id:"skin-care",title:"Skin Care"},{id:"sets",title:"Sets & Bundles"}],J={shampoo:"Shampoos",conditioners:"Conditioners",masks:"Masks & Treatments","leave-in":"Leave-In Treatments",cleansers:"Cleansers",serums:"Serums",creams:"Creams",sets:"Sets"};let D=N;v&&v!=="all"&&(D=N.filter(f=>f.id===v));const R=b&&b!=="all";if(n){const f=Array(4).fill(0).map((L,Z)=>`
+                    </div>`;
+            };
+            shopLayout.innerHTML = '';
+            const allSections = [
+                { id: 'hair-care', title: 'Hair Care' },
+                { id: 'skin-care', title: 'Skin Care' },
+                { id: 'sets', title: 'Sets & Bundles' }
+            ];
+            const subCatDisplay = {
+                'shampoo': 'Shampoos',
+                'conditioners': 'Conditioners',
+                'masks': 'Masks & Treatments',
+                'leave-in': 'Leave-In Treatments',
+                'cleansers': 'Cleansers',
+                'serums': 'Serums',
+                'creams': 'Creams',
+                'sets': 'Sets'
+            };
+            let sectionsToShow = allSections;
+            if (activeCat && activeCat !== 'all') {
+                sectionsToShow = allSections.filter(s => s.id === activeCat);
+            }
+
+            const isSpecificSub = activeSub && activeSub !== 'all';
+
+            if (loading) {
+                const skeletonCards = Array(4).fill(0).map((_, i) => `
                     <div class="product-card" style="opacity: 1; pointer-events: none;">
                         <div class="skeleton-img" style="border-radius: 20px; aspect-ratio: 4/5; width: 100%;"></div>
                         <div class="product-card-info" style="margin-top: 1rem;">
@@ -131,62 +1248,1283 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                             <div class="skeleton-text" style="width: 40%; height: 1rem;"></div>
                         </div>
                     </div>
-                `).join("");if(!R)D.forEach(L=>{const Z=`
+                `).join('');
+
+                if (!isSpecificSub) {
+                    sectionsToShow.forEach(section => {
+                        const sectionHTML = `
                             <div class="shop-category-section">
                                 <h2 class="shop-category-title skeleton-text" style="width: 200px; height: 2rem; margin-bottom: 2rem; border-radius: 4px;"></h2>
                                 <div class="shop-grid horizontal-scroll">
-                                    ${f}
+                                    ${skeletonCards}
                                 </div>
                             </div>
-                        `;e.insertAdjacentHTML("beforeend",Z)});else{const L=`
+                        `;
+                        shopLayout.insertAdjacentHTML('beforeend', sectionHTML);
+                    });
+                } else {
+                    const gridHTML = `
                         <div class="shop-category-section">
                             <h2 class="shop-category-title skeleton-text" style="width: 200px; height: 2rem; margin-bottom: 2rem; border-radius: 4px;"></h2>
                             <div class="shop-grid">
-                                ${f}
+                                ${skeletonCards}
                             </div>
                         </div>
-                    `;e.innerHTML=L}return}if(R){const f=r.filter(([,L])=>{const Z=!v||v==="all"||L.category===v,xe=!b||b==="all"||(Array.isArray(L.subCategory)?L.subCategory.includes(b):L.subCategory===b);return Z&&xe&&!L.isPermanentlyUnavailable});if(f.length>0){const L=`
-                        <div class="shop-category-section">
-                            <h2 class="shop-category-title">${J[b]||b.charAt(0).toUpperCase()+b.slice(1)}</h2>
-                            <div class="shop-grid">
-                                ${f.map(([Z,xe],ue)=>A(Z,xe,ue)).join("")}
-                            </div>
-                        </div>
-                    `;e.innerHTML=L}else e.innerHTML='<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>'}else{let f=!1;D.forEach(L=>{const Z=r.filter(([,xe])=>xe.category===L.id&&!xe.isPermanentlyUnavailable);if(Z.length>0){f=!0;const xe=`
+                    `;
+                    shopLayout.innerHTML = gridHTML;
+                }
+                return;
+            }
+
+            if (!isSpecificSub) {
+                let hasProducts = false;
+                sectionsToShow.forEach(section => {
+                    const sectionProducts = sortedCatalog.filter(([, p]) => p.category === section.id && !p.isPermanentlyUnavailable);
+
+                    if (sectionProducts.length > 0) {
+                        hasProducts = true;
+                        const contentHTML = `
                             <div class="shop-grid horizontal-scroll">
-                                ${Z.map(([Q,ve],be)=>A(Q,ve,be)).join("")}
+                                ${sectionProducts.map(([id, p], i) => generateCardHTML(id, p, i)).join('')}
                             </div>
-                        `,ue=`
+                        `;
+
+                        const sectionHTML = `
                             <div class="shop-category-section">
-                                <h2 class="shop-category-title">${L.title}</h2>
-                                ${xe}
+                                <h2 class="shop-category-title">${section.title}</h2>
+                                ${contentHTML}
                             </div>
-                        `;e.insertAdjacentHTML("beforeend",ue)}}),f||(e.innerHTML='<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>')}document.querySelectorAll(".shop-layout .product-card.reveal").forEach(f=>{typeof ie<"u"&&(ie.observe(f),window.dodchSEO&&window.dodchSEO.runSEO())})};a?(e.classList.add("fade-out"),_e&&clearTimeout(_e),_e=setTimeout(()=>{t(i),e.classList.remove("fade-out")},300)):t(i)}async function vt(){let a=null;try{if(typeof Ft<"u")try{await Ft}catch(t){console.warn("\u26A0\uFE0F App Check: Proceeding with product sync without waiting further.",t)}console.log("\u{1F4E1} Syncing prices & stock from Firestore...");const i=new Promise((t,n)=>setTimeout(()=>n(new Error("Firestore sync timeout")),15e3)),e=await Promise.race([nt(Re(ae,"products")),i]);e.empty||(e.forEach(t=>{const n=t.data(),r=t.id;if(n.deleted)delete w[r];else if(w[r]){n.name&&(w[r].name=n.name),n.subtitle&&(w[r].subtitle=n.subtitle),n.description&&(w[r].description=n.description),w[r].notice=n.notice||"",w[r].price=n.price||null,w[r].originalPrice=n.originalPrice||null,w[r].storyUrl=n.storyUrl||null,w[r].outOfStock=n.outOfStock===!0,w[r].isPermanentlyUnavailable=n.isPermanentlyUnavailable===!0,document.querySelectorAll(`[data-name-target="${r}"]`).forEach(N=>{N.textContent=w[r].name}),n.image&&(w[r].image=n.image),Array.isArray(n.images)&&n.images.length>0?w[r].images=n.images:n.image&&!w[r].images&&(w[r].images=[n.image]);const v=kt(w[r]);if(v){const N=document.querySelector(`.product-card[data-product-id="${r}"]`);if(N){const J=N.querySelector(".product-card-img");J&&J.src!==v&&(J.src=v);const D=N.querySelector(".tinted-shadow");D&&(D.style.backgroundImage=`url('${v}')`);const R=N.querySelector(".quick-view-btn");R&&(R.dataset.img=v)}}w[r].sizes=n.sizes||[],n.performance&&(w[r].performance=n.performance),n.inci&&(w[r].inci=n.inci),n.batchHistory&&(w[r].batchHistory=n.batchHistory);const b=document.querySelectorAll(`[data-price-target="${r}"]`);if(b.length>0){let N=w[r].price,J="",D=!1;if(n.sizes){let R=[];if(Array.isArray(n.sizes)?R=n.sizes:R=Object.entries(n.sizes).map(([f,L])=>({label:f,price:L})),R.length>0){const f=R.map(Z=>parseFloat(Z.price)),L=R.find(Z=>parseFloat(Z.price)===Math.min(...f))||R[0];N=parseFloat(L.price).toFixed(2),L.originalPrice&&parseFloat(L.originalPrice)>parseFloat(L.price)&&(D=!0,J=`<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(L.originalPrice).toFixed(2)} TND</span>`)}}if(N){document.querySelectorAll('script[type="application/ld+json"]').forEach(L=>{try{let Z=JSON.parse(L.textContent);if(Z["@type"]==="Product"&&Z.offers&&Z.offers["@type"]==="Offer"){const xe=window.location.pathname.split("/").pop()||"",Q=new URLSearchParams(window.location.search).get("id");if(window.location.pathname.includes(r)||w[r]&&w[r].storyUrl===xe||Q===r||Object.keys(w).length===1){Z.offers.price=String(N),L.textContent=JSON.stringify(Z,null,2);const be=document.querySelector('meta[property="product:price:amount"]');be&&be.setAttribute("content",String(N));const ke=document.querySelector('meta[name="price"]');ke&&ke.setAttribute("content",String(N))}}}catch{}});const f=`${J}<span style="color: ${D?"var(--accent-gold-text)":"inherit"}; font-weight: ${D?"700":"500"};">${N} TND</span>`;b.forEach(L=>{L.innerHTML=f;const Z=L.closest(".product-card");if(Z){const xe=Z.querySelector(".product-image-wrapper");if(xe){xe.querySelectorAll(".product-badge").forEach(ke=>ke.remove());const ve=n.sizes&&n.sizes.length>0?n.sizes.every(ke=>ke.outOfStock===!0||String(ke.outOfStock).toLowerCase()==="true"):w[r].outOfStock===!0||String(w[r].outOfStock).toLowerCase()==="true",be=Z.querySelector(".product-card-img");if(be&&(ve?(be.style.opacity="0.55",be.style.filter="grayscale(60%)"):(be.style.opacity="",be.style.filter="")),w[r].isPermanentlyUnavailable)xe.insertAdjacentHTML("afterbegin",'<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>');else if(ve)xe.insertAdjacentHTML("afterbegin",'<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>');else if(D){const ke=n.sizes.map(P=>parseFloat(P.price)),W=n.sizes.find(P=>parseFloat(P.price)===Math.min(...ke))||n.sizes[0],ne=Math.round((parseFloat(W.originalPrice)-parseFloat(W.price))/parseFloat(W.originalPrice)*100);if(ne>0){const P=`<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${ne}%</span>`;xe.insertAdjacentHTML("afterbegin",P)}}}const ue=Z.querySelector(".quick-view-btn");ue&&(ue.dataset.price=N)}})}}const S=new URLSearchParams(window.location.search).get("id"),E=window.location.pathname.split("/").pop();(S===r||w[r]?.storyUrl===E)&&go()}else n.sizes&&!Array.isArray(n.sizes)&&(n.sizes=Object.entries(n.sizes).map(([H,v])=>({label:H,price:v}))),w[r]=n}),console.log("\u2705 Real-time data synced. Refreshing UI."),Pe=!0,window.dodchSearchEngine&&window.dodchSearchEngine.init(w)),typeof window.refreshAdminProducts=="function"&&window.refreshAdminProducts()}catch(i){a=i,console.error("Error syncing with Firestore:",i)}finally{Pe=!0,Object.keys(w).forEach(r=>{document.querySelectorAll(`[data-name-target="${r}"]`).forEach(v=>{v.querySelector(".price-shimmer")&&(v.textContent=w[r].name)})});const e=new URLSearchParams(window.location.search).get("id"),t=window.location.pathname.split("/").pop();Object.keys(w).find(r=>e===r||w[r]?.storyUrl===t)&&go(),a&&console.warn("\u23F1\uFE0F Prices didn't load. Shimmers stay until next reload (cache will serve data then).")}}const Ht=6;let Be=JSON.parse(localStorage.getItem("dodch_cart"))||[];parseInt(localStorage.getItem("dodch_cart_version")||"0")<Ht&&(console.warn("Cart version mismatch. Clearing old data to ensure accuracy."),Be=[],localStorage.setItem("dodch_cart",JSON.stringify(Be)),localStorage.setItem("dodch_cart_version",Ht));let Ke=null;const Wt=document.getElementById("cart-toggle"),zo=document.getElementById("cart-drawer"),Jt=document.getElementById("cart-overlay"),Ao=document.getElementById("close-cart-btn"),ht=document.getElementById("cart-items-container"),ao=document.getElementById("cart-count-badge"),Po=document.getElementById("cart-subtotal"),qo=document.querySelector(".cart-empty"),Do=document.querySelectorAll(".size-btn"),Qi=document.getElementById("product-price"),Mo=document.querySelectorAll(".add-to-cart-btn"),Fo=document.getElementById("login-btn"),Zi=a=>{const i=typeof a=="string"?parseFloat(a.replace(/[^0-9.]/g,"")):Number(a);return isNaN(i)?"0.00 TND":`${i.toFixed(2)} TND`},lo=()=>{localStorage.setItem("dodch_cart",JSON.stringify(Be)),localStorage.setItem("dodch_cart_version",Ht),Ke&&at(Ae(ae,"carts",Ke.uid),{items:Be})},co=()=>{const a=Be.reduce((b,y)=>b+y.quantity,0),i=Be.reduce((b,y)=>{const S=parseFloat(String(y.price).replace(/[^0-9.]/g,""));return b+(isNaN(S)?0:S*y.quantity)},0);ao&&(ao.textContent=a>99?"99+":a,ao.classList.toggle("visible",a>0)),Po&&(Po.textContent=`${i.toFixed(2)} TND`);const e=document.querySelector(".cart-footer .checkout-btn");e&&(Be.length===0?(e.classList.add("disabled"),e.style.pointerEvents="none",e.style.opacity="0.5"):(e.classList.remove("disabled"),e.style.pointerEvents="auto",e.style.opacity="1"));const t=document.querySelector(".cart-footer");if(!t)return;let n=t.querySelector(".shipping-promo-msg");n||(n=document.createElement("p"),n.className="shipping-promo-msg",n.style.cssText="font-size: 0.75rem; text-align: center; margin-bottom: 1rem; color: #666; border-top: 1px solid #f5f5f5; padding-top: 1rem;",t.prepend(n));const r=100,H=i>=r,v=n.classList.contains("shipping-promo-unlocked");if(H!==v)n.classList.add("exit"),setTimeout(()=>{if(H){const b="\u2728 You've unlocked Free Shipping!";n.innerHTML=b.split("").map((y,S)=>`<span style="animation-delay: ${S*.02}s; display: inline-block; white-space: pre;">${y}</span>`).join(""),n.classList.add("shipping-promo-unlocked")}else{const b=r-i;n.innerHTML=`Add <strong>${b.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`,n.classList.remove("shipping-promo-unlocked")}n.classList.remove("exit")},400);else if(!H){const b=r-i;n.innerHTML=`Add <strong>${b.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`}},ni=(a,i)=>{const e=document.createElement("div");return e.classList.add("cart-item"),e.dataset.index=i,e.innerHTML=`
-            <img loading="lazy" src="${a.image}" alt="${a.name}" class="cart-item-img">
+                        `;
+                        shopLayout.insertAdjacentHTML('beforeend', sectionHTML);
+                    }
+                });
+
+                if (!hasProducts) {
+                    shopLayout.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>`;
+                }
+            } else {
+                const filteredProducts = sortedCatalog.filter(([, p]) => {
+                    const matchesCat = !activeCat || activeCat === 'all' || p.category === activeCat;
+                    const matchesSub = !activeSub || activeSub === 'all' || (Array.isArray(p.subCategory) ? p.subCategory.includes(activeSub) : p.subCategory === activeSub);
+                    return matchesCat && matchesSub && !p.isPermanentlyUnavailable;
+                });
+
+                if (filteredProducts.length > 0) {
+                    const gridHTML = `
+                        <div class="shop-category-section">
+                            <h2 class="shop-category-title">${subCatDisplay[activeSub] || (activeSub.charAt(0).toUpperCase() + activeSub.slice(1))}</h2>
+                            <div class="shop-grid">
+                                ${filteredProducts.map(([id, p], i) => generateCardHTML(id, p, i)).join('')}
+                            </div>
+                        </div>
+                    `;
+                    shopLayout.innerHTML = gridHTML;
+                } else {
+                    shopLayout.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>`;
+                }
+            }
+            document.querySelectorAll('.shop-layout .product-card.reveal').forEach(el => {
+                if (typeof revealObserver !== 'undefined') {
+                    revealObserver.observe(el);
+                    if (window.dodchSEO) window.dodchSEO.runSEO();
+                }
+            });
+        };
+
+        if (animate) {
+            shopLayout.classList.add('fade-out');
+            if (shopTransitionTimeout) clearTimeout(shopTransitionTimeout);
+
+            shopTransitionTimeout = setTimeout(() => { // Pass loading state
+                renderContent(loading);
+                shopLayout.classList.remove('fade-out');
+            }, 300);
+        } else {
+            renderContent(loading);
+        }
+    };
+    async function loadProductCatalog() {
+        let syncError = null;
+        try {
+            if (typeof appCheckReady !== 'undefined') {
+                try {
+                    await appCheckReady;
+                } catch (err) {
+                    console.warn("⚠️ App Check: Proceeding with product sync without waiting further.", err);
+                }
+            }
+            // No AppCheck wait needed — products are public read (allow read: if true in rules).
+            // AppCheck is only required for sensitive writes (contact form, newsletter, reviews).
+            // Firebase Console: App Check → Cloud Firestore must be "Monitoring" not "Enforced".
+            console.log("📡 Syncing prices & stock from Firestore...");
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 15000));
+            const querySnapshot = await Promise.race([
+                getDocs(collection(db, "products")),
+                timeoutPromise
+            ]);
+
+            if (!querySnapshot.empty) {
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const productId = doc.id;
+
+                    if (data.deleted) {
+                        delete productCatalog[productId];
+                    } else if (productCatalog[productId]) {
+                        // HYBRID SYNC: Database (Firestore) is the source of truth for Price, Stock, Sizes, name, subtitle, description, and admin-approved image paths.
+                        if (data.name) {
+                            productCatalog[productId].name = data.name;
+                        }
+                        if (data.subtitle) {
+                            productCatalog[productId].subtitle = data.subtitle;
+                        }
+                        if (data.description) {
+                            productCatalog[productId].description = data.description;
+                        }
+                        productCatalog[productId].notice = data.notice || "";
+                        productCatalog[productId].price = data.price || null;
+                        productCatalog[productId].originalPrice = data.originalPrice || null;
+                        productCatalog[productId].storyUrl = data.storyUrl || null;
+                        productCatalog[productId].outOfStock = data.outOfStock === true;
+                        productCatalog[productId].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
+
+                        // Target specific name elements in the DOM to avoid full re-render
+                        const nameTargets = document.querySelectorAll(`[data-name-target="${productId}"]`);
+                        nameTargets.forEach(target => {
+                            target.textContent = productCatalog[productId].name;
+                        });
+
+                        if (data.image) {
+                            productCatalog[productId].image = data.image;
+                        }
+                        if (Array.isArray(data.images) && data.images.length > 0) {
+                            productCatalog[productId].images = data.images;
+                        } else if (data.image && !productCatalog[productId].images) {
+                            productCatalog[productId].images = [data.image];
+                        }
+
+                        // LIVE IMAGE SYNC: Update the rendered shop-grid card img src so changes
+                        // made in the admin inventory are immediately visible without a page reload.
+                        const newPrimaryImg = getProductPrimaryImage(productCatalog[productId]);
+                        if (newPrimaryImg) {
+                            const gridCard = document.querySelector(`.product-card[data-product-id="${productId}"]`);
+                            if (gridCard) {
+                                const cardImg = gridCard.querySelector('.product-card-img');
+                                if (cardImg && cardImg.src !== newPrimaryImg) {
+                                    cardImg.src = newPrimaryImg;
+                                }
+                                const tintedShadow = gridCard.querySelector('.tinted-shadow');
+                                if (tintedShadow) {
+                                    tintedShadow.style.backgroundImage = `url('${newPrimaryImg}')`;
+                                }
+                                const qvBtn = gridCard.querySelector('.quick-view-btn');
+                                if (qvBtn) qvBtn.dataset.img = newPrimaryImg;
+                            }
+                        }
+
+                        // CRITICAL: Overwrite sizes. If Firestore has no sizes, clear the local sizes to use single price logic.
+                        productCatalog[productId].sizes = data.sizes || [];
+
+                        // Sync dynamic performance metrics
+                        if (data.performance) {
+                            productCatalog[productId].performance = data.performance;
+                        }
+                        
+                        // Sync INCI ingredients
+                        if (data.inci) {
+                            productCatalog[productId].inci = data.inci;
+                        }
+
+                        // Sync Batch History
+                        if (data.batchHistory) {
+                            productCatalog[productId].batchHistory = data.batchHistory;
+                        }
+
+                        // Target specific price elements in the DOM to avoid full re-render
+                        const priceTargets = document.querySelectorAll(`[data-price-target="${productId}"]`);
+                        if (priceTargets.length > 0) {
+                            let updatedDisplayPrice = productCatalog[productId].price;
+                            let originalPriceDisplay = '';
+                            let hasDiscount = false;
+
+                            if (data.sizes) {
+                                let sizesArray = [];
+                                if (Array.isArray(data.sizes)) {
+                                    sizesArray = data.sizes;
+                                } else {
+                                    // Convert object { "250ml": 42.99 } to array for frontend
+                                    sizesArray = Object.entries(data.sizes).map(([label, price]) => ({ label, price }));
+                                }
+
+                                if (sizesArray.length > 0) {
+                                    const prices = sizesArray.map(s => parseFloat(s.price));
+                                    const baseSize = sizesArray.find(s => parseFloat(s.price) === Math.min(...prices)) || sizesArray[0];
+                                    updatedDisplayPrice = parseFloat(baseSize.price).toFixed(2);
+
+                                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
+                                        hasDiscount = true;
+                                        originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
+                                    }
+                                }
+                            }
+
+                            if (updatedDisplayPrice) {
+                                 // Sync JSON-LD structured data and Meta Tags for Google Merchant Center / Facebook Pixel / Crawlers
+                                 const schemas = document.querySelectorAll('script[type="application/ld+json"]');
+                                 schemas.forEach(schema => {
+                                     try {
+                                         let schemaData = JSON.parse(schema.textContent);
+                                         if (schemaData['@type'] === 'Product' && schemaData.offers && schemaData.offers['@type'] === 'Offer') {
+                                             // Robust match: check if URL contains product ID, filename matches product's storyUrl, or query parameter id matches
+                                             const currentFilename = window.location.pathname.split('/').pop() || '';
+                                             const urlParams = new URLSearchParams(window.location.search);
+                                             const activeIdParam = urlParams.get('id');
+                                             const isMatchingProduct = window.location.pathname.includes(productId) ||
+                                                                       (productCatalog[productId] && productCatalog[productId].storyUrl === currentFilename) ||
+                                                                       activeIdParam === productId ||
+                                                                       Object.keys(productCatalog).length === 1;
+
+                                             if (isMatchingProduct) {
+                                                 schemaData.offers.price = String(updatedDisplayPrice);
+                                                 schema.textContent = JSON.stringify(schemaData, null, 2);
+
+                                                 // Also sync the OpenGraph & standard Meta Price tags live in the DOM!
+                                                 const ogPriceMeta = document.querySelector('meta[property="product:price:amount"]');
+                                                 if (ogPriceMeta) {
+                                                     ogPriceMeta.setAttribute('content', String(updatedDisplayPrice));
+                                                 }
+                                                 const priceMeta = document.querySelector('meta[name="price"]');
+                                                 if (priceMeta) {
+                                                     priceMeta.setAttribute('content', String(updatedDisplayPrice));
+                                                 }
+                                             }
+                                         }
+                                     } catch (e) {}
+                                 });
+
+                                const newPriceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${updatedDisplayPrice} TND</span>`;
+                                priceTargets.forEach(target => {
+                                    target.innerHTML = newPriceHTML;
+
+                                    const card = target.closest('.product-card');
+                                    if (card) {
+                                        // Update/Add Discount Badge
+                                        const imgWrapper = card.querySelector('.product-image-wrapper');
+                                        if (imgWrapper) {
+                                            // Clear any existing badges first
+                                            const existingBadges = imgWrapper.querySelectorAll('.product-badge');
+                                            existingBadges.forEach(b => b.remove());
+
+                                            const isActuallyOOS = data.sizes && data.sizes.length > 0
+                                                ? data.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                                : (productCatalog[productId].outOfStock === true || String(productCatalog[productId].outOfStock).toLowerCase() === 'true');
+                                
+                                // Apply/remove grayscale effect based on the new stock status
+                                const cardImg = card.querySelector('.product-card-img');
+                                if (cardImg) {
+                                    if (isActuallyOOS) {
+                                        cardImg.style.opacity = '0.55';
+                                        cardImg.style.filter = 'grayscale(60%)';
+                                    } else {
+                                        cardImg.style.opacity = '';
+                                        cardImg.style.filter = '';
+                                    }
+                                }
+                                            if (productCatalog[productId].isPermanentlyUnavailable) {
+                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>');
+                                            } else if (isActuallyOOS) {
+                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>');
+                                            } else if (hasDiscount) {
+                                                const prices = data.sizes.map(s => parseFloat(s.price));
+                                                const baseSize = data.sizes.find(s => parseFloat(s.price) === Math.min(...prices)) || data.sizes[0];
+                                                const discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
+                                                if (discountPercentage > 0) {
+                                                    const badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
+                                                    imgWrapper.insertAdjacentHTML('afterbegin', badgeHTML);
+                                                }
+                                            }
+                                        }
+
+                                        // Update Quick View button data
+                                        const qvBtn = card.querySelector('.quick-view-btn');
+                                        if (qvBtn) qvBtn.dataset.price = updatedDisplayPrice;
+                                    }
+                                });
+                            }
+                        }
+
+                        // Also update individual product page elements if active
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const activeIdParam = urlParams.get('id');
+                        const currentFilename = window.location.pathname.split('/').pop();
+                        const isThisProductPage = activeIdParam === productId ||
+                            productCatalog[productId]?.storyUrl === currentFilename;
+
+                        if (isThisProductPage) {
+                            // Always re-run initProductPage after Firestore sync on a product detail page
+                            // This replaces shimmers with real prices and size buttons
+                            initProductPage();
+                        }
+                    } else {
+                        // If it's a completely new product from database not in local code, add it
+                        if (data.sizes && !Array.isArray(data.sizes)) {
+                            data.sizes = Object.entries(data.sizes).map(([label, price]) => ({ label, price }));
+                        }
+                        productCatalog[productId] = data;
+                    }
+                });
+
+                // RE-INITIALIZE DYNAMIC ELEMENTS (No full refresh, just update prices/stock)
+                console.log("✅ Real-time data synced. Refreshing UI.");
+                firestoreSynced = true;
+                if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
+            }
+            if (typeof window.refreshAdminProducts === 'function') {
+                window.refreshAdminProducts();
+            }
+        } catch (error) {
+            syncError = error;
+            console.error("Error syncing with Firestore:", error);
+        } finally {
+            firestoreSynced = true;
+            // Reveal fallback names for cards if they are still shimmers
+            Object.keys(productCatalog).forEach(productId => {
+                const nameTargets = document.querySelectorAll(`[data-name-target="${productId}"]`);
+                nameTargets.forEach(target => {
+                    if (target.querySelector('.price-shimmer')) {
+                        target.textContent = productCatalog[productId].name;
+                    }
+                });
+            });
+            // Re-run initProductPage to resolve any product detail page shimmers to fallbacks
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeIdParam = urlParams.get('id');
+            const currentFilename = window.location.pathname.split('/').pop();
+            const activeProd = Object.keys(productCatalog).find(id => activeIdParam === id || productCatalog[id]?.storyUrl === currentFilename);
+            if (activeProd) {
+                initProductPage();
+            }
+            if (syncError) {
+                console.warn("⏱️ Prices didn't load. Shimmers stay until next reload (cache will serve data then).");
+            }
+        }
+    };
+
+    const CART_VERSION = 6; // Increment to force reset and clear stale/buggy data
+    let cart = JSON.parse(localStorage.getItem('dodch_cart')) || [];
+    const storedVersion = parseInt(localStorage.getItem('dodch_cart_version') || '0');
+    if (storedVersion < CART_VERSION) {
+        console.warn("Cart version mismatch. Clearing old data to ensure accuracy.");
+        cart = [];
+        localStorage.setItem('dodch_cart', JSON.stringify(cart));
+        localStorage.setItem('dodch_cart_version', CART_VERSION);
+    }
+
+    let currentUser = null;
+
+    const cartToggle = document.getElementById('cart-toggle');
+    const cartDrawer = document.getElementById('cart-drawer');
+    const cartOverlay = document.getElementById('cart-overlay');
+    const closeCartBtn = document.getElementById('close-cart-btn');
+    const cartItemsContainer = document.getElementById('cart-items-container');
+    const cartCountBadge = document.getElementById('cart-count-badge');
+    const cartSubtotalEl = document.getElementById('cart-subtotal');
+    const cartEmptyMsg = document.querySelector('.cart-empty');
+
+    const sizeBtns = document.querySelectorAll('.size-btn');
+    const priceDisplay = document.getElementById('product-price');
+    const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
+    const loginBtn = document.getElementById('login-btn');
+
+    const formatPrice = (value) => {
+        const numeric = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.]/g, '')) : Number(value);
+        return isNaN(numeric) ? '0.00 TND' : `${numeric.toFixed(2)} TND`;
+    };
+
+    const saveCart = () => {
+        localStorage.setItem('dodch_cart', JSON.stringify(cart));
+        localStorage.setItem('dodch_cart_version', CART_VERSION);
+        if (currentUser) {
+            setDoc(doc(db, 'carts', currentUser.uid), { items: cart });
+        }
+    };
+
+    const updateCartTotals = () => {
+        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const subtotal = cart.reduce((sum, item) => {
+            const priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
+            return sum + (isNaN(priceVal) ? 0 : priceVal * item.quantity);
+        }, 0);
+
+        if (cartCountBadge) {
+            cartCountBadge.textContent = totalItems > 99 ? '99+' : totalItems;
+            cartCountBadge.classList.toggle('visible', totalItems > 0);
+        }
+
+        if (cartSubtotalEl) {
+            cartSubtotalEl.textContent = `${subtotal.toFixed(2)} TND`;
+        }
+
+        // Disable checkout button if cart is empty
+        const checkoutBtn = document.querySelector('.cart-footer .checkout-btn');
+        if (checkoutBtn) {
+            if (cart.length === 0) {
+                checkoutBtn.classList.add('disabled');
+                checkoutBtn.style.pointerEvents = 'none';
+                checkoutBtn.style.opacity = '0.5';
+            } else {
+                checkoutBtn.classList.remove('disabled');
+                checkoutBtn.style.pointerEvents = 'auto';
+                checkoutBtn.style.opacity = '1';
+            }
+        }
+
+        const cartFooter = document.querySelector('.cart-footer');
+        if (!cartFooter) return;
+
+        let shippingMsg = cartFooter.querySelector('.shipping-promo-msg');
+        if (!shippingMsg) {
+            shippingMsg = document.createElement('p');
+            shippingMsg.className = 'shipping-promo-msg';
+            shippingMsg.style.cssText = 'font-size: 0.75rem; text-align: center; margin-bottom: 1rem; color: #666; border-top: 1px solid #f5f5f5; padding-top: 1rem;';
+            cartFooter.prepend(shippingMsg);
+        }
+
+        const FREE_SHIPPING_THRESHOLD = 100;
+        const isUnlocked = subtotal >= FREE_SHIPPING_THRESHOLD;
+        const currentlyUnlocked = shippingMsg.classList.contains('shipping-promo-unlocked');
+
+        if (isUnlocked !== currentlyUnlocked) {
+            shippingMsg.classList.add('exit');
+            setTimeout(() => {
+                if (isUnlocked) {
+                    const text = "✨ You've unlocked Free Shipping!";
+                    shippingMsg.innerHTML = text.split('').map((char, i) => `<span style="animation-delay: ${i * 0.02}s; display: inline-block; white-space: pre;">${char}</span>`).join('');
+                    shippingMsg.classList.add('shipping-promo-unlocked');
+                } else {
+                    const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
+                    shippingMsg.innerHTML = `Add <strong>${remaining.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`;
+                    shippingMsg.classList.remove('shipping-promo-unlocked');
+                }
+                shippingMsg.classList.remove('exit');
+            }, 400);
+        } else if (!isUnlocked) {
+            const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
+            shippingMsg.innerHTML = `Add <strong>${remaining.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`;
+        }
+    };
+
+    const renderCartItem = (item, index) => {
+        const cartItemEl = document.createElement('div');
+        cartItemEl.classList.add('cart-item');
+        cartItemEl.dataset.index = index;
+        cartItemEl.innerHTML = `
+            <img loading="lazy" src="${item.image}" alt="${item.name}" class="cart-item-img">
             <div class="cart-item-info">
-                <h4 class="cart-item-title">${a.name}</h4>
-                <p class="cart-item-details">Size: ${a.size}</p>
+                <h4 class="cart-item-title">${item.name}</h4>
+                <p class="cart-item-details">Size: ${item.size}</p>
                 <div class="cart-item-quantity">
-                    <button class="qty-btn minus" type="button" data-index="${i}" aria-label="Decrease quantity" ${a.quantity<=1?'disabled style="opacity: 0.4; cursor: not-allowed; pointer-events: none;"':""}>-</button>
-                    <span class="qty-display" data-index="${i}" data-editable="true" title="Click to edit">${a.quantity}</span>
-                    <button class="qty-btn plus" type="button" data-index="${i}" aria-label="Increase quantity">+</button>
+                    <button class="qty-btn minus" type="button" data-index="${index}" aria-label="Decrease quantity" ${item.quantity <= 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed; pointer-events: none;"' : ''}>-</button>
+                    <span class="qty-display" data-index="${index}" data-editable="true" title="Click to edit">${item.quantity}</span>
+                    <button class="qty-btn plus" type="button" data-index="${index}" aria-label="Increase quantity">+</button>
                 </div>
             </div>
             <div class="cart-item-actions">
-                <p class="cart-item-price">${a.price}</p>
-                <button class="cart-item-remove-btn" type="button" data-index="${i}">Remove</button>
+                <p class="cart-item-price">${item.price}</p>
+                <button class="cart-item-remove-btn" type="button" data-index="${index}">Remove</button>
             </div>
-        `,e},si=a=>{a&&(a.classList.add("animate-bump"),a.addEventListener("animationend",()=>a.classList.remove("animate-bump"),{once:!0}))},ai=a=>{const i=a.target.closest(".qty-btn, .cart-item-remove-btn");if(!i||!ht)return;const e=Number(i.dataset.index);if(Number.isNaN(e)||e<0||e>=Be.length)return;if(window.triggerHaptic("light"),i.classList.contains("cart-item-remove-btn")){Be.splice(e,1),pt();return}const t=Be[e];if(!t)return;const n=ht.querySelector(`.cart-item[data-index="${e}"] .qty-display`);if(i.classList.contains("plus"))t.quantity<99&&(t.quantity+=1);else if(i.classList.contains("minus"))if(t.quantity>1)t.quantity-=1;else{Be.splice(e,1),pt();return}n&&(n.textContent=t.quantity,si(n));const r=ht.querySelector(`.cart-item[data-index="${e}"] .qty-btn.minus`);r&&(t.quantity<=1?(r.disabled=!0,r.style.opacity="0.4",r.style.cursor="not-allowed",r.style.pointerEvents="none"):(r.disabled=!1,r.style.opacity="",r.style.cursor="",r.style.pointerEvents="")),co(),lo()},po=a=>{const i=a.target.closest(".qty-display[data-editable]");if(!i)return;const e=Number(i.dataset.index);if(Number.isNaN(e)||e<0||e>=Be.length)return;const t=i.textContent,n=document.createElement("input");n.type="text",n.value=t,n.style.width="50px",n.style.textAlign="center",n.style.fontWeight="600",n.className="qty-edit-input",i.replaceWith(n),n.focus(),n.select();const r=()=>{let v=parseInt(n.value,10)||1;v=Math.max(1,Math.min(99,v)),Be[e].quantity=v;const b=document.createElement("span");b.className="qty-display",b.dataset.index=e,b.dataset.editable="true",b.title="Click to edit",b.textContent=v,b.addEventListener("click",po),n.replaceWith(b);const y=ht.querySelector(`.cart-item[data-index="${e}"] .qty-btn.minus`);y&&(v<=1?(y.disabled=!0,y.style.opacity="0.4",y.style.cursor="not-allowed",y.style.pointerEvents="none"):(y.disabled=!1,y.style.opacity="",y.style.cursor="",y.style.pointerEvents="")),co(),lo()},H=()=>{i.textContent=t,n.replaceWith(i),i.addEventListener("click",po)};n.addEventListener("blur",r),n.addEventListener("keydown",v=>{v.key==="Enter"&&r(),v.key==="Escape"&&H()})},pt=()=>{if(lo(),!!ht){if(ht.innerHTML="",Be.length===0)qo&&ht.appendChild(qo);else{const a=document.createDocumentFragment();Be.forEach((i,e)=>{a.appendChild(ni(i,e))}),ht.appendChild(a)}co(),$t()}};ht&&ht.addEventListener("click",a=>{ai(a),po(a)});const Nt=async()=>{if(await window.showConfirm('<svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 10px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg> Continue with Google Sign In?',"Login"))try{await wi(tt,Di),window.showToast("Successfully logged in!","success")}catch(e){console.error("Login failed",e),window.showToast("Login failed. Please try again.","error")}},Ho=async()=>{if(await window.showConfirm("Are you sure you want to log out?","Logout"))try{await ki(tt),window.showToast("Successfully logged out.","success")}catch(i){console.error("Logout failed",i)}},li=async a=>{const i=JSON.parse(localStorage.getItem("dodch_guest_orders")||"[]");if(i.length===0)return;console.log(`Checking for ${i.length} guest orders to claim...`);let e=0;for(const t of i)try{const n=Ae(ae,"orders",t),r=await ft(n);r.exists()&&r.data().userId==="guest"&&(await gt(n,{userId:a,hasUnseenUpdate:!0}),e++)}catch(n){console.warn(`Could not claim order ${t}:`,n)}e>0&&window.showToast(`Successfully linked ${e} previous order(s) to your account!`,"success"),localStorage.removeItem("dodch_guest_orders")};if(Fo){Fo.addEventListener("click",e=>{window.triggerHaptic("light"),e.preventDefault(),Ke?Ho():Nt()});const a=document.getElementById("hero-login-google-btn");a&&a.addEventListener("click",e=>{window.triggerHaptic("light"),e.preventDefault(),Ke?window.location.href="my-account.html":Nt()});const i=document.getElementById("hero-login-google-btn-cloned");i&&i.addEventListener("click",e=>{window.triggerHaptic("light"),e.preventDefault(),Ke?window.location.href="my-account.html":Nt()})}const uo=document.getElementById("login-form"),mo=document.getElementById("google-login-btn"),Xt=document.getElementById("toggle-auth-mode");let wt=!1;uo&&uo.addEventListener("submit",async a=>{a.preventDefault();const i=document.getElementById("login-email").value,e=document.getElementById("login-password").value,t=uo.querySelector("button");t.innerText="Processing...",t.disabled=!0;try{wt?(await Ei(tt,i,e),window.showToast("Account created successfully!","success")):(await Si(tt,i,e),window.showToast("Welcome back!","success")),setTimeout(()=>window.location.href="my-account.html",1500)}catch(n){console.error(n),window.showToast(n.message,"error"),t.innerText=wt?"Sign Up":"Sign In",t.disabled=!1}}),mo&&(mo.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 12px; vertical-align: middle;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg> Sign In with Google',mo.addEventListener("click",Nt)),Xt&&Xt.addEventListener("click",a=>{a.preventDefault(),wt=!wt,document.querySelector(".auth-header h1").textContent=wt?"Create Account":"Welcome Back",document.querySelector(".auth-header p").textContent=wt?"Join the inner circle.":"Sign in to access your account.",document.querySelector(".auth-btn").textContent=wt?"Sign Up":"Sign In",Xt.textContent=wt?"Sign In":"Sign Up",Xt.parentElement.innerHTML=wt?'Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign In</a>':`Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign Up</a>`,document.getElementById("toggle-auth-mode").addEventListener("click",i=>{location.reload()})});const fo=document.getElementById("checkout-items-container"),Oo=document.getElementById("checkout-subtotal"),No=document.getElementById("checkout-total"),$t=()=>{if(!fo)return;fo.innerHTML="";let a=0;Be.forEach((A,N)=>{let J=parseFloat(String(A.price).replace(/[^0-9.]/g,""));isNaN(J)&&(J=0);const D=J*A.quantity;a+=D;const R=document.createElement("div");R.classList.add("summary-item","co-item"),R.innerHTML=`
-                <img class="co-item-img" src="${A.image}" alt="${A.name}" onerror="this.style.background='#f0f0f0'">
+        `;
+        return cartItemEl;
+    };
+
+    const animateQtyChange = (displayEl) => {
+        if (!displayEl) return;
+        displayEl.classList.add('animate-bump');
+        displayEl.addEventListener('animationend', () => displayEl.classList.remove('animate-bump'), { once: true });
+    };
+
+    const handleCartControlClick = (e) => {
+        const button = e.target.closest('.qty-btn, .cart-item-remove-btn');
+        if (!button || !cartItemsContainer) return;
+        const index = Number(button.dataset.index);
+        if (Number.isNaN(index) || index < 0 || index >= cart.length) return;
+
+        window.triggerHaptic('light');
+
+        if (button.classList.contains('cart-item-remove-btn')) {
+            cart.splice(index, 1);
+            updateCartUI();
+            return;
+        }
+
+        const item = cart[index];
+        if (!item) return;
+
+        const displayEl = cartItemsContainer.querySelector(`.cart-item[data-index="${index}"] .qty-display`);
+
+        if (button.classList.contains('plus')) {
+            if (item.quantity < 99) item.quantity += 1;
+        } else if (button.classList.contains('minus')) {
+            if (item.quantity > 1) {
+                item.quantity -= 1;
+            } else {
+                cart.splice(index, 1);
+                updateCartUI();
+                return;
+            }
+        }
+
+        if (displayEl) {
+            displayEl.textContent = item.quantity;
+            animateQtyChange(displayEl);
+        }
+
+        const minusBtn = cartItemsContainer.querySelector(`.cart-item[data-index="${index}"] .qty-btn.minus`);
+        if (minusBtn) {
+            if (item.quantity <= 1) {
+                minusBtn.disabled = true;
+                minusBtn.style.opacity = "0.4";
+                minusBtn.style.cursor = "not-allowed";
+                minusBtn.style.pointerEvents = "none";
+            } else {
+                minusBtn.disabled = false;
+                minusBtn.style.opacity = "";
+                minusBtn.style.cursor = "";
+                minusBtn.style.pointerEvents = "";
+            }
+        }
+
+        updateCartTotals();
+        saveCart();
+    };
+
+    const handleQtyDisplayEdit = (e) => {
+        const span = e.target.closest('.qty-display[data-editable]');
+        if (!span) return;
+        const index = Number(span.dataset.index);
+        if (Number.isNaN(index) || index < 0 || index >= cart.length) return;
+
+        const originalText = span.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = originalText;
+        input.style.width = '50px';
+        input.style.textAlign = 'center';
+        input.style.fontWeight = '600';
+        input.className = 'qty-edit-input';
+
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+
+        const saveEdit = () => {
+            let qty = parseInt(input.value, 10) || 1;
+            qty = Math.max(1, Math.min(99, qty));
+            cart[index].quantity = qty;
+            
+            const newSpan = document.createElement('span');
+            newSpan.className = 'qty-display';
+            newSpan.dataset.index = index;
+            newSpan.dataset.editable = 'true';
+            newSpan.title = 'Click to edit';
+            newSpan.textContent = qty;
+            newSpan.addEventListener('click', handleQtyDisplayEdit);
+            
+            input.replaceWith(newSpan);
+
+            const minusBtn = cartItemsContainer.querySelector(`.cart-item[data-index="${index}"] .qty-btn.minus`);
+            if (minusBtn) {
+                if (qty <= 1) {
+                    minusBtn.disabled = true;
+                    minusBtn.style.opacity = "0.4";
+                    minusBtn.style.cursor = "not-allowed";
+                    minusBtn.style.pointerEvents = "none";
+                } else {
+                    minusBtn.disabled = false;
+                    minusBtn.style.opacity = "";
+                    minusBtn.style.cursor = "";
+                    minusBtn.style.pointerEvents = "";
+                }
+            }
+
+            updateCartTotals();
+            saveCart();
+        };
+
+        const cancelEdit = () => {
+            span.textContent = originalText;
+            input.replaceWith(span);
+            span.addEventListener('click', handleQtyDisplayEdit);
+        };
+
+        input.addEventListener('blur', saveEdit);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveEdit();
+            if (e.key === 'Escape') cancelEdit();
+        });
+    };
+
+    const updateCartUI = () => {
+        saveCart();
+
+        if (!cartItemsContainer) return;
+
+        cartItemsContainer.innerHTML = '';
+
+        if (cart.length === 0) {
+            if (cartEmptyMsg) cartItemsContainer.appendChild(cartEmptyMsg);
+        } else {
+            const fragment = document.createDocumentFragment();
+            cart.forEach((item, index) => {
+                fragment.appendChild(renderCartItem(item, index));
+            });
+            cartItemsContainer.appendChild(fragment);
+        }
+
+        updateCartTotals();
+        updateCheckoutUI();
+    };
+
+    if (cartItemsContainer) {
+        cartItemsContainer.addEventListener('click', (e) => {
+            handleCartControlClick(e);
+            handleQtyDisplayEdit(e);
+        });
+    }
+
+    const handleLogin = async () => {
+        const googleIcon = `<svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 10px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg>`;
+        const confirmed = await window.showConfirm(`${googleIcon} Continue with Google Sign In?`, "Login");
+        if (!confirmed) return;
+
+        try {
+            await signInWithPopup(auth, provider);
+            window.showToast("Successfully logged in!", "success");
+        } catch (error) {
+            console.error("Login failed", error);
+            window.showToast("Login failed. Please try again.", "error");
+        }
+    };
+
+    const handleLogout = async () => {
+        const confirmed = await window.showConfirm("Are you sure you want to log out?", "Logout");
+        if (!confirmed) return;
+
+        try {
+            await signOut(auth);
+            window.showToast("Successfully logged out.", "success");
+        } catch (error) {
+            console.error("Logout failed", error);
+        }
+    };
+    const claimGuestOrders = async (userId) => {
+        const guestOrders = JSON.parse(localStorage.getItem('dodch_guest_orders') || '[]');
+        if (guestOrders.length === 0) return;
+
+        console.log(`Checking for ${guestOrders.length} guest orders to claim...`);
+        let claimedCount = 0;
+
+        for (const orderId of guestOrders) {
+            try {
+                const orderRef = doc(db, "orders", orderId);
+                const orderSnap = await getDoc(orderRef);
+
+                if (orderSnap.exists()) {
+                    const orderData = orderSnap.data();
+                    if (orderData.userId === 'guest') {
+                        await updateDoc(orderRef, {
+                            userId: userId,
+                            hasUnseenUpdate: true // Mark as new for their account
+                        });
+                        claimedCount++;
+                    }
+                }
+            } catch (err) {
+                console.warn(`Could not claim order ${orderId}:`, err);
+            }
+        }
+
+        if (claimedCount > 0) {
+            window.showToast(`Successfully linked ${claimedCount} previous order(s) to your account!`, "success");
+        }
+        localStorage.removeItem('dodch_guest_orders');
+    };
+
+    if (loginBtn) {
+        loginBtn.addEventListener('click', (e) => {
+            window.triggerHaptic('light');
+            e.preventDefault();
+            if (currentUser) {
+                handleLogout();
+            } else {
+                handleLogin();
+            }
+        });
+        
+        const heroLoginBtn = document.getElementById('hero-login-google-btn');
+        if (heroLoginBtn) {
+            heroLoginBtn.addEventListener('click', (e) => {
+                window.triggerHaptic('light');
+                e.preventDefault();
+                if (currentUser) {
+                    window.location.href = 'my-account.html';
+                } else {
+                    handleLogin();
+                }
+            });
+        }
+
+        const heroLoginBtnCloned = document.getElementById('hero-login-google-btn-cloned');
+        if (heroLoginBtnCloned) {
+            heroLoginBtnCloned.addEventListener('click', (e) => {
+                window.triggerHaptic('light');
+                e.preventDefault();
+                if (currentUser) {
+                    window.location.href = 'my-account.html';
+                } else {
+                    handleLogin();
+                }
+            });
+        }
+    }
+
+    // --- Login Page Logic ---
+    const loginForm = document.getElementById('login-form');
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    const toggleAuthMode = document.getElementById('toggle-auth-mode');
+    let isSignUp = false;
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const btn = loginForm.querySelector('button');
+
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            try {
+                if (isSignUp) {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    window.showToast("Account created successfully!", "success");
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    window.showToast("Welcome back!", "success");
+                }
+                setTimeout(() => window.location.href = 'my-account.html', 1500);
+            } catch (error) {
+                console.error(error);
+                window.showToast(error.message, "error");
+                btn.innerText = isSignUp ? "Sign Up" : "Sign In";
+                btn.disabled = false;
+            }
+        });
+    }
+
+    if (googleLoginBtn) {
+        googleLoginBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 12px; vertical-align: middle;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg> Sign In with Google`;
+        googleLoginBtn.addEventListener('click', handleLogin);
+    }
+
+    if (toggleAuthMode) toggleAuthMode.addEventListener('click', (e) => {
+        e.preventDefault();
+        isSignUp = !isSignUp;
+        document.querySelector('.auth-header h1').textContent = isSignUp ? "Create Account" : "Welcome Back";
+        document.querySelector('.auth-header p').textContent = isSignUp ? "Join the inner circle." : "Sign in to access your account.";
+        document.querySelector('.auth-btn').textContent = isSignUp ? "Sign Up" : "Sign In";
+        toggleAuthMode.textContent = isSignUp ? "Sign In" : "Sign Up";
+        toggleAuthMode.parentElement.innerHTML = isSignUp ? `Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign In</a>` : `Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign Up</a>`;
+        document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
+            location.reload();
+        });
+    });
+    const checkoutItemsContainer = document.getElementById('checkout-items-container');
+    const checkoutSubtotalEl = document.getElementById('checkout-subtotal');
+    const checkoutTotalEl = document.getElementById('checkout-total');
+
+    const updateCheckoutUI = () => {
+        if (!checkoutItemsContainer) return;
+
+        checkoutItemsContainer.innerHTML = '';
+        let subtotal = 0;
+
+        cart.forEach((item, index) => {
+            let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
+            if (isNaN(priceVal)) priceVal = 0;
+            const itemTotal = priceVal * item.quantity;
+            subtotal += itemTotal;
+
+            const el = document.createElement('div');
+            el.classList.add('summary-item', 'co-item');
+            el.innerHTML = `
+                <img class="co-item-img" src="${item.image}" alt="${item.name}" onerror="this.style.background='#f0f0f0'">
                 <div class="co-item-info summary-item-info">
-                    <div class="co-item-name">${A.name}</div>
-                    <div class="co-item-meta">Size: ${A.size} \xB7 Qty: ${A.quantity}</div>
-                    <button class="checkout-remove-btn co-item-remove" data-index="${N}">Remove</button>
+                    <div class="co-item-name">${item.name}</div>
+                    <div class="co-item-meta">Size: ${item.size} · Qty: ${item.quantity}</div>
+                    <button class="checkout-remove-btn co-item-remove" data-index="${index}">Remove</button>
                 </div>
-                <div class="co-item-price summary-item-price">${D.toFixed(2)} TND</div>
-            `,fo.appendChild(R)});const i=7,e=100,t=a>=e,n=t?0:i,r=document.getElementById("use-rewards-checkbox"),H=document.getElementById("checkout-rewards-discount");let v=0,b=a+n;r&&r.checked&&window._dodchUserCredits>0?(v=Math.min(window._dodchUserCredits,b),H&&(H.innerText=`-${v.toFixed(2)} TND`)):H&&(H.innerText="-0.00 TND"),window._dodchCreditsUsedForOrder=v;const y=Math.max(0,b-v);Oo&&(Oo.innerText=`${a.toFixed(2)} TND`);const S=document.getElementById("checkout-shipping");S&&(S.innerText=t?"Free":`${i.toFixed(2)} TND`),No&&(No.innerText=`${y.toFixed(2)} TND`);const E=document.querySelector(".summary-totals");if(E){let A=E.querySelector(".checkout-promo-msg");A||(A=document.createElement("p"),A.className="checkout-promo-msg",A.style.cssText="font-size: 0.75rem; color: #888; margin-top: 1rem; text-align: left; font-style: italic;",E.appendChild(A)),A.innerText=a>=e?"Your order qualifies for Free Shipping.":`Free shipping on orders over ${e} TND.`}document.querySelectorAll(".checkout-remove-btn").forEach(A=>{A.addEventListener("click",N=>{window.triggerHaptic("medium");const J=parseInt(N.target.dataset.index);Be.splice(J,1),pt()})}),r&&!r.hasAttribute("data-listener-attached")&&(r.addEventListener("change",()=>{$t()}),r.setAttribute("data-listener-attached","true"))},Rt=()=>{window.triggerHaptic("light"),document.body.style.overflow="hidden",zo.classList.add("active"),Jt.classList.add("active")},Ro=()=>{window.triggerHaptic("light"),document.body.style.overflow="",zo.classList.remove("active"),Jt.classList.remove("active")};window.addToCart=(a,i=null)=>{window.triggerHaptic("medium");const e=w[a];if(!e){console.error("Product not found in catalog:",a),window.showToast("Product not found.","error");return}let t=i,n=e.price;if(e.sizes&&e.sizes.length>0)if(!t)t=e.sizes[0].label,n=e.sizes[0].price;else{const b=e.sizes.find(y=>y.label===t);b?n=b.price:(t=e.sizes[0].label,n=e.sizes[0].price)}else t="Standard";const r=`${e.name}-${t}`,H=Be.find(b=>b.id===r),v=kt(e);H?H.quantity++:Be.push({id:r,productId:a,name:e.name,size:t,price:`${parseFloat(n).toFixed(2)} TND`,image:v,quantity:1}),pt(),Rt(),window.showToast(`Added ${e.name} to cart`,"success")},Wt&&Wt.addEventListener("click",a=>{a.preventDefault(),Rt()}),Ao&&Ao.addEventListener("click",Ro),Jt&&Jt.addEventListener("click",Ro);const _o=a=>{let i=a.closest(".product-card, .product-item, .product-info, .collection-item, .item, .single-product-wrapper");if(!i){let e=a.parentElement;for(let t=0;t<10&&!(!e||e.tagName==="BODY");t++){const n=e.querySelector(".product-title, .product-name, h1, h2, h3, h4, h5"),r=e.querySelector("img"),H=e.querySelector(".product-price, .price, .money, #product-price"),v=e.querySelectorAll(".add-to-cart-btn");if(n&&(r||H)&&v.length===1){i=e;break}if((e.tagName==="SECTION"||e.tagName==="MAIN")&&n&&H){i=e;break}e=e.parentElement}}return i||(document.querySelectorAll(".add-to-cart-btn").length===1?document.body:a.parentElement)};Do.length>0&&Do.forEach(a=>{a.addEventListener("click",i=>{const e=i.currentTarget;if(e.classList.contains("active"))return;window.triggerHaptic("light");const t=_o(e);if(t&&t.querySelectorAll(".size-btn").forEach(r=>r.classList.remove("active")),e.classList.add("active"),t){let n=t.querySelector(".product-price, .price, #product-price");if(n){const r=e.getAttribute("data-price");n.innerText=`${r} TND`}}})}),Mo.length>0&&Mo.forEach(a=>{a.addEventListener("click",i=>{const t=window.location.pathname.split("/").pop();if(t.includes("face-foam.html")||t.includes("face-serum.html")||t.includes("silk-mask.html")||t.includes("dodchmellow-pro-v.html")){i.preventDefault();let f="dodchmellow-pro-v";t.includes("face-foam.html")?f="foaming-cleanser":t.includes("silk-mask.html")?f="silk-therapy-mask":t.includes("face-serum.html")&&(f="advanced-ha-serum"),window.location.href=`product.html?id=${f}`;return}const r=i.currentTarget,H=_o(r);let v=r.dataset.title;if(!v){let f=H?H.querySelector(".product-title, .product-name, h1, h2, h3, h4, h5"):null;v=f?f.textContent.trim():"Unknown Product"}if(v==="Unknown Product"){console.error("Could not detect product name. Container:",H),window.showToast("Error adding to cart. Please refresh.","error");return}let b="Standard";const y=H?H.querySelectorAll(".size-btn"):[];if(y.length>0){let f=Array.from(y).filter(L=>L.classList.contains("active")).find(L=>!L.closest(".qv-modal-content"));if(!f){window.showToast("Please select a size.","error");return}b=f.dataset.size}let S=r.dataset.productId||r.dataset.id,E=w[S]||Object.values(w).find(f=>f.name.toLowerCase()===v.toLowerCase()),A="0.00";if(E)if(E.sizes&&E.sizes.length>0){const f=E.sizes.find(L=>L.label===b);if(f)A=f.price;else if(y.length>0){let L=Array.from(y).filter(Z=>Z.classList.contains("active")).find(Z=>!Z.closest(".qv-modal-content"));L&&(A=L.dataset.price)}else A=E.sizes[0].price,b=E.sizes[0].label}else E.price&&(A=E.price);if(!A||A==="0.00"||A==="0"||parseFloat(A)===0)if(y.length>0){let f=Array.from(y).filter(L=>L.classList.contains("active")).find(L=>!L.closest(".qv-modal-content"));f&&(A=f.dataset.price)}else{const f=H?H.querySelector(".product-price, .price, #product-price"):null;f?A=f.textContent.replace(/[^0-9.]/g,""):r.dataset.price&&(A=r.dataset.price)}let N="";if(E&&(N=kt(E)),N||(N=r.dataset.img||"",N&&!N.startsWith("http")&&!N.startsWith("data:")&&(N=window.location.origin+"/"+N.replace(/^\/+/,""))),!N){const f=H?H.querySelector("img.product-image, img"):null;if(f)N=f.src;else{const L=document.getElementById("main-product-image");L&&(N=L.src)}}const J=`${v}-${b}`,D=Be.find(f=>f.id===J);if(D)D.quantity++;else{const f={id:J,productId:r.dataset.productId||r.dataset.id,name:v,size:b,price:`${parseFloat(A).toFixed(2)} TND`,image:N,quantity:1};Be.push(f)}pt(),Rt();const R=r.innerText;r.innerText="Added",setTimeout(()=>r.innerText=R,2e3)})});let zt=null;function Uo(a){if(!a||!a.storyUrl)return!1;const i=a.storyUrl.trim();if(i===""||i==="#"||i.includes("product.html"))return!1;const t=window.location.pathname.split("/").pop()||"index.html",n=i.replace(/\.html$/,"").replace(/^\/+/,""),r=t.replace(/\.html$/,"");return n!==r}function go(){const i=new URLSearchParams(window.location.search).get("id"),e=window.location.pathname.split("/").pop()||"index.html",t=w[i]||Object.values(w).find(P=>P.storyUrl===e)||null;if(!t)return;const n=i||Object.keys(w).find(P=>w[P]===t);let r=document.getElementById("product-title");if(!r){const P=document.querySelector(".product-info");P&&(r=P.querySelector("h1"))}let H=document.getElementById("product-subtitle");if(!H){const P=document.querySelector(".product-info");P&&(H=P.querySelector(".product-subtitle, h2"))}const v=document.getElementById("product-price"),b=document.getElementById("product-description-text"),y=document.getElementById("main-product-image"),S=document.querySelector(".product-info"),E=S?S.querySelector(".add-to-cart-btn"):null,A=(P,I,K=!1)=>{if(!P)return;const q=P.querySelector(".price-shimmer");K?P.innerHTML=I:P.textContent=I,q&&(P.classList.remove("fade-in-load"),P.offsetWidth,P.classList.add("fade-in-load"))};if(r&&(n&&(r.style.viewTransitionName=`prod-title-${n}`),Pe?A(r,t.name):r.innerHTML='<span class="price-shimmer" style="width: 250px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>'),H&&(Pe?A(H,t.subtitle):H.innerHTML='<span class="price-shimmer" style="width: 180px; height: 1.2em; display: inline-block; border-radius: 6px;"></span>'),v){const P=t.sizes&&t.sizes.length>0?t.sizes.every(K=>K.outOfStock===!0||String(K.outOfStock).toLowerCase()==="true"):t.outOfStock===!0||String(t.outOfStock).toLowerCase()==="true",I=t.price?`${t.price} TND`:"";Pe?P?A(v,`<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span> <span style="opacity: 0.7;">${I}</span>`,!0):t.price&&(A(v,I),v.style.color=""):v.innerHTML='<span class="price-shimmer" style="width: 110px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>'}const N=(P,I)=>{let K=document.getElementById("product-batch-display");K?K.style.display="inline-flex":(K=document.createElement("div"),K.id="product-batch-display",K.className="product-batch-display",I.after(K));const q=typeof P=="object"?P.batchNumber||"Batch #001":P||"Batch #001",Ee=typeof P=="object"?P.expiryDate:null,me=typeof P=="object"&&P.formulaVersion||null;K.innerHTML=`
+                <div class="co-item-price summary-item-price">${itemTotal.toFixed(2)} TND</div>
+            `;
+            checkoutItemsContainer.appendChild(el);
+        });
+
+        const SHIPPING_FEE = 7;
+        const FREE_SHIPPING_THRESHOLD = 100;
+        const isFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
+        const currentShipping = isFreeShipping ? 0 : SHIPPING_FEE;
+        
+        // --- Rewards Calculation ---
+        const useRewardsCheckbox = document.getElementById('use-rewards-checkbox');
+        const checkoutRewardsDiscountEl = document.getElementById('checkout-rewards-discount');
+        let creditsUsed = 0;
+        let baseTotal = subtotal + currentShipping;
+
+        if (useRewardsCheckbox && useRewardsCheckbox.checked && window._dodchUserCredits > 0) {
+            creditsUsed = Math.min(window._dodchUserCredits, baseTotal);
+            if (checkoutRewardsDiscountEl) {
+                checkoutRewardsDiscountEl.innerText = `-${creditsUsed.toFixed(2)} TND`;
+            }
+        } else {
+            if (checkoutRewardsDiscountEl) checkoutRewardsDiscountEl.innerText = `-0.00 TND`;
+        }
+        window._dodchCreditsUsedForOrder = creditsUsed; // Store for order creation
+
+        const total = Math.max(0, baseTotal - creditsUsed);
+
+        if (checkoutSubtotalEl) checkoutSubtotalEl.innerText = `${subtotal.toFixed(2)} TND`;
+
+        const shippingEl = document.getElementById('checkout-shipping');
+        if (shippingEl) {
+            shippingEl.innerText = isFreeShipping ? 'Free' : `${SHIPPING_FEE.toFixed(2)} TND`;
+        }
+
+        if (checkoutTotalEl) checkoutTotalEl.innerText = `${total.toFixed(2)} TND`;
+        const summaryTotals = document.querySelector('.summary-totals');
+        if (summaryTotals) {
+            let checkoutPromo = summaryTotals.querySelector('.checkout-promo-msg');
+            if (!checkoutPromo) {
+                checkoutPromo = document.createElement('p');
+                checkoutPromo.className = 'checkout-promo-msg';
+                checkoutPromo.style.cssText = 'font-size: 0.75rem; color: #888; margin-top: 1rem; text-align: left; font-style: italic;';
+                summaryTotals.appendChild(checkoutPromo);
+            }
+            checkoutPromo.innerText = subtotal >= FREE_SHIPPING_THRESHOLD
+                ? "Your order qualifies for Free Shipping."
+                : `Free shipping on orders over ${FREE_SHIPPING_THRESHOLD} TND.`;
+        }
+        document.querySelectorAll('.checkout-remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                window.triggerHaptic('medium');
+                const index = parseInt(e.target.dataset.index);
+                cart.splice(index, 1);
+                updateCartUI();
+            });
+        });
+        
+        // Ensure listener is added to checkbox
+        if (useRewardsCheckbox && !useRewardsCheckbox.hasAttribute('data-listener-attached')) {
+            useRewardsCheckbox.addEventListener('change', () => {
+                updateCheckoutUI();
+            });
+            useRewardsCheckbox.setAttribute('data-listener-attached', 'true');
+        }
+    };
+
+    const openCart = () => {
+        window.triggerHaptic('light');
+        document.body.style.overflow = 'hidden'; // Lock scroll
+        cartDrawer.classList.add('active');
+        cartOverlay.classList.add('active');
+    };
+
+    const closeCart = () => {
+        window.triggerHaptic('light');
+        document.body.style.overflow = ''; // Restore scroll
+        cartDrawer.classList.remove('active');
+        cartOverlay.classList.remove('active');
+    };
+
+    window.addToCart = (productId, sizeLabel = null) => {
+        window.triggerHaptic('medium');
+        const product = productCatalog[productId];
+        if (!product) {
+            console.error("Product not found in catalog:", productId);
+            window.showToast("Product not found.", "error");
+            return;
+        }
+        let size = sizeLabel;
+        let price = product.price;
+
+        if (product.sizes && product.sizes.length > 0) {
+            if (!size) {
+                size = product.sizes[0].label;
+                price = product.sizes[0].price;
+            } else {
+                const sizeObj = product.sizes.find(s => s.label === size);
+                if (sizeObj) {
+                    price = sizeObj.price;
+                } else {
+                    size = product.sizes[0].label;
+                    price = product.sizes[0].price;
+                }
+            }
+        } else {
+            size = "Standard";
+        }
+
+        const newItemId = `${product.name}-${size}`;
+        const existingItem = cart.find(item => item.id === newItemId);
+        const productImage = getProductPrimaryImage(product);
+
+        if (existingItem) {
+            existingItem.quantity++;
+        } else {
+            cart.push({
+                id: newItemId,
+                productId: productId,
+                name: product.name,
+                size: size,
+                price: `${parseFloat(price).toFixed(2)} TND`,
+                image: productImage,
+                quantity: 1
+            });
+        }
+
+        updateCartUI();
+        openCart();
+        window.showToast(`Added ${product.name} to cart`, 'success');
+    };
+
+    if (cartToggle) cartToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        openCart();
+    });
+    if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
+    if (cartOverlay) cartOverlay.addEventListener('click', closeCart);
+    const findProductContainer = (element) => {
+        let container = element.closest('.product-card, .product-item, .product-info, .collection-item, .item, .single-product-wrapper');
+        if (!container) {
+            let parent = element.parentElement;
+            for (let i = 0; i < 10; i++) {
+                if (!parent || parent.tagName === 'BODY') break;
+
+                const hasTitle = parent.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5');
+                const hasImg = parent.querySelector('img');
+                const hasPrice = parent.querySelector('.product-price, .price, .money, #product-price');
+                const buttonsInParent = parent.querySelectorAll('.add-to-cart-btn');
+                if (hasTitle && (hasImg || hasPrice) && buttonsInParent.length === 1) {
+                    container = parent;
+                    break;
+                }
+                if ((parent.tagName === 'SECTION' || parent.tagName === 'MAIN') && hasTitle && hasPrice) {
+                    container = parent;
+                    break;
+                }
+
+                parent = parent.parentElement;
+            }
+        }
+        if (!container) {
+            const allButtons = document.querySelectorAll('.add-to-cart-btn');
+            if (allButtons.length === 1) {
+                return document.body;
+            }
+            return element.parentElement;
+        }
+
+        return container;
+    };
+
+    if (sizeBtns.length > 0) {
+        sizeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const clickedBtn = e.currentTarget;
+                if (clickedBtn.classList.contains('active')) return;
+                window.triggerHaptic('light');
+                const container = findProductContainer(clickedBtn);
+                if (container) {
+                    const containerBtns = container.querySelectorAll('.size-btn');
+                    containerBtns.forEach(b => b.classList.remove('active'));
+                }
+                clickedBtn.classList.add('active');
+                if (container) {
+                    let localPrice = container.querySelector('.product-price, .price, #product-price');
+                    if (localPrice) {
+                        const newPrice = clickedBtn.getAttribute('data-price');
+                        localPrice.innerText = `${newPrice} TND`;
+                    }
+                }
+            });
+        });
+    }
+
+    if (addToCartBtns.length > 0) {
+        addToCartBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const path = window.location.pathname;
+                const page = path.split("/").pop();
+                const isStoryPage = page.includes("face-foam.html") || page.includes("face-serum.html") || page.includes("silk-mask.html") || page.includes("dodchmellow-pro-v.html");
+                
+                if (isStoryPage) {
+                    e.preventDefault();
+                    let productId = 'dodchmellow-pro-v';
+                    if (page.includes('face-foam.html')) productId = 'foaming-cleanser';
+                    else if (page.includes('silk-mask.html')) productId = 'silk-therapy-mask';
+                    else if (page.includes('face-serum.html')) productId = 'advanced-ha-serum';
+                    
+                    window.location.href = `product.html?id=${productId}`;
+                    return;
+                }
+
+                const clickedBtn = e.currentTarget;
+                const container = findProductContainer(clickedBtn);
+                let productName = clickedBtn.dataset.title;
+
+                if (!productName) {
+                    let nameEl = container ? container.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5') : null;
+                    productName = nameEl ? nameEl.textContent.trim() : "Unknown Product";
+                }
+
+                if (productName === "Unknown Product") {
+                    console.error("Could not detect product name. Container:", container);
+                    window.showToast("Error adding to cart. Please refresh.", "error");
+                    return;
+                }
+
+                let size = "Standard";
+                const sizeBtnsInContainer = container ? container.querySelectorAll('.size-btn') : [];
+
+                if (sizeBtnsInContainer.length > 0) {
+                    let activeSizeBtn = Array.from(sizeBtnsInContainer)
+                        .filter(b => b.classList.contains('active'))
+                        .find(b => !b.closest('.qv-modal-content'));
+
+                    if (!activeSizeBtn) {
+                        window.showToast("Please select a size.", "error");
+                        return;
+                    }
+                    size = activeSizeBtn.dataset.size;
+                }
+
+                let productId = clickedBtn.dataset.productId || clickedBtn.dataset.id;
+                let matchedProduct = productCatalog[productId] || Object.values(productCatalog).find(p => p.name.toLowerCase() === productName.toLowerCase());
+                let price = "0.00";
+
+                if (matchedProduct) {
+                    if (matchedProduct.sizes && matchedProduct.sizes.length > 0) {
+                        const matchedSize = matchedProduct.sizes.find(s => s.label === size);
+                        if (matchedSize) {
+                            price = matchedSize.price;
+                        } else {
+                            if (sizeBtnsInContainer.length > 0) {
+                                let activeSizeBtn = Array.from(sizeBtnsInContainer)
+                                    .filter(b => b.classList.contains('active'))
+                                    .find(b => !b.closest('.qv-modal-content'));
+                                if (activeSizeBtn) {
+                                    price = activeSizeBtn.dataset.price;
+                                }
+                            } else {
+                                price = matchedProduct.sizes[0].price;
+                                size = matchedProduct.sizes[0].label;
+                            }
+                        }
+                    } else if (matchedProduct.price) {
+                        price = matchedProduct.price;
+                    }
+                }
+
+                // If price is still null/0/unset, check fallbacks to DOM and datasets
+                if (!price || price === "0.00" || price === "0" || parseFloat(price) === 0) {
+                    if (sizeBtnsInContainer.length > 0) {
+                        let activeSizeBtn = Array.from(sizeBtnsInContainer)
+                            .filter(b => b.classList.contains('active'))
+                            .find(b => !b.closest('.qv-modal-content'));
+                        if (activeSizeBtn) {
+                            price = activeSizeBtn.dataset.price;
+                        }
+                    } else {
+                        const priceEl = container ? container.querySelector('.product-price, .price, #product-price') : null;
+                        if (priceEl) {
+                            price = priceEl.textContent.replace(/[^0-9.]/g, '');
+                        } else if (clickedBtn.dataset.price) {
+                            price = clickedBtn.dataset.price;
+                        }
+                    }
+                }
+
+
+
+                let imageSrc = '';
+                if (matchedProduct) {
+                    imageSrc = getProductPrimaryImage(matchedProduct);
+                }
+                if (!imageSrc) {
+                    imageSrc = clickedBtn.dataset.img || '';
+                    if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
+                        imageSrc = window.location.origin + '/' + imageSrc.replace(/^\/+/, '');
+                    }
+                }
+                if (!imageSrc) {
+                    const imgEl = container ? container.querySelector('img.product-image, img') : null;
+                    if (imgEl) {
+                        imageSrc = imgEl.src;
+                    } else {
+                        const mainImg = document.getElementById('main-product-image');
+                        if (mainImg) imageSrc = mainImg.src;
+                    }
+                }
+
+                const newItemId = `${productName}-${size}`;
+                const existingItem = cart.find(item => item.id === newItemId);
+
+                if (existingItem) {
+                    existingItem.quantity++;
+                } else {
+                    const newItem = {
+                        id: newItemId,
+                        productId: clickedBtn.dataset.productId || clickedBtn.dataset.id, // Pass ID for server verification
+                        name: productName,
+                        size: size,
+                        price: `${parseFloat(price).toFixed(2)} TND`,
+                        image: imageSrc,
+                        quantity: 1
+                    };
+                    cart.push(newItem);
+                }
+
+                updateCartUI();
+                openCart();
+
+                const originalText = clickedBtn.innerText;
+                clickedBtn.innerText = "Added";
+                setTimeout(() => clickedBtn.innerText = originalText, 2000);
+            });
+        });
+    }
+
+    // --- DYNAMIC PRODUCT PAGE LOGIC ---
+    let autoProductImageInterval = null;
+
+    function hasStandaloneStoryPage(product) {
+        if (!product || !product.storyUrl) return false;
+        const storyUrl = product.storyUrl.trim();
+        if (storyUrl === '' || storyUrl === '#' || storyUrl.includes('product.html')) return false;
+
+        // Prevent self-linking: normalize both paths to handle trailing slashes and extensions
+        const currentPath = window.location.pathname;
+        const currentFile = currentPath.split('/').pop() || 'index.html';
+        
+        const normStory = storyUrl.replace(/\.html$/, '').replace(/^\/+/, '');
+        const normCurrent = currentFile.replace(/\.html$/, '');
+        
+        if (normStory === normCurrent) return false;
+
+        return true;
+    }
+
+    function initProductPage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+        const currentFilename = window.location.pathname.split('/').pop() || 'index.html';
+        
+        // Robust product matching for both generic and story pages
+        const product = productCatalog[productId] || 
+                        Object.values(productCatalog).find(p => p.storyUrl === currentFilename) || 
+                        (productId ? null : null);
+
+        if (!product) return;
+
+        const activeId = productId || Object.keys(productCatalog).find(k => productCatalog[k] === product);
+
+        let titleEl = document.getElementById('product-title');
+        if (!titleEl) {
+            const info = document.querySelector('.product-info');
+            if (info) titleEl = info.querySelector('h1');
+        }
+
+        let subtitleEl = document.getElementById('product-subtitle');
+        if (!subtitleEl) {
+            const info = document.querySelector('.product-info');
+            if (info) subtitleEl = info.querySelector('.product-subtitle, h2');
+        }
+
+        const priceEl = document.getElementById('product-price');
+        const descEl = document.getElementById('product-description-text');
+        const imgEl = document.getElementById('main-product-image');
+        const productInfo = document.querySelector('.product-info');
+        const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
+
+        const updateWithFade = (el, newHtmlOrText, isHtml = false) => {
+            if (!el) return;
+            const hasShimmer = el.querySelector('.price-shimmer');
+            if (isHtml) {
+                el.innerHTML = newHtmlOrText;
+            } else {
+                el.textContent = newHtmlOrText;
+            }
+            if (hasShimmer) {
+                el.classList.remove('fade-in-load');
+                void el.offsetWidth; // Force reflow
+                el.classList.add('fade-in-load');
+            }
+        };
+
+        if (titleEl) {
+            if (activeId) titleEl.style.viewTransitionName = `prod-title-${activeId}`;
+            if (firestoreSynced) {
+                updateWithFade(titleEl, product.name);
+            } else {
+                titleEl.innerHTML = `<span class="price-shimmer" style="width: 250px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>`;
+            }
+        }
+        if (subtitleEl) {
+            if (firestoreSynced) {
+                updateWithFade(subtitleEl, product.subtitle);
+            } else {
+                subtitleEl.innerHTML = `<span class="price-shimmer" style="width: 180px; height: 1.2em; display: inline-block; border-radius: 6px;"></span>`;
+            }
+        }
+
+        // Price: show shimmer until Firestore provides data
+        if (priceEl) {
+            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
+            const priceVal = product.price ? `${product.price} TND` : '';
+            if (firestoreSynced) {
+                if (isActuallyOOS) {
+                    updateWithFade(priceEl, `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span> <span style="opacity: 0.7;">${priceVal}</span>`, true);
+                } else if (product.price) {
+                    updateWithFade(priceEl, priceVal);
+                    priceEl.style.color = "";
+                }
+            } else {
+                // No price yet — Firestore hasn't synced. Show shimmer.
+                priceEl.innerHTML = `<span class="price-shimmer" style="width: 110px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>`;
+            }
+        }
+
+        // Shared batch display renderer
+        const renderBatchDisplay = (sizeObj, afterEl) => {
+            let el = document.getElementById('product-batch-display');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'product-batch-display';
+                el.className = 'product-batch-display';
+                afterEl.after(el);
+            } else {
+                el.style.display = 'inline-flex';
+            }
+
+            const batchNum = typeof sizeObj === 'object' ? (sizeObj.batchNumber || 'Batch #001') : (sizeObj || 'Batch #001');
+            const expiryDate = typeof sizeObj === 'object' ? sizeObj.expiryDate : null;
+            const formulaVersion = typeof sizeObj === 'object' ? (sizeObj.formulaVersion || null) : null;
+
+            el.innerHTML = `
                 <span>Batch:</span>
-                <span class="batch-num-tag">${q}</span>
+                <span class="batch-num-tag">${batchNum}</span>
                 <button type="button" class="batch-tooltip-trigger" aria-label="Batch details and info">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -200,57 +2538,575 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                         </div>
                         <div class="batch-tooltip-detail">
                             <span class="label">Batch Code:</span>
-                            <span class="val">${q}</span>
+                            <span class="val">${batchNum}</span>
                         </div>
-                        ${me?`
+                        ${formulaVersion ? `
                         <div class="batch-tooltip-detail">
                             <span class="label">Formula Version:</span>
-                            <span class="val">${me}</span>
-                        </div>`:""}
-                        ${Ee?`
+                            <span class="val">${formulaVersion}</span>
+                        </div>` : ''}
+                        ${expiryDate ? `
                         <div class="batch-tooltip-detail">
                             <span class="label">Expiry Date:</span>
-                            <span class="val">${Ee}</span>
-                        </div>`:""}
+                            <span class="val">${expiryDate}</span>
+                        </div>` : ''}
                         <div class="batch-tooltip-footer">
                             <p style="margin-bottom:4px; font-weight:500;">Hand-poured in small artisanal batches following strict laboratory QA standards.</p>
                             <p style="color:#BBB; font-style:italic;">Each batch may feature subtle variations in INCI composition, expiry date, texture, or performance. Please refer to your product packaging label or contact client care for exact specifications regarding your order.</p>
                         </div>
                     </div>
                 </button>
-            `;const he=K.querySelector(".batch-tooltip-trigger");if(he){const $e=()=>{const ye=he.querySelector(".batch-tooltip-popup");if(!ye)return;ye.style.left="50%",ye.style.transform="translateX(-50%)";const we=ye.getBoundingClientRect(),Le=14;if(we.left<Le){const ze=Le-we.left;ye.style.left=`calc(50% + ${ze}px)`}else if(we.right>window.innerWidth-Le){const ze=we.right-(window.innerWidth-Le);ye.style.left=`calc(50% - ${ze}px)`}};he.addEventListener("click",ye=>{ye.stopPropagation();const we=he.classList.contains("active");document.querySelectorAll(".batch-tooltip-trigger.active").forEach(Le=>Le.classList.remove("active")),we||(he.classList.add("active"),$e(),typeof window.triggerHaptic=="function"&&window.triggerHaptic("light"))}),he.addEventListener("mouseenter",$e)}return window._batchTooltipGlobalListener||(window._batchTooltipGlobalListener=!0,document.addEventListener("click",$e=>{$e.target.closest(".batch-tooltip-trigger")||document.querySelectorAll(".batch-tooltip-trigger.active").forEach(ye=>ye.classList.remove("active"))})),K},J=document.getElementById("product-batch-display");J&&J.remove();const D=t.sizes&&t.sizes.length>0?[...t.sizes].sort((P,I)=>parseFloat(P.price)-parseFloat(I.price)):[],R=D.find(P=>!P.outOfStock)||D[0];R?.batchNumber&&H&&(N(R,H),r&&r.classList.contains("fade-in-load")&&document.getElementById("product-batch-display")?.classList.add("fade-in-load")),b&&(Pe?A(b,t.description):b.innerHTML=`
+            `;
+
+            const triggerBtn = el.querySelector('.batch-tooltip-trigger');
+            if (triggerBtn) {
+                const adjustPosition = () => {
+                    const popup = triggerBtn.querySelector('.batch-tooltip-popup');
+                    if (!popup) return;
+                    popup.style.left = '50%';
+                    popup.style.transform = 'translateX(-50%)';
+                    const rect = popup.getBoundingClientRect();
+                    const margin = 14;
+                    if (rect.left < margin) {
+                        const shift = margin - rect.left;
+                        popup.style.left = `calc(50% + ${shift}px)`;
+                    } else if (rect.right > window.innerWidth - margin) {
+                        const shift = rect.right - (window.innerWidth - margin);
+                        popup.style.left = `calc(50% - ${shift}px)`;
+                    }
+                };
+
+                triggerBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const wasActive = triggerBtn.classList.contains('active');
+                    document.querySelectorAll('.batch-tooltip-trigger.active').forEach(b => b.classList.remove('active'));
+                    if (!wasActive) {
+                        triggerBtn.classList.add('active');
+                        adjustPosition();
+                        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
+                    }
+                });
+
+                triggerBtn.addEventListener('mouseenter', adjustPosition);
+            }
+
+            if (!window._batchTooltipGlobalListener) {
+                window._batchTooltipGlobalListener = true;
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.batch-tooltip-trigger')) {
+                        document.querySelectorAll('.batch-tooltip-trigger.active').forEach(b => b.classList.remove('active'));
+                    }
+                });
+            }
+
+            return el;
+        };
+
+        // Add batch number display
+        const existingBatch = document.getElementById('product-batch-display');
+        if (existingBatch) existingBatch.remove();
+        const sortedSizes = product.sizes && product.sizes.length > 0 ? [...product.sizes].sort((a, b) => parseFloat(a.price) - parseFloat(b.price)) : [];
+        const defaultSize = sortedSizes.find(s => !s.outOfStock) || sortedSizes[0];
+        if (defaultSize?.batchNumber && subtitleEl) {
+            renderBatchDisplay(defaultSize, subtitleEl);
+            if (titleEl && titleEl.classList.contains('fade-in-load')) {
+                document.getElementById('product-batch-display')?.classList.add('fade-in-load');
+            }
+        }
+
+        if (descEl) {
+            if (firestoreSynced) {
+                updateWithFade(descEl, product.description);
+            } else {
+                descEl.innerHTML = `
                     <span class="price-shimmer" style="width: 100%; height: 1.2em; display: inline-block; border-radius: 4px; margin-bottom: 6px;"></span>
                     <span class="price-shimmer" style="width: 90%; height: 1.2em; display: inline-block; border-radius: 4px; margin-bottom: 6px;"></span>
                     <span class="price-shimmer" style="width: 75%; height: 1.2em; display: inline-block; border-radius: 4px;"></span>
-                `);let f=document.getElementById("product-notice-container");const L=document.querySelector(".product-details-accordion");if(Pe&&t.notice){if(f||(f=document.createElement("div"),f.id="product-notice-container",f.className="product-notice",b?b.after(f):L&&(L.before(f),f.style.marginBottom="2rem")),f){const I='<div class="product-notice-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Important Notice</div>';if(t.notice.length>180){f.innerHTML=`${I}<div class="product-notice-text-wrap"><span>${t.notice}</span></div><button class="read-more-notice-btn" style="background:none;border:none;color:var(--accent-gold-text);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.85rem;text-decoration:underline;padding:0;display:block;margin-top:8px;">Read More</button>`;const K=f.querySelector(".read-more-notice-btn"),q=f.querySelector(".product-notice-text-wrap");K.onclick=()=>{const Ee=q.classList.toggle("expanded");if(K.textContent=Ee?"Read Less":"Read More",Ee){const me=q.querySelector("span");me&&(me.style.animation="none",me.offsetWidth,me.style.animation=""),setTimeout(()=>{f.scrollIntoView({behavior:"smooth",block:"nearest"})},60)}else setTimeout(()=>{f.scrollIntoView({behavior:"smooth",block:"center"})},520)}}else f.innerHTML=`${I}<span>${t.notice}</span>`;f.style.display="block"}}else f&&(f.style.display="none");const Z=To(t),xe=Z[0]||"";if(y){const P=y.src.includes("placeholder-glow.webp")||y.getAttribute("src")==="placeholder-glow.webp";n&&(y.style.viewTransitionName=`prod-img-${n}`),y.src=xe,t.style&&(y.style=t.style),P&&Pe&&(y.classList.remove("fade-in-load"),y.offsetWidth,y.classList.add("fade-in-load"));const I=y.closest(".product-image-window");if(I){let K=I.parentElement.querySelector(".product-page-tinted-shadow");const q=!K;K||(K=document.createElement("div"),K.className="tinted-shadow product-page-tinted-shadow",I.before(K)),K.style.backgroundImage=`url('${xe}')`,q&&Pe&&K.classList.add("fade-in-load")}}const ue=document.getElementById("product-thumbnails");if(ue){const P=!ue.querySelector("button");ue.innerHTML="",Z.forEach((K,q)=>{const Ee=document.createElement("button");Ee.type="button",Ee.className="product-thumbnail-btn"+(q===0?" active":""),Ee.innerHTML=`<img src="${K}" alt="Thumbnail ${q+1}">`,Ee.addEventListener("click",()=>{y&&y.src!==K&&(y.classList.add("switching"),setTimeout(()=>{y.src=K,y.classList.remove("switching")},260));const me=y.closest(".product-gallery")?.querySelector(".product-page-tinted-shadow");me&&(me.style.backgroundImage=`url('${K}')`),ue.querySelectorAll(".product-thumbnail-btn").forEach(he=>he.classList.remove("active")),Ee.classList.add("active"),zt&&(clearInterval(zt),zt=setInterval(I,4500))}),ue.appendChild(Ee)}),P&&Pe&&ue.classList.add("fade-in-load");const I=()=>{const K=ue.querySelector(".product-thumbnail-btn.active"),q=Array.from(ue.querySelectorAll(".product-thumbnail-btn")),Ee=q.indexOf(K),me=Ee<q.length-1?Ee+1:0,he=q[me];if(he){const $e=he.querySelector("img")?.src;y&&$e&&y.src!==$e&&(y.classList.add("switching"),setTimeout(()=>{y.src=$e,y.classList.remove("switching")},260));const ye=y.closest(".product-gallery")?.querySelector(".product-page-tinted-shadow");ye&&(ye.style.backgroundImage=`url('${$e}')`),q.forEach(we=>we.classList.remove("active")),he.classList.add("active")}};zt&&clearInterval(zt),Z.length>1&&(zt=setInterval(I,4500))}E&&(E.dataset.productId=i||Object.keys(w).find(P=>w[P]===t)||""),document.title=`${t.name} | DODCH`;const Q=document.querySelector(".size-options"),ve=document.querySelector(".size-selector"),be=Pe&&Q&&!Q.dataset.synced;if(Q&&t.sizes)if(be&&(Q.dataset.synced="1"),Q.innerHTML="",t.sizes&&t.sizes.length>0){ve&&(ve.style.display="block"),be&&ve&&ve.classList.add("fade-in-load");const P=t.sizes.map((q,Ee)=>({...q,i:Ee})).sort((q,Ee)=>parseFloat(q.price)-parseFloat(Ee.price)),I=P.find(q=>!q.outOfStock),K=I?I.i:P[0].i;t.sizes.forEach((q,Ee)=>{const me=document.createElement("button");if(me.className="size-btn",me.dataset.size=q.label,me.dataset.price=q.price,me.textContent=q.label,Ee===K){if(me.classList.add("active"),v){const Le=(t.sizes&&t.sizes.length>0?t.sizes.every(je=>je.outOfStock===!0||String(je.outOfStock).toLowerCase()==="true"):t.outOfStock===!0||String(t.outOfStock).toLowerCase()==="true")||q.outOfStock,ze=Le?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";q.originalPrice?v.innerHTML=`<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${q.originalPrice} TND</span> <span style="${Le?"opacity: 0.7;":""}">${q.price} TND</span> ${ze}`:(v.innerHTML=`<span style="${Le?"opacity: 0.7;":""}">${q.price} TND</span> ${ze}`,v.style.color="")}const he=document.querySelector(".product-info .add-to-cart-btn"),$e=t.sizes&&t.sizes.length>0?t.sizes.every(we=>we.outOfStock===!0||String(we.outOfStock).toLowerCase()==="true"):t.outOfStock===!0||String(t.outOfStock).toLowerCase()==="true";let ye=document.getElementById("back-in-stock-notify-btn");if(ye&&ye.remove(),he)if($e||q.outOfStock)he.style.display="none",ye=document.createElement("button"),ye.id="back-in-stock-notify-btn",ye.className="notify-back-in-stock-btn",$o(i,q.label)?no(ye):ye.innerHTML=`
+                `;
+            }
+        }
+
+        // Notice Section Display (Generic & Story Pages)
+        let noticeContainer = document.getElementById('product-notice-container');
+        const storyAccordion = document.querySelector('.product-details-accordion');
+        if (firestoreSynced && product.notice) {
+            if (!noticeContainer) {
+                noticeContainer = document.createElement('div');
+                noticeContainer.id = 'product-notice-container';
+                noticeContainer.className = 'product-notice';
+                
+                if (descEl) {
+                    descEl.after(noticeContainer);
+                } else if (storyAccordion) {
+                    storyAccordion.before(noticeContainer);
+                    noticeContainer.style.marginBottom = '2rem';
+                }
+            }
+            if (noticeContainer) {
+                const MAX_NOTICE_LENGTH = 180;
+                const titleHtml = `<div class="product-notice-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Important Notice</div>`;
+                
+                if (product.notice.length > MAX_NOTICE_LENGTH) {
+                    noticeContainer.innerHTML = `${titleHtml}<div class="product-notice-text-wrap"><span>${product.notice}</span></div><button class="read-more-notice-btn" style="background:none;border:none;color:var(--accent-gold-text);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.85rem;text-decoration:underline;padding:0;display:block;margin-top:8px;">Read More</button>`;
+                    
+                    const btn = noticeContainer.querySelector('.read-more-notice-btn');
+                    const wrap = noticeContainer.querySelector('.product-notice-text-wrap');
+                    btn.onclick = () => {
+                        const isExpanded = wrap.classList.toggle('expanded');
+                        btn.textContent = isExpanded ? 'Read Less' : 'Read More';
+
+                        if (isExpanded) {
+                            // Retrigger span fade-in animation
+                            const inner = wrap.querySelector('span');
+                            if (inner) {
+                                inner.style.animation = 'none';
+                                void inner.offsetWidth;
+                                inner.style.animation = '';
+                            }
+                            // Scroll notice into view as it starts opening
+                            setTimeout(() => {
+                                noticeContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }, 60);
+                        } else {
+                            // After collapse finishes (500ms CSS duration), scroll notice centered
+                            setTimeout(() => {
+                                noticeContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 520);
+                        }
+                    };
+                } else {
+                    noticeContainer.innerHTML = `${titleHtml}<span>${product.notice}</span>`;
+                }
+                noticeContainer.style.display = 'block';
+            }
+        } else if (noticeContainer) {
+            noticeContainer.style.display = 'none';
+        }
+
+        const productImages = getProductImages(product);
+        const primaryImage = productImages[0] || '';
+        if (imgEl) {
+            const isPlaceholder = imgEl.src.includes('placeholder-glow.webp') || imgEl.getAttribute('src') === 'placeholder-glow.webp';
+            if (activeId) imgEl.style.viewTransitionName = `prod-img-${activeId}`;
+            imgEl.src = primaryImage;
+            if (product.style) imgEl.style = product.style;
+
+            if (isPlaceholder && firestoreSynced) {
+                imgEl.classList.remove('fade-in-load');
+                void imgEl.offsetWidth; // Force reflow
+                imgEl.classList.add('fade-in-load');
+            }
+
+            // Inject Product Page Tinted Shadow
+            const windowEl = imgEl.closest('.product-image-window');
+            if (windowEl) {
+                let tintedShadow = windowEl.parentElement.querySelector('.product-page-tinted-shadow');
+                const isNewShadow = !tintedShadow;
+                if (!tintedShadow) {
+                    tintedShadow = document.createElement('div');
+                    tintedShadow.className = 'tinted-shadow product-page-tinted-shadow';
+                    windowEl.before(tintedShadow);
+                }
+                tintedShadow.style.backgroundImage = `url('${primaryImage}')`;
+                if (isNewShadow && firestoreSynced) {
+                    tintedShadow.classList.add('fade-in-load');
+                }
+            }
+        }
+
+        const thumbnailsContainer = document.getElementById('product-thumbnails');
+        if (thumbnailsContainer) {
+            const thumbsWereEmpty = !thumbnailsContainer.querySelector('button');
+            thumbnailsContainer.innerHTML = '';
+            productImages.forEach((imageSrc, index) => {
+                const thumb = document.createElement('button');
+                thumb.type = 'button';
+                thumb.className = 'product-thumbnail-btn' + (index === 0 ? ' active' : '');
+                thumb.innerHTML = `<img src="${imageSrc}" alt="Thumbnail ${index + 1}">`;
+                thumb.addEventListener('click', () => {
+                    if (imgEl && imgEl.src !== imageSrc) {
+                        imgEl.classList.add('switching');
+                        setTimeout(() => {
+                            imgEl.src = imageSrc;
+                            imgEl.classList.remove('switching');
+                        }, 260);
+                    }
+                    // Update tinted shadow
+                    const ts = imgEl.closest('.product-gallery')?.querySelector('.product-page-tinted-shadow');
+                    if (ts) ts.style.backgroundImage = `url('${imageSrc}')`;
+
+                    thumbnailsContainer.querySelectorAll('.product-thumbnail-btn').forEach(btn => btn.classList.remove('active'));
+                    thumb.classList.add('active');
+                    if (autoProductImageInterval) {
+                        clearInterval(autoProductImageInterval);
+                        autoProductImageInterval = setInterval(switchProductImage, 4500);
+                    }
+                });
+                thumbnailsContainer.appendChild(thumb);
+            });
+            if (thumbsWereEmpty && firestoreSynced) thumbnailsContainer.classList.add('fade-in-load');
+
+            const switchProductImage = () => {
+                const activeBtn = thumbnailsContainer.querySelector('.product-thumbnail-btn.active');
+                const buttons = Array.from(thumbnailsContainer.querySelectorAll('.product-thumbnail-btn'));
+                const currentIndex = buttons.indexOf(activeBtn);
+                const nextIndex = currentIndex < buttons.length - 1 ? currentIndex + 1 : 0;
+                const nextBtn = buttons[nextIndex];
+                if (nextBtn) {
+                    const nextImage = nextBtn.querySelector('img')?.src;
+                    if (imgEl && nextImage && imgEl.src !== nextImage) {
+                        imgEl.classList.add('switching');
+                        setTimeout(() => {
+                            imgEl.src = nextImage;
+                            imgEl.classList.remove('switching');
+                        }, 260);
+                    }
+                    // Update tinted shadow on auto-switch
+                    const ts = imgEl.closest('.product-gallery')?.querySelector('.product-page-tinted-shadow');
+                    if (ts) ts.style.backgroundImage = `url('${nextImage}')`;
+
+                    buttons.forEach(btn => btn.classList.remove('active'));
+                    nextBtn.classList.add('active');
+                }
+            };
+
+            if (autoProductImageInterval) clearInterval(autoProductImageInterval);
+            if (productImages.length > 1) {
+                autoProductImageInterval = setInterval(switchProductImage, 4500);
+            }
+        }
+
+        if (addToCartBtn) {
+            addToCartBtn.dataset.productId = productId || Object.keys(productCatalog).find(k => productCatalog[k] === product) || '';
+        }
+        document.title = `${product.name} | DODCH`;
+
+        const sizeOptionsContainer = document.querySelector('.size-options');
+        const sizeSelector = document.querySelector('.size-selector');
+        const isFirstSizeSync = firestoreSynced && sizeOptionsContainer && !sizeOptionsContainer.dataset.synced;
+
+        if (sizeOptionsContainer && product.sizes) {
+            if (isFirstSizeSync) sizeOptionsContainer.dataset.synced = '1';
+            sizeOptionsContainer.innerHTML = '';
+
+            if (product.sizes && product.sizes.length > 0) {
+                // Firestore data is loaded — render real size buttons
+                if (sizeSelector) sizeSelector.style.display = 'block';
+                if (isFirstSizeSync && sizeSelector) sizeSelector.classList.add('fade-in-load');
+
+                const sortedSizes = product.sizes.map((s, i) => ({ ...s, i })).sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+                const firstInStock = sortedSizes.find(s => !s.outOfStock);
+                const minIndex = firstInStock ? firstInStock.i : sortedSizes[0].i;
+
+                product.sizes.forEach((sizeObj, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'size-btn';
+                    btn.dataset.size = sizeObj.label;
+                    btn.dataset.price = sizeObj.price;
+                    btn.textContent = sizeObj.label;
+
+                    if (index === minIndex) {
+                        btn.classList.add('active');
+                        if (priceEl) {
+                            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                            const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
+                            const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
+
+                            if (sizeObj.originalPrice) {
+                                priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
+                            } else {
+                                priceEl.innerHTML = `<span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
+                                priceEl.style.color = "";
+                            }
+                        }
+                        const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
+                        const isActuallyOOS = product.sizes && product.sizes.length > 0
+                            ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                            : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                        
+                        // Handle stock notification button dynamic injection
+                        let notifyBtn = document.getElementById('back-in-stock-notify-btn');
+                        if (notifyBtn) notifyBtn.remove();
+
+                        if (atcBtn) {
+                            if (isActuallyOOS || sizeObj.outOfStock) {
+                                // Out of Stock state
+                                atcBtn.style.display = 'none';
+                                
+                                notifyBtn = document.createElement('button');
+                                notifyBtn.id = 'back-in-stock-notify-btn';
+                                notifyBtn.className = 'notify-back-in-stock-btn';
+
+                                // Check localStorage — if already subscribed, show persisted state
+                                if (isNotifySubscribed(productId, sizeObj.label)) {
+                                    applySubscribedState(notifyBtn);
+                                } else {
+                                    notifyBtn.innerHTML = `
                                         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                         </svg>
                                         Notify Me When Back in Stock
-                                    `,he.before(ye),be&&ye.classList.add("fade-in-load"),ye.addEventListener("click",async()=>{ye.disabled||(window.triggerHaptic("medium"),ye.classList.add("loading"),ye.disabled=!0,await so(i,q.label,ye),ye.classList.remove("loading"),ye.classList.contains("subscribed")||(ye.disabled=!1))});else{try{localStorage.removeItem(Yt(i,q.label))}catch{}he.style.display="block",be&&he.classList.add("fade-in-load");const we='<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';he.disabled=!1,he.innerHTML=we+"Add to Cart",he.style.backgroundColor="",he.style.opacity=""}}me.addEventListener("click",()=>{if(me.classList.contains("active"))return;window.triggerHaptic("light"),Q.querySelectorAll(".size-btn").forEach(ye=>ye.classList.remove("active")),me.classList.add("active");const he=document.getElementById("product-batch-display"),$e=[v,he].filter(Boolean);$e.forEach(ye=>ye.classList.add("text-switch-anim","text-switch-blur")),setTimeout(()=>{const ye=t.sizes&&t.sizes.length>0?t.sizes.every(ze=>ze.outOfStock===!0||String(ze.outOfStock).toLowerCase()==="true"):t.outOfStock===!0||String(t.outOfStock).toLowerCase()==="true";if(v){const ze=ye||q.outOfStock,je=ze?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";q.originalPrice?v.innerHTML=`<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${q.originalPrice} TND</span> <span style="${ze?"opacity: 0.7;":""}">${q.price} TND</span> ${je}`:(v.innerHTML=`<span style="${ze?"opacity: 0.7;":""}">${q.price} TND</span> ${je}`,v.style.color="")}const we=document.querySelector(".product-info .add-to-cart-btn");let Le=document.getElementById("back-in-stock-notify-btn");if(Le&&Le.remove(),we)if(ye||q.outOfStock)we.style.display="none",Le=document.createElement("button"),Le.id="back-in-stock-notify-btn",Le.className="notify-back-in-stock-btn",$o(i,q.label)?no(Le):Le.innerHTML=`
+                                    `;
+                                }
+
+                                atcBtn.before(notifyBtn);
+                                if (isFirstSizeSync) notifyBtn.classList.add('fade-in-load');
+                                
+                                notifyBtn.addEventListener('click', async () => {
+                                    if (notifyBtn.disabled) return;
+                                    window.triggerHaptic('medium');
+                                    notifyBtn.classList.add('loading');
+                                    notifyBtn.disabled = true;
+                                    await handleBackInStockSubscription(productId, sizeObj.label, notifyBtn);
+                                    notifyBtn.classList.remove('loading');
+                                    if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
+                                });
+
+                            } else {
+                                // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
+                                try { localStorage.removeItem(getNotifyStorageKey(productId, sizeObj.label)); } catch(e) {}
+                                atcBtn.style.display = 'block';
+                                if (isFirstSizeSync) atcBtn.classList.add('fade-in-load');
+                                const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                                atcBtn.disabled = false;
+                                atcBtn.innerHTML = cartIcon + "Add to Cart";
+                                atcBtn.style.backgroundColor = "";
+                                atcBtn.style.opacity = "";
+                            }
+                        }
+                    }
+
+                    btn.addEventListener('click', () => {
+                        if (btn.classList.contains('active')) return;
+                        window.triggerHaptic('light');
+                        sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+
+                        const batchDisplay = document.getElementById('product-batch-display');
+                        const animTargets = [priceEl, batchDisplay].filter(Boolean);
+
+                        animTargets.forEach(el => el.classList.add('text-switch-anim', 'text-switch-blur'));
+
+                        setTimeout(() => {
+                            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
+                            if (priceEl) {
+                                const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
+                                const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
+
+                                if (sizeObj.originalPrice) {
+                                    priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
+                                } else {
+                                    priceEl.innerHTML = `<span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
+                                    priceEl.style.color = "";
+                                }
+                            }
+
+                            // Handle stock notification button dynamic injection
+                            const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
+                            let notifyBtn = document.getElementById('back-in-stock-notify-btn');
+                            if (notifyBtn) notifyBtn.remove();
+
+                            if (atcBtn) {
+                                if (isActuallyOOS || sizeObj.outOfStock) {
+                                    // Out of Stock state
+                                    atcBtn.style.display = 'none';
+                                    
+                                    notifyBtn = document.createElement('button');
+                                    notifyBtn.id = 'back-in-stock-notify-btn';
+                                    notifyBtn.className = 'notify-back-in-stock-btn';
+
+                                    // Check localStorage — if already subscribed, show persisted state
+                                    if (isNotifySubscribed(productId, sizeObj.label)) {
+                                        applySubscribedState(notifyBtn);
+                                    } else {
+                                        notifyBtn.innerHTML = `
                                             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                             </svg>
                                             Notify Me When Back in Stock
-                                        `,we.before(Le),Le.addEventListener("click",async()=>{Le.disabled||(window.triggerHaptic("medium"),Le.classList.add("loading"),Le.disabled=!0,await so(i,q.label,Le),Le.classList.remove("loading"),Le.classList.contains("subscribed")||(Le.disabled=!1))});else{try{localStorage.removeItem(Yt(i,q.label))}catch{}we.style.display="block";const ze='<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';we.disabled=!1,we.innerHTML=ze+"Add to Cart",we.style.backgroundColor="",we.style.opacity=""}he&&(q.batchNumber?N(q,H||he.previousElementSibling):he.style.display="none"),$e.forEach(ze=>ze.classList.remove("text-switch-blur","text-switch-anim"))},250)}),q.outOfStock&&(me.style.textDecoration="line-through",me.style.opacity="0.6"),Q.appendChild(me)})}else!t.isPermanentlyUnavailable&&!t.outOfStock?(ve&&(ve.style.display="block"),Q.innerHTML=`
+                                        `;
+                                    }
+
+                                    atcBtn.before(notifyBtn);
+                                    
+                                    notifyBtn.addEventListener('click', async () => {
+                                        if (notifyBtn.disabled) return;
+                                        window.triggerHaptic('medium');
+                                        notifyBtn.classList.add('loading');
+                                        notifyBtn.disabled = true;
+                                        await handleBackInStockSubscription(productId, sizeObj.label, notifyBtn);
+                                        notifyBtn.classList.remove('loading');
+                                        if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
+                                    });
+                                } else {
+                                    // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
+                                    try { localStorage.removeItem(getNotifyStorageKey(productId, sizeObj.label)); } catch(e) {}
+                                    atcBtn.style.display = 'block';
+                                    const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                                    atcBtn.disabled = false;
+                                    atcBtn.innerHTML = cartIcon + "Add to Cart";
+                                    atcBtn.style.backgroundColor = "";
+                                    atcBtn.style.opacity = "";
+                                }
+                            }
+
+                            if (batchDisplay) {
+                                if (sizeObj.batchNumber) {
+                                    renderBatchDisplay(sizeObj, subtitleEl || batchDisplay.previousElementSibling);
+                                } else { batchDisplay.style.display = 'none'; }
+                            }
+                            animTargets.forEach(el => el.classList.remove('text-switch-blur', 'text-switch-anim'));
+                        }, 250);
+                    });
+
+                    if (sizeObj.outOfStock) {
+                        btn.style.textDecoration = "line-through";
+                        btn.style.opacity = "0.6";
+                    }
+
+                    sizeOptionsContainer.appendChild(btn);
+                });
+
+            } else if (!product.isPermanentlyUnavailable && !product.outOfStock) {
+                // No sizes yet — Firestore hasn't responded. Show shimmer placeholders.
+                if (sizeSelector) sizeSelector.style.display = 'block';
+                sizeOptionsContainer.innerHTML = `
                     <span class="price-shimmer" style="width: 70px; height: 38px; border-radius: 8px; display: inline-block;"></span>
                     <span class="price-shimmer" style="width: 70px; height: 38px; border-radius: 8px; display: inline-block; margin-left: 10px;"></span>
-                `,E&&(E.disabled=!0,E.style.opacity="0.5")):ve&&(ve.style.display="none");const ke=document.querySelector(".accordion-item:first-child .accordion-inner")||document.querySelector(".inci-list-container");ke&&t.inci&&(ke.textContent=t.inci);let W=document.querySelector(".performance-bars");!W&&S&&(W=document.createElement("div"),W.className="performance-bars",W.style.marginBottom="2rem",S.querySelector(".add-to-cart-btn")?.before(W)),W&&t.performance&&t.performance.length>0&&(W.innerHTML=t.performance.map(P=>{const I=parseInt(P.value)||0,q=(P.levels||[])[I-1]||"";return`
+                `;
+                // Disable Add to Cart until sizes load
+                if (addToCartBtn) {
+                    addToCartBtn.disabled = true;
+                    addToCartBtn.style.opacity = "0.5";
+                }
+            } else {
+                if (sizeSelector) sizeSelector.style.display = 'none';
+            }
+        }
+
+        // Performance Bars Dynamic Rendering
+        // Target the INCI accordion (usually the first one in story pages)
+        const inciAccordionInner = document.querySelector('.accordion-item:first-child .accordion-inner') || 
+                                   document.querySelector('.inci-list-container');
+        if (inciAccordionInner && product.inci) {
+            inciAccordionInner.textContent = product.inci;
+        }
+
+        let perfContainer = document.querySelector('.performance-bars');
+        if (!perfContainer && productInfo) {
+             // If container missing in HTML, inject it before the Add to Cart button
+             perfContainer = document.createElement('div');
+             perfContainer.className = 'performance-bars';
+             perfContainer.style.marginBottom = '2rem';
+             productInfo.querySelector('.add-to-cart-btn')?.before(perfContainer);
+        }
+        if (perfContainer && product.performance && product.performance.length > 0) {
+            perfContainer.innerHTML = product.performance.map(metric => {
+                const level = parseInt(metric.value) || 0;
+                const labels = metric.levels || [];
+                const currentLabel = labels[level - 1] || '';
+                
+                return `
                     <div class="perf-item">
                         <div class="perf-header">
-                            <span class="perf-label">${P.label}</span>
-                            <span class="perf-value">${q}</span>
+                            <span class="perf-label">${metric.label}</span>
+                            <span class="perf-value">${currentLabel}</span>
                         </div>
                         <div class="perf-levels">
-                            ${[1,2,3,4].map(Ee=>`<div class="level-step ${Ee<=I?"active":""}"></div>`).join("")}
+                            ${[1, 2, 3, 4].map(i => `<div class="level-step ${i <= level ? 'active' : ''}"></div>`).join('')}
                         </div>
                     </div>
-                `}).join(""),Bo());const ne=document.getElementById("product-story-link");if(ne&&ne.remove(),E&&Uo(t)){const I=document.createElement("a");I.id="product-story-link",I.className="qv-view-details-btn",I.style.marginBottom="1rem",I.style.display="block",I.textContent="View Story Page",I.href=t.storyUrl,E.after(I)}}go(),Je(),jo(),window.dodchSearchEngine&&window.dodchSearchEngine.init(w),vt();const er=document.getElementById("sidebar-user-name"),ho=document.getElementById("sidebar-login-btn"),yo=document.getElementById("sidebar-logout-btn");ho&&(ho.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>Login',ho.addEventListener("click",()=>Nt())),yo&&(yo.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>Logout',yo.addEventListener("click",()=>{Ho()})),Vt(tt,async a=>{if(Ke=a,a){li(a.uid);const S=document.getElementById("guest-convert-banner");S&&(S.style.opacity="0",S.style.transform="scale(0.95)",setTimeout(()=>{S.innerHTML=`
+                `;
+            }).join('');
+            applyPerformanceColors(); // Apply colors to newly injected bars
+        }
+        const existingStoryBtn = document.getElementById('product-story-link');
+        if (existingStoryBtn) existingStoryBtn.remove();
+        // The Add to Cart button state is already managed by the size selection logic above.
+
+        if (addToCartBtn) {
+            const hasStory = hasStandaloneStoryPage(product);
+            if (hasStory) {
+                const storyBtn = document.createElement('a');
+                storyBtn.id = 'product-story-link';
+                storyBtn.className = 'qv-view-details-btn';
+                storyBtn.style.marginBottom = '1rem';
+                storyBtn.style.display = 'block'; // Ensure it takes full width if qv-view-details-btn uses inline-block
+                storyBtn.textContent = 'View Story Page';
+                storyBtn.href = product.storyUrl;
+                addToCartBtn.after(storyBtn);
+            }
+        }
+    };
+    initProductPage();
+    initShopPage();
+    renderSidebarMenu();
+    if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
+
+    loadProductCatalog();
+    const sidebarUserName = document.getElementById('sidebar-user-name');
+    const sidebarLoginBtn = document.getElementById('sidebar-login-btn');
+    const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
+
+    if (sidebarLoginBtn) {
+        sidebarLoginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>Login`;
+        sidebarLoginBtn.addEventListener('click', () => handleLogin());
+    }
+
+    if (sidebarLogoutBtn) {
+        sidebarLogoutBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>Logout`;
+        sidebarLogoutBtn.addEventListener('click', () => {
+            handleLogout();
+        });
+    }
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+
+        if (user) {
+            claimGuestOrders(user.uid);
+            const guestBanner = document.getElementById('guest-convert-banner');
+            if (guestBanner) {
+                guestBanner.style.opacity = '0';
+                guestBanner.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    guestBanner.innerHTML = `
                         <svg style="width:40px;height:40px;color:#4CAF50;margin-bottom:0.75rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         <h4 style="margin-bottom:0.4rem;color:var(--text-charcoal);font-size:1.05rem;">You're all set!</h4>
                         <p style="font-size:0.85rem;color:#666;margin-bottom:1.1rem;">Your order has been linked to your account.</p>
                         <a href="my-account.html#orders" class="cta-button cta-button-primary" style="width:auto;padding:0.65rem 1.6rem;font-size:0.9rem;display:inline-block;">View Your Orders</a>
-                    `,S.style.transition="opacity 0.4s ease, transform 0.4s ease",S.style.opacity="1",S.style.transform="scale(1)"},350))}typeof ro=="function"&&ro();const i=document.getElementById("login-btn"),e=document.getElementById("sidebar-user-name"),t=document.getElementById("sidebar-login-btn"),n=document.getElementById("sidebar-logout-btn");i&&(a?i.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="login-text">Logout</span>':i.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg><span class="login-text">Login</span>');const r=S=>{S&&(a?S.innerHTML="Go to My Account":S.innerHTML=`
+                    `;
+                    guestBanner.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                    guestBanner.style.opacity = '1';
+                    guestBanner.style.transform = 'scale(1)';
+                }, 350);
+            }
+        }
+        if (typeof syncPushTokenToUser === 'function') {
+            syncPushTokenToUser();
+        }
+        const loginBtn = document.getElementById('login-btn');
+        const sidebarUserName = document.getElementById('sidebar-user-name');
+        const sidebarLoginBtn = document.getElementById('sidebar-login-btn');
+        const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
+        if (loginBtn) {
+            if (user) {
+                loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="login-text">Logout</span>`;
+            } else {
+                loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg><span class="login-text">Login</span>`;
+            }
+        }
+        
+        const updateHeroButton = (btn) => {
+            if (!btn) return;
+            if (user) {
+                btn.innerHTML = `Go to My Account`;
+            } else {
+                btn.innerHTML = `
                     <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -258,63 +3114,359 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
                     Continue with Google
-                `)};if(r(document.getElementById("hero-login-google-btn")),r(document.getElementById("hero-login-google-btn-cloned")),e){const S=document.querySelector(".profile-icon");if(a){e.textContent=a.displayName||a.email||"Member",S&&a.photoURL?S.innerHTML=`<img src="${a.photoURL}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`:S&&(S.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'),t&&(t.style.display="none"),n&&(n.style.display="block");let E=document.getElementById("sidebar-my-account-btn");if(E){E.style.display="inline-block";const J=document.getElementById("sidebar-admin-btn");J&&(J.style.display="inline-block")}else if(E=document.createElement("a"),E.id="sidebar-my-account-btn",E.href="my-account.html",E.textContent="My Account",E.style.marginTop="1rem",E.style.background="transparent",E.style.border="1px solid var(--accent-gold)",E.style.color="var(--accent-gold-text)",E.style.padding="0.5rem 1.5rem",E.style.cursor="pointer",E.style.textTransform="uppercase",E.style.fontSize="0.8rem",E.style.letterSpacing="1px",E.style.textDecoration="none",E.style.transition="all 0.3s ease",E.style.display="inline-block",E.style.borderRadius="6px",E.addEventListener("mouseenter",()=>{E.style.backgroundColor="var(--accent-gold)",E.style.color="#fff"}),E.addEventListener("mouseleave",()=>{E.style.backgroundColor="transparent",E.style.color="var(--accent-gold-text)"}),e.after(E),a.uid===Gt){let J=document.getElementById("sidebar-admin-btn");J?J.style.display="inline-block":(J=E.cloneNode(!0),J.id="sidebar-admin-btn",J.href="admin.html",J.textContent="Admin Dashboard",J.style.position="relative",J.style.marginTop="0.5rem",J.style.borderColor="var(--text-charcoal)",J.style.color="var(--text-charcoal)",E.after(J)),Hi()}a.uid!==Gt&&Oi(a.uid);const A=Ae(ae,"carts",a.uid),N=await ft(A);N.exists()&&Be.length===0&&(Be=N.data().items||[],pt())}else{e.textContent="Guest",S&&(S.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'),t&&(t.style.display="block"),n&&(n.style.display="none");const E=document.getElementById("sidebar-my-account-btn");E&&(E.style.display="none");const A=document.getElementById("sidebar-admin-btn");A&&(A.style.display="none")}}const H=document.getElementById("checkout-email"),v=document.getElementById("checkout-name");a&&H&&v&&(H.value=a.email||"",v.value=a.displayName||"");const b=document.getElementById("orders-list"),y=document.getElementById("account-user-name");if(b)if(a){y&&(y.textContent=a.displayName||"Member");const S=document.getElementById("orders-loader");S&&S.classList.add("active"),b.classList.remove("visible");try{const E=await nt(We(Re(ae,"product_reviews"),rt("userId","==",a.uid))),A=new Set;E.forEach(W=>A.add(W.data().productId));const N=We(Re(ae,"orders"),rt("userId","==",a.uid)),J=await nt(N);let D=[];const R=[];J.forEach(W=>{const ne=W.data();D.push({id:W.id,...ne}),ne.hasUnseenUpdate&&R.push(gt(W.ref,{hasUnseenUpdate:!1}))}),R.length>0&&Promise.all(R).then(()=>{document.body.classList.remove("has-notification")}).catch(console.error);let f=10,L=[];const Z=(W,ne=!1)=>{ne||(b.innerHTML="");const P=W.slice(ne?f-10:0,f);!ne&&W.length===0?(b.innerHTML="<p>You haven't placed any orders yet.</p>",document.getElementById("load-more-orders-container").style.display="none"):(P.forEach(I=>{const K=I.timestamp?new Date(I.timestamp.seconds*1e3):new Date,q=I.timestamp?K.toLocaleDateString():"Recent",Ee=new Date-K<336*60*60*1e3,me=typeof I.total=="number"?I.total.toFixed(2):I.total,he=I.status||"Pending",$e=`status-${he.toLowerCase().replace(/\s+/g,"-")}`;let ye="",we="",Le="";if(he.toLowerCase()==="shipped"){const De=I.trackingNumber||`1Z${I.id.slice(0,10).toUpperCase()}A0${Math.floor(Math.random()*90+10)}`;ye=`<a href="tracking.html?orderId=${I.id}&trackingNumber=${De}" class="track-order-btn">Track Order</a>`}else if(he.toLowerCase()==="pending")we=`<button class="cancel-order-btn" data-id="${I.id}" style="margin-left: 5px; color: #ff4d4d; background: none; border: 1px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer;">Cancel</button>`;else if(he.toLowerCase()==="delivered"){const De=I.items.find(Ze=>!A.has(Ze.productId||Ze.id));if(De){const Ze=De.productId||De.id,mt=w[Ze];Le=`<a href="${mt&&mt.storyUrl?`${mt.storyUrl}#reviews`:`product.html?id=${Ze}#reviews`}" class="review-prompt-btn" style="margin-left: 5px; background: #fdf6ec; color: #e6a23c; border: 1px solid #e6a23c; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;">Rate Products</a>`}}let ze=I.items.map(De=>{const Ze=De.productId||De.id,mt=w[Ze]?.image||"placeholder-glow.webp",Ut=String(De.price).includes("TND")?De.price:`${De.price} TND`,It=De.refunded===!0||De.refunded==="true",Qt=It?'<span class="refunded-badge" style="color: #e74c3c; font-weight: 600; font-size: 0.75rem; margin-left: 8px; border: 1px solid #e74c3c; border-radius: 4px; padding: 1px 4px; display: inline-block;">Refunded</span>':"";let Tt="";if(he.toLowerCase()==="delivered"&&Ee)if(De.report){const Ct=De.report.status||"Pending";let Pt="#e6a23c";Ct==="Refunded"&&(Pt="#27ae60"),Ct==="Refused"&&(Pt="#e74c3c"),Tt=`
-                                                <div style="font-size: 0.75rem; margin-top: 4px; color: ${Pt}; font-weight: 500;">
-                                                     Problem Reported: <strong>${Ct}</strong>
-                                                     ${De.report.reply?`<br><span style="color: #666; font-style: italic; font-weight: 400;">Reply: ${De.report.reply}</span>`:""}
+                `;
+            }
+        };
+        updateHeroButton(document.getElementById('hero-login-google-btn'));
+        updateHeroButton(document.getElementById('hero-login-google-btn-cloned'));
+        if (sidebarUserName) {
+            const profileIcon = document.querySelector('.profile-icon');
+            if (user) {
+                sidebarUserName.textContent = user.displayName || user.email || "Member";
+                if (profileIcon && user.photoURL) {
+                    profileIcon.innerHTML = `<img src="${user.photoURL}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                } else if (profileIcon) {
+                    profileIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+                }
+
+                if (sidebarLoginBtn) sidebarLoginBtn.style.display = 'none';
+                if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'block';
+                let myAccountBtn = document.getElementById('sidebar-my-account-btn');
+                if (!myAccountBtn) {
+                    myAccountBtn = document.createElement('a');
+                    myAccountBtn.id = 'sidebar-my-account-btn';
+                    myAccountBtn.href = 'my-account.html';
+                    myAccountBtn.textContent = 'My Account';
+                    myAccountBtn.style.marginTop = '1rem';
+                    myAccountBtn.style.background = 'transparent';
+                    myAccountBtn.style.border = '1px solid var(--accent-gold)';
+                    myAccountBtn.style.color = 'var(--accent-gold-text)';
+                    myAccountBtn.style.padding = '0.5rem 1.5rem';
+                    myAccountBtn.style.cursor = 'pointer';
+                    myAccountBtn.style.textTransform = 'uppercase';
+                    myAccountBtn.style.fontSize = '0.8rem';
+                    myAccountBtn.style.letterSpacing = '1px';
+                    myAccountBtn.style.textDecoration = 'none';
+                    myAccountBtn.style.transition = 'all 0.3s ease';
+                    myAccountBtn.style.display = 'inline-block';
+                    myAccountBtn.style.borderRadius = '6px';
+
+                    myAccountBtn.addEventListener('mouseenter', () => {
+                        myAccountBtn.style.backgroundColor = 'var(--accent-gold)';
+                        myAccountBtn.style.color = '#fff';
+                    });
+                    myAccountBtn.addEventListener('mouseleave', () => {
+                        myAccountBtn.style.backgroundColor = 'transparent';
+                        myAccountBtn.style.color = 'var(--accent-gold-text)';
+                    });
+
+                    sidebarUserName.after(myAccountBtn);
+                    if (user.uid === ADMIN_UID) {
+                        let adminBtn = document.getElementById('sidebar-admin-btn');
+                        if (!adminBtn) {
+                            adminBtn = myAccountBtn.cloneNode(true);
+                            adminBtn.id = 'sidebar-admin-btn';
+                            adminBtn.href = 'admin.html';
+                            adminBtn.textContent = 'Admin Dashboard';
+                            adminBtn.style.position = 'relative';
+                            adminBtn.style.marginTop = '0.5rem';
+                            adminBtn.style.borderColor = 'var(--text-charcoal)';
+                            adminBtn.style.color = 'var(--text-charcoal)';
+                            myAccountBtn.after(adminBtn);
+                        } else {
+                            adminBtn.style.display = 'inline-block';
+                        }
+                        listenForAdminNotifications();
+                    }
+                } else {
+                    myAccountBtn.style.display = 'inline-block';
+                    const adminBtn = document.getElementById('sidebar-admin-btn');
+                    if (adminBtn) adminBtn.style.display = 'inline-block';
+                }
+                if (user.uid !== ADMIN_UID) {
+                    listenForUserNotifications(user.uid);
+                }
+                const cartRef = doc(db, "carts", user.uid);
+                const docSnap = await getDoc(cartRef);
+
+                if (docSnap.exists() && cart.length === 0) {
+                    cart = docSnap.data().items || [];
+                    updateCartUI();
+                }
+            } else {
+                sidebarUserName.textContent = "Guest";
+                if (profileIcon) {
+                    profileIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+                }
+                if (sidebarLoginBtn) sidebarLoginBtn.style.display = 'block';
+                if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'none';
+                const myAccountBtn = document.getElementById('sidebar-my-account-btn');
+                if (myAccountBtn) myAccountBtn.style.display = 'none';
+                const adminBtn = document.getElementById('sidebar-admin-btn');
+                if (adminBtn) adminBtn.style.display = 'none';
+            }
+        }
+        const checkoutEmailInput = document.getElementById('checkout-email');
+        const checkoutNameInput = document.getElementById('checkout-name');
+
+        if (user && checkoutEmailInput && checkoutNameInput) {
+            checkoutEmailInput.value = user.email || '';
+            checkoutNameInput.value = user.displayName || '';
+        }
+        const ordersList = document.getElementById('orders-list');
+        const accountUserName = document.getElementById('account-user-name');
+
+        if (ordersList) {
+            if (user) {
+                if (accountUserName) accountUserName.textContent = user.displayName || "Member";
+                const ordersLoader = document.getElementById('orders-loader');
+                if (ordersLoader) ordersLoader.classList.add('active');
+                ordersList.classList.remove('visible');
+
+                try {
+                    const reviewsSnap = await getDocs(query(collection(db, "product_reviews"), where("userId", "==", user.uid)));
+                    const reviewedProductIds = new Set();
+                    reviewsSnap.forEach(doc => reviewedProductIds.add(doc.data().productId));
+
+                    const q = query(collection(db, "orders"), where("userId", "==", user.uid));
+                    const querySnapshot = await getDocs(q);
+
+                    let orders = [];
+                    const updatesToClear = [];
+
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        orders.push({ id: doc.id, ...data });
+                        if (data.hasUnseenUpdate) {
+                            updatesToClear.push(updateDoc(doc.ref, { hasUnseenUpdate: false }));
+                        }
+                    });
+                    if (updatesToClear.length > 0) {
+                        Promise.all(updatesToClear).then(() => {
+                            document.body.classList.remove('has-notification');
+                        }).catch(console.error);
+                    }
+
+                    let visibleOrdersCount = 10;
+                    let filteredOrders = [];
+
+                    const renderOrders = (toRender, append = false) => {
+                        if (!append) ordersList.innerHTML = '';
+
+                        const chunk = toRender.slice(append ? visibleOrdersCount - 10 : 0, visibleOrdersCount);
+
+                        if (!append && toRender.length === 0) {
+                            ordersList.innerHTML = '<p>You haven\'t placed any orders yet.</p>';
+                            document.getElementById('load-more-orders-container').style.display = 'none';
+                        } else {
+                            chunk.forEach(order => {
+                                const orderDate = order.timestamp ? new Date(order.timestamp.seconds * 1000) : new Date();
+                                const date = order.timestamp ? orderDate.toLocaleDateString() : 'Recent';
+                                const isWithinTwoWeeks = (new Date() - orderDate) < (14 * 24 * 60 * 60 * 1000);
+                                const total = typeof order.total === 'number' ? order.total.toFixed(2) : order.total;
+                                const status = order.status || 'Pending';
+                                const statusClass = `status-${status.toLowerCase().replace(/\s+/g, '-')}`;
+
+                                let trackButtonHtml = '';
+                                let cancelButtonHtml = '';
+                                let reviewButtonHtml = '';
+
+                                if (status.toLowerCase() === 'shipped') {
+                                    const trackingNumber = order.trackingNumber || `1Z${order.id.slice(0, 10).toUpperCase()}A0${Math.floor(Math.random() * 90 + 10)}`;
+                                    trackButtonHtml = `<a href="tracking.html?orderId=${order.id}&trackingNumber=${trackingNumber}" class="track-order-btn">Track Order</a>`;
+                                } else if (status.toLowerCase() === 'pending') {
+                                    cancelButtonHtml = `<button class="cancel-order-btn" data-id="${order.id}" style="margin-left: 5px; color: #ff4d4d; background: none; border: 1px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer;">Cancel</button>`;
+                                } else if (status.toLowerCase() === 'delivered') {
+                                    const firstUnreviewedItem = order.items.find(item => !reviewedProductIds.has(item.productId || item.id));
+                                    if (firstUnreviewedItem) {
+                                        const firstPId = firstUnreviewedItem.productId || firstUnreviewedItem.id;
+                                        const firstProd = productCatalog[firstPId];
+                                        const reviewPageUrl = (firstProd && firstProd.storyUrl) ? `${firstProd.storyUrl}#reviews` : `product.html?id=${firstPId}#reviews`;
+                                        reviewButtonHtml = `<a href="${reviewPageUrl}" class="review-prompt-btn" style="margin-left: 5px; background: #fdf6ec; color: #e6a23c; border: 1px solid #e6a23c; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;">Rate Products</a>`;
+                                    }
+                                }
+
+
+                                let itemsHtml = order.items.map(item => {
+                                    const pId = item.productId || item.id;
+                                    const img = productCatalog[pId]?.image || 'placeholder-glow.webp';
+                                    const itemPrice = String(item.price).includes('TND') ? item.price : `${item.price} TND`;
+                                    
+                                    const isRefunded = item.refunded === true || item.refunded === 'true';
+                                    const statusText = isRefunded 
+                                        ? `<span class="refunded-badge" style="color: #e74c3c; font-weight: 600; font-size: 0.75rem; margin-left: 8px; border: 1px solid #e74c3c; border-radius: 4px; padding: 1px 4px; display: inline-block;">Refunded</span>` 
+                                        : '';
+
+                                    let reportHtml = '';
+                                    if (status.toLowerCase() === 'delivered' && isWithinTwoWeeks) {
+                                        if (item.report) {
+                                            const rStatus = item.report.status || 'Pending';
+                                            let rColor = '#e6a23c';
+                                            if (rStatus === 'Refunded') rColor = '#27ae60';
+                                            if (rStatus === 'Refused') rColor = '#e74c3c';
+                                            reportHtml = `
+                                                <div style="font-size: 0.75rem; margin-top: 4px; color: ${rColor}; font-weight: 500;">
+                                                     Problem Reported: <strong>${rStatus}</strong>
+                                                     ${item.report.reply ? `<br><span style="color: #666; font-style: italic; font-weight: 400;">Reply: ${item.report.reply}</span>` : ''}
                                                 </div>
-                                            `}else I.hasReports===!0?Tt=`
+                                            `;
+                                        } else if (order.hasReports === true) {
+                                            reportHtml = `
                                                 <div style="font-size: 0.75rem; margin-top: 4px; color: #888; font-weight: 500;">
                                                      Reported
                                                 </div>
-                                            `:It||(Tt=`
+                                            `;
+                                        } else if (!isRefunded) {
+                                            reportHtml = `
                                                 <button class="report-problem-btn" 
-                                                    data-order-id="${I.id}" 
-                                                    data-item-id="${Ze}" 
-                                                    data-item-size="${De.size}"
-                                                    data-item-name="${De.name.replace(/"/g,"&quot;")}"
+                                                    data-order-id="${order.id}" 
+                                                    data-item-id="${pId}" 
+                                                    data-item-size="${item.size}"
+                                                    data-item-name="${item.name.replace(/"/g, '&quot;')}"
                                                     style="margin-top: 5px; background: none; border: 1px solid #999; border-radius: 6px; padding: 3px 8px; font-size: 0.7rem; cursor: pointer; color: #555; font-family: inherit; font-weight: 500; transition: all 0.2s;">
                                                     Report a Problem
                                                 </button>
-                                            `);return`
+                                            `;
+                                        }
+                                    }
+
+                                    return `
                                          <div class="order-item-row" style="margin-bottom: 0.75rem;">
-                                             <img src="${mt}" class="account-item-mini-img" alt="${De.name}">
+                                             <img src="${img}" class="account-item-mini-img" alt="${item.name}">
                                              <div style="flex: 1;">
                                                  <div style="font-weight: 500; display: flex; align-items: center; flex-wrap: wrap;">
-                                                     ${De.name} ${Qt}
+                                                     ${item.name} ${statusText}
                                                  </div>
-                                                 <div style="color: #888; font-size: 0.85rem;">Size: ${De.size} | Qty: ${De.quantity}</div>
-                                                 ${Tt}
+                                                 <div style="color: #888; font-size: 0.85rem;">Size: ${item.size} | Qty: ${item.quantity}</div>
+                                                 ${reportHtml}
                                              </div>
-                                             <div style="font-weight: 600;">${Ut}</div>
+                                             <div style="font-weight: 600;">${itemPrice}</div>
                                          </div>
-                                    `}).join("");const je=String(me).includes("TND")?me:`${me} TND`;let ut="";I.creditsUsed>0&&(ut+=`<span style="font-size: 0.75rem; color: #e74c3c; background: #fdecea; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Spent: ${I.creditsUsed} TND Rewards</span>`),I.creditsGranted>0&&(ut+=`<span style="font-size: 0.75rem; color: #27ae60; background: #eafaf1; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Earned: ${I.creditsGranted} TND Rewards</span>`),ut!==""&&(ut=`<div style="margin-top: 5px;">${ut}</div>`);const yt=document.createElement("div");yt.classList.add("order-card","reveal","active"),yt.innerHTML=`
+                                    `;
+                                }).join('');
+
+                                const orderTotal = String(total).includes('TND') ? total : `${total} TND`;
+                                
+                                let rewardsHtml = '';
+                                if (order.creditsUsed > 0) {
+                                    rewardsHtml += `<span style="font-size: 0.75rem; color: #e74c3c; background: #fdecea; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Spent: ${order.creditsUsed} TND Rewards</span>`;
+                                }
+                                if (order.creditsGranted > 0) {
+                                    rewardsHtml += `<span style="font-size: 0.75rem; color: #27ae60; background: #eafaf1; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Earned: ${order.creditsGranted} TND Rewards</span>`;
+                                }
+                                if (rewardsHtml !== '') {
+                                    rewardsHtml = `<div style="margin-top: 5px;">${rewardsHtml}</div>`;
+                                }
+
+                                const orderCard = document.createElement('div');
+                                orderCard.classList.add('order-card', 'reveal', 'active');
+                                orderCard.innerHTML = `
                                     <div class="order-header">
-                                        <span>Order #${I.orderReference||I.id.slice(0,8).toUpperCase()}</span>
-                                        <span>${q}</span>
+                                        <span>Order #${order.orderReference || order.id.slice(0, 8).toUpperCase()}</span>
+                                        <span>${date}</span>
                                     </div>
                                     <div class="order-items">
-                                        ${ze}
+                                        ${itemsHtml}
                                     </div>
                                     <div class="order-footer">
                                         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                            <span class="status-badge ${$e}">${he}</span>
-                                            <button class="reorder-btn" data-id="${I.id}">Reorder</button>
-                                            ${ye}
-                                            ${we}
-                                            ${Le}
+                                            <span class="status-badge ${statusClass}">${status}</span>
+                                            <button class="reorder-btn" data-id="${order.id}">Reorder</button>
+                                            ${trackButtonHtml}
+                                            ${cancelButtonHtml}
+                                            ${reviewButtonHtml}
                                         </div>
                                         <div style="text-align: right;">
-                                            <span style="color: var(--accent-gold-text); font-weight: 700;">${je}</span>
-                                            ${ut}
+                                            <span style="color: var(--accent-gold-text); font-weight: 700;">${orderTotal}</span>
+                                            ${rewardsHtml}
                                         </div>
                                     </div>
-                                `,b.appendChild(yt)}),f<W.length?document.getElementById("load-more-orders-container").style.display="flex":document.getElementById("load-more-orders-container").style.display="none",xe(D))},xe=W=>{document.querySelectorAll(".reorder-btn").forEach(ne=>{ne.onclick=P=>{const I=P.target.getAttribute("data-id"),K=W.find(q=>q.id===I);K&&K.items&&(K.items.forEach(q=>{q.image&&typeof q.image=="string"&&!q.image.startsWith("http")&&!q.image.startsWith("data:")&&(q.image=window.location.origin+"/"+q.image.replace(/^\/+/,""));const Ee=Be.find(me=>me.id===q.id);Ee?Ee.quantity+=q.quantity:Be.push({...q})}),pt(),Rt())}}),document.querySelectorAll(".cancel-order-btn").forEach(ne=>{ne.onclick=async P=>{const I=P.currentTarget;if(!await window.showConfirm("Are you sure you want to cancel this order? This action cannot be undone.","Cancel Order"))return;const q=I.getAttribute("data-id");I.innerText="Processing...",I.disabled=!0;try{await gt(Ae(ae,"orders",q),{status:"Cancelled"});const me=I.closest(".order-card").querySelector(".status-badge");me&&(me.textContent="Cancelled",me.className="status-badge status-cancelled"),I.remove()}catch(Ee){console.error("Error cancelling order:",Ee),window.showToast("Failed to cancel order.","error"),I.innerText="Cancel",I.disabled=!1}}}),document.querySelectorAll(".review-prompt-btn").forEach(ne=>{}),document.querySelectorAll(".report-problem-btn").forEach(ne=>{ne.onclick=P=>{const I=P.target.getAttribute("data-order-id"),K=P.target.getAttribute("data-item-id"),q=P.target.getAttribute("data-item-size"),Ee=P.target.getAttribute("data-item-name");ue(I,K,q,Ee)}})},ue=(W,ne,P,I)=>{document.getElementById("report-problem-modal")?.remove();const K=`
+                                `;
+                                ordersList.appendChild(orderCard);
+                            });
+                            if (visibleOrdersCount < toRender.length) {
+                                document.getElementById('load-more-orders-container').style.display = 'flex';
+                            } else {
+                                document.getElementById('load-more-orders-container').style.display = 'none';
+                            }
+                            attachOrderActionListeners(orders);
+                        }
+                    };
+
+                    const attachOrderActionListeners = (allOrders) => {
+                        document.querySelectorAll('.reorder-btn').forEach(btn => {
+                            btn.onclick = (e) => {
+                                const orderId = e.target.getAttribute('data-id');
+                                const order = allOrders.find(o => o.id === orderId);
+                                if (order && order.items) {
+                                    order.items.forEach(item => {
+                                        if (item.image && typeof item.image === 'string' && !item.image.startsWith('http') && !item.image.startsWith('data:')) {
+                                            item.image = window.location.origin + '/' + item.image.replace(/^\/+/, '');
+                                        }
+                                        const existingItem = cart.find(c => c.id === item.id);
+                                        if (existingItem) existingItem.quantity += item.quantity;
+                                        else cart.push({ ...item });
+                                    });
+                                    updateCartUI();
+                                    openCart();
+                                }
+                            };
+                        });
+
+                        document.querySelectorAll('.cancel-order-btn').forEach(btn => {
+                            btn.onclick = async (e) => {
+                                const btnElement = e.currentTarget;
+                                const confirmed = await window.showConfirm("Are you sure you want to cancel this order? This action cannot be undone.", "Cancel Order");
+                                if (!confirmed) return;
+
+                                const orderId = btnElement.getAttribute('data-id');
+                                btnElement.innerText = "Processing...";
+                                btnElement.disabled = true;
+
+                                try {
+                                    await updateDoc(doc(db, "orders", orderId), { status: "Cancelled" });
+                                    const orderCard = btnElement.closest('.order-card');
+                                    const statusBadge = orderCard.querySelector('.status-badge');
+                                    if (statusBadge) {
+                                        statusBadge.textContent = "Cancelled";
+                                        statusBadge.className = "status-badge status-cancelled";
+                                    }
+                                    btnElement.remove();
+                                } catch (error) {
+                                    console.error("Error cancelling order:", error);
+                                    window.showToast("Failed to cancel order.", "error");
+                                    btnElement.innerText = "Cancel";
+                                    btnElement.disabled = false;
+                                }
+                            };
+                        });
+
+                        document.querySelectorAll('.review-prompt-btn').forEach(btn => {
+                            // Now handled via href anchor link — no JS needed
+                        });
+
+
+                        document.querySelectorAll('.report-problem-btn').forEach(btn => {
+                            btn.onclick = (e) => {
+                                const orderId = e.target.getAttribute('data-order-id');
+                                const itemId = e.target.getAttribute('data-item-id');
+                                const itemSize = e.target.getAttribute('data-item-size');
+                                const itemName = e.target.getAttribute('data-item-name');
+                                openReportProblemModal(orderId, itemId, itemSize, itemName);
+                            };
+                        });
+
+                    };
+
+                    const openReportProblemModal = (orderId, itemId, itemSize, itemName) => {
+                        document.getElementById('report-problem-modal')?.remove();
+
+                        const modalHTML = `
                             <div id="report-problem-modal" class="confirm-overlay active" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);">
                                 <div class="confirm-box" style="max-width: 450px; width: 90%; padding: 2rem; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
                                     <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin-top: 0; margin-bottom: 0.5rem; color: var(--text-charcoal);">Report a Problem</h3>
                                     <p style="font-size: 0.88rem; color: #666; margin-bottom: 1.5rem;">
-                                        Product: <strong>${I} (${P})</strong>
+                                        Product: <strong>${itemName} (${itemSize})</strong>
                                     </p>
                                     <form id="report-problem-form">
                                         <div class="form-group" style="margin-bottom: 1.25rem;">
@@ -339,64 +3491,476 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                                     </form>
                                 </div>
                             </div>
-                        `;document.body.insertAdjacentHTML("beforeend",K);const q=document.getElementById("report-problem-modal"),Ee=document.getElementById("report-problem-form"),me=document.getElementById("cancel-report-btn"),he=()=>{q.remove()};me.onclick=he,q.onclick=$e=>{$e.target===q&&he()},Ee.onsubmit=async $e=>{$e.preventDefault();const ye=document.getElementById("report-issue-select").value,we=document.getElementById("report-message-input").value.trim(),Le=Ee.querySelector('button[type="submit"]');Le.disabled=!0,Le.textContent="Submitting...";try{const ze=Ae(ae,"orders",W),je=await ft(ze);if(!je.exists())throw new Error("Order not found.");const yt=je.data().items.map(Ze=>(Ze.productId||Ze.id)===ne&&Ze.size===P?{...Ze,report:{problem:ye,message:we,status:"Pending",createdAt:new Date().toISOString()}}:Ze);await gt(ze,{items:yt,hasReports:!0,hasUnseenReport:!0}),window.showToast("Report submitted successfully! \u2728","success"),he();const De=document.querySelector('.account-tab-btn[data-tab="orders"]');De?De.click():location.reload()}catch(ze){console.error("Error submitting report:",ze),window.showToast("Failed to submit report. Please try again.","error"),Le.disabled=!1,Le.textContent="Submit Report"}}};setTimeout(()=>{S&&S.classList.remove("active"),b.classList.add("visible"),D.sort((W,ne)=>(ne.timestamp?.seconds||0)-(W.timestamp?.seconds||0)),L=[...D],Z(L)},800);const Q=document.getElementById("order-sort-date"),ve=document.getElementById("order-filter-status"),be=()=>{let W=[...D];const ne=Q?.value||"newest",P=ve?.value||"all";P!=="all"&&(W=W.filter(I=>(I.status||"Pending")===P)),ne==="newest"?W.sort((I,K)=>(K.timestamp?.seconds||0)-(I.timestamp?.seconds||0)):W.sort((I,K)=>(I.timestamp?.seconds||0)-(K.timestamp?.seconds||0)),f=10,L=W,Z(L)};Q&&Q.addEventListener("change",be),ve&&ve.addEventListener("change",be);const ke=document.getElementById("load-more-orders-btn");ke&&(ke.onclick=()=>{ke.innerText="Loading...",setTimeout(()=>{f+=10,Z(L,!0),ke.innerText="View More Orders"},500)})}catch(E){console.error("Error fetching orders:",E),S&&S.classList.remove("active"),b.classList.add("visible"),b.innerHTML="<p>Unable to load orders at this time.</p>"}}else b.innerHTML=`<p>Please <a href="#" onclick="document.getElementById('login-btn').click(); return false;" style="text-decoration: underline;">login</a> to view your order history.</p>`,y&&(y.textContent="Guest")}),pt(),$t();const dt=document.querySelector(".place-order-btn"),bo=document.querySelector(".checkout-form form, .co-form-panel form, #checkout-shipping-form");dt&&bo&&dt.addEventListener("click",async a=>{if(a.preventDefault(),Be.length===0){window.showToast("Your cart is empty.","error");return}const i=document.getElementById("checkout-email").value.trim(),e=document.getElementById("checkout-name").value.trim(),t=document.getElementById("checkout-phone").value.trim(),n=document.getElementById("checkout-address").value.trim(),r=document.getElementById("checkout-city").value.trim(),H=document.getElementById("checkout-postal-code").value.trim();if(!Ge.validateEmail(i)){window.showToast("Please provide a real email address.","error");return}if(!Ge.validatePhone(t)){window.showToast("Invalid Tunisian phone number. Please enter 8 digits (2,4,5,7,9).","error");return}if(!Ge.TUNISIA_GOVERNORATES.includes(r)){window.showToast("Please select a valid Tunisian Governorat.","error");return}if(Ge.isProfane(e)||Ge.isProfane(n)){window.showToast("Inappropriate language detected.","error");return}if(bo.checkValidity()){const v=Be.filter(y=>{const S=w[y.productId||y.id];if(!S)return!1;if(S.sizes&&S.sizes.length>0){const E=S.sizes.find(A=>A.label===y.size);return E?E.outOfStock===!0||String(E.outOfStock).toLowerCase()==="true":!1}return S.outOfStock===!0||String(S.outOfStock).toLowerCase()==="true"});if(v.length>0){document.getElementById("oos-cart-error-panel")?.remove();const y=document.createElement("div");y.id="oos-cart-error-panel",y.style.cssText=`
+                        `;
+
+                        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+                        const modal = document.getElementById('report-problem-modal');
+                        const form = document.getElementById('report-problem-form');
+                        const cancelBtn = document.getElementById('cancel-report-btn');
+
+                        const closeModal = () => {
+                            modal.remove();
+                        };
+
+                        cancelBtn.onclick = closeModal;
+                        modal.onclick = (e) => {
+                            if (e.target === modal) closeModal();
+                        };
+
+                        form.onsubmit = async (e) => {
+                            e.preventDefault();
+                            const problem = document.getElementById('report-issue-select').value;
+                            const message = document.getElementById('report-message-input').value.trim();
+                            const submitBtn = form.querySelector('button[type="submit"]');
+
+                            submitBtn.disabled = true;
+                            submitBtn.textContent = 'Submitting...';
+
+                            try {
+                                const orderRef = doc(db, "orders", orderId);
+                                const orderSnap = await getDoc(orderRef);
+
+                                if (!orderSnap.exists()) {
+                                    throw new Error("Order not found.");
+                                }
+
+                                const orderData = orderSnap.data();
+                                const updatedItems = orderData.items.map(item => {
+                                    const pId = item.productId || item.id;
+                                    if (pId === itemId && item.size === itemSize) {
+                                        return {
+                                            ...item,
+                                            report: {
+                                                problem,
+                                                message,
+                                                status: 'Pending',
+                                                createdAt: new Date().toISOString()
+                                            }
+                                        };
+                                    }
+                                    return item;
+                                });
+
+                                await updateDoc(orderRef, {
+                                    items: updatedItems,
+                                    hasReports: true,
+                                    hasUnseenReport: true
+                                });
+
+                                window.showToast("Report submitted successfully! ✨", "success");
+                                closeModal();
+
+                                const ordersTabBtn = document.querySelector('.account-tab-btn[data-tab="orders"]');
+                                if (ordersTabBtn) {
+                                    ordersTabBtn.click();
+                                } else {
+                                    location.reload();
+                                }
+
+                            } catch (err) {
+                                console.error("Error submitting report:", err);
+                                window.showToast("Failed to submit report. Please try again.", "error");
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = 'Submit Report';
+                            }
+                        };
+                    };
+                    setTimeout(() => {
+                        if (ordersLoader) ordersLoader.classList.remove('active');
+                        ordersList.classList.add('visible');
+
+                        orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                        filteredOrders = [...orders];
+                        renderOrders(filteredOrders);
+                    }, 800);
+                    const sortDateSelect = document.getElementById('order-sort-date');
+                    const filterStatusSelect = document.getElementById('order-filter-status');
+
+                    const applyFilters = () => {
+                        let filtered = [...orders];
+                        const dateSort = sortDateSelect?.value || 'newest';
+                        const statusFilter = filterStatusSelect?.value || 'all';
+
+                        if (statusFilter !== 'all') {
+                            filtered = filtered.filter(o => (o.status || 'Pending') === statusFilter);
+                        }
+
+                        if (dateSort === 'newest') {
+                            filtered.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                        } else {
+                            filtered.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+                        }
+
+                        visibleOrdersCount = 10;
+                        filteredOrders = filtered;
+                        renderOrders(filteredOrders);
+                    };
+
+                    if (sortDateSelect) sortDateSelect.addEventListener('change', applyFilters);
+                    if (filterStatusSelect) filterStatusSelect.addEventListener('change', applyFilters);
+                    const loadMoreOrdersBtn = document.getElementById('load-more-orders-btn');
+                    if (loadMoreOrdersBtn) {
+                        loadMoreOrdersBtn.onclick = () => {
+                            loadMoreOrdersBtn.innerText = "Loading...";
+                            setTimeout(() => {
+                                visibleOrdersCount += 10;
+                                renderOrders(filteredOrders, true);
+                                loadMoreOrdersBtn.innerText = "View More Orders";
+                            }, 500);
+                        };
+                    }
+                } catch (error) {
+                    console.error("Error fetching orders:", error);
+                    if (ordersLoader) ordersLoader.classList.remove('active');
+                    ordersList.classList.add('visible');
+                    ordersList.innerHTML = '<p>Unable to load orders at this time.</p>';
+                }
+            } else {
+                ordersList.innerHTML = '<p>Please <a href="#" onclick="document.getElementById(\'login-btn\').click(); return false;" style="text-decoration: underline;">login</a> to view your order history.</p>';
+                if (accountUserName) accountUserName.textContent = "Guest";
+            }
+        }
+    });
+
+    updateCartUI(); // Initial call to set empty state
+    updateCheckoutUI(); // Initial call for checkout page
+    const placeOrderBtn = document.querySelector('.place-order-btn');
+    const checkoutForm = document.querySelector('.checkout-form form, .co-form-panel form, #checkout-shipping-form');
+
+    if (placeOrderBtn && checkoutForm) {
+        placeOrderBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            if (cart.length === 0) {
+                window.showToast("Your cart is empty.", "error");
+                return;
+            }
+
+            const email = document.getElementById('checkout-email').value.trim();
+            const name = document.getElementById('checkout-name').value.trim();
+            const phone = document.getElementById('checkout-phone').value.trim();
+            const address = document.getElementById('checkout-address').value.trim();
+            const city = document.getElementById('checkout-city').value.trim();
+            const postalCode = document.getElementById('checkout-postal-code').value.trim();
+
+            // --- SMART VALIDATION ---
+            if (!SecurityValidator.validateEmail(email)) {
+                window.showToast("Please provide a real email address.", "error");
+                return;
+            }
+            if (!SecurityValidator.validatePhone(phone)) {
+                window.showToast("Invalid Tunisian phone number. Please enter 8 digits (2,4,5,7,9).", "error");
+                return;
+            }
+            if (!SecurityValidator.TUNISIA_GOVERNORATES.includes(city)) {
+                window.showToast("Please select a valid Tunisian Governorat.", "error");
+                return;
+            }
+            if (SecurityValidator.isProfane(name) || SecurityValidator.isProfane(address)) {
+                window.showToast("Inappropriate language detected.", "error");
+                return;
+            }
+
+            // --- END SMART VALIDATION ---
+
+            if (checkoutForm.checkValidity()) {
+
+                // --- OOS GUARD: Check every cart item against live productCatalog ---
+                const oosItems = cart.filter(item => {
+                    const prod = productCatalog[item.productId || item.id];
+                    if (!prod) return false;
+                    if (prod.sizes && prod.sizes.length > 0) {
+                        const sizeObj = prod.sizes.find(s => s.label === item.size);
+                        return sizeObj
+                            ? (sizeObj.outOfStock === true || String(sizeObj.outOfStock).toLowerCase() === 'true')
+                            : false;
+                    }
+                    return prod.outOfStock === true || String(prod.outOfStock).toLowerCase() === 'true';
+                });
+
+                if (oosItems.length > 0) {
+                    // Remove any existing error panel first
+                    document.getElementById('oos-cart-error-panel')?.remove();
+
+                    const panel = document.createElement('div');
+                    panel.id = 'oos-cart-error-panel';
+                    panel.style.cssText = `
                         background: #fff8f8; border: 1.5px solid #e74c3c; border-radius: 16px;
                         padding: 1.5rem; margin-bottom: 1.5rem; animation: slideUpFade 0.4s ease;
-                    `;const S=v.map(A=>{const N=A.productId||A.id,J=A.name.replace(/'/g,"&apos;"),D=(A.size||"Default").replace(/'/g,"&apos;");return`
+                    `;
+
+                    const itemRows = oosItems.map(item => {
+                        const pid = item.productId || item.id;
+                        const safeName = item.name.replace(/'/g, "&apos;");
+                        const safeSize = (item.size || 'Default').replace(/'/g, "&apos;");
+                        return `
                             <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 0;border-bottom:1px solid rgba(231,76,60,0.12);">
                                 <div style="width:48px;height:48px;flex-shrink:0;border-radius:8px;overflow:hidden;border:1px solid #eee;">
-                                    <img src="${A.image||""}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                                    <img src="${item.image || ''}" alt="" style="width:100%;height:100%;object-fit:cover;">
                                 </div>
                                 <div style="flex:1;min-width:0;">
-                                    <p style="margin:0 0 2px;font-weight:600;font-size:0.9rem;color:#1a1a1a;">${A.name}</p>
-                                    <p style="margin:0;font-size:0.8rem;color:#e74c3c;font-weight:500;">\u26A0 Out of Stock${A.size?" &bull; "+A.size:""}</p>
+                                    <p style="margin:0 0 2px;font-weight:600;font-size:0.9rem;color:#1a1a1a;">${item.name}</p>
+                                    <p style="margin:0;font-size:0.8rem;color:#e74c3c;font-weight:500;">⚠ Out of Stock${item.size ? ' &bull; ' + item.size : ''}</p>
                                 </div>
                                 <div style="display:flex;flex-direction:column;gap:0.4rem;flex-shrink:0;">
                                     <button
-                                        onclick="window.__removeOOSItem('${N}','${D}')"
+                                        onclick="window.__removeOOSItem('${pid}','${safeSize}')"
                                         style="font-size:0.78rem;padding:5px 12px;border-radius:20px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;cursor:pointer;font-weight:600;white-space:nowrap;">
                                         Remove
                                     </button>
                                     <button
-                                        onclick="window.__notifyOOSItem('${N}','${D}',this)"
+                                        onclick="window.__notifyOOSItem('${pid}','${safeSize}',this)"
                                         style="font-size:0.78rem;padding:5px 12px;border-radius:20px;border:1.5px solid #c8a400;background:transparent;color:#c8a400;cursor:pointer;font-weight:600;white-space:nowrap;">
                                         Notify Me
                                     </button>
                                 </div>
                             </div>
-                        `}).join("");y.innerHTML=`
+                        `;
+                    }).join('');
+
+                    panel.innerHTML = `
                         <div style="display:flex;align-items:flex-start;gap:0.8rem;margin-bottom:1rem;">
                             <svg style="width:22px;height:22px;flex-shrink:0;color:#e74c3c;margin-top:2px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                             </svg>
                             <div>
                                 <p style="margin:0 0 2px;font-weight:700;font-size:0.95rem;color:#c0392b;">Order Cannot Be Placed</p>
-                                <p style="margin:0;font-size:0.83rem;color:#888;">The following item${v.length>1?"s are":" is"} currently out of stock. Please remove ${v.length>1?"them":"it"} or wait for restock.</p>
+                                <p style="margin:0;font-size:0.83rem;color:#888;">The following item${oosItems.length > 1 ? 's are' : ' is'} currently out of stock. Please remove ${oosItems.length > 1 ? 'them' : 'it'} or wait for restock.</p>
                             </div>
                         </div>
-                        ${S}
-                    `,window.__removeOOSItem=(A,N)=>{Be=Be.filter(D=>!((D.productId||D.id)===A&&(D.size||"Default")===N)),localStorage.setItem("dodch_cart",JSON.stringify(Be)),pt(),typeof $t=="function"&&$t(),Be.filter(D=>{const R=w[D.productId||D.id];if(!R)return!1;if(R.sizes&&R.sizes.length>0){const f=R.sizes.find(L=>L.label===D.size);return f?f.outOfStock===!0||String(f.outOfStock).toLowerCase()==="true":!1}return R.outOfStock===!0||String(R.outOfStock).toLowerCase()==="true"}).length===0?document.getElementById("oos-cart-error-panel")?.remove():dt.click()},window.__notifyOOSItem=async(A,N,J)=>{J.disabled=!0,J.textContent="Saving...",await so(A,N==="Default"?"Default":N,J),J.classList.contains("subscribed")?(J.textContent="You're On the List!",J.style.background="rgba(200,164,0,0.08)"):(J.disabled=!1,J.textContent="Notify Me")};const E=document.querySelector(".checkout-container, .co-page");E&&(E.insertBefore(y,E.firstChild),y.scrollIntoView({behavior:"smooth",block:"nearest"}));return}dt.innerText="Processing...",dt.style.opacity="0.7",dt.style.pointerEvents="none";const b=setTimeout(()=>{console.error("TIMEOUT: Firebase did not respond within 15 seconds."),window.showToast("Server not responding. Please try again.","error"),dt.innerText="Place Order",dt.style.opacity="1",dt.style.pointerEvents="auto"},15e3);try{const y="ORD-"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,5).toUpperCase();let S=0;const E=Be.map(Q=>{let ve=parseFloat(String(Q.price).replace(/[^0-9.]/g,""));isNaN(ve)&&(ve=0),S+=ve*Q.quantity;const be=w[Q.productId||Q.id],ke=be?.sizes?.find(W=>W.label===Q.size);return{id:Q.id,productId:Q.productId||Q.id,name:Q.name,size:Q.size,quantity:Q.quantity,price:ve.toFixed(2),batchNumber:ke?.batchNumber||be?.batchNumber||"N/A",expiryDate:ke?.expiryDate||be?.expiryDate||"N/A"}}),J=S>=100?0:7;let D=0;const R=document.getElementById("use-rewards-checkbox");if(R&&R.checked&&Ke){const Q=await ft(Ae(ae,"users",Ke.uid)),ve=Q.exists()&&Q.data().credits||0,be=S+J;D=Math.min(ve,be)}else D=0;let f=S+J;f=Math.max(0,f-D);const L={orderReference:y,items:E,shipping:{email:i,fullName:e,phone:t,address:n,city:r,postalCode:H},subtotal:parseFloat(S.toFixed(2)),shippingFee:J,creditsUsed:parseFloat(D.toFixed(2)),total:parseFloat(f.toFixed(2)),status:"Pending",userId:Ke?Ke.uid:"guest",timestamp:Et()};typeof Ft<"u"&&await Ft;let Z;if(D>0&&Ke){const{writeBatch:Q}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"),ve=Q(ae),be=Ae(Re(ae,"orders"));ve.set(be,L);const ke=Ae(ae,"users",Ke.uid),W=await ft(ke),ne=W.exists()&&W.data().credits||0;ve.update(ke,{credits:ne-D}),await ve.commit(),Z=be.id,window._dodchUserCredits-=D,$t()}else Z=(await to(Re(ae,"orders"),L)).id;const xe=y,ue=`DODCH_Receipt_${xe}_${e.replace(/[^a-z0-9\s-]/gi,"").replace(/\s+/g,"_")}`;if(clearTimeout(b),console.log("Order placed successfully with ID: ",Z),localStorage.setItem("dodch_has_ordered","1"),Ke&&typeof window.saveShippingFromCheckout=="function"&&await window.saveShippingFromCheckout(Ke.uid),!Ke){const Q=JSON.parse(localStorage.getItem("dodch_guest_orders")||"[]");Q.push(Z),localStorage.setItem("dodch_guest_orders",JSON.stringify(Q))}setTimeout(()=>{const Q=document.getElementById("checkout-email").value,ve=document.getElementById("checkout-name").value,be=document.getElementById("checkout-phone").value,ke=document.getElementById("checkout-address").value,W=document.getElementById("checkout-city").value;let ne="";Be.forEach(I=>{let K=parseFloat(String(I.price).replace(/[^0-9.]/g,""));isNaN(K)&&(K=0);const q=K*I.quantity;ne+=`
+                        ${itemRows}
+                    `;
+
+                    // Attach helpers
+                    window.__removeOOSItem = (productId, size) => {
+                        cart = cart.filter(i => !((i.productId || i.id) === productId && (i.size || 'Default') === size));
+                        localStorage.setItem('dodch_cart', JSON.stringify(cart));
+                        updateCartUI();
+                        // Refresh the checkout order summary
+                        if (typeof updateCheckoutUI === 'function') updateCheckoutUI();
+                        // If no more OOS items, dismiss the panel
+                        const remaining = cart.filter(item => {
+                            const prod = productCatalog[item.productId || item.id];
+                            if (!prod) return false;
+                            if (prod.sizes && prod.sizes.length > 0) {
+                                const s = prod.sizes.find(s => s.label === item.size);
+                                return s ? (s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true') : false;
+                            }
+                            return prod.outOfStock === true || String(prod.outOfStock).toLowerCase() === 'true';
+                        });
+                        if (remaining.length === 0) {
+                            document.getElementById('oos-cart-error-panel')?.remove();
+                        } else {
+                            // Re-trigger to refresh the panel with the remaining items
+                            placeOrderBtn.click();
+                        }
+                    };
+                    window.__notifyOOSItem = async (productId, size, btnEl) => {
+                        btnEl.disabled = true;
+                        btnEl.textContent = 'Saving...';
+                        await handleBackInStockSubscription(productId, size === 'Default' ? 'Default' : size, btnEl);
+                        if (!btnEl.classList.contains('subscribed')) {
+                            btnEl.disabled = false;
+                            btnEl.textContent = 'Notify Me';
+                        } else {
+                            btnEl.textContent = "You're On the List!";
+                            btnEl.style.background = 'rgba(200,164,0,0.08)';
+                        }
+                    };
+
+                    const checkoutContainer = document.querySelector('.checkout-container, .co-page');
+                    if (checkoutContainer) {
+                        checkoutContainer.insertBefore(panel, checkoutContainer.firstChild);
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    return; // Stop order placement
+                }
+                // --- END OOS GUARD ---
+
+                placeOrderBtn.innerText = "Processing...";
+                placeOrderBtn.style.opacity = "0.7";
+                placeOrderBtn.style.pointerEvents = "none";
+                const operationTimeout = setTimeout(() => {
+                    console.error("TIMEOUT: Firebase did not respond within 15 seconds.");
+                    window.showToast("Server not responding. Please try again.", "error");
+                    placeOrderBtn.innerText = "Place Order";
+                    placeOrderBtn.style.opacity = "1";
+                    placeOrderBtn.style.pointerEvents = "auto";
+                }, 15000); // 15 seconds
+
+                try {
+                    const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
+                    let calculatedSubtotal = 0;
+                    const items = cart.map(item => {
+                        let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
+                        if (isNaN(priceVal)) priceVal = 0;
+                        calculatedSubtotal += priceVal * item.quantity;
+                        const prod = productCatalog[item.productId || item.id];
+                        const sizeInfo = prod?.sizes?.find(s => s.label === item.size);
+                        return {
+                            id: item.id,
+                            productId: item.productId || item.id,
+                            name: item.name,
+                            size: item.size,
+                            quantity: item.quantity,
+                            price: priceVal.toFixed(2),
+                            batchNumber: sizeInfo?.batchNumber || prod?.batchNumber || 'N/A',
+                            expiryDate: sizeInfo?.expiryDate || prod?.expiryDate || 'N/A'
+                        };
+                    });
+
+                    const SHIPPING_FEE = 7;
+                    const FREE_SHIPPING_THRESHOLD = 100;
+                    const shippingFee = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+                    
+                    // --- REAL-TIME CREDIT VALIDATION ---
+                    let creditsUsed = 0;
+                    const useRewardsCheckbox = document.getElementById('use-rewards-checkbox');
+                    if (useRewardsCheckbox && useRewardsCheckbox.checked && currentUser) {
+                        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+                        const liveCredits = userDoc.exists() ? (userDoc.data().credits || 0) : 0;
+                        
+                        const baseTotalForCreditCalc = calculatedSubtotal + shippingFee;
+                        creditsUsed = Math.min(liveCredits, baseTotalForCreditCalc);
+                    } else {
+                        creditsUsed = 0;
+                    }
+                    // --- END REAL-TIME CREDIT VALIDATION ---
+
+                    let finalTotal = (calculatedSubtotal + shippingFee);
+                    finalTotal = Math.max(0, finalTotal - creditsUsed);
+
+                    const orderData = {
+                        orderReference: orderReference,
+                        items: items,
+                        shipping: {
+                            email: email,
+                            fullName: name,
+                            phone: phone,
+                            address: address,
+                            city: city,
+                            postalCode: postalCode
+                        },
+                        subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
+                        shippingFee: shippingFee,
+                        creditsUsed: parseFloat(creditsUsed.toFixed(2)),
+                        total: parseFloat(finalTotal.toFixed(2)),
+                        status: 'Pending',
+                        userId: currentUser ? currentUser.uid : 'guest',
+                        timestamp: serverTimestamp()
+                    };
+                    if (typeof appCheckReady !== 'undefined') {
+                        await appCheckReady;
+                    }
+                    // --- DIRECT FIRESTORE SAVE (Spark Plan Support) ---
+                    let orderId;
+                    if (creditsUsed > 0 && currentUser) {
+                        const { writeBatch } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+                        const batch = writeBatch(db);
+                        const orderRef = doc(collection(db, "orders"));
+                        batch.set(orderRef, orderData);
+                        
+                        const userRef = doc(db, "users", currentUser.uid);
+                        // Decrement the credits
+                        // We must fetch the current credits to ensure we don't go below 0 (though our UI limits it)
+                        const userDoc = await getDoc(userRef);
+                        const liveCredits = userDoc.exists() ? (userDoc.data().credits || 0) : 0;
+                        batch.update(userRef, {
+                             credits: liveCredits - creditsUsed
+                        });
+                        
+                        await batch.commit();
+                        orderId = orderRef.id;
+                        
+                        // Update local cache to reflect immediate deduction
+                        window._dodchUserCredits -= creditsUsed;
+                        updateCheckoutUI(); // Re-render UI with new credit balance
+                    } else {
+                        const docRef = await addDoc(collection(db, "orders"), orderData);
+                        orderId = docRef.id;
+                    }
+                    const finalOrderReference = orderReference;
+                    // --- END DIRECT SAVE ---
+
+                    // Generate a clean filename for the PDF save dialog
+                    const safeFileName = `DODCH_Receipt_${finalOrderReference}_${name.replace(/[^a-z0-9\s-]/gi, '').replace(/\s+/g, '_')}`;
+
+                    clearTimeout(operationTimeout);
+                    console.log("Order placed successfully with ID: ", orderId);
+                    localStorage.setItem('dodch_has_ordered', '1');
+                    if (currentUser && typeof window.saveShippingFromCheckout === 'function') {
+                        await window.saveShippingFromCheckout(currentUser.uid);
+                    }
+                    if (!currentUser) {
+                        const guestOrders = JSON.parse(localStorage.getItem('dodch_guest_orders') || '[]');
+                        guestOrders.push(orderId);
+                        localStorage.setItem('dodch_guest_orders', JSON.stringify(guestOrders));
+                    }
+
+                    setTimeout(() => {
+                        // Capture customer details for the receipt before clearing form
+                        const customerEmail = document.getElementById('checkout-email').value;
+                        const customerName = document.getElementById('checkout-name').value;
+                        const customerPhone = document.getElementById('checkout-phone').value;
+                        const customerAddress = document.getElementById('checkout-address').value;
+                        const customerCity = document.getElementById('checkout-city').value;
+
+                        // Generate Items HTML before clearing cart
+                        let itemsHtml = '';
+                        cart.forEach(item => {
+                            let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
+                            if (isNaN(priceVal)) priceVal = 0;
+                            const itemTotal = priceVal * item.quantity;
+                            itemsHtml += `
                                 <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid #f0f0f0;">
                                     <div style="width: 60px; height: 60px; flex-shrink: 0; border-radius: 8px; overflow: hidden; border: 1px solid #eee;">
-                                        <img src="${I.image}" alt="${I.name}" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <img src="${item.image}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover;">
                                     </div>
                                     <div style="flex-grow: 1;">
-                                        <h4 style="margin: 0 0 0.3rem 0; font-size: 0.95rem; color: var(--text-charcoal);">${I.name}</h4>
-                                        <p style="margin: 0; font-size: 0.8rem; color: #888;">Size: ${I.size} <span style="margin: 0 0.5rem;">\u2022</span> Qty: ${I.quantity}</p>
+                                        <h4 style="margin: 0 0 0.3rem 0; font-size: 0.95rem; color: var(--text-charcoal);">${item.name}</h4>
+                                        <p style="margin: 0; font-size: 0.8rem; color: #888;">Size: ${item.size} <span style="margin: 0 0.5rem;">•</span> Qty: ${item.quantity}</p>
                                     </div>
                                     <div style="text-align: right; font-weight: 600; color: var(--text-charcoal); font-size: 0.95rem;">
-                                        ${q.toFixed(2)} TND
+                                        ${itemTotal.toFixed(2)} TND
                                     </div>
                                 </div>
-                            `}),Be=[],localStorage.setItem("dodch_cart",JSON.stringify(Be)),pt();const P=document.querySelector(".checkout-container, .co-page");if(P){let I="";Ke||(I=`
+                            `;
+                        });
+
+                        cart = [];
+                        localStorage.setItem('dodch_cart', JSON.stringify(cart));
+                        updateCartUI();
+
+                        const checkoutContainer = document.querySelector('.checkout-container, .co-page');
+
+                        if (checkoutContainer) {
+                            let guestMessage = '';
+                            if (!currentUser) {
+                                const googleIconSmall = `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px; background: white; border-radius: 50%; padding: 2px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>`;
+                                guestMessage = `
                                     <div id="guest-convert-banner" class="no-print" style="margin-top: 2rem; padding: 1.5rem; background: #fff; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; transition: all 0.4s ease;">
                                         <h4 style="margin-bottom: 0.5rem; color: var(--text-charcoal); font-size: 1.1rem;">Track Your Luxury Journey</h4>
                                         <p style="font-size: 0.85rem; color: #666; margin-bottom: 1.2rem; max-width: 280px; margin-left: auto; margin-right: auto;">Create an account now to claim this order and access exclusive DODCH rewards.</p>
                                         <button onclick="document.getElementById('login-btn').click()" class="cta-button cta-button-primary" style="width: auto; padding: 0.7rem 1.8rem; font-size: 0.9rem; display: flex; align-items: center; margin: 0 auto;">
-                                            <svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px; background: white; border-radius: 50%; padding: 2px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg> Sign In with Google
+                                            ${googleIconSmall} Sign In with Google
                                         </button>
                                     </div>
-                                `);const K=new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});if(P.style.display="block",P.style.maxWidth="800px",P.style.margin="0 auto",!document.getElementById("receipt-mobile-fix")){const q=document.createElement("style");q.id="receipt-mobile-fix",q.textContent=`
+                                `;
+                            }
+
+                            const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                            // Turn the container into a full-width wrapper
+                            checkoutContainer.style.display = 'block';
+                            checkoutContainer.style.maxWidth = '800px';
+                            checkoutContainer.style.margin = '0 auto';
+
+                            // Inject mobile-responsive styles for the receipt
+                            if (!document.getElementById('receipt-mobile-fix')) {
+                                const mobileStyle = document.createElement('style');
+                                mobileStyle.id = 'receipt-mobile-fix';
+                                mobileStyle.textContent = `
                                     @media (max-width: 600px) {
                                         .order-receipt-sheet { padding: 1.25rem !important; border-radius: 16px !important; }
                                         .receipt-header { margin-bottom: 1.5rem !important; padding-bottom: 1.25rem !important; }
@@ -407,87 +3971,241 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                                         .receipt-actions a, .receipt-actions button { flex: none !important; width: 100% !important; box-sizing: border-box !important; }
                                         .receipt-items-section { margin-bottom: 2rem !important; }
                                     }
-                                `,document.head.appendChild(q)}P.innerHTML=`
+                                `;
+                                document.head.appendChild(mobileStyle);
+                            }
+
+                            checkoutContainer.innerHTML = `
                                 <div class="order-receipt-sheet" style="background: #fff; padding: 3rem; border-radius: 24px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 20px 60px rgba(0,0,0,0.04); animation: slideUpFade 0.6s ease;">
                                     <div class="receipt-header" style="text-align: center; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid #eee;">
                                         <div class="no-print" style="width: 64px; height: 64px; background: rgba(212, 175, 55, 0.1); color: var(--accent-gold-text); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
                                             <svg style="width: 32px; height: 32px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                         </div>
                                         <h2 style="margin: 0; font-size: 2.2rem; color: var(--text-charcoal); border: none; padding-bottom: 0.5rem;">Order Confirmed</h2>
-                                        <p style="margin: 0; color: #666; font-size: 1.05rem;">Thank you, ${ve.split(" ")[0]}. Your order is being processed.</p>
+                                        <p style="margin: 0; color: #666; font-size: 1.05rem;">Thank you, ${customerName.split(' ')[0]}. Your order is being processed.</p>
                                     </div>
                                     
                                     <div class="receipt-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem; background: #fafafa; padding: 1.5rem; border-radius: 16px;">
                                         <div>
                                             <h4 style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.8rem;">Order Details</h4>
-                                            <p style="margin: 0 0 0.4rem 0; font-size: 0.95rem; font-weight: 500;"><strong>Ref:</strong> #${xe}</p>
-                                            <p style="margin: 0; font-size: 0.95rem;"><strong>Date:</strong> ${K}</p>
+                                            <p style="margin: 0 0 0.4rem 0; font-size: 0.95rem; font-weight: 500;"><strong>Ref:</strong> #${finalOrderReference}</p>
+                                            <p style="margin: 0; font-size: 0.95rem;"><strong>Date:</strong> ${today}</p>
                                         </div>
                                         <div>
                                             <h4 style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.8rem;">Shipping To</h4>
-                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.95rem; font-weight: 500;">${ve}</p>
-                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.9rem; color: #555;">${ke}, ${W}</p>
-                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.9rem; color: #555;">${be}</p>
-                                            <p style="margin: 0; font-size: 0.9rem; color: #555;">${Q}</p>
+                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.95rem; font-weight: 500;">${customerName}</p>
+                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.9rem; color: #555;">${customerAddress}, ${customerCity}</p>
+                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.9rem; color: #555;">${customerPhone}</p>
+                                            <p style="margin: 0; font-size: 0.9rem; color: #555;">${customerEmail}</p>
                                         </div>
                                     </div>
 
                                     <div class="receipt-items-section" style="margin-bottom: 3rem;">
                                         <h4 style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">Order Items</h4>
                                         <div class="receipt-items-list">
-                                            ${ne}
+                                            ${itemsHtml}
                                         </div>
                                     </div>
 
                                     <div class="receipt-totals" style="width: 100%; max-width: 300px; margin-left: auto;">
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 0.95rem; color: #666;">
                                             <span>Subtotal</span>
-                                            <span>${S.toFixed(2)} TND</span>
+                                            <span>${calculatedSubtotal.toFixed(2)} TND</span>
                                         </div>
-                                        ${D>0?`
+                                        ${creditsUsed > 0 ? `
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 0.95rem; color: #e74c3c;">
                                             <span>Rewards Discount</span>
-                                            <span>-${D.toFixed(2)} TND</span>
-                                        </div>`:""}
+                                            <span>-${creditsUsed.toFixed(2)} TND</span>
+                                        </div>` : ''}
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 1.2rem; font-size: 0.95rem; color: #666;">
                                             <span>Shipping</span>
-                                            <span>${J===0?"Free":J.toFixed(2)+" TND"}</span>
+                                            <span>${shippingFee === 0 ? 'Free' : shippingFee.toFixed(2) + ' TND'}</span>
                                         </div>
                                         <div style="display: flex; justify-content: space-between; padding-top: 1.2rem; border-top: 2px solid #eee; font-size: 1.2rem; font-weight: 600; color: var(--text-charcoal);">
                                             <span>Total</span>
-                                            <span>${f.toFixed(2)} TND</span>
+                                            <span>${finalTotal.toFixed(2)} TND</span>
                                         </div>
                                     </div>
                                      <div class="receipt-actions no-print" style="display: flex; gap: 1rem; margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2.5rem;">
-                                        <button onclick="window.printCheckoutReceipt('${ue}')" class="cta-button cta-button-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: var(--text-charcoal); border: 1px solid #ddd; border-radius: 30px; cursor: pointer;">
+                                        <button onclick="window.printCheckoutReceipt('${safeFileName}')" class="cta-button cta-button-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: var(--text-charcoal); border: 1px solid #ddd; border-radius: 30px; cursor: pointer;">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                             Download PDF
                                         </button>
                                         <a href="index.html" class="cta-button cta-button-primary" style="flex: 1; text-align: center; border-radius: 30px; display: flex; align-items: center; justify-content: center; padding: 0;">Continue Shopping</a>
                                     </div>
                                     
-                                    ${I}
+                                    ${guestMessage}
                                 </div>
-                            `,P.scrollIntoView({behavior:"smooth",block:"start"})}},1e3)}catch(y){clearTimeout(b),console.error("Error placing order:",y),window.showToast(y.message||"Error placing order.","error"),dt.innerText="Place Order",dt.style.opacity="1",dt.style.pointerEvents="auto"}}else bo.reportValidity()});const _t=document.getElementById("newsletter-form");_t&&_t.addEventListener("submit",async a=>{window.triggerHaptic("medium"),a.preventDefault();const i=_t.querySelector("button"),e=i.innerText,t=_t.querySelector('input[type="email"]'),n=t?t.value.trim():"";if(!Ge.validateEmail(n)){window.showToast("Please use a real email address.","error");return}i.disabled=!0,i.innerText="Joining...";try{await to(Re(ae,"newsletter"),{email:n,createdAt:Et(),source:"footer"}),window.showToast("Welcome to the Inner Circle!","success"),_t.reset(),i.style.backgroundColor="#4CAF50"}catch(r){console.error("Newsletter Error:",r),r.code==="permission-denied"?window.showToast("Security verification failed. Please refresh.","error"):window.showToast("Failed to subscribe. Please try again later.","error")}finally{setTimeout(()=>{i.disabled=!1,i.innerText=e,i.style.backgroundColor=""},3e3)}});const Lt=()=>{const a=document.querySelector(".breadcrumb-wrapper");a&&a.remove(),document.body.classList.remove("has-breadcrumbs");const e=window.location.pathname.split("/").pop();if((e===""||e==="index.html"||e==="/")&&!window.location.search||e.includes("face-foam.html")||e.includes("face-serum.html")||e.includes("silk-mask.html")||e.includes("dodchmellow-pro-v.html"))return;const t=document.querySelector("main");if(!t)return;let n=[{name:"Home",url:"index.html"}],r="";if(e.includes("index.html")||e==="/"||e===""){const v=new URLSearchParams(window.location.search),b=v.get("cat"),y=v.get("sub");if(b){const S={"hair-care":"Hair Care","skin-care":"Skin Care",sets:"Sets & Bundles"};n.push({name:"Shop",url:"index.html"}),r=S[b]||b,y&&y!=="all"&&(n.push({name:r,url:`index.html?cat=${b}`}),r={shampoo:"Shampoo",conditioners:"Conditioners","leave-in":"Leave-in",masks:"Masks",cleansers:"Cleansers",serums:"Serums",creams:"Creams"}[y]||y)}else r="Shop"}else if(e.includes("about.html"))r="About Us";else if(e.includes("careers.html"))r="Careers";else if(e.includes("privacy-policy.html"))r="Privacy Policy";else if(e.includes("terms-of-service.html"))r="Terms of Service";else if(e.includes("shipping-returns.html"))r="Shipping & Returns";else if(e.includes("faq.html"))r="FAQ";else if(e.includes("checkout.html"))n.push({name:"Shop",url:"index.html"}),r="Checkout";else if(e.includes("my-account.html"))r="My Account";else if(e.includes("tracking.html"))n.push({name:"My Account",url:"my-account.html"}),r="Tracking";else if(e.includes("admin.html"))r="Admin Dashboard";else if(e.includes("product.html")){n.push({name:"Shop",url:"index.html"});const b=new URLSearchParams(window.location.search).get("id"),y=w[b]||Object.values(w).find(S=>S.storyUrl===window.location.pathname.split("/").pop())||w["glass-glow-shampoo"];r=y?y.name:"Product"}r&&n.push({name:r,url:null});const H=`
+                            `;
+                            
+                            checkoutContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 1000);
+
+                } catch (err) {
+                    clearTimeout(operationTimeout);
+                    console.error("Error placing order:", err);
+                    window.showToast(err.message || "Error placing order.", "error");
+                    placeOrderBtn.innerText = "Place Order";
+                    placeOrderBtn.style.opacity = "1";
+                    placeOrderBtn.style.pointerEvents = "auto";
+                }
+            } else {
+                checkoutForm.reportValidity();
+            }
+        });
+    }
+    const newsletterForm = document.getElementById('newsletter-form');
+    if (newsletterForm) {
+        newsletterForm.addEventListener('submit', async (e) => {
+            window.triggerHaptic('medium');
+            e.preventDefault();
+            const btn = newsletterForm.querySelector('button');
+            const originalText = btn.innerText;
+            const emailInput = newsletterForm.querySelector('input[type="email"]');
+            const email = emailInput ? emailInput.value.trim() : "";
+
+            if (!SecurityValidator.validateEmail(email)) {
+                window.showToast("Please use a real email address.", "error");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Joining...";
+
+            try {
+                // Direct Firestore write (Spark-compatible)
+                // App Check will verify this request automatically
+                await addDoc(collection(db, "newsletter"), {
+                    email: email,
+                    createdAt: serverTimestamp(),
+                    source: 'footer'
+                });
+
+                window.showToast("Welcome to the Inner Circle!", "success");
+                newsletterForm.reset();
+                btn.style.backgroundColor = "#4CAF50"; // Green for success
+            } catch (err) {
+                console.error("Newsletter Error:", err);
+                if (err.code === 'permission-denied') {
+                    window.showToast("Security verification failed. Please refresh.", "error");
+                } else {
+                    window.showToast("Failed to subscribe. Please try again later.", "error");
+                }
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    btn.style.backgroundColor = "";
+                }, 3000);
+            }
+        });
+    }
+    const initBreadcrumbs = () => {
+        const existing = document.querySelector('.breadcrumb-wrapper');
+        if (existing) existing.remove();
+        document.body.classList.remove('has-breadcrumbs');
+
+        const path = window.location.pathname;
+        const page = path.split("/").pop();
+        if ((page === "" || page === "index.html" || page === "/") && !window.location.search) return;
+        if (page.includes("face-foam.html") || page.includes("face-serum.html") || page.includes("silk-mask.html") || page.includes("dodchmellow-pro-v.html")) return;
+
+        const main = document.querySelector('main');
+        if (!main) return;
+
+        let crumbs = [{ name: "Home", url: "index.html" }];
+        let currentName = "";
+        if (page.includes("index.html") || page === "/" || page === "") {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cat = urlParams.get('cat');
+            const sub = urlParams.get('sub');
+
+            if (cat) {
+                const catNames = { 'hair-care': 'Hair Care', 'skin-care': 'Skin Care', 'sets': 'Sets & Bundles' };
+                crumbs.push({ name: "Shop", url: "index.html" });
+                currentName = catNames[cat] || cat;
+
+                if (sub && sub !== 'all') {
+                    crumbs.push({ name: currentName, url: `index.html?cat=${cat}` });
+                    const subNames = { 'shampoo': 'Shampoo', 'conditioners': 'Conditioners', 'leave-in': 'Leave-in', 'masks': 'Masks', 'cleansers': 'Cleansers', 'serums': 'Serums', 'creams': 'Creams' };
+                    currentName = subNames[sub] || sub;
+                }
+            } else {
+                currentName = "Shop";
+            }
+        } else if (page.includes("about.html")) {
+            currentName = "About Us";
+        } else if (page.includes("careers.html")) {
+            currentName = "Careers";
+        } else if (page.includes("privacy-policy.html")) {
+            currentName = "Privacy Policy";
+        } else if (page.includes("terms-of-service.html")) {
+            currentName = "Terms of Service";
+        } else if (page.includes("shipping-returns.html")) {
+            currentName = "Shipping & Returns";
+        } else if (page.includes("faq.html")) {
+            currentName = "FAQ";
+        } else if (page.includes("checkout.html")) {
+            crumbs.push({ name: "Shop", url: "index.html" });
+            currentName = "Checkout";
+        } else if (page.includes("my-account.html")) {
+            currentName = "My Account";
+        } else if (page.includes("tracking.html")) {
+            crumbs.push({ name: "My Account", url: "my-account.html" });
+            currentName = "Tracking";
+        } else if (page.includes("admin.html")) {
+            currentName = "Admin Dashboard";
+        } else if (page.includes("product.html")) {
+            crumbs.push({ name: "Shop", url: "index.html" });
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+            const product = productCatalog[productId] || Object.values(productCatalog).find(p => p.storyUrl === window.location.pathname.split('/').pop()) || productCatalog['glass-glow-shampoo'];
+            currentName = product ? product.name : "Product";
+        }
+
+        if (currentName) {
+            crumbs.push({ name: currentName, url: null });
+        }
+        const breadcrumbHTML = `
             <div class="breadcrumb-wrapper">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb" itemscope itemtype="https://schema.org/BreadcrumbList">
-                    ${n.map((v,b)=>b===n.length-1?`
+                    ${crumbs.map((crumb, index) => {
+            const isLast = index === crumbs.length - 1;
+
+            if (isLast) {
+                return `
                             <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-                                <span itemprop="name" class="breadcrumb-current">${v.name}</span>
-                                <meta itemprop="position" content="${b+1}" />
-                            </li>`:`
+                                <span itemprop="name" class="breadcrumb-current">${crumb.name}</span>
+                                <meta itemprop="position" content="${index + 1}" />
+                            </li>`;
+            } else {
+                const absoluteUrl = new URL(crumb.url, window.location.href).href;
+                return `
                             <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-                                <a itemprop="item" href="${new URL(v.url,window.location.href).href}">
-                                    <span itemprop="name">${v.name}</span>
+                                <a itemprop="item" href="${absoluteUrl}">
+                                    <span itemprop="name">${crumb.name}</span>
                                 </a>
-                                <meta itemprop="position" content="${b+1}" />
+                                <meta itemprop="position" content="${index + 1}" />
                                 <span class="breadcrumb-separator" aria-hidden="true">&gt;</span>
-                            </li>`).join("")}
+                            </li>`;
+            }
+        }).join('')}
                     </ol>
                 </nav>
             </div>
-        `;t.insertAdjacentHTML("afterbegin",H),document.body.classList.add("has-breadcrumbs")};Lt();function ci(){const a=document.querySelector("footer");a&&(document.getElementById("contact")||a.insertAdjacentHTML("beforebegin",`
+        `;
+        main.insertAdjacentHTML('afterbegin', breadcrumbHTML);
+        document.body.classList.add('has-breadcrumbs');
+    };
+
+    initBreadcrumbs();
+    function initSmartFooter() {
+        const footer = document.querySelector('footer');
+        if (footer) {
+            if (!document.getElementById('contact')) {
+                const contactSectionHTML = `
                     <section id="contact" style="padding: var(--space-12) 0; background: transparent;">
                         <div class="contact-card" style="margin: 0 var(--space-6) var(--space-12) var(--space-6); background: #FFFFFF; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.08); padding: var(--space-12) 0; border: 1px solid rgba(0,0,0,0.05);">
                             <div class="container">
@@ -529,7 +4247,11 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                             </div>
                         </div>
                     </section>
-                `),a.innerHTML=`
+                `;
+
+                footer.insertAdjacentHTML('beforebegin', contactSectionHTML);
+            }
+            footer.innerHTML = `
                 <div class="container">
                     <div class="footer-content">
                         <div class="footer-col brand-col">
@@ -577,11 +4299,361 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                         <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">Terms of Service</a> apply.
                     </div>
                 </div>
-            `)}ci();function jo(a=!1){const i=document.querySelector(".sidebar-menu");if(!i)return;if(i.innerHTML="",a){const b=Array(5).fill(0).map((y,S)=>`
+            `;
+        }
+    };
+
+    initSmartFooter();
+
+    // --- Sidebar Menu Rendering ---
+    function renderSidebarMenu(loading = false) {
+        const sidebarMenu = document.querySelector('.sidebar-menu');
+        if (!sidebarMenu) return;
+
+        sidebarMenu.innerHTML = ''; // Clear existing static links
+
+        if (loading) {
+            const skeletonItems = Array(5).fill(0).map((_, i) => `
                 <div style="display: flex; align-items: center; padding: 18px 20px; border-bottom: 2px solid rgba(0,0,0,0.03); margin-bottom: 5px;">
-                    <div class="skeleton-text" style="height: 1.15rem; width: ${40+S%3*15}%; border-radius: 4px;"></div>
+                    <div class="skeleton-text" style="height: 1.15rem; width: ${40 + (i % 3) * 15}%; border-radius: 4px;"></div>
                 </div>
-            `).join("");i.innerHTML=b;return}const e=[{label:"Home",link:"index.html",type:"link",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'},{label:"Shop",id:"shop-group",type:"group",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>',children:[{label:"Hair Care",id:"hair-care",type:"group",children:[{label:"All Hair Care",link:"index.html?cat=hair-care",type:"link"},{label:"Shampoo",link:"index.html?cat=hair-care&sub=shampoo",type:"link"},{label:"Conditioners",link:"index.html?cat=hair-care&sub=conditioners",type:"link"},{label:"Masks",link:"index.html?cat=hair-care&sub=masks",type:"link"},{label:"Leave-in",link:"index.html?cat=hair-care&sub=leave-in",type:"link"}]},{label:"Skin Care",id:"skin-care",type:"group",children:[{label:"All Skin Care",link:"index.html?cat=skin-care",type:"link"},{label:"Cleansers",link:"index.html?cat=skin-care&sub=cleansers",type:"link"},{label:"Serums",link:"index.html?cat=skin-care&sub=serums",type:"link"},{label:"Creams",link:"index.html?cat=skin-care&sub=creams",type:"link"}]},{label:"Sets & Bundles",link:"index.html?cat=sets",type:"link"}]},{label:"Our Identity",link:"identity.html",type:"link",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>'},{label:"About Us",link:"about.html",type:"link",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'},{label:"Contact",link:"#contact",type:"link",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>'}],t=b=>{if(b.type==="group"){const y=document.createElement("div");y.className="sidebar-menu-group",b.id&&(y.dataset.id=b.id);const S=document.createElement("div");S.className="sidebar-menu-toggle",S.innerHTML=`${b.icon||""}<span>${b.label}</span><span class="toggle-icon"></span>`,S.addEventListener("click",A=>{A.stopPropagation(),Array.from(y.parentElement.children).forEach(J=>{J!==y&&J.classList.contains("sidebar-menu-group")&&J.classList.remove("active")}),y.classList.toggle("active")});const E=document.createElement("div");return E.className="sidebar-submenu",b.children.forEach(A=>{E.appendChild(t(A))}),y.appendChild(S),y.appendChild(E),y}else{const y=document.createElement("a");return y.href=b.link,y.innerHTML=`${b.icon||""}<span>${b.label}</span>`,b.className&&b.className.split(" ").forEach(S=>y.classList.add(S)),y.addEventListener("click",S=>{if(b.link&&b.link.includes("index.html")&&window.location.pathname.includes("index.html")&&(S.preventDefault(),window.history.pushState({},"",b.link),Je(!0),At(),typeof Lt=="function"&&Lt(),updateMainPageSEO(),window.dodchSEO&&window.dodchSEO.runSEO(),window.scrollTo({top:0,behavior:"smooth"})),typeof X=="function")X();else{document.body.style.overflow="";const E=document.getElementById("desktop-sidebar"),A=document.querySelector(".sidebar-overlay"),N=document.querySelector(".hamburger");E&&E.classList.remove("active"),A&&A.classList.remove("active"),N&&N.classList.remove("active")}}),y}};e.forEach(b=>{i.appendChild(t(b))});const n=window.location.pathname,H=new URLSearchParams(window.location.search).get("cat");if(n.endsWith("/")||n.endsWith("index.html")||n.includes("product.html")){const b=i.querySelector('.sidebar-menu-group[data-id="home"]');if(b&&b.classList.add("active"),H==="hair-care"){const y=i.querySelector('.sidebar-menu-group[data-id="hair-care"]');y&&y.classList.add("active")}else if(H==="skin-care"){const y=i.querySelector('.sidebar-menu-group[data-id="skin-care"]');y&&y.classList.add("active")}}}jo(!1);const At=()=>{const a=new URL(window.location.href);(a.pathname.endsWith("/")||a.pathname.endsWith("/index.html"))&&a.search===""&&a.searchParams.set("cat","all"),document.querySelectorAll(".sidebar-menu-group.active").forEach(n=>n.classList.remove("active")),document.querySelectorAll(".sidebar-menu a.active").forEach(n=>n.classList.remove("active"));let e=null,t=-1;if(document.querySelectorAll(".sidebar-menu a").forEach(n=>{if((n.getAttribute("href")||"").startsWith("#"))return;const H=new URL(n.href,window.location.origin);let v=0;if(H.pathname!==a.pathname)return;v=1;const b=a.searchParams,y=H.searchParams;if(a.search===H.search)v=10;else{let S=!0,E=0;for(const[A,N]of y.entries()){if(b.get(A)!==N){S=!1;break}E++}S?v+=E:v=0}v>t&&(t=v,e=n)}),e){e.classList.add("active");let n=e.closest(".sidebar-menu-group");for(;n;)n.classList.add("active"),n=n.parentElement.closest(".sidebar-menu-group");setTimeout(()=>{const r=document.getElementById("desktop-sidebar");r&&(window.innerWidth>=768||r.classList.contains("active"))&&e.scrollIntoView({behavior:"smooth",block:"center"})},500)}};At(),(()=>{const a=()=>{const i=document.getElementById("contact");i&&(i.scrollIntoView({behavior:"smooth"}),i.classList.remove("highlight-section"),i.offsetWidth,i.classList.add("highlight-section"),setTimeout(()=>{i.classList.remove("highlight-section")},2e3))};p==="#contact"&&setTimeout(a,1e3),document.addEventListener("click",i=>{const e=i.target.closest("a");if(e){const t=e.getAttribute("href");t&&(t==="#contact"||t.endsWith("#contact"))&&setTimeout(a,100)}})})(),(async()=>{const a=(u,x)=>{let T;return function(...M){clearTimeout(T),T=setTimeout(()=>u.apply(this,M),x)}},i=document.getElementById("admin-orders-list"),e=document.getElementById("admin-products-list");if(!i)return;const t=async()=>{const u=document.getElementById("admin-export-btn");if(u)try{const x=We(Re(ae,"orders")),T=await nt(x);let M=0,$=0;T.forEach(h=>{const g=h.data();g.exported||(["Pending","Confirmed","In Delivery"].includes(g.status)?M++:["Delivered","Cancelled","Local Order"].includes(g.status)&&$++)}),M>0?(u.disabled=!0,u.style.opacity="0.5",u.title=`Export locked: ${M} order(s) still in progress.`):$===0?(u.disabled=!0,u.style.opacity="0.5",u.title="No new delivered orders to export."):(u.disabled=!1,u.style.opacity="1",u.title=`Export ${$} delivered order(s).`)}catch(x){console.warn("Eligibility check failed",x)}};Vt(tt,u=>{if(!u||u.uid!==Gt)window.location.href="index.html";else{Dt(),jt(),Wo();let x=document.querySelector("#tab-orders .admin-header");if(!x){const T=document.getElementById("admin-export-btn");T&&(x=T.parentElement)}x&&!document.getElementById("create-local-order-btn")&&(x.insertAdjacentHTML("beforeend",'<button id="create-local-order-btn" class="admin-btn btn-add" style="margin-left: 1rem;">+ Create Local Order</button>'),document.getElementById("create-local-order-btn").addEventListener("click",()=>{typeof ne=="function"&&ne()})),pi(),ui(),t()}});const n=document.querySelectorAll(".admin-tab-btn"),r=document.querySelectorAll(".tab-pane"),H=`
+            `).join('');
+            sidebarMenu.innerHTML = skeletonItems;
+            return;
+        }
+
+        const menuItems = [
+            {
+                label: "Home",
+                link: "index.html",
+                type: "link",
+                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`
+            },
+            {
+                label: "Shop",
+                id: "shop-group",
+                type: "group",
+                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
+                children: [
+                    {
+                        label: "Hair Care",
+                        id: "hair-care",
+                        type: "group",
+                        children: [
+                            { label: "All Hair Care", link: "index.html?cat=hair-care", type: "link" },
+                            { label: "Shampoo", link: "index.html?cat=hair-care&sub=shampoo", type: "link" },
+                            { label: "Conditioners", link: "index.html?cat=hair-care&sub=conditioners", type: "link" },
+                            { label: "Masks", link: "index.html?cat=hair-care&sub=masks", type: "link" },
+                            { label: "Leave-in", link: "index.html?cat=hair-care&sub=leave-in", type: "link" }
+                        ]
+                    },
+                    {
+                        label: "Skin Care",
+                        id: "skin-care",
+                        type: "group",
+                        children: [
+                            { label: "All Skin Care", link: "index.html?cat=skin-care", type: "link" },
+                            { label: "Cleansers", link: "index.html?cat=skin-care&sub=cleansers", type: "link" },
+                            { label: "Serums", link: "index.html?cat=skin-care&sub=serums", type: "link" },
+                            { label: "Creams", link: "index.html?cat=skin-care&sub=creams", type: "link" }
+                        ]
+                    },
+                    { label: "Sets & Bundles", link: "index.html?cat=sets", type: "link" }
+                ]
+            },
+            {
+                label: "Our Identity",
+                link: "identity.html",
+                type: "link",
+                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>`
+            },
+            {
+                label: "About Us",
+                link: "about.html",
+                type: "link",
+                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
+            },
+            {
+                label: "Contact",
+                link: "#contact",
+                type: "link",
+                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`
+            }
+        ];
+
+        const createMenuNode = (item) => {
+            if (item.type === "group") {
+                const group = document.createElement('div');
+                group.className = 'sidebar-menu-group';
+                if (item.id) group.dataset.id = item.id;
+
+                const toggle = document.createElement('div');
+                toggle.className = 'sidebar-menu-toggle';
+                toggle.innerHTML = `${item.icon || ''}<span>${item.label}</span><span class="toggle-icon"></span>`;
+
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const siblings = Array.from(group.parentElement.children);
+                    siblings.forEach(sibling => {
+                        if (sibling !== group && sibling.classList.contains('sidebar-menu-group')) {
+                            sibling.classList.remove('active');
+                        }
+                    });
+
+                    group.classList.toggle('active');
+                });
+
+                const submenu = document.createElement('div');
+                submenu.className = 'sidebar-submenu';
+
+                item.children.forEach(child => {
+                    submenu.appendChild(createMenuNode(child));
+                });
+
+                group.appendChild(toggle);
+                group.appendChild(submenu);
+                return group;
+            } else {
+                const link = document.createElement('a');
+                link.href = item.link;
+                link.innerHTML = `${item.icon || ''}<span>${item.label}</span>`;
+                if (item.className) {
+                    item.className.split(' ').forEach(cls => link.classList.add(cls));
+                }
+
+                // Attach click listener to close sidebar on ANY link tap
+                link.addEventListener('click', (e) => {
+                    // Specific logic for in-page 'index.html' routing (Shop grid refresh)
+                    if (item.link && item.link.includes('index.html') && window.location.pathname.includes('index.html')) {
+                        e.preventDefault();
+                        window.history.pushState({}, '', item.link);
+                        initShopPage(true);
+                        updateSidebarActiveState();
+                        if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
+                        updateMainPageSEO();
+                        if (window.dodchSEO) window.dodchSEO.runSEO();
+
+                        // Reset scroll position so new section starts from the top
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+
+                    // Always forcibly close the sidebar
+                    if (typeof closeSidebar === 'function') {
+                        closeSidebar();
+                    } else {
+                        document.body.style.overflow = '';
+                        const sb = document.getElementById('desktop-sidebar');
+                        const overlay = document.querySelector('.sidebar-overlay');
+                        const hamb = document.querySelector('.hamburger');
+                        if (sb) sb.classList.remove('active');
+                        if (overlay) overlay.classList.remove('active');
+                        if (hamb) hamb.classList.remove('active');
+                    }
+                });
+                return link;
+            }
+        };
+
+        menuItems.forEach(item => {
+            sidebarMenu.appendChild(createMenuNode(item));
+        });
+        const currentPath = window.location.pathname;
+        const urlParams = new URLSearchParams(window.location.search);
+        const cat = urlParams.get('cat');
+        const isShopPage = currentPath.endsWith('/') || currentPath.endsWith('index.html');
+
+        if (isShopPage || currentPath.includes('product.html')) {
+            const homeGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="home"]');
+            if (homeGroup) homeGroup.classList.add('active');
+
+            if (cat === 'hair-care') {
+                const hairGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="hair-care"]');
+                if (hairGroup) hairGroup.classList.add('active');
+            } else if (cat === 'skin-care') {
+                const faceGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="skin-care"]');
+                if (faceGroup) faceGroup.classList.add('active');
+            }
+        }
+    };
+
+    renderSidebarMenu(false);
+    const updateSidebarActiveState = () => {
+        const currentUrl = new URL(window.location.href);
+        const isBaseHomePage = (currentUrl.pathname.endsWith('/') || currentUrl.pathname.endsWith('/index.html')) && currentUrl.search === '';
+        if (isBaseHomePage) {
+            currentUrl.searchParams.set('cat', 'all');
+        }
+        document.querySelectorAll('.sidebar-menu-group.active').forEach(g => g.classList.remove('active'));
+        document.querySelectorAll('.sidebar-menu a.active').forEach(l => l.classList.remove('active'));
+
+        let bestMatch = null;
+        let maxScore = -1;
+
+        document.querySelectorAll('.sidebar-menu a').forEach(link => {
+            // Skip pure hash anchors (e.g. #contact) — they are in-page section links,
+            // not page navigation links, and their resolved pathname always matches the
+            // current page, causing them to incorrectly appear as "active".
+            const rawHref = link.getAttribute('href') || '';
+            if (rawHref.startsWith('#')) return;
+
+            const linkUrl = new URL(link.href, window.location.origin);
+            let score = 0;
+            if (linkUrl.pathname !== currentUrl.pathname) {
+                return;
+            }
+            score = 1;
+            const currentParams = currentUrl.searchParams;
+            const linkParams = linkUrl.searchParams;
+
+            if (currentUrl.search === linkUrl.search) {
+                score = 10; // Perfect match is best
+            } else {
+                let paramsMatch = true;
+                let matchCount = 0;
+                for (const [key, value] of linkParams.entries()) {
+                    if (currentParams.get(key) !== value) {
+                        paramsMatch = false;
+                        break;
+                    }
+                    matchCount++;
+                }
+
+                if (paramsMatch) {
+                    score += matchCount;
+                } else {
+                    score = 0; // Not a valid candidate
+                }
+            }
+
+            if (score > maxScore) {
+                maxScore = score;
+                bestMatch = link;
+            }
+        });
+
+        if (bestMatch) {
+            bestMatch.classList.add('active');
+            let parent = bestMatch.closest('.sidebar-menu-group');
+            while (parent) {
+                parent.classList.add('active');
+                parent = parent.parentElement.closest('.sidebar-menu-group');
+            }
+            setTimeout(() => {
+                const sidebar = document.getElementById('desktop-sidebar');
+                if (sidebar && (window.innerWidth >= 768 || sidebar.classList.contains('active'))) {
+                    bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 500);
+        }
+    };
+    updateSidebarActiveState();
+    const initContactHighlight = () => {
+        const highlight = () => {
+            const contactSection = document.getElementById('contact');
+            if (contactSection) {
+                contactSection.scrollIntoView({ behavior: 'smooth' });
+                contactSection.classList.remove('highlight-section');
+                void contactSection.offsetWidth; // Trigger reflow
+                contactSection.classList.add('highlight-section');
+
+                setTimeout(() => {
+                    contactSection.classList.remove('highlight-section');
+                }, 2000);
+            }
+        };
+
+        if (initialHash === '#contact') {
+            setTimeout(highlight, 1000);
+        }
+
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (link) {
+                const href = link.getAttribute('href');
+                if (href && (href === '#contact' || href.endsWith('#contact'))) {
+                    setTimeout(highlight, 100);
+                }
+            }
+        });
+    };
+    initContactHighlight();
+    const initAdminPage = async () => {
+        const debounce = (func, wait) => {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        };
+
+        const adminOrdersList = document.getElementById('admin-orders-list');
+        const adminProductsList = document.getElementById('admin-products-list');
+
+        if (!adminOrdersList) return; // Not on admin page
+
+        const checkExportEligibility = async () => {
+            const exportBtn = document.getElementById('admin-export-btn');
+            if (!exportBtn) return;
+            try {
+                // Check system-wide for any orders that are not terminal (Delivered/Cancelled) and not yet exported
+                const q = query(collection(db, "orders"));
+                const querySnapshot = await getDocs(q);
+                let pendingCount = 0;
+                let exportableCount = 0;
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.exported) return;
+                    if (['Pending', 'Confirmed', 'In Delivery'].includes(data.status)) pendingCount++;
+                    else if (['Delivered', 'Cancelled', 'Local Order'].includes(data.status)) exportableCount++;
+                });
+                if (pendingCount > 0) {
+                    exportBtn.disabled = true;
+                    exportBtn.style.opacity = "0.5";
+                    exportBtn.title = `Export locked: ${pendingCount} order(s) still in progress.`;
+                } else if (exportableCount === 0) {
+                    exportBtn.disabled = true;
+                    exportBtn.style.opacity = "0.5";
+                    exportBtn.title = "No new delivered orders to export.";
+                } else {
+                    exportBtn.disabled = false;
+                    exportBtn.style.opacity = "1";
+                    exportBtn.title = `Export ${exportableCount} delivered order(s).`;
+                }
+            } catch (err) { console.warn("Eligibility check failed", err); }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user || user.uid !== ADMIN_UID) {
+                window.location.href = 'index.html';
+            } else {
+                loadAdminOrders();
+                loadAdminProducts();
+                loadRevenueChart();
+                
+                // Add "Create Local Order" button - Refined to find the best header element
+                let adminOrdersHeader = document.querySelector('#tab-orders .admin-header');
+                if (!adminOrdersHeader) {
+                    const exportBtnAnchor = document.getElementById('admin-export-btn');
+                    if (exportBtnAnchor) adminOrdersHeader = exportBtnAnchor.parentElement;
+                }
+
+                if (adminOrdersHeader && !document.getElementById('create-local-order-btn')) {
+                    adminOrdersHeader.insertAdjacentHTML('beforeend', '<button id="create-local-order-btn" class="admin-btn btn-add" style="margin-left: 1rem;">+ Create Local Order</button>');
+                    // Fix: Attach listener immediately after dynamic creation
+                    document.getElementById('create-local-order-btn').addEventListener('click', () => {
+                        if (typeof openLocalOrderModal === 'function') openLocalOrderModal();
+                    });
+                }
+                loadAdminMessages();
+                loadAdminReports();
+                checkExportEligibility();
+            }
+        });
+        const tabs = document.querySelectorAll('.admin-tab-btn');
+        const panes = document.querySelectorAll('.tab-pane');
+
+        // --- Local Order Modal HTML ---
+        const localOrderModalHTML = `
             <div id="local-order-modal" class="local-order-modal">
                 <div class="local-order-modal-content">
                     <button id="close-local-order-modal" class="qv-close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
@@ -603,7 +4675,7 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                         <div class="form-group">
                             <select id="lo-customer-city" required>
                                 <option value="" disabled selected>Select Governorate</option>
-                                ${Ge.TUNISIA_GOVERNORATES.map(u=>`<option value="${u}">${u}</option>`).join("")}
+                                ${SecurityValidator.TUNISIA_GOVERNORATES.map(gov => `<option value="${gov}">${gov}</option>`).join('')}
                             </select>
                         </div>
                         <div class="form-group">
@@ -659,20 +4731,501 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                     </form>
                 </div>
             </div>
-        `;document.body.insertAdjacentHTML("beforeend",H);const v=document.getElementById("local-order-modal"),b=document.getElementById("close-local-order-modal"),y=document.getElementById("local-order-form"),S=document.getElementById("lo-apply-shipping"),E=document.getElementById("lo-product-search"),A=document.getElementById("lo-product-suggestions"),N=document.getElementById("lo-selected-product-details"),J=document.getElementById("lo-selected-product-name"),D=document.getElementById("lo-selected-product-img"),R=document.getElementById("lo-product-size"),f=document.getElementById("lo-product-qty"),L=document.getElementById("lo-add-product-btn"),Z=document.getElementById("lo-current-items-list"),xe=document.getElementById("lo-subtotal"),ue=document.getElementById("lo-shipping"),Q=document.getElementById("lo-total"),ve=document.getElementById("lo-cancel-btn"),be=document.getElementById("lo-place-order-btn");let ke=[],W=null;n.forEach(u=>{u.addEventListener("click",()=>{n.forEach(T=>T.classList.remove("active")),r.forEach(T=>T.classList.remove("active")),u.classList.add("active");const x=document.getElementById(`tab-${u.dataset.tab}`);x&&x.classList.add("active")})});const ne=()=>{ke=[],I(),K(),y.reset(),N.style.display="none",A.style.display="none",v&&(v.classList.add("active"),document.body.style.overflow="hidden")},P=()=>{v&&(v.classList.remove("active"),document.body.style.overflow="")},I=()=>{if(Z.innerHTML="",ke.length===0){Z.innerHTML='<p style="opacity: 0.7;">No products added yet.</p>';return}ke.forEach((u,x)=>{const T=document.createElement("div");T.className="local-order-product-item",T.innerHTML=`
-                    <img src="${u.image}" alt="${u.name}">
+        `;
+        document.body.insertAdjacentHTML('beforeend', localOrderModalHTML);
+
+        // --- Local Order Modal Elements ---
+        const localOrderModal = document.getElementById('local-order-modal');
+        const closeLocalOrderModalBtn = document.getElementById('close-local-order-modal');
+        const localOrderForm = document.getElementById('local-order-form');
+        const loApplyShippingCheckbox = document.getElementById('lo-apply-shipping');
+        const loProductSearch = document.getElementById('lo-product-search');
+        const loProductSuggestions = document.getElementById('lo-product-suggestions');
+        const loSelectedProductDetails = document.getElementById('lo-selected-product-details');
+        const loSelectedProductName = document.getElementById('lo-selected-product-name');
+        const loSelectedProductImg = document.getElementById('lo-selected-product-img');
+        const loProductSize = document.getElementById('lo-product-size');
+        const loProductQty = document.getElementById('lo-product-qty');
+        const loAddProductBtn = document.getElementById('lo-add-product-btn');
+        const loCurrentItemsList = document.getElementById('lo-current-items-list');
+        const loSubtotalEl = document.getElementById('lo-subtotal');
+        const loShippingEl = document.getElementById('lo-shipping');
+        const loTotalEl = document.getElementById('lo-total');
+        const loCancelBtn = document.getElementById('lo-cancel-btn');
+        const loPlaceOrderBtn = document.getElementById('lo-place-order-btn');
+
+        let localOrderCart = [];
+        let selectedProductForAdd = null;
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                panes.forEach(p => p.classList.remove('active'));
+
+                tab.classList.add('active');
+                const targetPane = document.getElementById(`tab-${tab.dataset.tab}`);
+                if (targetPane) targetPane.classList.add('active');
+            });
+        });
+
+        // --- Local Order Modal Functions ---
+        const openLocalOrderModal = () => {
+            localOrderCart = [];
+            renderLocalOrderProducts();
+            updateLocalOrderSummary();
+            localOrderForm.reset();
+            loSelectedProductDetails.style.display = 'none';
+            loProductSuggestions.style.display = 'none';
+            if (localOrderModal) {
+                localOrderModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        const closeLocalOrderModal = () => {
+            if (localOrderModal) {
+                localOrderModal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        };
+
+        const renderLocalOrderProducts = () => {
+            loCurrentItemsList.innerHTML = '';
+            if (localOrderCart.length === 0) {
+                loCurrentItemsList.innerHTML = '<p style="opacity: 0.7;">No products added yet.</p>';
+                return;
+            }
+            localOrderCart.forEach((item, index) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'local-order-product-item';
+                itemEl.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}">
                     <div style="flex: 1;">
-                        <p style="margin: 0; font-weight: 600;">${u.name} (${u.size})</p>
-                        <p style="margin: 0; font-size: 0.9rem; color: #666;">Qty: ${u.quantity} @ ${u.price} TND</p>
+                        <p style="margin: 0; font-weight: 600;">${item.name} (${item.size})</p>
+                        <p style="margin: 0; font-size: 0.9rem; color: #666;">Qty: ${item.quantity} @ ${item.price} TND</p>
                     </div>
-                    <button type="button" class="admin-btn btn-delete lo-remove-item-btn" data-index="${x}">Remove</button>
-                `,Z.appendChild(T)}),document.querySelectorAll(".lo-remove-item-btn").forEach(u=>{u.addEventListener("click",x=>{const T=parseInt(x.target.dataset.index);ke.splice(T,1),I(),K()})})},K=()=>{let u=0;ke.forEach(g=>{u+=parseFloat(g.price)*g.quantity});const x=S?S.checked:!0,T=7,M=100;let $=0;x&&($=u>=M?0:T);const h=u+$;xe.textContent=`${u.toFixed(2)} TND`,ue.textContent=`${$.toFixed(2)} TND`,Q.textContent=`${h.toFixed(2)} TND`};b&&b.addEventListener("click",P),ve&&ve.addEventListener("click",P),v&&v.addEventListener("click",u=>{u.target===v&&P()}),S&&S.addEventListener("change",K),E.addEventListener("input",a(()=>{const u=E.value.toLowerCase();if(A.innerHTML="",u.length<2){A.style.display="none";return}const x=Object.entries(w).filter(([,T])=>T.name.toLowerCase().includes(u)||T.subtitle.toLowerCase().includes(u));x.length>0?(x.slice(0,5).forEach(([T,M])=>{const $=document.createElement("div");$.textContent=M.name,$.addEventListener("click",()=>{if(W={id:T,...M},E.value=M.name,A.style.display="none",N.style.display="block",J.textContent=M.name,D.src=kt(M),R.innerHTML="",M.sizes&&M.sizes.length>0)M.sizes.forEach(h=>{const g=document.createElement("option");g.value=h.label,g.textContent=`${h.label} (${h.price} TND)`,R.appendChild(g)});else{const h=document.createElement("option");h.value="Standard",h.textContent=`Standard (${M.price} TND)`,R.appendChild(h)}f.value=1}),A.appendChild($)}),A.style.display="block"):A.style.display="none"},300)),L.addEventListener("click",()=>{if(!W){window.showToast("Please select a product first.","error");return}const u=R.value,x=parseInt(f.value);if(isNaN(x)||x<=0){window.showToast("Please enter a valid quantity.","error");return}let T=W.price;if(W.sizes&&W.sizes.length>0){const $=W.sizes.find(h=>h.label===u);$&&(T=$.price)}const M=ke.findIndex($=>$.productId===W.id&&$.size===u);M>-1?ke[M].quantity+=x:ke.push({productId:W.id,name:W.name,size:u,price:parseFloat(T).toFixed(2),image:kt(W),quantity:x}),I(),K(),E.value="",N.style.display="none",W=null}),y.addEventListener("submit",async u=>{if(u.preventDefault(),ke.length===0){window.showToast("Please add products to the order.","error");return}const x=document.getElementById("lo-customer-name").value.trim(),T=document.getElementById("lo-customer-email").value.trim(),M=document.getElementById("lo-customer-phone").value.trim(),$=document.getElementById("lo-customer-address").value.trim(),h=document.getElementById("lo-customer-city").value.trim(),g=document.getElementById("lo-customer-postal").value.trim();if(T&&!Ge.validateEmail(T)){window.showToast("Invalid customer email.","error");return}if(M&&!Ge.validatePhone(M)){window.showToast("Invalid customer phone number.","error");return}if(!Ge.TUNISIA_GOVERNORATES.includes(h)){window.showToast("Invalid customer city.","error");return}if(Ge.isProfane(x)||Ge.isProfane($)){window.showToast("Inappropriate language detected in customer details.","error");return}be.disabled=!0,be.textContent="Placing Order...";try{const oe="LO-"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,5).toUpperCase();let se=0;const de=ke.map(Ie=>{se+=parseFloat(Ie.price)*Ie.quantity;const Oe=w[Ie.productId],Xe=Oe?.sizes?.find(Fe=>Fe.label===Ie.size);return{...Ie,price:parseFloat(Ie.price),batchNumber:Xe?.batchNumber||Oe?.batchNumber||"N/A",expiryDate:Xe?.expiryDate||Oe?.expiryDate||"N/A"}}),C=(S?S.checked:!0)&&se<100?7:0,ge=se+C,k={orderReference:oe,items:de,shipping:{email:T,fullName:x,phone:M,address:$,city:h,postalCode:g},subtotal:parseFloat(se.toFixed(2)),shippingFee:C,total:parseFloat(ge.toFixed(2)),status:"Local Order",type:"local",adminId:Ke.uid,timestamp:Et()};await to(Re(ae,"orders"),k),window.showToast("Local order placed successfully!","success"),P(),Dt()}catch(oe){console.error("Error placing local order:",oe),window.showToast("Failed to place local order.","error")}finally{be.disabled=!1,be.textContent="Place Local Order"}});const q=document.getElementById("add-product-modal"),Ee=document.getElementById("admin-add-product-btn"),me=document.getElementById("cancel-product-edit"),he=document.getElementById("add-product-form"),$e=document.getElementById("add-size-btn"),ye=document.getElementById("new-prod-sizes-container"),we=document.getElementById("new-prod-image-paths");let Le=null;const ze=()=>{const u=document.querySelector('button[type="submit"][form="add-product-form"]');if(!u)return;if(!Le){u.disabled=!1;return}const x=w[Le];if(!x)return;let T=!1;if(document.getElementById("new-prod-name").value.trim()!==(x.name||"")&&(T=!0),document.getElementById("new-prod-subtitle").value.trim()!==(x.subtitle||"")&&(T=!0),document.getElementById("new-prod-desc").value.trim()!==(x.description||"")&&(T=!0),document.getElementById("new-prod-inci").value.trim()!==(x.inci||"")&&(T=!0),(document.getElementById("new-prod-story-url")?.value.trim()||"")!==(x.storyUrl||"")&&(T=!0),(document.getElementById("new-prod-notice")?.value.trim()||"")!==(x.notice||"")&&(T=!0),!T){const $=ut(we.value),h=x.images&&Array.isArray(x.images)&&x.images.length>0?x.images:x.image?[x.image]:[];JSON.stringify($)!==JSON.stringify(h)&&(T=!0)}if(!T){const $=Array.from(ye.querySelectorAll(".size-input-row")).map(g=>({label:g.querySelector(".size-label-input").value,price:parseFloat(g.querySelector(".size-price-input").value).toFixed(2),originalPrice:g.querySelector(".size-original-price-input").value?parseFloat(g.querySelector(".size-original-price-input").value).toFixed(2):null,batchNumber:g.querySelector(".size-batch-input").value.trim(),expiryDate:g.querySelector(".size-expiry-input").value})),h=(x.sizes||[]).map(g=>({label:g.label,price:parseFloat(g.price).toFixed(2),originalPrice:g.originalPrice?parseFloat(g.originalPrice).toFixed(2):null,batchNumber:g.batchNumber||"",expiryDate:g.expiryDate||""}));JSON.stringify($)!==JSON.stringify(h)&&(T=!0)}if(!T){const $=Array.from(document.querySelectorAll(".performance-input-row")).map(g=>({label:g.querySelector(".metric-label-input").value.trim(),value:parseInt(g.querySelector(".metric-value-input").value)||0,levels:Array.from(g.querySelectorAll(".metric-level-label-input")).map(oe=>oe.value.trim())})),h=(x.performance||[]).map(g=>({label:g.label||"",value:parseInt(g.value)||0,levels:(g.levels||[]).map(oe=>oe.trim())}));JSON.stringify($)!==JSON.stringify(h)&&(T=!0)}u.disabled=!T},je=document.getElementById("image-preview-gallery"),ut=u=>u?u.split(/\r?\n|,\s*/).map(x=>x.trim()).filter(x=>x.length>0):[],yt=()=>{if(!je||!we)return;const u=ut(we.value);if(je.innerHTML="",u.length===0){je.style.display="none";return}je.style.display="flex",u.forEach((x,T)=>{const M=document.createElement("div");M.className="image-preview-item",M.style.position="relative",M.style.marginRight="0.75rem",M.style.marginBottom="0.75rem",M.style.maxWidth="110px",M.style.border="1px solid #e0e0e0",M.style.borderRadius="12px",M.style.overflow="hidden",M.style.background="#fff";const $=document.createElement("img");$.loading="lazy",$.src=x,$.alt=`Preview ${T+1}`,$.style.width="100%",$.style.height="100%",$.style.objectFit="cover",$.style.display="block",M.appendChild($),je.appendChild(M)})},De=document.getElementById("add-image-path-btn");we&&we.addEventListener("input",yt),De&&we&&De.addEventListener("click",()=>{we.value.trim()?we.value.endsWith(`
-`)||(we.value+=`
-`):we.value="",we.focus(),yt()});const Ze=()=>{if(q){q.style.display="flex",setTimeout(()=>q.classList.add("active"),10),q.querySelectorAll(".aem-tab-btn").forEach(T=>T.classList.toggle("active",T.dataset.tab==="general")),q.querySelectorAll(".aem-tab-pane").forEach(T=>T.classList.toggle("active",T.dataset.tab==="general"));const u=document.getElementById("product-modal-title"),x=document.getElementById("new-prod-performance-container");u&&u.textContent==="Add New Product"&&x&&x.children.length===0&&(It({label:"Hydration",value:3,levels:["Dry","Normal","Hydrated","Intense"]}),It({label:"Shine",value:2,levels:["Matte","Natural","Glow","Glass-like"]}))}},mt=()=>{q&&(q.classList.remove("active"),Le=null,setTimeout(()=>{q.style.display="none",document.getElementById("new-prod-name")&&(document.getElementById("new-prod-name").value=""),document.getElementById("new-prod-subtitle")&&(document.getElementById("new-prod-subtitle").value=""),document.getElementById("new-prod-desc")&&(document.getElementById("new-prod-desc").value=""),document.getElementById("new-prod-inci")&&(document.getElementById("new-prod-inci").value=""),document.getElementById("new-prod-notice")&&(document.getElementById("new-prod-notice").value=""),document.getElementById("new-prod-story-url")&&(document.getElementById("new-prod-story-url").value=""),document.getElementById("new-prod-performance-container")&&(document.getElementById("new-prod-performance-container").innerHTML=""),ye&&(ye.innerHTML=""),document.getElementById("batch-history-container")&&(document.getElementById("batch-history-container").innerHTML="");const u=document.getElementById("aem-history-tab-btn");u&&(u.style.display="none"),q.querySelectorAll(".aem-tab-btn").forEach(T=>T.classList.toggle("active",T.dataset.tab==="general")),q.querySelectorAll(".aem-tab-pane").forEach(T=>T.classList.toggle("active",T.dataset.tab==="general"));const x=document.getElementById("product-id-input");x&&(x.value=""),we&&(we.value=""),yt()},300))};Ee&&Ee.addEventListener("click",()=>{const u=document.getElementById("product-modal-title");u&&(u.textContent="Add New Product"),Le=null,Ze(),ze()}),me&&me.addEventListener("click",mt),q&&q.addEventListener("click",u=>{u.target===q&&mt()});const Ut=(u={label:"",price:"",originalPrice:"",batchNumber:"",expiryDate:"",formulaVersion:""})=>{if(!ye)return;const x=document.createElement("div");x.className="size-card",x.innerHTML=`
+                    <button type="button" class="admin-btn btn-delete lo-remove-item-btn" data-index="${index}">Remove</button>
+                `;
+                loCurrentItemsList.appendChild(itemEl);
+            });
+            document.querySelectorAll('.lo-remove-item-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    localOrderCart.splice(index, 1);
+                    renderLocalOrderProducts();
+                    updateLocalOrderSummary();
+                });
+            });
+        };
+
+        const updateLocalOrderSummary = () => {
+            let subtotal = 0;
+            localOrderCart.forEach(item => {
+                subtotal += parseFloat(item.price) * item.quantity;
+            });
+
+            const applyShipping = loApplyShippingCheckbox ? loApplyShippingCheckbox.checked : true;
+            const SHIPPING_FEE = 7;
+            const FREE_SHIPPING_THRESHOLD = 100;
+
+            let shippingFee = 0;
+            if (applyShipping) {
+                shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+            }
+
+            const total = subtotal + shippingFee;
+
+            loSubtotalEl.textContent = `${subtotal.toFixed(2)} TND`;
+            loShippingEl.textContent = `${shippingFee.toFixed(2)} TND`;
+            loTotalEl.textContent = `${total.toFixed(2)} TND`;
+        };
+
+        // --- Event Listeners for Local Order Modal ---
+        if (closeLocalOrderModalBtn) closeLocalOrderModalBtn.addEventListener('click', closeLocalOrderModal);
+        if (loCancelBtn) loCancelBtn.addEventListener('click', closeLocalOrderModal);
+        if (localOrderModal) localOrderModal.addEventListener('click', (e) => {
+            if (e.target === localOrderModal) closeLocalOrderModal();
+        });
+
+        if (loApplyShippingCheckbox) {
+            loApplyShippingCheckbox.addEventListener('change', updateLocalOrderSummary);
+        }
+
+        loProductSearch.addEventListener('input', debounce(() => {
+            const searchTerm = loProductSearch.value.toLowerCase();
+            loProductSuggestions.innerHTML = '';
+            if (searchTerm.length < 2) {
+                loProductSuggestions.style.display = 'none';
+                return;
+            }
+
+            const filteredProducts = Object.entries(productCatalog).filter(([, prod]) =>
+                prod.name.toLowerCase().includes(searchTerm) || prod.subtitle.toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredProducts.length > 0) {
+                filteredProducts.slice(0, 5).forEach(([id, prod]) => {
+                    const suggestionEl = document.createElement('div');
+                    suggestionEl.textContent = prod.name;
+                    suggestionEl.addEventListener('click', () => {
+                        selectedProductForAdd = { id, ...prod };
+                        loProductSearch.value = prod.name;
+                        loProductSuggestions.style.display = 'none';
+                        loSelectedProductDetails.style.display = 'block';
+                        loSelectedProductName.textContent = prod.name;
+                        loSelectedProductImg.src = getProductPrimaryImage(prod);
+                        loProductSize.innerHTML = '';
+                        if (prod.sizes && prod.sizes.length > 0) {
+                            prod.sizes.forEach(size => {
+                                const option = document.createElement('option');
+                                option.value = size.label;
+                                option.textContent = `${size.label} (${size.price} TND)`;
+                                loProductSize.appendChild(option);
+                            });
+                        } else {
+                            const option = document.createElement('option');
+                            option.value = 'Standard';
+                            option.textContent = `Standard (${prod.price} TND)`;
+                            loProductSize.appendChild(option);
+                        }
+                        loProductQty.value = 1;
+                    });
+                    loProductSuggestions.appendChild(suggestionEl);
+                });
+                loProductSuggestions.style.display = 'block';
+            } else {
+                loProductSuggestions.style.display = 'none';
+            }
+        }, 300));
+
+        loAddProductBtn.addEventListener('click', () => {
+            if (!selectedProductForAdd) {
+                window.showToast("Please select a product first.", "error");
+                return;
+            }
+            const sizeLabel = loProductSize.value;
+            const quantity = parseInt(loProductQty.value);
+            if (isNaN(quantity) || quantity <= 0) {
+                window.showToast("Please enter a valid quantity.", "error");
+                return;
+            }
+
+            let price = selectedProductForAdd.price;
+            if (selectedProductForAdd.sizes && selectedProductForAdd.sizes.length > 0) {
+                const selectedSize = selectedProductForAdd.sizes.find(s => s.label === sizeLabel);
+                if (selectedSize) price = selectedSize.price;
+            }
+
+            const existingItemIndex = localOrderCart.findIndex(item => item.productId === selectedProductForAdd.id && item.size === sizeLabel);
+            if (existingItemIndex > -1) {
+                localOrderCart[existingItemIndex].quantity += quantity;
+            } else {
+                localOrderCart.push({
+                    productId: selectedProductForAdd.id,
+                    name: selectedProductForAdd.name,
+                    size: sizeLabel,
+                    price: parseFloat(price).toFixed(2),
+                    image: getProductPrimaryImage(selectedProductForAdd),
+                    quantity: quantity
+                });
+            }
+            renderLocalOrderProducts();
+            updateLocalOrderSummary();
+            loProductSearch.value = '';
+            loSelectedProductDetails.style.display = 'none';
+            selectedProductForAdd = null;
+        });
+
+        localOrderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (localOrderCart.length === 0) {
+                window.showToast("Please add products to the order.", "error");
+                return;
+            }
+
+            const customerName = document.getElementById('lo-customer-name').value.trim();
+            const customerEmail = document.getElementById('lo-customer-email').value.trim();
+            const customerPhone = document.getElementById('lo-customer-phone').value.trim();
+            const customerAddress = document.getElementById('lo-customer-address').value.trim();
+            const customerCity = document.getElementById('lo-customer-city').value.trim();
+            const customerPostal = document.getElementById('lo-customer-postal').value.trim();
+
+            if (customerEmail && !SecurityValidator.validateEmail(customerEmail)) { window.showToast("Invalid customer email.", "error"); return; }
+            if (customerPhone && !SecurityValidator.validatePhone(customerPhone)) { window.showToast("Invalid customer phone number.", "error"); return; }
+            if (!SecurityValidator.TUNISIA_GOVERNORATES.includes(customerCity)) { window.showToast("Invalid customer city.", "error"); return; }
+            if (SecurityValidator.isProfane(customerName) || SecurityValidator.isProfane(customerAddress)) { window.showToast("Inappropriate language detected in customer details.", "error"); return; }
+
+            loPlaceOrderBtn.disabled = true;
+            loPlaceOrderBtn.textContent = 'Placing Order...';
+
+            try {
+                const orderReference = 'LO-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
+                let calculatedSubtotal = 0;
+                const itemsForFirestore = localOrderCart.map(item => {
+                    calculatedSubtotal += parseFloat(item.price) * item.quantity;
+                    const prod = productCatalog[item.productId];
+                    const sizeInfo = prod?.sizes?.find(s => s.label === item.size);
+                    return { 
+                        ...item, 
+                        price: parseFloat(item.price),
+                        batchNumber: sizeInfo?.batchNumber || prod?.batchNumber || 'N/A',
+                        expiryDate: sizeInfo?.expiryDate || prod?.expiryDate || 'N/A'
+                    }; 
+                });
+
+                const applyShipping = loApplyShippingCheckbox ? loApplyShippingCheckbox.checked : true;
+                const SHIPPING_FEE = 7;
+                const FREE_SHIPPING_THRESHOLD = 100;
+                const shippingFee = (applyShipping && calculatedSubtotal < FREE_SHIPPING_THRESHOLD) ? SHIPPING_FEE : 0;
+                const finalTotal = calculatedSubtotal + shippingFee;
+
+                const orderData = {
+                    orderReference: orderReference,
+                    items: itemsForFirestore,
+                    shipping: {
+                        email: customerEmail,
+                        fullName: customerName,
+                        phone: customerPhone,
+                        address: customerAddress,
+                        city: customerCity,
+                        postalCode: customerPostal
+                    },
+                    subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
+                    shippingFee: shippingFee,
+                    total: parseFloat(finalTotal.toFixed(2)),
+                    status: 'Local Order', // Custom status for local orders
+                    type: 'local', // Custom type flag
+                    adminId: currentUser.uid, // Track which admin created it
+                    timestamp: serverTimestamp()
+                };
+
+                await addDoc(collection(db, "orders"), orderData);
+                window.showToast("Local order placed successfully!", "success");
+                closeLocalOrderModal();
+                loadAdminOrders(); // Refresh the orders list
+            } catch (error) {
+                console.error("Error placing local order:", error);
+                window.showToast("Failed to place local order.", "error");
+            } finally {
+                loPlaceOrderBtn.disabled = false;
+                loPlaceOrderBtn.textContent = 'Place Local Order';
+            }
+        });
+
+        const addProductModal = document.getElementById('add-product-modal');
+        const addProductBtn = document.getElementById('admin-add-product-btn');
+        const cancelProductEditBtn = document.getElementById('cancel-product-edit');
+        const addProductForm = document.getElementById('add-product-form');
+        const addSizeBtn = document.getElementById('add-size-btn');
+        const sizesContainer = document.getElementById('new-prod-sizes-container');
+        const imagePathInput = document.getElementById('new-prod-image-paths');
+
+        let currentModalProductId = null; // Track if we are editing an existing product
+
+        const checkModalChanges = () => {
+            const submitBtn = document.querySelector('button[type="submit"][form="add-product-form"]');
+            if (!submitBtn) return;
+
+            if (!currentModalProductId) {
+                submitBtn.disabled = false; // Always allow save for "Add New Product"
+                return;
+            }
+
+            const product = productCatalog[currentModalProductId];
+            if (!product) return;
+
+            let hasChanged = false;
+
+            // 1. Basic Fields
+            if (document.getElementById('new-prod-name').value.trim() !== (product.name || '')) hasChanged = true;
+            if (document.getElementById('new-prod-subtitle').value.trim() !== (product.subtitle || '')) hasChanged = true;
+            if (document.getElementById('new-prod-desc').value.trim() !== (product.description || '')) hasChanged = true;
+            if (document.getElementById('new-prod-inci').value.trim() !== (product.inci || '')) hasChanged = true;
+            if ((document.getElementById('new-prod-story-url')?.value.trim() || '') !== (product.storyUrl || '')) hasChanged = true;
+            const noticeVal = document.getElementById('new-prod-notice')?.value.trim() || "";
+            if (noticeVal !== (product.notice || "")) hasChanged = true;
+
+            // 2. Images
+            if (!hasChanged) {
+                const paths = parseImagePaths(imagePathInput.value);
+                const originalPaths = product.images && Array.isArray(product.images) && product.images.length > 0
+                    ? product.images
+                    : (product.image ? [product.image] : []);
+                if (JSON.stringify(paths) !== JSON.stringify(originalPaths)) hasChanged = true;
+            }
+
+            // 3. Sizes
+            if (!hasChanged) {
+                const currentSizes = Array.from(sizesContainer.querySelectorAll('.size-card')).map(row => ({
+                    label: row.querySelector('.size-label-input').value,
+                    price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
+                    originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
+                    batchNumber: row.querySelector('.size-batch-input').value.trim(),
+                    expiryDate: row.querySelector('.size-expiry-input').value
+                }));
+                
+                const originalSizes = (product.sizes || []).map(s => ({
+                    label: s.label,
+                    price: parseFloat(s.price).toFixed(2),
+                    originalPrice: s.originalPrice ? parseFloat(s.originalPrice).toFixed(2) : null,
+                    batchNumber: s.batchNumber || '',
+                    expiryDate: s.expiryDate || ''
+                }));
+                if (JSON.stringify(currentSizes) !== JSON.stringify(originalSizes)) hasChanged = true;
+            }
+
+            // 4. Performance
+            if (!hasChanged) {
+                const currentPerf = Array.from(document.querySelectorAll('.metric-card')).map(row => ({
+                    label: row.querySelector('.metric-label-input').value.trim(),
+                    value: parseInt(row.querySelector('.metric-value-input').value) || 0,
+                    levels: Array.from(row.querySelectorAll('.metric-level-label-input')).map(inp => inp.value.trim())
+                }));
+                
+                const originalPerf = (product.performance || []).map(m => ({
+                    label: m.label || '',
+                    value: parseInt(m.value) || 0,
+                    levels: (m.levels || []).map(l => l.trim())
+                }));
+                if (JSON.stringify(currentPerf) !== JSON.stringify(originalPerf)) hasChanged = true;
+            }
+
+            submitBtn.disabled = !hasChanged;
+        };
+
+        const imagePreviewGallery = document.getElementById('image-preview-gallery');
+        const parseImagePaths = (raw) => {
+            if (!raw) return [];
+            return raw
+                .split(/\r?\n|,\s*/)
+                .map(path => path.trim())
+                .filter(path => path.length > 0);
+        };
+
+        const renderImagePreviews = () => {
+            if (!imagePreviewGallery || !imagePathInput) return;
+            const paths = parseImagePaths(imagePathInput.value);
+            imagePreviewGallery.innerHTML = '';
+
+            if (paths.length === 0) {
+                imagePreviewGallery.style.display = 'none';
+                return;
+            }
+
+            imagePreviewGallery.style.display = 'flex';
+            paths.forEach((path, index) => {
+                const item = document.createElement('div');
+                item.className = 'image-preview-item';
+                item.style.position = 'relative';
+                item.style.marginRight = '0.75rem';
+                item.style.marginBottom = '0.75rem';
+                item.style.maxWidth = '110px';
+                item.style.border = '1px solid #e0e0e0';
+                item.style.borderRadius = '12px';
+                item.style.overflow = 'hidden';
+                item.style.background = '#fff';
+
+                const img = document.createElement('img');
+                img.loading = 'lazy';
+                img.src = path;
+                img.alt = `Preview ${index + 1}`;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.display = 'block';
+                item.appendChild(img);
+
+                imagePreviewGallery.appendChild(item);
+            });
+        };
+
+        const addImagePathBtn = document.getElementById('add-image-path-btn');
+
+        if (imagePathInput) {
+            imagePathInput.addEventListener('input', renderImagePreviews);
+        }
+        if (addImagePathBtn && imagePathInput) {
+            addImagePathBtn.addEventListener('click', () => {
+                if (!imagePathInput.value.trim()) {
+                    imagePathInput.value = '';
+                } else if (!imagePathInput.value.endsWith('\n')) {
+                    imagePathInput.value += '\n';
+                }
+                imagePathInput.focus();
+                renderImagePreviews();
+            });
+        }
+
+        const openProductModal = () => {
+            if (addProductModal) {
+                addProductModal.style.display = 'flex';
+                setTimeout(() => addProductModal.classList.add('active'), 10);
+                // Reset to General tab
+                addProductModal.querySelectorAll('.aem-tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'general'));
+                addProductModal.querySelectorAll('.aem-tab-pane').forEach(pane => pane.classList.toggle('active', pane.dataset.tab === 'general'));
+                // Pre-populate default metrics for brand-new products
+                const title = document.getElementById('product-modal-title');
+                const perfContainer = document.getElementById('new-prod-performance-container');
+                if (title && title.textContent === 'Add New Product' && perfContainer && perfContainer.children.length === 0) {
+                    addPerformanceMetricRow({ label: 'Hydration', value: 3, levels: ['Dry', 'Normal', 'Hydrated', 'Intense'] });
+                    addPerformanceMetricRow({ label: 'Shine', value: 2, levels: ['Matte', 'Natural', 'Glow', 'Glass-like'] });
+                }
+            }
+        };
+
+        const closeProductModal = () => {
+            if (addProductModal) {
+                addProductModal.classList.remove('active');
+                currentModalProductId = null;
+                setTimeout(() => {
+                    addProductModal.style.display = 'none';
+                    if (document.getElementById('new-prod-name')) document.getElementById('new-prod-name').value = '';
+                    if (document.getElementById('new-prod-subtitle')) document.getElementById('new-prod-subtitle').value = '';
+                    if (document.getElementById('new-prod-desc')) document.getElementById('new-prod-desc').value = '';
+                    if (document.getElementById('new-prod-inci')) document.getElementById('new-prod-inci').value = '';
+                    if (document.getElementById('new-prod-notice')) document.getElementById('new-prod-notice').value = '';
+                    if (document.getElementById('new-prod-story-url')) document.getElementById('new-prod-story-url').value = '';
+                    if (document.getElementById('new-prod-performance-container')) document.getElementById('new-prod-performance-container').innerHTML = '';
+                    if (sizesContainer) sizesContainer.innerHTML = '';
+                    if (document.getElementById('batch-history-container')) document.getElementById('batch-history-container').innerHTML = '';
+                    // Hide history tab, reset to General
+                    const historyTabBtn = document.getElementById('aem-history-tab-btn');
+                    if (historyTabBtn) historyTabBtn.style.display = 'none';
+                    addProductModal.querySelectorAll('.aem-tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'general'));
+                    addProductModal.querySelectorAll('.aem-tab-pane').forEach(pane => pane.classList.toggle('active', pane.dataset.tab === 'general'));
+                    const productIdInput = document.getElementById('product-id-input');
+                    if (productIdInput) productIdInput.value = '';
+                    if (imagePathInput) imagePathInput.value = '';
+                    renderImagePreviews();
+                }, 300);
+            }
+        };
+
+        if (addProductBtn) {
+            addProductBtn.addEventListener('click', () => {
+                const modalTitle = document.getElementById('product-modal-title');
+                if (modalTitle) modalTitle.textContent = 'Add New Product';
+                currentModalProductId = null;
+                openProductModal();
+                checkModalChanges();
+            });
+        }
+        if (cancelProductEditBtn) cancelProductEditBtn.addEventListener('click', closeProductModal);
+        if (addProductModal) {
+            addProductModal.addEventListener('click', (e) => {
+                if (e.target === addProductModal) closeProductModal();
+            });
+        }
+
+        const addSizeInputRow = (size = { label: '', price: '', originalPrice: '', batchNumber: '', expiryDate: '', formulaVersion: '' }) => {
+            if (!sizesContainer) return;
+            const sizeRow = document.createElement('div');
+            sizeRow.className = 'size-card';
+            sizeRow.innerHTML = `
                 <div class="size-card-header">
                     <div class="size-card-chip">
                         <span class="size-card-chip-dot"></span>
-                        <span class="size-card-chip-label">${u.label||"New Size"}</span>
+                        <span class="size-card-chip-label">${size.label || 'New Size'}</span>
                     </div>
                     <button type="button" class="size-card-remove" aria-label="Remove size">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -682,37 +5235,59 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                     <div class="size-row-primary">
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Size Label <span class="badge-required">*</span></label>
-                            <input type="text" class="size-label-input modern-input" placeholder="e.g., 50ml" value="${u.label}" required>
+                            <input type="text" class="size-label-input modern-input" placeholder="e.g., 50ml" value="${size.label}" required>
                         </div>
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Price (TND) <span class="badge-required">*</span></label>
-                            <input type="number" step="0.01" class="size-price-input modern-input" placeholder="0.00" value="${u.price}" required>
+                            <input type="number" step="0.01" class="size-price-input modern-input" placeholder="0.00" value="${size.price}" required>
                         </div>
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Old Price</label>
-                            <input type="number" step="0.01" class="size-original-price-input modern-input" placeholder="\u2014" value="${u.originalPrice||""}">
+                            <input type="number" step="0.01" class="size-original-price-input modern-input" placeholder="—" value="${size.originalPrice || ''}">
                         </div>
                     </div>
                     <div class="size-row-batch">
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Batch #</label>
-                            <input type="text" class="size-batch-input modern-input" placeholder="e.g. 001" value="${u.batchNumber||""}">
+                            <input type="text" class="size-batch-input modern-input" placeholder="e.g. 001" value="${size.batchNumber || ''}">
                         </div>
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Expiry Date</label>
-                            <input type="date" class="size-expiry-input modern-input" value="${u.expiryDate||""}">
+                            <input type="date" class="size-expiry-input modern-input" value="${size.expiryDate || ''}">
                         </div>
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Formula Version</label>
-                            <input type="text" class="size-formula-input modern-input" placeholder="e.g. v2.1" value="${u.formulaVersion||""}">
+                            <input type="text" class="size-formula-input modern-input" placeholder="e.g. v2.1" value="${size.formulaVersion || ''}">
                         </div>
                     </div>
                 </div>
-            `;const T=x.querySelector(".size-label-input"),M=x.querySelector(".size-card-chip-label");T.addEventListener("input",()=>{M.textContent=T.value||"New Size"}),x.querySelectorAll("input").forEach($=>$.addEventListener("input",ze)),x.querySelector(".size-card-remove").addEventListener("click",async()=>{await window.showConfirm("Are you sure you want to remove this size option?","Remove Size")&&(x.remove(),ze())}),ye.appendChild(x)},It=(u={label:"",value:3,levels:["Low","Moderate","High","Intense"]})=>{const x=document.getElementById("new-prod-performance-container");if(!x)return;const T=document.createElement("div");T.className="metric-card",T.innerHTML=`
+            `;
+            // Live chip label update
+            const labelInput = sizeRow.querySelector('.size-label-input');
+            const chipLabel = sizeRow.querySelector('.size-card-chip-label');
+            labelInput.addEventListener('input', () => {
+                chipLabel.textContent = labelInput.value || 'New Size';
+            });
+            sizeRow.querySelectorAll('input').forEach(inp => inp.addEventListener('input', checkModalChanges));
+            sizeRow.querySelector('.size-card-remove').addEventListener('click', async () => {
+                if (await window.showConfirm("Are you sure you want to remove this size option?", "Remove Size")) {
+                    sizeRow.remove();
+                    checkModalChanges();
+                }
+            });
+            sizesContainer.appendChild(sizeRow);
+        };
+
+        const addPerformanceMetricRow = (metric = { label: '', value: 3, levels: ['Low', 'Moderate', 'High', 'Intense'] }) => {
+            const container = document.getElementById('new-prod-performance-container');
+            if (!container) return;
+            const row = document.createElement('div');
+            row.className = 'metric-card';
+            row.innerHTML = `
                 <div class="metric-card-header">
                     <div class="size-card-chip">
                         <span class="size-card-chip-dot" style="background:#6c63ff;"></span>
-                        <span class="metric-chip-label size-card-chip-label">${u.label||"New Metric"}</span>
+                        <span class="metric-chip-label size-card-chip-label">${metric.label || 'New Metric'}</span>
                     </div>
                     <button type="button" class="size-card-remove remove-metric-btn" aria-label="Remove metric">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -722,47 +5297,347 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                     <div class="form-grid" style="gap:8px;margin-bottom:0;">
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Metric Name <span class="badge-required">*</span></label>
-                            <input type="text" class="metric-label-input modern-input" placeholder="e.g. Hydration" value="${u.label}" required>
+                            <input type="text" class="metric-label-input modern-input" placeholder="e.g. Hydration" value="${metric.label}" required>
                         </div>
                         <div class="form-group" style="margin:0;">
-                            <label class="size-field-label">Active Level (1\u20134)</label>
-                            <input type="number" min="1" max="4" class="metric-value-input modern-input" value="${u.value}">
+                            <label class="size-field-label">Active Level (1–4)</label>
+                            <input type="number" min="1" max="4" class="metric-value-input modern-input" value="${metric.value}">
                         </div>
                     </div>
                     <div>
                         <label class="size-field-label" style="margin-bottom:6px;">Level Labels</label>
                         <div class="metric-levels-grid">
-                            ${[0,1,2,3].map(h=>`
+                            ${[0, 1, 2, 3].map(i => `
                                 <div class="form-group" style="margin:0;">
-                                    <label class="size-field-label">Level ${h+1}</label>
-                                    <input type="text" class="metric-level-label-input modern-input" data-index="${h}" value="${u.levels&&u.levels[h]||""}" placeholder="Level ${h+1}">
+                                    <label class="size-field-label">Level ${i + 1}</label>
+                                    <input type="text" class="metric-level-label-input modern-input" data-index="${i}" value="${metric.levels ? (metric.levels[i] || '') : ''}" placeholder="Level ${i + 1}">
                                 </div>
-                            `).join("")}
+                            `).join('')}
                         </div>
                     </div>
                 </div>
-            `,x.appendChild(T);const M=T.querySelector(".metric-label-input"),$=T.querySelector(".metric-chip-label");M.addEventListener("input",()=>{$.textContent=M.value||"New Metric"}),T.querySelectorAll("input").forEach(h=>h.addEventListener("input",ze)),T.querySelector(".remove-metric-btn").addEventListener("click",async()=>{await window.showConfirm("Are you sure you want to remove this performance metric?","Remove Metric")&&(T.remove(),ze())})},Qt=document.getElementById("close-modal-top-btn");Qt&&Qt.addEventListener("click",mt),q&&q.querySelectorAll(".aem-tab-btn").forEach(u=>{u.addEventListener("click",()=>{const x=u.dataset.tab;q.querySelectorAll(".aem-tab-btn").forEach(T=>T.classList.toggle("active",T===u)),q.querySelectorAll(".aem-tab-pane").forEach(T=>T.classList.toggle("active",T.dataset.tab===x))})});const Tt=document.getElementById("add-metric-btn");Tt&&Tt.addEventListener("click",()=>{It(),ze()}),$e&&$e.addEventListener("click",()=>{Ut(),ze()}),he&&(he.addEventListener("input",ze),he.addEventListener("submit",async u=>{u.preventDefault();const x=document.querySelector('button[type="submit"][form="add-product-form"]');x.disabled=!0;const T='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 18px; height: 18px; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>';x.innerHTML=`${T} Saving...`;const M=we?ut(we.value):[];if(M.length===0){window.showToast("Please provide at least one local image path for the product.","error"),x.disabled=!1,x.textContent="Save Product";return}const $=document.getElementById("product-id-input"),h=$&&$.value,g=document.getElementById("new-prod-name").value.trim();let oe;if(h)oe=$.value;else if(oe=g.toLowerCase().replace(/[^a-z0-9\s-]/g,"").replace(/\s+/g,"-"),!oe||w[oe]){window.showToast("Product with this name already exists or name is invalid.","error"),x.disabled=!1,x.textContent="Save Product";return}const se=Array.from(ye.querySelectorAll(".size-input-row")).map(k=>({label:k.querySelector(".size-label-input").value,price:parseFloat(k.querySelector(".size-price-input").value).toFixed(2),originalPrice:k.querySelector(".size-original-price-input").value?parseFloat(k.querySelector(".size-original-price-input").value).toFixed(2):null,batchNumber:k.querySelector(".size-batch-input").value.trim(),expiryDate:k.querySelector(".size-expiry-input").value,formulaVersion:k.querySelector(".size-formula-input")?.value.trim()||"",outOfStock:!1})),de=Array.from(document.querySelectorAll(".performance-input-row")).map(k=>({label:k.querySelector(".metric-label-input").value.trim(),value:parseInt(k.querySelector(".metric-value-input").value)||0,levels:Array.from(k.querySelectorAll(".metric-level-label-input")).map(Ie=>Ie.value.trim())})),ee=h?w[oe]:{};if(h&&ee.sizes&&se.forEach(k=>{const Ie=ee.sizes.find(Oe=>Oe.label===k.label);Ie&&(k.outOfStock=Ie.outOfStock)}),se.length===0){window.showToast("Please add at least one size.","error"),x.disabled=!1,x.textContent="Save Product";return}let Se=h&&ee.orderIndex||0;if(!h){const k=Object.values(w).map(Ie=>Ie.orderIndex||0);Se=k.length>0?Math.max(...k)+1:0}const j=ee.batchHistory||[],C=document.getElementById("new-prod-inci").value.trim();h&&ee.sizes&&Array.isArray(ee.sizes)?se.forEach(k=>{const Ie=ee.sizes.find(Fe=>Fe.label===k.label),Oe=Ie&&Ie.batchNumber||"",Xe=k.batchNumber||"";Xe&&Xe!==Oe&&j.push({size:k.label,batchNumber:Xe,expiryDate:k.expiryDate||"",formulaVersion:k.formulaVersion||"",timestamp:new Date().toISOString(),inci:C})}):se.forEach(k=>{const Ie=k.batchNumber||"";Ie&&j.push({size:k.label,batchNumber:Ie,expiryDate:k.expiryDate||"",formulaVersion:k.formulaVersion||"",timestamp:new Date().toISOString(),inci:C})});const ge={...ee,name:g,subtitle:document.getElementById("new-prod-subtitle").value.trim(),description:document.getElementById("new-prod-desc").value.trim(),inci:C,storyUrl:document.getElementById("new-prod-story-url")?.value.trim()||null,notice:document.getElementById("new-prod-notice")?.value.trim()||"",image:M[0],images:M,sizes:se,performance:de,price:Math.min(...se.map(k=>parseFloat(k.price))).toFixed(2),outOfStock:h&&ee.outOfStock||!1,style:h&&ee.style||"",orderIndex:Se,batchHistory:j};x.innerHTML=`${T} Saving Product...`;try{const k=JSON.parse(JSON.stringify(ge));await at(Ae(ae,"products",oe),k),w[oe]=k,await ko(),jt(),mt(),window.showToast(h?"Product updated successfully!":"Product added successfully!","success")}catch(k){console.error("Error saving product:",k),window.showToast("Failed to save product.","error")}finally{x.disabled=!1,x.textContent="Save Product"}}));const Ct=10;let Pt=1,xo=[null];const Zt=document.getElementById("admin-filter-status"),eo=document.getElementById("admin-sort-date"),Yo=()=>{Pt=1,xo=[null],Dt(0)};Zt&&Zt.addEventListener("change",Yo),eo&&eo.addEventListener("change",Yo);const qt=document.getElementById("admin-export-btn");qt&&qt.addEventListener("click",async()=>{try{const u=await nt(Re(ae,"orders")),x=[];let T=0,M=0;if(u.forEach(de=>{const ee=de.data();ee.exported||!["Delivered","Cancelled","Local Order"].includes(ee.status)||(x.push({id:de.id,ref:de.ref,data:ee}),(ee.status==="Delivered"||ee.status==="Local Order")&&T++,M++)}),M===0){window.showToast("No new handled orders to process.","info"),t();return}if(!await window.showConfirm(`You are about to export <strong>${T}</strong> orders to CSV and archive <strong>${M}</strong> total terminal records. <br><br>Archived orders will be locked and cannot be modified. Proceed?`,"Confirm Export"))return;const h=qt.innerText;qt.innerText="Exporting...",qt.disabled=!0;let g=`data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items
-`,oe=0;const se=[];if(x.forEach(de=>{const ee=de.data;if(ee.status==="Delivered"||ee.status==="Local Order"){const Se=ee.timestamp?new Date(ee.timestamp.seconds*1e3).toLocaleDateString():"N/A",j=ee.items?ee.items.map(ge=>`${ge.quantity}x ${ge.name} (${ge.size})`).join("; "):"",C=[ee.orderReference||de.id,Se,`"${ee.shipping?.fullName||""}"`,ee.shipping?.email||"",ee.status,ee.total||0,`"${j}"`].join(",");g+=C+`
-`,oe++}se.push(gt(de.ref,{exported:!0}))}),await Promise.all(se),oe>0){const de=encodeURI(g),ee=document.createElement("a");ee.setAttribute("href",de),ee.setAttribute("download",`orders_export_${new Date().toISOString().slice(0,10)}.csv`),document.body.appendChild(ee),ee.click(),document.body.removeChild(ee),window.showToast(`Exported ${oe} orders and marked ${M} as handled.`,"success")}else window.showToast(`Archived ${M} terminal orders (No CSV needed).`,"success");Dt(Pt-1)}catch(u){console.error("Export failed:",u),window.showToast("Export failed. Check console for details.","error")}finally{qt.innerText="Export CSV",t()}});const di=u=>{const x=u.timestamp?new Date(u.timestamp.seconds*1e3).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}):"N/A",T=`DODCH_Receipt_${(u.orderReference||u.id.slice(0,8)).toUpperCase()}_${(u.shipping?.fullName||"Customer").replace(/[^a-z0-9\s-]/gi,"").replace(/\s+/g,"_")}`;let M="";u.items.forEach(se=>{const de=se.productId||se.id,ee=w[de],Se=se.image||(ee?kt(ee):"placeholder-glow.webp"),C=parseFloat(se.price)*se.quantity;M+=`
+            `;
+            container.appendChild(row);
+            // Live chip label update
+            const metricLabelInput = row.querySelector('.metric-label-input');
+            const metricChipLabel = row.querySelector('.metric-chip-label');
+            metricLabelInput.addEventListener('input', () => {
+                metricChipLabel.textContent = metricLabelInput.value || 'New Metric';
+            });
+            row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', checkModalChanges));
+            row.querySelector('.remove-metric-btn').addEventListener('click', async () => {
+                if (await window.showConfirm("Are you sure you want to remove this performance metric?", "Remove Metric")) {
+                    row.remove();
+                    checkModalChanges();
+                }
+            });
+        };
+
+        const closeModalTopBtn = document.getElementById('close-modal-top-btn');
+        if (closeModalTopBtn) closeModalTopBtn.addEventListener('click', closeProductModal);
+
+        // Tab switching for admin edit modal (set up once)
+        if (addProductModal) {
+            addProductModal.querySelectorAll('.aem-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabName = btn.dataset.tab;
+                    addProductModal.querySelectorAll('.aem-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+                    addProductModal.querySelectorAll('.aem-tab-pane').forEach(p => p.classList.toggle('active', p.dataset.tab === tabName));
+                });
+            });
+        }
+
+        // Add Metric btn is now static in HTML
+        const addMetricBtn = document.getElementById('add-metric-btn');
+        if (addMetricBtn) addMetricBtn.addEventListener('click', () => { addPerformanceMetricRow(); checkModalChanges(); });
+
+        if (addSizeBtn) addSizeBtn.addEventListener('click', () => { addSizeInputRow(); checkModalChanges(); });
+
+        if (addProductForm) {
+            addProductForm.addEventListener('input', checkModalChanges);
+            addProductForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = document.querySelector('button[type="submit"][form="add-product-form"]');
+                submitBtn.disabled = true;
+                const spinner = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 18px; height: 18px; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>';
+                submitBtn.innerHTML = `${spinner} Saving...`;
+
+                // --- Step 1: Read local image paths ---
+                const imagePaths = imagePathInput ? parseImagePaths(imagePathInput.value) : [];
+                if (imagePaths.length === 0) {
+                    window.showToast("Please provide at least one local image path for the product.", "error");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Save Product';
+                    return;
+                }
+
+                const idInput = document.getElementById('product-id-input');
+                const isEdit = idInput && idInput.value;
+                const name = document.getElementById('new-prod-name').value.trim();
+                let newId;
+                if (isEdit) {
+                    newId = idInput.value;
+                } else {
+                    newId = name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+                    if (!newId || (productCatalog[newId])) {
+                        window.showToast("Product with this name already exists or name is invalid.", "error");
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Save Product';
+                        return;
+                    }
+                }
+
+                const sizes = Array.from(sizesContainer.querySelectorAll('.size-card')).map(row => ({
+                    label: row.querySelector('.size-label-input').value,
+                    price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
+                    originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
+                    batchNumber: row.querySelector('.size-batch-input').value.trim(),
+                    expiryDate: row.querySelector('.size-expiry-input').value,
+                    formulaVersion: row.querySelector('.size-formula-input')?.value.trim() || '',
+                    outOfStock: false // Default to false, will be preserved below if editing
+                }));
+
+                const performanceMetrics = Array.from(document.querySelectorAll('.metric-card')).map(row => ({
+                    label: row.querySelector('.metric-label-input').value.trim(),
+                    value: parseInt(row.querySelector('.metric-value-input').value) || 0,
+                    levels: Array.from(row.querySelectorAll('.metric-level-label-input')).map(inp => inp.value.trim())
+                }));
+
+                const existingProduct = isEdit ? productCatalog[newId] : {};
+                if (isEdit && existingProduct.sizes) {
+                    sizes.forEach(newSize => {
+                        const oldSize = existingProduct.sizes.find(s => s.label === newSize.label);
+                        if (oldSize) newSize.outOfStock = oldSize.outOfStock;
+                    });
+                }
+
+                if (sizes.length === 0) { window.showToast("Please add at least one size.", "error"); submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; return; }
+                let orderIndex = isEdit ? (existingProduct.orderIndex || 0) : 0;
+                if (!isEdit) {
+                    const existingIndices = Object.values(productCatalog).map(p => p.orderIndex || 0);
+                    orderIndex = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 0;
+                }
+
+                // --- Step 2: Construct Product Object with Final Image URLs ---
+                const batchHistory = existingProduct.batchHistory || [];
+                const currentInci = document.getElementById('new-prod-inci').value.trim();
+                if (isEdit && existingProduct.sizes && Array.isArray(existingProduct.sizes)) {
+                    sizes.forEach(newSize => {
+                        const oldSize = existingProduct.sizes.find(s => s.label === newSize.label);
+                        const oldBatch = oldSize ? (oldSize.batchNumber || '') : '';
+                        const newBatch = newSize.batchNumber || '';
+                        if (newBatch && newBatch !== oldBatch) {
+                            batchHistory.push({
+                                size: newSize.label,
+                                batchNumber: newBatch,
+                                expiryDate: newSize.expiryDate || '',
+                                formulaVersion: newSize.formulaVersion || '',
+                                timestamp: new Date().toISOString(),
+                                inci: currentInci
+                            });
+                        }
+                    });
+                } else {
+                    // For new products or if the product had no sizes, log any initial batches
+                    sizes.forEach(newSize => {
+                        const newBatch = newSize.batchNumber || '';
+                        if (newBatch) {
+                            batchHistory.push({
+                                size: newSize.label,
+                                batchNumber: newBatch,
+                                expiryDate: newSize.expiryDate || '',
+                                formulaVersion: newSize.formulaVersion || '',
+                                timestamp: new Date().toISOString(),
+                                inci: currentInci
+                            });
+                        }
+                    });
+                }
+
+                const newProduct = {
+                    ...existingProduct,
+                    name,
+                    subtitle: document.getElementById('new-prod-subtitle').value.trim(),
+                    description: document.getElementById('new-prod-desc').value.trim(),
+                    inci: currentInci,
+                    storyUrl: document.getElementById('new-prod-story-url')?.value.trim() || null,
+                    notice: document.getElementById('new-prod-notice')?.value.trim() || "",
+                    image: imagePaths[0],
+                    images: imagePaths,
+                    sizes,
+                    performance: performanceMetrics,
+                    price: Math.min(...sizes.map(s => parseFloat(s.price))).toFixed(2),
+                    outOfStock: isEdit ? (existingProduct.outOfStock || false) : false,
+                    style: isEdit ? (existingProduct.style || "") : "",
+                    orderIndex: orderIndex,
+                    batchHistory: batchHistory
+                };
+
+                // --- Step 3: Save to Firestore ---
+                submitBtn.innerHTML = `${spinner} Saving Product...`;
+                try {
+                    const cleanedProduct = JSON.parse(JSON.stringify(newProduct));
+                    await setDoc(doc(db, "products", newId), cleanedProduct);
+                    productCatalog[newId] = cleanedProduct;
+                    await syncCatalogLocally();
+                    loadAdminProducts();
+                    closeProductModal();
+                    window.showToast(isEdit ? "Product updated successfully!" : "Product added successfully!", "success");
+                } catch (error) {
+                    console.error("Error saving product:", error);
+                    window.showToast("Failed to save product.", "error");
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Save Product';
+                }
+            });
+        }
+        const pageSize = 10;
+        let currentPage = 1;
+        let cursors = [null]; // Stores the last document of each page to use as a cursor for the next
+        const filterStatus = document.getElementById('admin-filter-status');
+        const sortDate = document.getElementById('admin-sort-date');
+
+        const refreshOrders = () => {
+            currentPage = 1;
+            cursors = [null];
+            loadAdminOrders(0);
+        };
+
+        if (filterStatus) filterStatus.addEventListener('change', refreshOrders);
+        if (sortDate) sortDate.addEventListener('change', refreshOrders);
+        const exportBtn = document.getElementById('admin-export-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', async () => {
+                try {
+                    // Smart Export Prep: Count handled orders before confirming
+                    const querySnapshot = await getDocs(collection(db, "orders"));
+                    
+                    const exportableBatch = [];
+                    let csvCount = 0;
+                    let archiveCount = 0;
+
+                    querySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.exported || !['Delivered', 'Cancelled', 'Local Order'].includes(data.status)) return;
+                        exportableBatch.push({ id: doc.id, ref: doc.ref, data });
+                        if (data.status === 'Delivered' || data.status === 'Local Order') csvCount++;
+                        archiveCount++;
+                    });
+
+                    if (archiveCount === 0) {
+                        window.showToast("No new handled orders to process.", "info");
+                        checkExportEligibility();
+                        return;
+                    }
+
+                    const confirmed = await window.showConfirm(
+                        `You are about to export <strong>${csvCount}</strong> orders to CSV and archive <strong>${archiveCount}</strong> total terminal records. <br><br>Archived orders will be locked and cannot be modified. Proceed?`,
+                        "Confirm Export"
+                    );
+
+                    if (!confirmed) return;
+
+                    const originalText = exportBtn.innerText;
+                    exportBtn.innerText = "Exporting...";
+                    exportBtn.disabled = true;
+
+                    let csvContent = "data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items\n";
+                    let csvRowsCount = 0;
+                    const updatePromises = [];
+
+                    exportableBatch.forEach(item => {
+                        const data = item.data;
+                        if (data.status === 'Delivered' || data.status === 'Local Order') {
+                            const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
+                            const itemsStr = data.items ? data.items.map(i => `${i.quantity}x ${i.name} (${i.size})`).join('; ') : '';
+                            const row = [
+                                data.orderReference || item.id,
+                                date,
+                                `"${data.shipping?.fullName || ''}"`,
+                                data.shipping?.email || '',
+                                data.status,
+                                data.total || 0,
+                                `"${itemsStr}"`
+                            ].join(",");
+                            
+                            csvContent += row + "\n";
+                            csvRowsCount++;
+                        }
+                        
+                        updatePromises.push(updateDoc(item.ref, { exported: true }));
+                    });
+
+                    await Promise.all(updatePromises);
+
+                    if (csvRowsCount > 0) {
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", `orders_export_${new Date().toISOString().slice(0, 10)}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                        window.showToast(`Exported ${csvRowsCount} orders and marked ${archiveCount} as handled.`, "success");
+                    } else {
+                        window.showToast(`Archived ${archiveCount} terminal orders (No CSV needed).`, "success");
+                    }
+
+                    // Refresh the current view to show the dimmed states
+                    loadAdminOrders(currentPage - 1);
+                } catch (error) {
+                    console.error("Export failed:", error);
+                    window.showToast("Export failed. Check console for details.", "error");
+                } finally {
+                    exportBtn.innerText = "Export CSV";
+                    checkExportEligibility();
+                }
+            });
+        }
+
+        const printOrderReceipt = (order) => {
+            const dateStr = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleDateString('en-US', { 
+                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+            }) : 'N/A';
+            
+            const safeFileName = `DODCH_Receipt_${(order.orderReference || order.id.slice(0, 8)).toUpperCase()}_${(order.shipping?.fullName || 'Customer').replace(/[^a-z0-9\s-]/gi, '').replace(/\s+/g, '_')}`;
+
+            let itemsHtml = '';
+            order.items.forEach(item => {
+                const pId = item.productId || item.id;
+                const product = productCatalog[pId];
+                const img = item.image || (product ? getProductPrimaryImage(product) : 'placeholder-glow.webp');
+                const price = parseFloat(item.price);
+                const sub = price * item.quantity;
+                
+                itemsHtml += `
                     <div style="display: flex; align-items: center; gap: 1.5rem; padding: 1.25rem 0; border-bottom: 1px solid #f2f2f2; break-inside: avoid;">
                         <div style="width: 70px; height: 70px; flex-shrink: 0; border-radius: 10px; overflow: hidden; border: 1px solid #eee; background: #fafafa;">
-                            <img src="${Se}" alt="${se.name}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <img src="${img}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         <div style="flex-grow: 1;">
-                            <h4 style="margin: 0 0 0.4rem 0; font-size: 1rem; color: #1a1a1a; font-family: 'Montserrat', sans-serif; font-weight: 600;">${se.name}</h4>
-                            <p style="margin: 0; font-size: 0.85rem; color: #777; letter-spacing: 0.5px;">Size: ${se.size} <span style="margin: 0 0.5rem; opacity: 0.3;">|</span> Quantity: ${se.quantity}</p>
-                            <p style="margin: 0.2rem 0 0; font-size: 0.75rem; color: #999;">Batch: ${se.batchNumber||"N/A"} <span style="margin: 0 0.4rem; opacity: 0.3;">|</span> Exp: ${se.expiryDate||"N/A"}</p>
+                            <h4 style="margin: 0 0 0.4rem 0; font-size: 1rem; color: #1a1a1a; font-family: 'Montserrat', sans-serif; font-weight: 600;">${item.name}</h4>
+                            <p style="margin: 0; font-size: 0.85rem; color: #777; letter-spacing: 0.5px;">Size: ${item.size} <span style="margin: 0 0.5rem; opacity: 0.3;">|</span> Quantity: ${item.quantity}</p>
+                            <p style="margin: 0.2rem 0 0; font-size: 0.75rem; color: #999;">Batch: ${item.batchNumber || 'N/A'} <span style="margin: 0 0.4rem; opacity: 0.3;">|</span> Exp: ${item.expiryDate || 'N/A'}</p>
                         </div>
                         <div style="text-align: right; font-weight: 700; color: #1a1a1a; font-size: 1rem; font-family: 'Montserrat', sans-serif;">
-                            ${C.toFixed(2)} TND
+                            ${sub.toFixed(2)} TND
                         </div>
                     </div>
-                `});const $=u.subtotal||u.items.reduce((se,de)=>se+parseFloat(de.price)*de.quantity,0),h=u.shippingFee||0,g=u.total||$+h,oe=window.open("","_blank","width=900,height=900");oe.document.write(`
+                `;
+            });
+
+            const subtotal = order.subtotal || order.items.reduce((acc, i) => acc + (parseFloat(i.price) * i.quantity), 0);
+            const shipping = order.shippingFee || 0;
+            const total = order.total || (subtotal + shipping);
+
+            const win = window.open('', '_blank', 'width=900,height=900');
+            win.document.write(`
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset='UTF-8'>
-                    <title>${T}</title>
+                    <title>${safeFileName}</title>
                     <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap' rel='stylesheet'>
                     <style>
                         * { box-sizing: border-box; }
@@ -805,43 +5680,43 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                         <div class="details-grid">
                             <div>
                                 <span class="section-label">Order Details</span>
-                                <div class="detail-val"><strong>Reference:</strong> #${u.orderReference||u.id.slice(0,8).toUpperCase()}</div>
-                                <div class="detail-val"><strong>Date:</strong> ${x}</div>
-                                <div class="detail-val"><strong>Status:</strong> ${u.status}</div>
-                                ${u.type==="local"?'<div class="detail-val" style="color: #e65100; font-weight: 700; margin-top: 1rem;">LOCAL ORDER</div>':""}
+                                <div class="detail-val"><strong>Reference:</strong> #${order.orderReference || order.id.slice(0, 8).toUpperCase()}</div>
+                                <div class="detail-val"><strong>Date:</strong> ${dateStr}</div>
+                                <div class="detail-val"><strong>Status:</strong> ${order.status}</div>
+                                ${order.type === 'local' ? '<div class="detail-val" style="color: #e65100; font-weight: 700; margin-top: 1rem;">LOCAL ORDER</div>' : ''}
                             </div>
                             <div>
                                 <span class="section-label">Shipping Details</span>
-                                <div class="detail-val"><strong>${Ue(u.shipping?.fullName)||"N/A"}</strong></div>
-                                <div class="detail-val">${Ue(u.shipping?.address)||"N/A"}</div>
-                                <div class="detail-val">${Ue(u.shipping?.city)||""} ${Ue(u.shipping?.postalCode)||""}</div>
-                                <div class="detail-val">${Ue(u.shipping?.phone)||"N/A"}</div>
-                                <div class="detail-val" style="font-size: 0.85rem; color: #888;">${Ue(u.shipping?.email)||""}</div>
+                                <div class="detail-val"><strong>${escapeHTML(order.shipping?.fullName) || 'N/A'}</strong></div>
+                                <div class="detail-val">${escapeHTML(order.shipping?.address) || 'N/A'}</div>
+                                <div class="detail-val">${escapeHTML(order.shipping?.city) || ''} ${escapeHTML(order.shipping?.postalCode) || ''}</div>
+                                <div class="detail-val">${escapeHTML(order.shipping?.phone) || 'N/A'}</div>
+                                <div class="detail-val" style="font-size: 0.85rem; color: #888;">${escapeHTML(order.shipping?.email) || ''}</div>
                             </div>
                         </div>
 
                         <div>
                             <span class="section-label">Order Summary</span>
-                            ${M}
+                            ${itemsHtml}
                         </div>
 
                         <div class="totals-box">
                             <div class="total-row">
                                 <span>Subtotal</span>
-                                <span>${parseFloat($).toFixed(2)} TND</span>
+                                <span>${parseFloat(subtotal).toFixed(2)} TND</span>
                             </div>
-                            ${u.creditsUsed>0?`
+                            ${order.creditsUsed > 0 ? `
                             <div class="total-row" style="color: #e74c3c; font-weight: 500;">
                                 <span>Rewards Discount</span>
-                                <span>-${parseFloat(u.creditsUsed).toFixed(2)} TND</span>
-                            </div>`:""}
+                                <span>-${parseFloat(order.creditsUsed).toFixed(2)} TND</span>
+                            </div>` : ''}
                             <div class="total-row">
                                 <span>Shipping</span>
-                                <span>${h===0?"Free":h.toFixed(2)+" TND"}</span>
+                                <span>${shipping === 0 ? 'Free' : shipping.toFixed(2) + ' TND'}</span>
                             </div>
                             <div class="total-row grand">
                                 <span>Total</span>
-                                <span>${parseFloat(g).toFixed(2)} TND</span>
+                                <span>${parseFloat(total).toFixed(2)} TND</span>
                             </div>
                         </div>
 
@@ -852,104 +5727,572 @@ window.addEventListener("error",function(p){if(p.target&&p.target.tagName==="IMG
                     </div>
                 </body>
                 </html>
-            `),oe.document.close(),oe.document.title=T,oe.focus(),setTimeout(()=>{oe.print()},800)},pi=async()=>{const u=document.getElementById("admin-messages-list");if(u){u.innerHTML="<p>Loading messages...</p>";try{const x=We(Re(ae,"messages"),oo("createdAt","desc"));io(x,T=>{if(u.innerHTML="",T.empty){u.innerHTML="<p>No messages found.</p>";return}let M=0;T.forEach(h=>{const g=h.data(),oe=h.id;g.status==="unread"&&M++;const se=g.createdAt?new Date(g.createdAt.toDate()).toLocaleDateString():"N/A",de=Ue(g.name),ee=Ue(g.email),Se=Ue(g.message),j=`mailto:${ee}?subject=Reply from DODCH Cosmetics&body=Dear ${encodeURIComponent(g.name)},%0D%0A%0D%0AThank you for getting in touch with us at DODCH!%0D%0A%0D%0A`,C=document.createElement("div");C.className="admin-order-card",g.status==="unread"&&C.classList.add("admin-unread-msg"),C.innerHTML=`
+            `);
+            win.document.close();
+            win.document.title = safeFileName;
+            win.focus();
+            // Use a slight timeout to ensure OS print driver registers the new title for filename pre-population
+            setTimeout(() => { win.print(); }, 800);
+        };
+
+        const loadAdminMessages = async () => {
+            const adminMessagesList = document.getElementById('admin-messages-list');
+            if (!adminMessagesList) return;
+
+            adminMessagesList.innerHTML = '<p>Loading messages...</p>';
+
+            try {
+                const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'));
+                onSnapshot(q, (snapshot) => {
+                    adminMessagesList.innerHTML = '';
+                    if (snapshot.empty) {
+                        adminMessagesList.innerHTML = '<p>No messages found.</p>';
+                        return;
+                    }
+
+                    let unreadCount = 0;
+                    snapshot.forEach(docSnap => {
+                        const msg = docSnap.data();
+                        const msgId = docSnap.id;
+
+                        if (msg.status === 'unread') unreadCount++;
+
+                        const dateStr = msg.createdAt ? new Date(msg.createdAt.toDate()).toLocaleDateString() : 'N/A';
+                        const safeName = escapeHTML(msg.name);
+                        const safeEmail = escapeHTML(msg.email);
+                        const safeMessage = escapeHTML(msg.message);
+                        const mailtoLink = `mailto:${safeEmail}?subject=Reply from DODCH Cosmetics&body=Dear ${encodeURIComponent(msg.name)},%0D%0A%0D%0AThank you for getting in touch with us at DODCH!%0D%0A%0D%0A`;
+
+                        const el = document.createElement('div');
+                        el.className = 'admin-order-card';
+                        if (msg.status === 'unread') el.classList.add('admin-unread-msg');
+
+                        el.innerHTML = `
                             <div class="admin-order-header">
-                                <strong>${de}</strong>
-                                <span>${se}</span>
+                                <strong>${safeName}</strong>
+                                <span>${dateStr}</span>
                             </div>
                             <div class="admin-order-details">
-                                <p><strong>Email:</strong> <a href="mailto:${ee}" style="color: inherit;">${ee}</a></p>
-                                <div style="margin-top: 1rem; line-height: 1.6; color: var(--text-charcoal); font-size: 0.95rem; white-space: pre-wrap;">${Se}</div>
+                                <p><strong>Email:</strong> <a href="mailto:${safeEmail}" style="color: inherit;">${safeEmail}</a></p>
+                                <div style="margin-top: 1rem; line-height: 1.6; color: var(--text-charcoal); font-size: 0.95rem; white-space: pre-wrap;">${safeMessage}</div>
                             </div>
                             <div class="admin-order-actions" style="margin-top: 1.5rem; border-top: 1px solid #f8f8f8; padding-top: 1rem;">
                                 <div style="display: flex; gap: 0.5rem; width: 100%;">
-                                    <a href="${j}" class="admin-btn btn-edit" style="text-decoration: none;">Reply</a>
-                                    ${g.status==="unread"?'<button class="admin-btn btn-save mark-read-btn" data-id="'+oe+'">Mark Read</button>':""}
-                                    <button class="admin-btn btn-delete delete-msg-btn" data-id="${oe}">
+                                    <a href="${mailtoLink}" class="admin-btn btn-edit" style="text-decoration: none;">Reply</a>
+                                    ${msg.status === 'unread' ? '<button class="admin-btn btn-save mark-read-btn" data-id="' + msgId + '">Mark Read</button>' : ''}
+                                    <button class="admin-btn btn-delete delete-msg-btn" data-id="${msgId}">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                     </button>
                                 </div>
                             </div>
-                        `,u.appendChild(C)});const $=document.getElementById("unread-messages-badge");$&&($.textContent=M,$.style.display=M>0?"inline-block":"none"),u.dataset.listenersAttached||(u.addEventListener("click",async h=>{const g=h.target.closest(".mark-read-btn"),oe=h.target.closest(".delete-msg-btn");if(g)try{const se=g.dataset.id;await gt(Ae(ae,"messages",se),{status:"read"}),window.showToast("Message marked as read","success")}catch(se){console.error(se),window.showToast(`Error updating message: ${se.code||se.message}`,"error")}if(oe&&confirm("Are you sure you want to delete this message?"))try{const se=oe.dataset.id;await Eo(Ae(ae,"messages",se)),window.showToast("Message deleted","success")}catch(se){console.error(se),window.showToast("Error deleting message","error")}}),u.dataset.listenersAttached="true")},T=>{console.error("Error fetching messages:",T),u.innerHTML='<p style="color: #ff4d4d;">Permission Denied or Error loading messages.</p>'})}catch(x){console.error("Setup error:",x)}}},ui=async()=>{const u=document.getElementById("admin-reports-list");if(u){u.innerHTML="<p>Loading reports and complaints...</p>";try{const x=We(Re(ae,"orders"),rt("hasReports","==",!0));io(x,T=>{if(u.innerHTML="",T.empty){u.innerHTML="<p>No reports or complaints found.</p>";const g=document.getElementById("unread-reports-badge");g&&(g.style.display="none");return}let M=0,$="";T.forEach(g=>{const oe=g.data(),se=g.id;oe.hasUnseenReport&&M++,oe.items.forEach((de,ee)=>{if(de.report){const Se=de.report,j=Se.createdAt?new Date(Se.createdAt).toLocaleString():"N/A",C=Se.status||"Pending",ge=C==="Pending";let k="";ge?k=`
+                        `;
+                        adminMessagesList.appendChild(el);
+                    });
+
+                    const badge = document.getElementById('unread-messages-badge');
+                    if (badge) {
+                        badge.textContent = unreadCount;
+                        badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+                    }
+
+                    // --- Unified Event Delegation for Messages ---
+                    if (!adminMessagesList.dataset.listenersAttached) {
+                        adminMessagesList.addEventListener('click', async (e) => {
+                            const markBtn = e.target.closest('.mark-read-btn');
+                            const deleteBtn = e.target.closest('.delete-msg-btn');
+
+                            if (markBtn) {
+                                try {
+                                    const id = markBtn.dataset.id;
+                                    await updateDoc(doc(db, 'messages', id), { status: 'read' });
+                                    window.showToast("Message marked as read", "success");
+                                } catch (err) {
+                                    console.error(err);
+                                    window.showToast(`Error updating message: ${err.code || err.message}`, "error");
+                                }
+                            }
+
+                            if (deleteBtn) {
+                                if (confirm("Are you sure you want to delete this message?")) {
+                                    try {
+                                        const id = deleteBtn.dataset.id;
+                                        await deleteDoc(doc(db, 'messages', id));
+                                        window.showToast("Message deleted", "success");
+                                    } catch (err) {
+                                        console.error(err);
+                                        window.showToast("Error deleting message", "error");
+                                    }
+                                }
+                            }
+                        });
+                        adminMessagesList.dataset.listenersAttached = 'true';
+                    }
+                }, (error) => {
+                    console.error("Error fetching messages:", error);
+                    adminMessagesList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied or Error loading messages.</p>';
+                });
+            } catch (err) {
+                console.error("Setup error:", err);
+            }
+        };
+
+        const loadAdminReports = async () => {
+            const adminReportsList = document.getElementById('admin-reports-list');
+            if (!adminReportsList) return;
+
+            adminReportsList.innerHTML = '<p>Loading reports and complaints...</p>';
+
+            try {
+                const q = query(collection(db, 'orders'), where('hasReports', '==', true));
+                onSnapshot(q, (snapshot) => {
+                    adminReportsList.innerHTML = '';
+                    if (snapshot.empty) {
+                        adminReportsList.innerHTML = '<p>No reports or complaints found.</p>';
+                        const badge = document.getElementById('unread-reports-badge');
+                        if (badge) badge.style.display = 'none';
+                        return;
+                    }
+
+                    let unseenCount = 0;
+                    let reportCardsHtml = '';
+
+                    snapshot.forEach(docSnap => {
+                        const order = docSnap.data();
+                        const orderId = docSnap.id;
+
+                        if (order.hasUnseenReport) unseenCount++;
+
+                        order.items.forEach((item, itemIdx) => {
+                            if (item.report) {
+                                const r = item.report;
+                                const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A';
+                                const status = r.status || 'Pending';
+                                
+                                const isPending = status === 'Pending';
+                                
+                                let actionControlsHtml = '';
+                                if (isPending) {
+                                    actionControlsHtml = `
                                         <div style="margin-top: 1rem; border-top: 1px solid #f0f0f0; padding-top: 1rem;">
                                             <div class="form-group" style="margin-bottom: 0.75rem;">
                                                 <label style="display:block; margin-bottom: 0.3rem; font-size: 0.8rem; font-weight: 600; color: #555;">Reply message (Optional)</label>
                                                 <input type="text" class="admin-report-reply-input modern-input" placeholder="Enter message for user..." style="padding: 8px 12px; font-size: 0.85rem; width: 100%; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box; font-family: inherit;">
                                             </div>
                                             <div style="display: flex; gap: 0.5rem;">
-                                                <button class="admin-btn btn-save refund-report-btn" data-order-id="${se}" data-item-idx="${ee}" style="background: #27ae60; border-color: #27ae60; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refund</button>
-                                                <button class="admin-btn btn-delete refuse-report-btn" data-order-id="${se}" data-item-idx="${ee}" style="background: #e74c3c; border-color: #e74c3c; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refuse</button>
+                                                <button class="admin-btn btn-save refund-report-btn" data-order-id="${orderId}" data-item-idx="${itemIdx}" style="background: #27ae60; border-color: #27ae60; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refund</button>
+                                                <button class="admin-btn btn-delete refuse-report-btn" data-order-id="${orderId}" data-item-idx="${itemIdx}" style="background: #e74c3c; border-color: #e74c3c; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refuse</button>
                                             </div>
                                         </div>
-                                    `:k=`
+                                    `;
+                                } else {
+                                    actionControlsHtml = `
                                         <div style="margin-top: 1rem; border-top: 1px solid #f0f0f0; padding-top: 1rem; color: #666; font-size: 0.85rem;">
-                                            <div>Status: <strong style="color: ${C==="Refunded"?"#27ae60":"#e74c3c"};">${C}</strong></div>
-                                            ${Se.reply?`<div style="margin-top: 0.25rem;">Reply: <em>"${Ue(Se.reply)}"</em></div>`:""}
+                                            <div>Status: <strong style="color: ${status === 'Refunded' ? '#27ae60' : '#e74c3c'};">${status}</strong></div>
+                                            ${r.reply ? `<div style="margin-top: 0.25rem;">Reply: <em>"${escapeHTML(r.reply)}"</em></div>` : ''}
                                         </div>
-                                    `;const Ie=`
-                                    <div class="admin-order-card ${oe.hasUnseenReport?"admin-unread-msg":""}" style="margin-bottom: 1rem; background: #fff; padding: 1.5rem; border-radius: 12px; border: 1px solid #eaeaea;">
+                                    `;
+                                }
+
+                                const card = `
+                                    <div class="admin-order-card ${order.hasUnseenReport ? 'admin-unread-msg' : ''}" style="margin-bottom: 1rem; background: #fff; padding: 1.5rem; border-radius: 12px; border: 1px solid #eaeaea;">
                                         <div class="admin-order-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f9f9f9; padding-bottom: 0.5rem;">
-                                            <strong style="font-size: 1.1rem; color: #1a1a1a;">Report: #${oe.orderReference||se.slice(0,8).toUpperCase()}</strong>
-                                            <span style="font-size: 0.8rem; color: #888;">${j}</span>
+                                            <strong style="font-size: 1.1rem; color: #1a1a1a;">Report: #${order.orderReference || orderId.slice(0, 8).toUpperCase()}</strong>
+                                            <span style="font-size: 0.8rem; color: #888;">${dateStr}</span>
                                         </div>
                                         <div class="admin-order-details" style="font-size: 0.9rem; line-height: 1.5; color: #444;">
-                                            <p style="margin: 0 0 0.5rem 0;"><strong>Customer:</strong> ${Ue(oe.shipping?.fullName)} (${Ue(oe.shipping?.phone||"N/A")})</p>
-                                            <p style="margin: 0 0 0.5rem 0;"><strong>Product:</strong> ${Ue(de.name)} (${Ue(de.size)}) - Qty: ${de.quantity} - Total: ${(de.price*de.quantity).toFixed(2)} TND</p>
-                                            <p style="margin: 0 0 0.5rem 0;"><strong>Problem Type:</strong> <span style="color: #c0392b; font-weight: 600;">${Ue(Se.problem)}</span></p>
-                                            <div style="background: #fafafa; padding: 0.75rem; border-radius: 8px; border-left: 3px solid #e74c3c; margin-top: 0.75rem; font-size: 0.9rem; color: #333; white-space: pre-wrap;">${Ue(Se.message||"(No details provided)")}</div>
-                                            ${k}
+                                            <p style="margin: 0 0 0.5rem 0;"><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)} (${escapeHTML(order.shipping?.phone || 'N/A')})</p>
+                                            <p style="margin: 0 0 0.5rem 0;"><strong>Product:</strong> ${escapeHTML(item.name)} (${escapeHTML(item.size)}) - Qty: ${item.quantity} - Total: ${(item.price * item.quantity).toFixed(2)} TND</p>
+                                            <p style="margin: 0 0 0.5rem 0;"><strong>Problem Type:</strong> <span style="color: #c0392b; font-weight: 600;">${escapeHTML(r.problem)}</span></p>
+                                            <div style="background: #fafafa; padding: 0.75rem; border-radius: 8px; border-left: 3px solid #e74c3c; margin-top: 0.75rem; font-size: 0.9rem; color: #333; white-space: pre-wrap;">${escapeHTML(r.message || '(No details provided)')}</div>
+                                            ${actionControlsHtml}
                                         </div>
                                     </div>
-                                `;$+=Ie}})}),u.innerHTML=$||"<p>No reports found.</p>";const h=document.getElementById("unread-reports-badge");h&&(h.textContent=M,h.style.display=M>0?"inline-block":"none"),u.dataset.listenersAttached||(u.addEventListener("click",async g=>{const oe=g.target.closest(".refund-report-btn"),se=g.target.closest(".refuse-report-btn");if(oe||se){const de=!!oe,ee=de?oe:se,Se=ee.dataset.orderId,j=parseInt(ee.dataset.itemIdx),ge=ee.closest(".admin-order-card").querySelector(".admin-report-reply-input"),k=ge?ge.value.trim():"";if(confirm(`Are you sure you want to ${de?"refund":"refuse"} this request?`)){ee.disabled=!0,ee.textContent="Processing...";try{const Oe=Ae(ae,"orders",Se),Xe=await ft(Oe);if(Xe.exists()){const Fe=Xe.data(),He=[...Fe.items];He[j]&&He[j].report&&(He[j].report.status=de?"Refunded":"Refused",He[j].report.reply=k,He[j].report.handledAt=new Date().toISOString(),de&&(He[j].refunded=!0));const St=He.some(it=>it.report&&it.report.status==="Pending"),{writeBatch:ot,increment:Ne}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"),Ve=ot(ae),et={items:He,hasUnseenReport:St,hasUnseenUpdate:!0};if(de&&Fe.userId&&Fe.userId!=="guest"&&(Fe.status==="Delivered"||Fe.status==="Local Order")){let it=0;He.forEach(bt=>{if(!(bt.refunded===!0||bt.refunded==="true")){let mi=parseFloat(bt.price)||0,fi=parseInt(bt.quantity)||1;it+=mi*fi}});const st=parseFloat(Fe.creditsUsed)||0,Mt=Math.floor(Math.max(0,it-st)/10),Bt=parseFloat(Fe.creditsGranted)||0;if(Mt!==Bt){const bt=Mt-Bt;et.creditsGranted=Mt;const Jo=Ae(ae,"users",Fe.userId);Ve.update(Jo,{credits:Ne(bt)}),console.log(`Admin refund adjusting credits by ${bt}`)}}if(Ve.update(Oe,et),await Ve.commit(),de&&Fe.userId){const it=He[j],st=it.productId||it.id;if(st){const Mt=`${Fe.userId}_${st}`,Bt=Ae(ae,"product_reviews",Mt);(await ft(Bt)).exists()&&await gt(Bt,{refunded:!0,refundedAt:new Date().toISOString()})}}if(window.showToast(`Request ${de?"refunded":"refused"} successfully!`,"success"),Fe.userId&&Fe.userId!=="guest"&&typeof window.sendTargetedPushNotification=="function"){const it=de?"Refund Approved! \u{1F4B0}":"Report Update",st=de?`Your refund request for ${He[j].name} was approved.`:`Your report for ${He[j].name} was reviewed.`;window.sendTargetedPushNotification(ae,Fe.userId,it,st,"/my-account.html#orders")}Wo()}}catch(Oe){console.error(Oe),window.showToast("Failed to process request.","error"),ee.disabled=!1,ee.textContent=de?"Refund":"Refuse"}}}}),u.dataset.listenersAttached="true")},T=>{console.error("Error fetching reports:",T),u.innerHTML='<p style="color: #ff4d4d;">Permission Denied or Error loading reports.</p>'})}catch(x){console.error("Setup reports error:",x)}}},Dt=async(u=0)=>{i.innerHTML="<p>Loading orders...</p>";try{let x=Re(ae,"orders");const T=Zt?Zt.value:"",M=eo?eo.value:"desc";T&&(x=We(x,rt("status","==",T))),x=We(x,oo("timestamp",M));const $=xo[u];$&&(x=We(x,Ci($))),x=We(x,Ti(Ct));const h=await nt(x),g=[];if(h.forEach(Se=>{g.push({id:Se.id,...Se.data()})}),h.docs.length>0&&(xo[u+1]=h.docs[h.docs.length-1]),g.length===0){i.innerHTML="<p>No orders found.</p>",u>0;return}const oe=Se=>{if(i.innerHTML="",Se.length===0){i.innerHTML="<p>No matching orders found.</p>";return}Se.forEach(j=>{const C=j.timestamp?new Date(j.timestamp.seconds*1e3).toLocaleString():"N/A",ge=j.status||"Pending",k=j.exported===!0,Ie=j.type==="local",Oe=ge==="Delivered"||ge==="Cancelled";let Xe=k?'<span class="export-status-badge status-exported">Exported</span>':Ie?'<span class="export-status-badge local-order-badge">Local Order</span>':'<span class="export-status-badge status-ready">New</span>';const Fe=document.createElement("div");Fe.className=`admin-order-card ${k?"exported":""}`,Fe.innerHTML=`
+                                `;
+                                reportCardsHtml += card;
+                            }
+                        });
+                    });
+
+                    adminReportsList.innerHTML = reportCardsHtml || '<p>No reports found.</p>';
+
+                    const badge = document.getElementById('unread-reports-badge');
+                    if (badge) {
+                        badge.textContent = unseenCount;
+                        badge.style.display = unseenCount > 0 ? 'inline-block' : 'none';
+                    }
+
+                    if (!adminReportsList.dataset.listenersAttached) {
+                        adminReportsList.addEventListener('click', async (e) => {
+                            const refundBtn = e.target.closest('.refund-report-btn');
+                            const refuseBtn = e.target.closest('.refuse-report-btn');
+                            
+                            if (refundBtn || refuseBtn) {
+                                const isRefund = !!refundBtn;
+                                const btn = isRefund ? refundBtn : refuseBtn;
+                                const oId = btn.dataset.orderId;
+                                const itemIdx = parseInt(btn.dataset.itemIdx);
+                                const card = btn.closest('.admin-order-card');
+                                const replyInput = card.querySelector('.admin-report-reply-input');
+                                const replyVal = replyInput ? replyInput.value.trim() : '';
+
+                                const actionText = isRefund ? 'refund' : 'refuse';
+                                if (confirm(`Are you sure you want to ${actionText} this request?`)) {
+                                    btn.disabled = true;
+                                    btn.textContent = 'Processing...';
+
+                                    try {
+                                        const orderRef = doc(db, "orders", oId);
+                                        const orderSnap = await getDoc(orderRef);
+                                        if (orderSnap.exists()) {
+                                            const orderData = orderSnap.data();
+                                            const items = [...orderData.items];
+                                            
+                                            if (items[itemIdx] && items[itemIdx].report) {
+                                                items[itemIdx].report.status = isRefund ? 'Refunded' : 'Refused';
+                                                items[itemIdx].report.reply = replyVal;
+                                                items[itemIdx].report.handledAt = new Date().toISOString();
+                                                if (isRefund) {
+                                                    items[itemIdx].refunded = true;
+                                                }
+                                            }
+
+                                            const hasPending = items.some(it => it.report && it.report.status === 'Pending');
+                                            
+                                            const { writeBatch, increment } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+                                            const batch = writeBatch(db);
+                                            
+                                            const orderUpdateData = {
+                                                items: items,
+                                                hasUnseenReport: hasPending,
+                                                hasUnseenUpdate: true // Notify the user
+                                            };
+                                            
+                                            if (isRefund && orderData.userId && orderData.userId !== 'guest' && (orderData.status === 'Delivered' || orderData.status === 'Local Order')) {
+                                                // Recalculate credits
+                                                let validSubtotal = 0;
+                                                items.forEach(item => {
+                                                    const isRef = item.refunded === true || item.refunded === 'true';
+                                                    if (!isRef) {
+                                                        let price = parseFloat(item.price) || 0;
+                                                        let qty = parseInt(item.quantity) || 1;
+                                                        validSubtotal += price * qty;
+                                                    }
+                                                });
+                                                const creditsUsed = parseFloat(orderData.creditsUsed) || 0;
+                                                const targetCreditsGranted = Math.floor(Math.max(0, validSubtotal - creditsUsed) / 10);
+                                                const currentGranted = parseFloat(orderData.creditsGranted) || 0;
+                                                
+                                                if (targetCreditsGranted !== currentGranted) {
+                                                    const delta = targetCreditsGranted - currentGranted;
+                                                    orderUpdateData.creditsGranted = targetCreditsGranted;
+                                                    
+                                                    const userRef = doc(db, "users", orderData.userId);
+                                                    batch.update(userRef, { credits: increment(delta) });
+                                                    console.log(`Admin refund adjusting credits by ${delta}`);
+                                                }
+                                            }
+                                            
+                                            batch.update(orderRef, orderUpdateData);
+                                            await batch.commit();
+
+                                            // Sync review refund state when admin approves a refund
+                                            if (isRefund && orderData.userId) {
+                                                const refundedItem = items[itemIdx];
+                                                const pId = refundedItem.productId || refundedItem.id;
+                                                if (pId) {
+                                                    const reviewDocId = `${orderData.userId}_${pId}`;
+                                                    const reviewDocRef = doc(db, "product_reviews", reviewDocId);
+                                                    const reviewSnap = await getDoc(reviewDocRef);
+                                                    if (reviewSnap.exists()) {
+                                                        await updateDoc(reviewDocRef, {
+                                                            refunded: true,
+                                                            refundedAt: new Date().toISOString()
+                                                        });
+                                                    }
+                                                }
+                                            }
+
+                                            window.showToast(`Request ${isRefund ? 'refunded' : 'refused'} successfully!`, "success");
+                                            
+                                            if (orderData.userId && orderData.userId !== 'guest' && typeof window.sendTargetedPushNotification === 'function') {
+                                                const title = isRefund ? "Refund Approved! 💰" : "Report Update";
+                                                const body = isRefund 
+                                                    ? `Your refund request for ${items[itemIdx].name} was approved.`
+                                                    : `Your report for ${items[itemIdx].name} was reviewed.`;
+                                                window.sendTargetedPushNotification(db, orderData.userId, title, body, '/my-account.html#orders');
+                                            }
+
+                                            loadRevenueChart();
+                                        }
+                                    } catch (err) {
+                                        console.error(err);
+                                        window.showToast("Failed to process request.", "error");
+                                        btn.disabled = false;
+                                        btn.textContent = isRefund ? 'Refund' : 'Refuse';
+                                    }
+                                }
+                            }
+                        });
+                        adminReportsList.dataset.listenersAttached = 'true';
+                    }
+                }, (error) => {
+                    console.error("Error fetching reports:", error);
+                    adminReportsList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied or Error loading reports.</p>';
+                });
+            } catch (err) {
+                console.error("Setup reports error:", err);
+            }
+        };
+
+        const loadAdminOrders = async (pageIndex = 0) => {
+            adminOrdersList.innerHTML = '<p>Loading orders...</p>';
+            try {
+                let q = collection(db, "orders");
+                const statusValue = filterStatus ? filterStatus.value : '';
+                const dateDir = sortDate ? sortDate.value : 'desc';
+                if (statusValue) {
+                    q = query(q, where("status", "==", statusValue));
+                }
+                q = query(q, orderBy("timestamp", dateDir));
+
+                const cursor = cursors[pageIndex];
+
+                if (cursor) {
+                    q = query(q, startAfter(cursor));
+                }
+
+                q = query(q, limit(pageSize));
+
+                const querySnapshot = await getDocs(q);
+                const orders = [];
+                querySnapshot.forEach((doc) => {
+                    orders.push({ id: doc.id, ...doc.data() });
+                });
+                if (querySnapshot.docs.length > 0) {
+                    cursors[pageIndex + 1] = querySnapshot.docs[querySnapshot.docs.length - 1];
+                }
+
+                if (orders.length === 0) {
+                    adminOrdersList.innerHTML = '<p>No orders found.</p>';
+                    if (pageIndex > 0) {
+                    }
+                    return;
+                }
+
+                const renderAdminOrdersList = (ordersToRender) => {
+                    adminOrdersList.innerHTML = '';
+                    if (ordersToRender.length === 0) {
+                        adminOrdersList.innerHTML = '<p>No matching orders found.</p>';
+                        return;
+                    }
+                    ordersToRender.forEach(order => {
+                        const date = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleString() : 'N/A';
+                        const status = order.status || 'Pending';
+                        const isExported = order.exported === true;
+                        const isLocalOrder = order.type === 'local';
+                        const isLocked = status === 'Delivered' || status === 'Cancelled';
+                        
+                        // Badge priority: Exported > Local Order > New
+                        let badgeHTML = isExported 
+                            ? '<span class="export-status-badge status-exported">Exported</span>' 
+                            : (isLocalOrder ? '<span class="export-status-badge local-order-badge">Local Order</span>' : '<span class="export-status-badge status-ready">New</span>');
+
+                        const el = document.createElement('div');
+                        el.className = `admin-order-card ${isExported ? 'exported' : ''}`;
+                        el.innerHTML = `
                         <div class="admin-order-header">
-                            <strong>#${j.orderReference||j.id.slice(0,6)}</strong>
-                            <span>${C}</span>
-                            ${Xe}
+                            <strong>#${order.orderReference || order.id.slice(0, 6)}</strong>
+                            <span>${date}</span>
+                            ${badgeHTML}
                         </div>
                         <div class="admin-order-details">
-                            <p><strong>Customer:</strong> ${Ue(j.shipping?.fullName)} (${Ue(j.shipping?.phone||"N/A")})</p>
-                            <p><strong>Email:</strong> ${Ue(j.shipping?.email||"N/A")}</p>
-                            <p><strong>Address:</strong> ${Ue(j.shipping?.address||"N/A")}, ${Ue(j.shipping?.city||"")}</p>
-                            <p><strong>Total:</strong> <span style="color: var(--accent-gold-text); font-weight: 700;">${j.total} TND</span></p>
-                            ${j.creditsUsed>0?`<p style="color: #e74c3c; font-weight: 500;"><strong>Discount:</strong> -${j.creditsUsed.toFixed(2)} TND</p>`:""}
+                            <p><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)} (${escapeHTML(order.shipping?.phone || 'N/A')})</p>
+                            <p><strong>Email:</strong> ${escapeHTML(order.shipping?.email || 'N/A')}</p>
+                            <p><strong>Address:</strong> ${escapeHTML(order.shipping?.address || 'N/A')}, ${escapeHTML(order.shipping?.city || '')}</p>
+                            <p><strong>Total:</strong> <span style="color: var(--accent-gold-text); font-weight: 700;">${order.total} TND</span></p>
+                            ${order.creditsUsed > 0 ? `<p style="color: #e74c3c; font-weight: 500;"><strong>Discount:</strong> -${order.creditsUsed.toFixed(2)} TND</p>` : ''}
                             <div class="admin-order-items">
-                                ${j.items.map(He=>`<div>\u2022 ${He.quantity}x ${Ue(He.name)} (${Ue(He.size)})</div>`).join("")}
+                                ${order.items.map(i => `<div>• ${i.quantity}x ${escapeHTML(i.name)} (${escapeHTML(i.size)})</div>`).join('')}
                             </div>
                         </div>
                         <div class="admin-order-actions">
-                            <span class="status-badge status-${ge.toLowerCase().replace(/\s/g,"-")}">${ge}</span>
+                            <span class="status-badge status-${status.toLowerCase().replace(/\s/g, '-')}">${status}</span>
                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <select class="admin-status-select" data-id="${j.id}" ${k||Oe?'disabled title="Order cannot be modified in this status"':""} style="margin: 0; min-width: 140px;">
+                                <select class="admin-status-select" data-id="${order.id}" ${(isExported || isLocked) ? 'disabled title="Order cannot be modified in this status"' : ''} style="margin: 0; min-width: 140px;">
                                     <option value="" disabled selected>Update Status</option>
                                 <option value="Confirmed">Confirmed</option>
                                 <option value="In Delivery">In Delivery</option>
                                 <option value="Delivered">Delivered</option>
                                 <option value="Cancelled">Cancelled</option>
                             </select>
-                                <button class="admin-btn btn-save admin-download-receipt-btn" data-id="${j.id}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.75rem;">Download Receipt</button>
+                                <button class="admin-btn btn-save admin-download-receipt-btn" data-id="${order.id}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.75rem;">Download Receipt</button>
                             </div>
                         </div>
-                    `,i.appendChild(Fe)})};oe(g);const se=document.getElementById("admin-order-search");se&&se.addEventListener("input",a(Se=>{const j=Se.target.value.toLowerCase(),C=g.filter(ge=>ge.id&&ge.id.toLowerCase().includes(j)||ge.orderReference&&ge.orderReference.toLowerCase().includes(j)||ge.shipping?.fullName&&ge.shipping.fullName.toLowerCase().includes(j)||ge.shipping?.email&&ge.shipping.email.toLowerCase().includes(j));oe(C)},300));const de=document.getElementById("admin-pagination-controls");de&&de.remove();const ee=`
+                    `;
+                        adminOrdersList.appendChild(el);
+                    });
+                };
+
+                renderAdminOrdersList(orders);
+                const searchInput = document.getElementById('admin-order-search');
+                if (searchInput) {
+                    searchInput.addEventListener('input', debounce((e) => {
+                        const term = e.target.value.toLowerCase();
+                        const filtered = orders.filter(o =>
+                            (o.id && o.id.toLowerCase().includes(term)) ||
+                            (o.orderReference && o.orderReference.toLowerCase().includes(term)) ||
+                            (o.shipping?.fullName && o.shipping.fullName.toLowerCase().includes(term)) ||
+                            (o.shipping?.email && o.shipping.email.toLowerCase().includes(term))
+                        );
+                        renderAdminOrdersList(filtered);
+                    }, 300));
+                }
+                const existingControls = document.getElementById('admin-pagination-controls');
+                if (existingControls) existingControls.remove();
+
+                const paginationHTML = `
                     <div id="admin-pagination-controls" class="admin-pagination">
-                        <button id="prev-page-btn" class="pagination-btn" ${u===0?"disabled":""}>Previous</button>
-                        <span class="page-info">Page ${u+1}</span>
-                        <button id="next-page-btn" class="pagination-btn" ${g.length<Ct?"disabled":""}>Next</button>
+                        <button id="prev-page-btn" class="pagination-btn" ${pageIndex === 0 ? 'disabled' : ''}>Previous</button>
+                        <span class="page-info">Page ${pageIndex + 1}</span>
+                        <button id="next-page-btn" class="pagination-btn" ${orders.length < pageSize ? 'disabled' : ''}>Next</button>
                     </div>
-                `;i.insertAdjacentHTML("afterend",ee),document.getElementById("prev-page-btn").addEventListener("click",()=>{u>0&&Dt(u-1)}),document.getElementById("next-page-btn").addEventListener("click",()=>{g.length===Ct&&Dt(u+1)}),document.querySelectorAll(".admin-status-select").forEach(Se=>{Se.addEventListener("change",async j=>{const C=j.target.value,ge=j.target.dataset.id;if(C)if(await window.showConfirm(`Change order status to ${C}?`,"Update Order"))try{const k=g.find(Ne=>Ne.id===ge);let Ie=0,Oe=k.creditsGranted||0;if(k&&k.userId&&k.userId!=="guest")if(C==="Cancelled"){const Ne=parseFloat(k.creditsUsed)||0;Ne>0&&!k.creditsRefunded&&(Ie+=Ne);const Ve=parseFloat(k.creditsGranted)||0;Ve>0&&(Ie-=Ve,Oe=0)}else{let Ne=0;if(C==="Delivered"||C==="Local Order"){let et=0;k.items&&Array.isArray(k.items)&&k.items.forEach(st=>{if(!(st.refunded===!0||st.refunded==="true")){let Bt=parseFloat(st.price)||0,bt=parseInt(st.quantity)||1;et+=Bt*bt}});const it=parseFloat(k.creditsUsed)||0;Ne=Math.floor(Math.max(0,et-it)/10)}const Ve=parseFloat(k.creditsGranted)||0;Ne!==Ve&&(Ie+=Ne-Ve,Oe=Ne)}const{writeBatch:Xe,increment:Fe}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"),He=Xe(ae),St=Ae(ae,"orders",ge),ot={status:C,hasUnseenUpdate:!0};if(k&&k.userId&&k.userId!=="guest"&&(C==="Cancelled"&&(parseFloat(k.creditsUsed)||0)>0&&!k.creditsRefunded&&(ot.creditsRefunded=!0),Oe!==(k.creditsGranted||0)&&(ot.creditsGranted=Oe),Ie!==0)){const Ne=Ae(ae,"users",k.userId);He.update(Ne,{credits:Fe(Ie)}),console.log(`Admin adjusting credits for user ${k.userId} by ${Ie}`)}if(He.update(St,ot),await He.commit(),window.showToast("Order status updated","success"),t(),k&&k.userId&&k.userId!=="guest"&&typeof window.sendTargetedPushNotification=="function"){let Ne="Order Update",Ve=`Your order #${k.orderReference||k.id.slice(-6)} is now ${C}.`;C==="Confirmed"?(Ne="Order Confirmed! \u{1F389}",Ve=`We're preparing your order #${k.orderReference||k.id.slice(-6)} with care.`):C==="In Delivery"?(Ne="Order Out for Delivery \u{1F69A}",Ve=`Your order #${k.orderReference||k.id.slice(-6)} is on its way to you!`):C==="Delivered"&&(Ne="Order Delivered! \u{1F4E6}",Ve="We hope you enjoy your DODCH products."),window.sendTargetedPushNotification(ae,k.userId,Ne,Ve,"/my-account.html#orders")}else k&&k.userId==="guest"&&k.type!=="local"&&window.showToast("Push Not Sent: Guest order (not linked to a user account).","info");if(C==="Confirmed"&&k&&k.shipping?.email){const Ne=`Order Confirmation: DODCH #${k.orderReference||k.id}`,Ve=k.items.map(st=>`\u2022 ${st.quantity}x ${st.name} (${st.size})`).join(`
-`),et=typeof k.total=="number"?k.total.toFixed(2):k.total,it=`Dear ${k.shipping.fullName},
+                `;
+                adminOrdersList.insertAdjacentHTML('afterend', paginationHTML);
+
+                document.getElementById('prev-page-btn').addEventListener('click', () => {
+                    if (pageIndex > 0) {
+                        loadAdminOrders(pageIndex - 1);
+                    }
+                });
+
+                document.getElementById('next-page-btn').addEventListener('click', () => {
+                    if (orders.length === pageSize) {
+                        loadAdminOrders(pageIndex + 1);
+                    }
+                });
+                document.querySelectorAll('.admin-status-select').forEach(select => {
+                    select.addEventListener('change', async (e) => {
+                        const newStatus = e.target.value;
+                        const orderId = e.target.dataset.id;
+                        if (!newStatus) return;
+
+                        if (await window.showConfirm(`Change order status to ${newStatus}?`, "Update Order")) {
+                            try {
+                                const order = orders.find(o => o.id === orderId);
+                                
+                                // --- Rewards System (Admin Side Processing) ---
+                                let deltaCredits = 0;
+                                let newGranted = order.creditsGranted || 0;
+                                
+                                if (order && order.userId && order.userId !== 'guest') {
+                                    if (newStatus === 'Cancelled') {
+                                        // Handle refunding spent credits
+                                        const creditsUsed = parseFloat(order.creditsUsed) || 0;
+                                        if (creditsUsed > 0 && !order.creditsRefunded) {
+                                            deltaCredits += creditsUsed;
+                                            // Mark as refunded on order document (handled in batch below)
+                                        }
+                                        
+                                        // Revoke earned credits if previously granted
+                                        const currentGranted = parseFloat(order.creditsGranted) || 0;
+                                        if (currentGranted > 0) {
+                                            deltaCredits -= currentGranted;
+                                            newGranted = 0;
+                                        }
+                                    } else {
+                                        // Calculate earned credits
+                                        let targetCreditsGranted = 0;
+                                        if (newStatus === 'Delivered' || newStatus === 'Local Order') {
+                                            let validSubtotal = 0;
+                                            if (order.items && Array.isArray(order.items)) {
+                                                order.items.forEach(item => {
+                                                    const isRefunded = item.refunded === true || item.refunded === 'true';
+                                                    if (!isRefunded) {
+                                                        let price = parseFloat(item.price) || 0;
+                                                        let qty = parseInt(item.quantity) || 1;
+                                                        validSubtotal += price * qty;
+                                                    }
+                                                });
+                                            }
+                                            const creditsUsed = parseFloat(order.creditsUsed) || 0;
+                                            targetCreditsGranted = Math.floor(Math.max(0, validSubtotal - creditsUsed) / 10);
+                                        }
+                                        
+                                        const currentGranted = parseFloat(order.creditsGranted) || 0;
+                                        if (targetCreditsGranted !== currentGranted) {
+                                            deltaCredits += (targetCreditsGranted - currentGranted);
+                                            newGranted = targetCreditsGranted;
+                                        }
+                                    }
+                                }
+                                
+                                const { writeBatch, increment } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+                                const batch = writeBatch(db);
+                                const orderRef = doc(db, "orders", orderId);
+                                
+                                const orderUpdateData = { status: newStatus, hasUnseenUpdate: true };
+                                
+                                if (order && order.userId && order.userId !== 'guest') {
+                                    if (newStatus === 'Cancelled' && (parseFloat(order.creditsUsed) || 0) > 0 && !order.creditsRefunded) {
+                                        orderUpdateData.creditsRefunded = true;
+                                    }
+                                    if (newGranted !== (order.creditsGranted || 0)) {
+                                        orderUpdateData.creditsGranted = newGranted;
+                                    }
+                                    
+                                    if (deltaCredits !== 0) {
+                                        const userRef = doc(db, "users", order.userId);
+                                        batch.update(userRef, { credits: increment(deltaCredits) });
+                                        console.log(`Admin adjusting credits for user ${order.userId} by ${deltaCredits}`);
+                                    }
+                                }
+                                
+                                batch.update(orderRef, orderUpdateData);
+                                await batch.commit();
+                                
+                                window.showToast("Order status updated", "success");
+                                checkExportEligibility(); // Re-evaluate export button state
+
+                                // --- Automated Target Push Notification ---
+                                if (order && order.userId && order.userId !== 'guest' && typeof window.sendTargetedPushNotification === 'function') {
+                                    let pushTitle = `Order Update`;
+                                    let pushBody = `Your order #${order.orderReference || order.id.slice(-6)} is now ${newStatus}.`;
+
+                                    if (newStatus === 'Confirmed') {
+                                        pushTitle = `Order Confirmed! 🎉`;
+                                        pushBody = `We're preparing your order #${order.orderReference || order.id.slice(-6)} with care.`;
+                                    } else if (newStatus === 'In Delivery') {
+                                        pushTitle = `Order Out for Delivery 🚚`;
+                                        pushBody = `Your order #${order.orderReference || order.id.slice(-6)} is on its way to you!`;
+                                    } else if (newStatus === 'Delivered') {
+                                        pushTitle = `Order Delivered! 📦`;
+                                        pushBody = `We hope you enjoy your DODCH products.`;
+                                    }
+
+                                    window.sendTargetedPushNotification(db, order.userId, pushTitle, pushBody, '/my-account.html#orders');
+                                } else if (order && order.userId === 'guest' && order.type !== 'local') {
+                                    window.showToast("Push Not Sent: Guest order (not linked to a user account).", "info");
+                                }
+                                if (newStatus === 'Confirmed') {
+                                    if (order && order.shipping?.email) {
+                                        const subject = `Order Confirmation: DODCH #${order.orderReference || order.id}`;
+                                        const itemsList = order.items.map(i => `• ${i.quantity}x ${i.name} (${i.size})`).join('\n');
+                                        const totalDisplay = typeof order.total === 'number' ? order.total.toFixed(2) : order.total;
+
+                                        const body = `Dear ${order.shipping.fullName},
 
 Thank you for choosing DODCH. We are delighted to confirm your order.
 
 ------------------------------------------------------
 ORDER SUMMARY
 ------------------------------------------------------
-Order Reference: ${k.orderReference||k.id}
+Order Reference: ${order.orderReference || order.id}
 
 ITEMS:
-${Ve}
+${itemsList}
 
 ------------------------------------------------------
-TOTAL: ${et} TND
+TOTAL: ${totalDisplay} TND
 ------------------------------------------------------
 
 We are preparing your order with care. You will receive another notification once it has been shipped.
@@ -957,7 +6300,34 @@ We are preparing your order with care. You will receive another notification onc
 Visit us: https://dodch.com
 
 Warm regards,
-The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encodeURIComponent(Ne)}&body=${encodeURIComponent(it)}`}}catch(k){console.error(k),window.showToast("Failed to update status","error")}else j.target.value=""})}),i.addEventListener("click",Se=>{const j=Se.target.closest(".admin-download-receipt-btn");if(j){const C=j.dataset.id,ge=g.find(k=>k.id===C);ge&&di(ge)}})}catch(x){console.error("Error loading orders:",x),x.code==="permission-denied"?i.innerHTML='<p style="color: #ff4d4d;">Permission Denied. Please update Firestore Rules to allow Admin access.</p>':x.code==="failed-precondition"?i.innerHTML=`
+The DODCH Team`;
+                                        window.location.href = `mailto:${order.shipping.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                                    }
+                                }
+                            } catch (err) {
+                                console.error(err);
+                                window.showToast("Failed to update status", "error");
+                            }
+                        } else {
+                            e.target.value = ""; // Reset
+                        }
+                    });
+                });
+
+                adminOrdersList.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.admin-download-receipt-btn');
+                    if (btn) {
+                        const orderId = btn.dataset.id;
+                        const order = orders.find(o => o.id === orderId);
+                        if (order) printOrderReceipt(order);
+                    }
+                });
+            } catch (error) {
+                console.error("Error loading orders:", error);
+                if (error.code === 'permission-denied') {
+                    adminOrdersList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied. Please update Firestore Rules to allow Admin access.</p>';
+                } else if (error.code === 'failed-precondition') {
+                    adminOrdersList.innerHTML = `
                         <div style="text-align: center; padding: 2rem; color: #ff4d4d; border: 1px dashed #ff4d4d; border-radius: 8px;">
                             <h3 style="margin-bottom: 0.5rem;">Missing Index</h3>
                             <p style="margin-bottom: 1rem;">Firestore requires a specific index for this Filter + Sort combination.</p>
@@ -966,68 +6336,294 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                                 <li>Look for the error message containing a long link.</li>
                                 <li>Click the link to create the index automatically.</li>
                             </ol>
-                        </div>`:i.innerHTML=`<p style="color: #ff4d4d;">Error: ${x.message}</p>`}},ko=async()=>{if(!(window.location.hostname!=="localhost"&&window.location.hostname!=="127.0.0.1"))try{const u={};Object.keys(w).forEach(M=>{const $=w[M];u[M]={name:$.name||"",category:$.category||"uncategorized",subCategory:$.subCategory||"",subtitle:$.subtitle||"",price:null,image:$.image||"",images:$.images||[],description:$.description||"",style:$.style||"",storyUrl:$.storyUrl||`${M}.html`,orderIndex:$.orderIndex||0,outOfStock:$.outOfStock||!1,isPermanentlyUnavailable:$.isPermanentlyUnavailable||!1,sizes:[]}});const T=await(await fetch("/api/sync-catalog",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(u)})).json();T.success?console.log("Local catalog sync complete."):console.error("Local sync API error:",T.error)}catch(u){console.error("Local catalog sync request failed:",u)}},jt=async()=>{if(!e)return;e.innerHTML='<p style="color:#888; padding: 1rem;">Loading inventory from Firestore...</p>';try{(await nt(Re(ae,"products"))).forEach($=>{const h=$.data(),g=$.id;if(h.deleted){delete w[g];return}w[g]?(h.name&&(w[g].name=h.name),h.subtitle&&(w[g].subtitle=h.subtitle),h.description&&(w[g].description=h.description),h.inci&&(w[g].inci=h.inci),w[g].notice=h.notice||"",w[g].price=h.price||null,w[g].originalPrice=h.originalPrice||null,w[g].outOfStock=h.outOfStock===!0,w[g].isPermanentlyUnavailable=h.isPermanentlyUnavailable===!0,w[g].sizes=h.sizes||[],w[g].image=h.image||"",w[g].images=h.images||[],w[g].batchHistory=h.batchHistory||[]):w[g]={name:h.name||g,subtitle:h.subtitle||"",description:h.description||"",image:h.image||"",images:h.images||[],price:h.price||null,sizes:h.sizes||[],outOfStock:h.outOfStock===!0,isPermanentlyUnavailable:h.isPermanentlyUnavailable===!0,orderIndex:h.orderIndex||99,style:h.style||"",storyUrl:h.storyUrl||null,category:h.category||"uncategorized",subCategory:h.subCategory||"",notice:h.notice||"",batchHistory:h.batchHistory||[]}})}catch(M){console.error("Failed to fetch products from Firestore:",M),e.innerHTML=`<p style="color: #ff4d4d;">Error loading inventory: ${M.message}</p>`;return}e.innerHTML="";const u=Object.entries(w).sort(([,M],[,$])=>{const h=(M.orderIndex||0)-($.orderIndex||0);return h!==0?h:M.name.localeCompare($.name)});u.forEach(([M,$],h)=>{const g=document.createElement("div");g.className="admin-product-card";let oe="";$.sizes&&$.sizes.length>0?(oe='<div class="price-inputs-container">',$.sizes.forEach((C,ge)=>{oe+=`
+                        </div>`;
+                } else {
+                    adminOrdersList.innerHTML = `<p style="color: #ff4d4d;">Error: ${error.message}</p>`;
+                }
+            }
+        };
+
+        const syncCatalogLocally = async () => {
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                return;
+            }
+            try {
+                const localCatalog = {};
+                Object.keys(productCatalog).forEach(id => {
+                    const prod = productCatalog[id];
+                    localCatalog[id] = {
+                        name: prod.name || "",
+                        category: prod.category || "uncategorized",
+                        subCategory: prod.subCategory || "",
+                        subtitle: prod.subtitle || "",
+                        price: null,
+                        image: prod.image || "",
+                        images: prod.images || [],
+                        description: prod.description || "",
+                        style: prod.style || "",
+                        storyUrl: prod.storyUrl || `${id}.html`,
+                        orderIndex: prod.orderIndex || 0,
+                        outOfStock: prod.outOfStock || false,
+                        isPermanentlyUnavailable: prod.isPermanentlyUnavailable || false,
+                        sizes: []
+                    };
+                });
+                const response = await fetch('/api/sync-catalog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(localCatalog)
+                });
+                const resData = await response.json();
+                if (resData.success) {
+                    console.log("Local catalog sync complete.");
+                } else {
+                    console.error("Local sync API error:", resData.error);
+                }
+            } catch (err) {
+                console.error("Local catalog sync request failed:", err);
+            }
+        };
+
+        const loadAdminProducts = async () => {
+            if (!adminProductsList) return;
+            adminProductsList.innerHTML = '<p style="color:#888; padding: 1rem;">Loading inventory from Firestore...</p>';
+
+            // Always fetch fresh data from Firestore before rendering
+            try {
+                const snapshot = await getDocs(collection(db, "products"));
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const id = docSnap.id;
+                    if (data.deleted) {
+                        delete productCatalog[id];
+                        return;
+                    }
+                    if (productCatalog[id]) {
+                        // Overwrite fields from Firestore (including edited name, subtitle, description, etc.)
+                        if (data.name) productCatalog[id].name = data.name;
+                        if (data.subtitle) productCatalog[id].subtitle = data.subtitle;
+                        if (data.description) productCatalog[id].description = data.description;
+                        if (data.inci) productCatalog[id].inci = data.inci;
+                        productCatalog[id].notice = data.notice || "";
+                        productCatalog[id].price = data.price || null;
+                        productCatalog[id].originalPrice = data.originalPrice || null;
+                        productCatalog[id].outOfStock = data.outOfStock === true;
+                        productCatalog[id].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
+                        productCatalog[id].sizes = data.sizes || [];
+                        productCatalog[id].image = data.image || '';
+                        productCatalog[id].images = data.images || [];
+                        productCatalog[id].batchHistory = data.batchHistory || [];
+                    } else {
+                        // Product exists only in Firestore (added via admin), add to local catalog
+                        productCatalog[id] = {
+                            name: data.name || id,
+                            subtitle: data.subtitle || '',
+                            description: data.description || '',
+                            image: data.image || '',
+                            images: data.images || [],
+                            price: data.price || null,
+                            sizes: data.sizes || [],
+                            outOfStock: data.outOfStock === true,
+                            isPermanentlyUnavailable: data.isPermanentlyUnavailable === true,
+                            orderIndex: data.orderIndex || 99,
+                            style: data.style || '',
+                            storyUrl: data.storyUrl || null,
+                            category: data.category || 'uncategorized',
+                            subCategory: data.subCategory || '',
+                            notice: data.notice || '',
+                            batchHistory: data.batchHistory || []
+                        };
+                    }
+                });
+            } catch (e) {
+                console.error("Failed to fetch products from Firestore:", e);
+                adminProductsList.innerHTML = `<p style="color: #ff4d4d;">Error loading inventory: ${e.message}</p>`;
+                return;
+            }
+
+            adminProductsList.innerHTML = '';
+            const sortedEntries = Object.entries(productCatalog).sort(([, a], [, b]) => {
+                const orderDiff = (a.orderIndex || 0) - (b.orderIndex || 0);
+                if (orderDiff !== 0) return orderDiff;
+                return a.name.localeCompare(b.name);
+            });
+
+            sortedEntries.forEach(([id, product], index) => {
+                const el = document.createElement('div');
+                el.className = 'admin-product-card';
+                let priceInputsHTML = '';
+                if (product.sizes && product.sizes.length > 0) {
+                    priceInputsHTML = '<div class="price-inputs-container">';
+                    product.sizes.forEach((size, index) => {
+                        priceInputsHTML += `
                             <div style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee;">
                                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                                <span style="font-size: 0.8rem; color: #666; flex: 1;">${C.label}</span>
+                                <span style="font-size: 0.8rem; color: #666; flex: 1;">${size.label}</span>
                                 <div style="display: flex; align-items: center; gap: 5px; flex: 3;">
-                                    <input type="number" class="admin-size-price-input" data-index="${ge}" value="${parseFloat(C.price)}" placeholder="Price" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
-                                    <input type="number" class="admin-size-original-price-input" data-index="${ge}" value="${C.originalPrice?parseFloat(C.originalPrice):""}" placeholder="Old" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
-                                    <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-size-stock-check" data-index="${ge}" ${C.outOfStock?"checked":""}> OOS</label>
+                                    <input type="number" class="admin-size-price-input" data-index="${index}" value="${parseFloat(size.price)}" placeholder="Price" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <input type="number" class="admin-size-original-price-input" data-index="${index}" value="${size.originalPrice ? parseFloat(size.originalPrice) : ''}" placeholder="Old" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-size-stock-check" data-index="${index}" ${size.outOfStock ? 'checked' : ''}> OOS</label>
                                 </div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;">
-                                    <input type="text" class="admin-size-batch-input" data-index="${ge}" value="${C.batchNumber||""}" placeholder="Batch #" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Batch Number">
-                                    <input type="date" class="admin-size-expiry-input" data-index="${ge}" value="${C.expiryDate||""}" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Expiry Date">
-                                    <input type="text" class="admin-size-formula-input" data-index="${ge}" value="${C.formulaVersion||""}" placeholder="Formula v" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Formula Version">
+                                    <input type="text" class="admin-size-batch-input" data-index="${index}" value="${size.batchNumber || ''}" placeholder="Batch #" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Batch Number">
+                                    <input type="date" class="admin-size-expiry-input" data-index="${index}" value="${size.expiryDate || ''}" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Expiry Date">
+                                    <input type="text" class="admin-size-formula-input" data-index="${index}" value="${size.formulaVersion || ''}" placeholder="Formula v" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Formula Version">
                                 </div>
                             </div>
-                        `}),oe+="</div>"):oe=`
+                        `;
+                    });
+                    priceInputsHTML += '</div>';
+                } else {
+                    priceInputsHTML = `
                         <div class="price-inputs-container">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="font-size: 0.85rem; color: #666; flex: 1;">Price (TND)</span>
-                                <input type="number" class="admin-price-input" value="${parseFloat($.price)}" style="flex: 2; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
-                                <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-single-stock-check" ${$.outOfStock?"checked":""}> OOS</label>
+                                <input type="number" class="admin-price-input" value="${parseFloat(product.price)}" style="flex: 2; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-single-stock-check" ${product.outOfStock ? 'checked' : ''}> OOS</label>
                             </div>
-                        </div>`;const se=h===0,de=h===u.length-1;g.innerHTML=`
+                        </div>`;
+                }
+
+                const isFirst = index === 0;
+                const isLast = index === sortedEntries.length - 1;
+
+                el.innerHTML = `
                     <div class="admin-product-info">
-                        <img src="${kt($)}" alt="${$.name}">
+                        <img src="${getProductPrimaryImage(product)}" alt="${product.name}">
                         <div class="admin-product-details">
-                            <h4>${$.name}</h4>
-                            <p>${$.subtitle}</p>
+                            <h4>${product.name}</h4>
+                            <p>${product.subtitle}</p>
                         </div>
                         <div class="admin-move-controls">
-                            <button class="btn-move up admin-move-btn" data-id="${M}" ${se?"disabled":""}>
+                            <button class="btn-move up admin-move-btn" data-id="${id}" ${isFirst ? 'disabled' : ''}>
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
                             </button>
-                            <button class="btn-move down admin-move-btn" data-id="${M}" ${de?"disabled":""}>
+                            <button class="btn-move down admin-move-btn" data-id="${id}" ${isLast ? 'disabled' : ''}>
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
                             </button>
                         </div>
                     </div>
                     <div class="admin-product-controls">
-                        ${oe}
+                        ${priceInputsHTML}
                         <div class="admin-actions-row">
-                            <button class="admin-btn btn-edit admin-edit-prod-btn" data-id="${M}">
+                            <button class="admin-btn btn-edit admin-edit-prod-btn" data-id="${id}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 Edit
                             </button>
-                            <button class="admin-btn btn-save admin-save-prod-btn" data-id="${M}" disabled>
+                            <button class="admin-btn btn-save admin-save-prod-btn" data-id="${id}" disabled>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                                 Save
                             </button>
-                            <button class="admin-btn btn-delete admin-delete-prod-btn" data-id="${M}">
+                            <button class="admin-btn btn-delete admin-delete-prod-btn" data-id="${id}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                 Delete
                             </button>
-                            <button class="admin-btn btn-history admin-history-prod-btn" data-id="${M}" title="View Batch History" style="background: linear-gradient(135deg, #6c63ff, #a78bfa); border-color: #6c63ff; color: #fff;">
+                            <button class="admin-btn btn-history admin-history-prod-btn" data-id="${id}" title="View Batch History" style="background: linear-gradient(135deg, #6c63ff, #a78bfa); border-color: #6c63ff; color: #fff;">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                 History
                             </button>
                         </div>
                     </div>
-                `,e.appendChild(g);const ee=g.querySelector(".admin-save-prod-btn"),Se=g.querySelectorAll("input"),j=()=>{let C=!1;if($.sizes&&$.sizes.length>0)g.querySelectorAll(".price-inputs-container > div").forEach((k,Ie)=>{const Oe=k.querySelector(".admin-size-price-input"),Xe=k.querySelector(".admin-size-original-price-input"),Fe=k.querySelector(".admin-size-stock-check"),He=k.querySelector(".admin-size-batch-input"),St=k.querySelector(".admin-size-expiry-input"),ot=$.sizes[Ie];parseFloat(Oe.value).toFixed(2)!==parseFloat(ot.price).toFixed(2)&&(C=!0);const Ne=Xe.value?parseFloat(Xe.value).toFixed(2):null,Ve=ot.originalPrice?parseFloat(ot.originalPrice).toFixed(2):null;Ne!==Ve&&(C=!0),Fe.checked!==(ot.outOfStock===!0)&&(C=!0);const et=k.querySelector(".admin-size-formula-input");(He.value||"")!==(ot.batchNumber||"")&&(C=!0),(St.value||"")!==(ot.expiryDate||"")&&(C=!0),et&&(et.value||"")!==(ot.formulaVersion||"")&&(C=!0)});else{const ge=g.querySelector(".admin-price-input"),k=g.querySelector(".admin-single-stock-check");ge&&parseFloat(ge.value).toFixed(2)!==parseFloat($.price).toFixed(2)&&(C=!0),k&&k.checked!==($.outOfStock===!0)&&(C=!0)}ee.disabled=!C};Se.forEach(C=>{C.addEventListener("input",j),C.addEventListener("change",j)})}),document.querySelectorAll(".admin-edit-prod-btn").forEach(M=>{M.addEventListener("click",$=>{const h=$.currentTarget.dataset.id,g=w[h];if(!g)return;const oe=document.getElementById("product-modal-title");oe&&(oe.textContent="Edit Product"),Le=h,Ze();const se=document.getElementById("product-id-input");if(se&&(se.value=h),document.getElementById("new-prod-name").value=g.name||"",document.getElementById("new-prod-subtitle").value=g.subtitle||"",document.getElementById("new-prod-desc").value=g.description||"",document.getElementById("new-prod-inci").value=g.inci||"",document.getElementById("new-prod-notice")&&(document.getElementById("new-prod-notice").value=g.notice||""),document.getElementById("new-prod-story-url")&&(document.getElementById("new-prod-story-url").value=g.storyUrl||""),we){const j=g.images&&Array.isArray(g.images)&&g.images.length>0?g.images:g.image?[g.image]:[];we.value=j.join(`
-`),yt()}ye&&(ye.innerHTML=""),g.sizes&&Array.isArray(g.sizes)&&g.sizes.forEach(j=>Ut(j));const de=document.getElementById("new-prod-performance-container");de&&(de.innerHTML=""),g.performance&&Array.isArray(g.performance)&&g.performance.forEach(j=>It(j));const ee=document.getElementById("aem-history-tab-btn"),Se=document.getElementById("batch-history-container");if(ee&&Se)if(g.batchHistory&&g.batchHistory.length>0){ee.style.display="";const j=[...g.batchHistory].sort((C,ge)=>new Date(ge.timestamp)-new Date(C.timestamp));Se.innerHTML=`
+                `;
+                adminProductsList.appendChild(el);
+
+                // --- Change Detection Logic ---
+                const saveBtn = el.querySelector('.admin-save-prod-btn');
+                const inputs = el.querySelectorAll('input');
+
+                const checkChanges = () => {
+                    let hasChanged = false;
+
+                    // Check Prices & Size-specific Stock
+
+                    // Check Prices & Size-specific Stock
+                    if (product.sizes && product.sizes.length > 0) {
+                        const sizeRows = el.querySelectorAll('.price-inputs-container > div');
+                        sizeRows.forEach((row, idx) => {
+                            const pInput = row.querySelector('.admin-size-price-input');
+                            const opInput = row.querySelector('.admin-size-original-price-input');
+                            const sCheck = row.querySelector('.admin-size-stock-check');
+                            const bInput = row.querySelector('.admin-size-batch-input');
+                            const eInput = row.querySelector('.admin-size-expiry-input');
+
+                            const original = product.sizes[idx];
+                            if (parseFloat(pInput.value).toFixed(2) !== parseFloat(original.price).toFixed(2)) hasChanged = true;
+                            const currentOp = opInput.value ? parseFloat(opInput.value).toFixed(2) : null;
+                            const originalOp = original.originalPrice ? parseFloat(original.originalPrice).toFixed(2) : null;
+                            if (currentOp !== originalOp) hasChanged = true;
+                            if (sCheck.checked !== (original.outOfStock === true)) hasChanged = true;
+                            const fInput = row.querySelector('.admin-size-formula-input');
+                            if ((bInput.value || '') !== (original.batchNumber || '')) hasChanged = true;
+                            if ((eInput.value || '') !== (original.expiryDate || '')) hasChanged = true;
+                            if (fInput && (fInput.value || '') !== (original.formulaVersion || '')) hasChanged = true;
+                        });
+                    } else {
+                        const pInput = el.querySelector('.admin-price-input');
+                        const sCheck = el.querySelector('.admin-single-stock-check');
+                        if (pInput && parseFloat(pInput.value).toFixed(2) !== parseFloat(product.price).toFixed(2)) hasChanged = true;
+                        if (sCheck && sCheck.checked !== (product.outOfStock === true)) hasChanged = true;
+                    }
+
+                    saveBtn.disabled = !hasChanged;
+                };
+
+                inputs.forEach(input => {
+                    input.addEventListener('input', checkChanges);
+                    input.addEventListener('change', checkChanges);
+                });
+            });
+
+            document.querySelectorAll('.admin-edit-prod-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const product = productCatalog[id];
+                    if (!product) return;
+
+                    const modalTitle = document.getElementById('product-modal-title');
+                    if (modalTitle) modalTitle.textContent = 'Edit Product';
+
+                    currentModalProductId = id; // Track for change detection
+
+                    openProductModal(); // Inject section container first (ensures notice textarea exists)
+
+                    const idInput = document.getElementById('product-id-input');
+                    if (idInput) idInput.value = id;
+
+                    document.getElementById('new-prod-name').value = product.name || '';
+                    document.getElementById('new-prod-subtitle').value = product.subtitle || '';
+                    document.getElementById('new-prod-desc').value = product.description || '';
+                    document.getElementById('new-prod-inci').value = product.inci || '';
+                    if (document.getElementById('new-prod-notice')) document.getElementById('new-prod-notice').value = product.notice || '';
+                    if (document.getElementById('new-prod-story-url')) document.getElementById('new-prod-story-url').value = product.storyUrl || '';
+
+                    if (imagePathInput) {
+                        const paths = product.images && Array.isArray(product.images) && product.images.length > 0
+                            ? product.images
+                            : (product.image ? [product.image] : []);
+                        imagePathInput.value = paths.join('\n');
+                        renderImagePreviews();
+                    }
+
+                    if (sizesContainer) sizesContainer.innerHTML = '';
+                    if (product.sizes && Array.isArray(product.sizes)) {
+                        product.sizes.forEach(size => addSizeInputRow(size));
+                    }
+
+                    const perfContainer = document.getElementById('new-prod-performance-container');
+                    if (perfContainer) perfContainer.innerHTML = '';
+                    if (product.performance && Array.isArray(product.performance)) {
+                        product.performance.forEach(m => addPerformanceMetricRow(m));
+                    }
+
+                    // Render Batch History in tabbed modal
+                    const historyTabBtn = document.getElementById('aem-history-tab-btn');
+                    const historyContainer = document.getElementById('batch-history-container');
+                    if (historyTabBtn && historyContainer) {
+                        if (product.batchHistory && product.batchHistory.length > 0) {
+                            historyTabBtn.style.display = '';
+                            const sortedHistory = [...product.batchHistory].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                            historyContainer.innerHTML = `
                                 <table style="width: 100%; border-collapse: collapse; font-family: var(--font-sans); font-size: 0.85rem; text-align: left;">
                                     <thead>
                                         <tr style="border-bottom: 2px solid #eee; font-weight: 600; color: #333;">
@@ -1040,27 +6636,175 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${j.map((C,ge)=>`
+                                        ${sortedHistory.map((h, i) => `
                                             <tr style="border-bottom: 1px solid #eee;">
-                                                <td style="padding: 8px; font-weight: 500;">${C.size}</td>
-                                                <td style="padding: 8px; color: var(--accent-gold-text); font-weight: 600;">${C.batchNumber}</td>
-                                                <td style="padding: 8px; color: #555;">${C.formulaVersion||"\u2014"}</td>
-                                                <td style="padding: 8px; color: #666;">${C.expiryDate||"N/A"}</td>
-                                                <td style="padding: 8px; color: #666; font-size: 0.8rem;">${new Date(C.timestamp).toLocaleString()}</td>
+                                                <td style="padding: 8px; font-weight: 500;">${h.size}</td>
+                                                <td style="padding: 8px; color: var(--accent-gold-text); font-weight: 600;">${h.batchNumber}</td>
+                                                <td style="padding: 8px; color: #555;">${h.formulaVersion || '—'}</td>
+                                                <td style="padding: 8px; color: #666;">${h.expiryDate || 'N/A'}</td>
+                                                <td style="padding: 8px; color: #666; font-size: 0.8rem;">${new Date(h.timestamp).toLocaleString()}</td>
                                                 <td style="padding: 8px; position: relative;">
                                                     <button type="button" class="admin-btn-sm" style="padding: 2px 6px; font-size: 0.75rem;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">View INCI</button>
-                                                    <div style="display: none; position: absolute; right: 10px; top: 35px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; max-width: 300px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-size: 0.75rem; white-space: normal; color: #333;">${C.inci||"None"}</div>
+                                                    <div style="display: none; position: absolute; right: 10px; top: 35px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; max-width: 300px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-size: 0.75rem; white-space: normal; color: #333;">${h.inci || 'None'}</div>
                                                 </td>
                                             </tr>
-                                        `).join("")}
+                                        `).join('')}
                                     </tbody>
                                 </table>
-                            `}else ee.style.display="none",Se.innerHTML="";ze()})}),document.querySelectorAll(".admin-save-prod-btn").forEach(M=>{M.addEventListener("click",async $=>{const h=$.currentTarget.dataset.id,g=$.currentTarget.closest(".admin-product-card"),oe=$.currentTarget;oe.disabled=!0;const se=oe.innerHTML;oe.innerHTML="Saving...";try{const de=g.querySelectorAll(".admin-size-price-input");if(de.length>0){w[h].batchHistory=w[h].batchHistory||[],de.forEach(j=>{const C=j.dataset.index,ge=parseFloat(j.value).toFixed(2),k=g.querySelector(`.admin-size-original-price-input[data-index="${C}"]`),Ie=k&&k.value?parseFloat(k.value).toFixed(2):null,Oe=g.querySelector(`.admin-size-stock-check[data-index="${C}"]`),Xe=Oe?Oe.checked:!1,Fe=g.querySelector(`.admin-size-batch-input[data-index="${C}"]`),He=Fe?Fe.value.trim():"",St=g.querySelector(`.admin-size-expiry-input[data-index="${C}"]`),ot=St?St.value:"",Ne=g.querySelector(`.admin-size-formula-input[data-index="${C}"]`),Ve=Ne?Ne.value.trim():"",et=w[h].sizes[C],it=et&&et.batchNumber||"";He&&He!==it&&w[h].batchHistory.push({size:et.label,batchNumber:He,expiryDate:ot,formulaVersion:Ve,timestamp:new Date().toISOString(),inci:w[h].inci||""}),et&&et.outOfStock&&!Xe&&ti(h,et.label,w[h].name),w[h].sizes[C].price=ge,w[h].sizes[C].originalPrice=Ie,w[h].sizes[C].outOfStock=Xe,w[h].sizes[C].batchNumber=He,w[h].sizes[C].expiryDate=ot,w[h].sizes[C].formulaVersion=Ve});const Se=w[h].sizes.map(j=>parseFloat(j.price));w[h].price=Math.min(...Se).toFixed(2)}else{const Se=g.querySelector(".admin-price-input"),j=g.querySelector(".admin-single-stock-check"),C=w[h].outOfStock===!0;if(Se&&(w[h].price=parseFloat(Se.value).toFixed(2)),j){const ge=j.checked;C&&!ge&&ti(h,"Standard",w[h].name),w[h].outOfStock=ge}}const ee=JSON.parse(JSON.stringify(w[h]));await at(Ae(ae,"products",h),ee,{merge:!0}),window.showToast("Product updated","success"),oe.innerHTML=se}catch(de){console.error(de),window.showToast("Failed to update product","error"),oe.innerHTML=se,oe.disabled=!1}})}),document.querySelectorAll(".admin-delete-prod-btn").forEach(M=>{M.addEventListener("click",async $=>{const h=$.currentTarget.dataset.id,g=w[h]?.name||h;if(await window.showConfirm(`Are you sure you want to delete <strong>${g}</strong>? This action cannot be undone.`,"Delete Product")&&await window.showConfirm(`FINAL WARNING: This will permanently remove <strong>${g}</strong> from the shop and database. Are you absolutely certain?`,"Confirm Permanent Deletion")&&await window.showConfirm(`This is your last chance to cancel. Proceed with deleting <strong>${g}</strong>?`,"Last Chance"))try{console.log("Deleting product:",h),ct.hasOwnProperty(h)?(await at(Ae(ae,"products",h),{deleted:!0},{merge:!0}),console.log("Soft delete executed (marked as deleted in DB)")):(await Eo(Ae(ae,"products",h)),console.log("Hard delete executed (removed from DB)")),delete w[h],await ko(),jt(),window.showToast("Product deleted successfully.","success")}catch(oe){console.error("Error deleting product:",oe),window.showToast("Failed to delete product.","error")}})}),document.querySelectorAll(".admin-history-prod-btn").forEach(M=>{M.addEventListener("click",$=>{const h=$.currentTarget.dataset.id,g=w[h];if(!g)return;const oe=document.getElementById("batch-history-modal"),se=document.getElementById("history-modal-title"),de=document.getElementById("history-modal-body");if(!oe||!de)return;se&&(se.textContent=`Batch History \u2014 ${g.name}`);const ee=g.batchHistory||[];if(ee.length===0)de.innerHTML=`
+                            `;
+                        } else {
+                            historyTabBtn.style.display = 'none';
+                            historyContainer.innerHTML = '';
+                        }
+                    }
+
+                    checkModalChanges(); // Initial check to disable Save button
+                });
+            });
+
+            document.querySelectorAll('.admin-save-prod-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const card = e.currentTarget.closest('.admin-product-card');
+                    const saveBtn = e.currentTarget;
+
+                    saveBtn.disabled = true;
+                    const originalHTML = saveBtn.innerHTML;
+                    saveBtn.innerHTML = 'Saving...';
+
+                    try {
+                        const sizeInputs = card.querySelectorAll('.admin-size-price-input');
+                        if (sizeInputs.length > 0) {
+                            productCatalog[id].batchHistory = productCatalog[id].batchHistory || [];
+                            sizeInputs.forEach(input => {
+                                const index = input.dataset.index;
+                                const newPrice = parseFloat(input.value).toFixed(2);
+                                const originalPriceInput = card.querySelector(`.admin-size-original-price-input[data-index="${index}"]`);
+                                const oldPrice = originalPriceInput ? (originalPriceInput.value ? parseFloat(originalPriceInput.value).toFixed(2) : null) : null;
+                                const stockCheck = card.querySelector(`.admin-size-stock-check[data-index="${index}"]`);
+                                const isOutOfStock = stockCheck ? stockCheck.checked : false;
+                                const batchInput = card.querySelector(`.admin-size-batch-input[data-index="${index}"]`);
+                                const newBatch = batchInput ? batchInput.value.trim() : '';
+                                const expiryInput = card.querySelector(`.admin-size-expiry-input[data-index="${index}"]`);
+                                const expiryDateVal = expiryInput ? expiryInput.value : '';
+                                const formulaInput = card.querySelector(`.admin-size-formula-input[data-index="${index}"]`);
+                                const formulaVersionVal = formulaInput ? formulaInput.value.trim() : '';
+
+                                const oldSize = productCatalog[id].sizes[index];
+                                const oldBatch = oldSize ? (oldSize.batchNumber || '') : '';
+
+                                if (newBatch && newBatch !== oldBatch) {
+                                    productCatalog[id].batchHistory.push({
+                                        size: oldSize.label,
+                                        batchNumber: newBatch,
+                                        expiryDate: expiryDateVal,
+                                        formulaVersion: formulaVersionVal,
+                                        timestamp: new Date().toISOString(),
+                                        inci: productCatalog[id].inci || ''
+                                    });
+                                }
+
+                                // Check for Back In Stock status change (from outOfStock=true to false)
+                                if (oldSize && oldSize.outOfStock && !isOutOfStock) {
+                                    triggerBackInStockNotifications(id, oldSize.label, productCatalog[id].name);
+                                }
+
+                                productCatalog[id].sizes[index].price = newPrice;
+                                productCatalog[id].sizes[index].originalPrice = oldPrice;
+                                productCatalog[id].sizes[index].outOfStock = isOutOfStock;
+                                productCatalog[id].sizes[index].batchNumber = newBatch;
+                                productCatalog[id].sizes[index].expiryDate = expiryDateVal;
+                                productCatalog[id].sizes[index].formulaVersion = formulaVersionVal;
+                            });
+                            const prices = productCatalog[id].sizes.map(s => parseFloat(s.price));
+                            productCatalog[id].price = Math.min(...prices).toFixed(2);
+                        } else {
+                            const priceInput = card.querySelector('.admin-price-input');
+                            const stockCheck = card.querySelector('.admin-single-stock-check');
+                            const wasOOS = productCatalog[id].outOfStock === true;
+                            
+                            if (priceInput) {
+                                productCatalog[id].price = parseFloat(priceInput.value).toFixed(2);
+                            }
+                            if (stockCheck) {
+                                const isOOS = stockCheck.checked;
+                                if (wasOOS && !isOOS) {
+                                    triggerBackInStockNotifications(id, 'Standard', productCatalog[id].name);
+                                }
+                                productCatalog[id].outOfStock = isOOS;
+                            }
+                        }
+                        const cleanedData = JSON.parse(JSON.stringify(productCatalog[id]));
+                        await setDoc(doc(db, "products", id), cleanedData, { merge: true });
+                        window.showToast("Product updated", "success");
+                        saveBtn.innerHTML = originalHTML;
+                        // Button stays disabled because data now matches catalog
+                    } catch (err) {
+                        console.error(err);
+                        window.showToast("Failed to update product", "error");
+                        saveBtn.innerHTML = originalHTML;
+                        saveBtn.disabled = false;
+                    }
+                });
+            });
+
+            document.querySelectorAll('.admin-delete-prod-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const prodName = productCatalog[id]?.name || id;
+                    
+                    if (await window.showConfirm(`Are you sure you want to delete <strong>${prodName}</strong>? This action cannot be undone.`, "Delete Product")) {
+                        if (await window.showConfirm(`FINAL WARNING: This will permanently remove <strong>${prodName}</strong> from the shop and database. Are you absolutely certain?`, "Confirm Permanent Deletion")) {
+                            if (await window.showConfirm(`This is your last chance to cancel. Proceed with deleting <strong>${prodName}</strong>?`, "Last Chance")) {
+                        try {
+                            console.log("Deleting product:", id);
+                            if (defaultProductCatalog.hasOwnProperty(id)) {
+                                await setDoc(doc(db, "products", id), { deleted: true }, { merge: true });
+                                console.log("Soft delete executed (marked as deleted in DB)");
+                            } else {
+                                await deleteDoc(doc(db, "products", id));
+                                console.log("Hard delete executed (removed from DB)");
+                            }
+
+                            delete productCatalog[id];
+                            await syncCatalogLocally();
+                            loadAdminProducts();
+                            window.showToast("Product deleted successfully.", "success");
+                        } catch (error) {
+                            console.error("Error deleting product:", error);
+                            window.showToast("Failed to delete product.", "error");
+                        }
+                    }
+                        }
+                    }
+                });
+            });
+
+            // --- Batch History Button Handler ---
+            document.querySelectorAll('.admin-history-prod-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const product = productCatalog[id];
+                    if (!product) return;
+
+                    const modal = document.getElementById('batch-history-modal');
+                    const titleEl = document.getElementById('history-modal-title');
+                    const bodyEl = document.getElementById('history-modal-body');
+                    if (!modal || !bodyEl) return;
+
+                    if (titleEl) titleEl.textContent = `Batch History — ${product.name}`;
+
+                    const history = product.batchHistory || [];
+                    if (history.length === 0) {
+                        bodyEl.innerHTML = `
                             <div style="text-align:center; padding: 2rem; color: #999;">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin-bottom:0.75rem;opacity:0.4;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                 <p style="font-size:0.95rem;">No batch history recorded yet.</p>
                                 <p style="font-size:0.82rem;margin-top:0.25rem;">History is saved each time a batch number is changed.</p>
-                            </div>`;else{const Se=[...ee].sort((j,C)=>new Date(C.timestamp)-new Date(j.timestamp));de.innerHTML=`
+                            </div>`;
+                    } else {
+                        const sorted = [...history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        bodyEl.innerHTML = `
                             <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
                                 <thead>
                                     <tr style="border-bottom:2px solid #e8e0ff;">
@@ -1072,25 +6816,173 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${Se.map((j,C)=>{const ge=`inci-row-${C}`;return`
-                                        <tr style="border-bottom:1px solid #f0eeff;background:${C%2===0?"#fff":"#faf8ff"};">
-                                            <td style="padding:12px 8px;font-weight:500;color:#333;">${j.size||"\u2014"}</td>
-                                            <td style="padding:12px 8px;color:#6c63ff;font-weight:700;letter-spacing:0.02em;">${j.batchNumber}</td>
-                                            <td style="padding:12px 8px;color:#555;">${j.expiryDate||"N/A"}</td>
-                                            <td style="padding:12px 8px;color:#888;font-size:0.78rem;white-space:nowrap;">${new Date(j.timestamp).toLocaleString()}</td>
+                                    ${sorted.map((h, i) => {
+                                        const rowId = `inci-row-${i}`;
+                                        return `
+                                        <tr style="border-bottom:1px solid #f0eeff;background:${i % 2 === 0 ? '#fff' : '#faf8ff'};">
+                                            <td style="padding:12px 8px;font-weight:500;color:#333;">${h.size || '—'}</td>
+                                            <td style="padding:12px 8px;color:#6c63ff;font-weight:700;letter-spacing:0.02em;">${h.batchNumber}</td>
+                                            <td style="padding:12px 8px;color:#555;">${h.expiryDate || 'N/A'}</td>
+                                            <td style="padding:12px 8px;color:#888;font-size:0.78rem;white-space:nowrap;">${new Date(h.timestamp).toLocaleString()}</td>
                                             <td style="padding:12px 8px;">
-                                                <button type="button" style="background:#f0eeff;border:none;color:#6c63ff;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;cursor:pointer;" onclick="const d=document.getElementById('${ge}');d.style.display=d.style.display==='none'?'table-row':'none';this.textContent=d.style.display==='table-row'?'Hide':'View';">View</button>
+                                                <button type="button" style="background:#f0eeff;border:none;color:#6c63ff;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;cursor:pointer;" onclick="const d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none';this.textContent=d.style.display==='table-row'?'Hide':'View';">View</button>
                                             </td>
                                         </tr>
-                                        <tr id="${ge}" style="display:none;background:${C%2===0?"#fff":"#faf8ff"};border-bottom:1px solid #f0eeff;">
+                                        <tr id="${rowId}" style="display:none;background:${i % 2 === 0 ? '#fff' : '#faf8ff'};border-bottom:1px solid #f0eeff;">
                                             <td colspan="5" style="padding:12px 16px;font-size:0.8rem;color:#555;line-height:1.5;background:#f9f9ff;">
                                                 <div style="font-weight:600;margin-bottom:6px;color:#6c63ff;">INCI Ingredients:</div>
-                                                <div style="white-space:normal;word-break:break-word;">${j.inci||"No INCI recorded"}</div>
+                                                <div style="white-space:normal;word-break:break-word;">${h.inci || 'No INCI recorded'}</div>
                                             </td>
                                         </tr>
-                                        `}).join("")}
+                                        `;
+                                    }).join('')}
                                 </tbody>
-                            </table>`}oe.classList.add("active"),document.body.style.overflow="hidden"})});const x=document.getElementById("close-history-modal-btn");x&&(x.onclick=()=>{const M=document.getElementById("batch-history-modal");M&&M.classList.remove("active"),document.body.style.overflow=""});const T=document.getElementById("batch-history-modal");T&&T.addEventListener("click",M=>{M.target===T&&(T.classList.remove("active"),document.body.style.overflow="")}),document.querySelectorAll(".admin-move-btn").forEach(M=>{M.addEventListener("click",async $=>{const h=$.currentTarget.dataset.id,g=$.currentTarget.classList.contains("up")?-1:1,oe=u.findIndex(([de])=>de===h),se=oe+g;if(se>=0&&se<u.length){const de=[];u.forEach(([ee,Se],j)=>{let C=j;j===oe&&(C=se),j===se&&(C=oe),Se.orderIndex!==C&&(Se.orderIndex=C,w[ee].orderIndex=C,de.push(gt(Ae(ae,"products",ee),{orderIndex:C})))});try{await Promise.all(de),await ko(),jt(),Je()}catch(ee){console.error("Error reordering:",ee),window.showToast("Failed to reorder products.","error")}}})})};window.refreshAdminProducts=jt;const Wo=async()=>{const u=document.getElementById("revenueChart");if(u)try{const x=We(Re(ae,"orders"),oo("timestamp","asc")),T=await nt(x),M={};let $=0,h=0;const g=new Date;g.setDate(g.getDate()-30);const oe=["Confirmed","In Delivery","Delivered","Local Order"];T.forEach(j=>{const C=j.data();if(h++,C.timestamp&&C.status&&oe.includes(C.status)){let ge=C.subtotal||(C.total?C.total-(C.shippingFee||0):0);C.items&&C.items.forEach(Ie=>{if(Ie.refunded===!0||Ie.refunded==="true"){const Oe=parseFloat(Ie.price)||0;ge-=Oe*(Ie.quantity||1)}}),$+=ge;const k=new Date(C.timestamp.seconds*1e3);if(k>=g){const Ie=k.toLocaleDateString("en-US",{month:"short",day:"numeric"});M[Ie]=(M[Ie]||0)+ge}}});const se=document.getElementById("total-revenue-display");se&&(se.textContent=`${$.toFixed(2)} TND`);const de=document.getElementById("total-orders-display");de&&(de.textContent=h.toLocaleString());const ee=Object.keys(M),Se=Object.values(M);new Chart(u,{type:"line",data:{labels:ee,datasets:[{label:"Revenue (TND)",data:Se,borderColor:"#D4AF37",backgroundColor:"rgba(212, 175, 55, 0.1)",borderWidth:2,fill:!0,tension:.4}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1}},scales:{y:{beginAtZero:!0,grid:{color:"rgba(0, 0, 0, 0.05)"}},x:{grid:{display:!1}}}}})}catch(x){console.error("Error loading revenue chart:",x)}}})(),(()=>{document.getElementById("qv-modal")||document.body.insertAdjacentHTML("beforeend",`
+                            </table>`;
+                    }
+
+                    modal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                });
+            });
+
+            // Close batch history modal
+            const closeHistoryBtn = document.getElementById('close-history-modal-btn');
+            if (closeHistoryBtn) {
+                closeHistoryBtn.onclick = () => {
+                    const modal = document.getElementById('batch-history-modal');
+                    if (modal) modal.classList.remove('active');
+                    document.body.style.overflow = '';
+                };
+            }
+            const historyModalOverlay = document.getElementById('batch-history-modal');
+            if (historyModalOverlay) {
+                historyModalOverlay.addEventListener('click', (e) => {
+                    if (e.target === historyModalOverlay) {
+                        historyModalOverlay.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
+            }
+
+            document.querySelectorAll('.admin-move-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const direction = e.currentTarget.classList.contains('up') ? -1 : 1;
+                    const currentIndex = sortedEntries.findIndex(([pid]) => pid === id);
+                    const targetIndex = currentIndex + direction;
+
+                    if (targetIndex >= 0 && targetIndex < sortedEntries.length) {
+                        const batchPromises = [];
+
+                        sortedEntries.forEach(([pid, p], idx) => {
+                            let newIndex = idx;
+                            if (idx === currentIndex) newIndex = targetIndex;
+                            if (idx === targetIndex) newIndex = currentIndex;
+
+                            if ((p.orderIndex !== newIndex)) {
+                                p.orderIndex = newIndex;
+                                productCatalog[pid].orderIndex = newIndex; // Update local immediately
+                                batchPromises.push(updateDoc(doc(db, "products", pid), { orderIndex: newIndex }));
+                            }
+                        });
+
+                        try {
+                            await Promise.all(batchPromises);
+                            await syncCatalogLocally();
+                            loadAdminProducts(); // Re-render admin list
+                            initShopPage(); // Re-render shop page if visible
+                        } catch (err) {
+                            console.error("Error reordering:", err);
+                            window.showToast("Failed to reorder products.", "error");
+                        }
+                    }
+                });
+            });
+        };
+        window.refreshAdminProducts = loadAdminProducts;
+
+        const loadRevenueChart = async () => {
+            const ctx = document.getElementById('revenueChart');
+            if (!ctx) return;
+
+            try {
+                const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
+                const querySnapshot = await getDocs(q);
+
+                const revenueByDate = {};
+                let totalRevenue = 0;
+                let totalOrdersCount = 0;
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const validStatuses = ['Confirmed', 'In Delivery', 'Delivered', 'Local Order'];
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    totalOrdersCount++;
+                    if (data.timestamp && data.status && validStatuses.includes(data.status)) {
+                        // Exclude shipping fee from revenue (Use subtotal if available, otherwise calculate it)
+                        let orderRevenue = data.subtotal || (data.total ? (data.total - (data.shippingFee || 0)) : 0);
+
+                        // Deduct value of refunded items
+                        if (data.items) {
+                            data.items.forEach(item => {
+                                if (item.refunded === true || item.refunded === 'true') {
+                                    const itemPrice = parseFloat(item.price) || 0;
+                                    orderRevenue -= itemPrice * (item.quantity || 1);
+                                }
+                            });
+                        }
+
+                        totalRevenue += orderRevenue;
+
+                        const date = new Date(data.timestamp.seconds * 1000);
+                        if (date >= thirtyDaysAgo) {
+                            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + orderRevenue;
+                        }
+                    }
+                });
+                const totalRevEl = document.getElementById('total-revenue-display');
+                if (totalRevEl) totalRevEl.textContent = `${totalRevenue.toFixed(2)} TND`;
+                const totalOrdersEl = document.getElementById('total-orders-display');
+                if (totalOrdersEl) totalOrdersEl.textContent = totalOrdersCount.toLocaleString();
+
+                const labels = Object.keys(revenueByDate);
+                const data = Object.values(revenueByDate);
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Revenue (TND)',
+                            data: data,
+                            borderColor: '#D4AF37',
+                            backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.05)' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error loading revenue chart:", error);
+            }
+        };
+
+    };
+    initAdminPage();
+    const initQuickView = () => {
+        const qvModalHTML = `
             <div id="qv-modal" class="qv-modal-overlay">
 
                 <div class="qv-modal-content">
@@ -1132,59 +7024,894 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                     </div>
                 </div>
             </div>
-        `);const i=document.getElementById("qv-modal"),e=document.getElementById("qv-close-btn"),t=document.getElementById("qv-image"),n=document.getElementById("qv-title"),r=document.getElementById("qv-price"),H=document.getElementById("qv-desc"),v=document.getElementById("qv-add-to-cart"),b=document.getElementById("qv-learn-more"),y=document.getElementById("qv-expand-page");let S={};document.body.addEventListener("click",A=>{if(A.target.classList.contains("quick-view-btn")){window.triggerHaptic("quickview");const N=A.target;A.preventDefault(),A.stopPropagation();const J=N.dataset.id,D=w[J];if(D&&D.isPermanentlyUnavailable){window.showToast("This product is no longer available.","error");return}const R=D?D.name:N.dataset.title,f=D?D.price:N.dataset.price,L=D?D.description:N.dataset.desc,Z=D?D.style:N.dataset.style,xe=D?To(D):[N.dataset.img],ue=xe[0]||"";S={id:J,title:R,price:f,img:ue,desc:L},document.body.style.overflow="hidden",t.src=ue,t.style=Z||"",n.textContent=R,H.textContent=L;const Q=document.getElementById("qv-thumbnails");if(Q&&(Q.innerHTML="",xe.forEach((W,ne)=>{const P=document.createElement("button");P.type="button",P.className="qv-thumbnail-btn"+(ne===0?" active":""),P.innerHTML=`<img src="${W}" alt="Thumbnail ${ne+1}">`,P.addEventListener("click",()=>{t.src=W;const I=t.parentElement.querySelector(".qv-tinted-shadow");I&&(I.style.backgroundImage=`url('${W}')`),Q.querySelectorAll(".qv-thumbnail-btn").forEach(K=>K.classList.remove("active")),P.classList.add("active")}),Q.appendChild(P)})),b){const W=Uo(D);if(b.textContent=W?"View Story Page":"",b.href=W?D.storyUrl:"#",b.style.display=W?"inline-block":"none",y){y.href=`product.html?id=${J}`;const ne=`
+        `;
+
+        if (!document.getElementById('qv-modal')) {
+            document.body.insertAdjacentHTML('beforeend', qvModalHTML);
+        }
+
+        const modal = document.getElementById('qv-modal');
+        const closeBtn = document.getElementById('qv-close-btn');
+        const qvImage = document.getElementById('qv-image');
+        const qvTitle = document.getElementById('qv-title');
+        const qvPrice = document.getElementById('qv-price');
+        const qvDesc = document.getElementById('qv-desc');
+        const qvAddToCart = document.getElementById('qv-add-to-cart');
+        const qvLearnMore = document.getElementById('qv-learn-more');
+        const qvExpandPage = document.getElementById('qv-expand-page');
+
+        let currentProduct = {};
+        document.body.addEventListener('click', (e) => {
+            if (e.target.classList.contains('quick-view-btn')) {
+                window.triggerHaptic('quickview');
+                const btn = e.target;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const id = btn.dataset.id;
+                const product = productCatalog[id];
+
+                if (product && product.isPermanentlyUnavailable) {
+                    window.showToast('This product is no longer available.', 'error');
+                    return;
+                }
+
+                const title = product ? product.name : btn.dataset.title;
+                const price = product ? product.price : btn.dataset.price;
+                const desc = product ? product.description : btn.dataset.desc;
+                const style = product ? product.style : btn.dataset.style;
+                const productImages = product ? getProductImages(product) : [btn.dataset.img];
+                const qvPrimaryImage = productImages[0] || '';
+
+                currentProduct = { id, title, price, img: qvPrimaryImage, desc };
+                document.body.style.overflow = 'hidden';
+
+                qvImage.src = qvPrimaryImage;
+                qvImage.style = style || '';
+                qvTitle.textContent = title;
+                qvDesc.textContent = desc;
+
+                const qvThumbnails = document.getElementById('qv-thumbnails');
+                if (qvThumbnails) {
+                    qvThumbnails.innerHTML = '';
+                    productImages.forEach((imageSrc, index) => {
+                        const thumbBtn = document.createElement('button');
+                        thumbBtn.type = 'button';
+                        thumbBtn.className = 'qv-thumbnail-btn' + (index === 0 ? ' active' : '');
+                        thumbBtn.innerHTML = `<img src="${imageSrc}" alt="Thumbnail ${index + 1}">`;
+                        thumbBtn.addEventListener('click', () => {
+                            qvImage.src = imageSrc;
+                            const qs = qvImage.parentElement.querySelector('.qv-tinted-shadow');
+                            if (qs) qs.style.backgroundImage = `url('${imageSrc}')`;
+
+                            qvThumbnails.querySelectorAll('.qv-thumbnail-btn').forEach(b => b.classList.remove('active'));
+                            thumbBtn.classList.add('active');
+                        });
+                        qvThumbnails.appendChild(thumbBtn);
+                    });
+                }
+
+                if (qvLearnMore) {
+                    const hasStory = hasStandaloneStoryPage(product);
+                    qvLearnMore.textContent = hasStory ? 'View Story Page' : '';
+                    qvLearnMore.href = hasStory ? product.storyUrl : '#';
+                    qvLearnMore.style.display = hasStory ? 'inline-block' : 'none';
+                    if (qvExpandPage) {
+                        qvExpandPage.href = `product.html?id=${id}`;
+                        const expandSVG = `
                             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="expand-svg">
                                 <g class="arrow-tr"><polyline points="15 3 21 3 21 9"></polyline><line x1="21" y1="3" x2="14" y2="10"></line></g>
                                 <g class="arrow-bl"><polyline points="9 21 3 21 3 15"></polyline><line x1="3" y1="21" x2="10" y2="14"></line></g>
                                 <g class="arrow-br"><polyline points="21 15 21 21 15 21"></polyline><line x1="21" y1="21" x2="14" y2="14"></line></g>
                                 <g class="arrow-tl"><polyline points="3 9 3 3 9 3"></polyline><line x1="3" y1="3" x2="10" y2="10"></line></g>
                             </svg>
-                        `;W?(y.classList.remove("pill-button"),y.innerHTML=ne,y.title="Open Product Page"):(y.classList.add("pill-button"),y.innerHTML=`View Full Product Page ${ne}`,y.removeAttribute("title"))}}const ve=i.querySelector(".size-options"),be=i.querySelector(".size-selector");ve.innerHTML="";const ke=W=>{let ne=document.getElementById("qv-back-in-stock-notify-btn");if(ne&&ne.remove(),(D.sizes&&D.sizes.length>0?D.sizes.every(K=>K.outOfStock===!0||String(K.outOfStock).toLowerCase()==="true"):D.outOfStock===!0||String(D.outOfStock).toLowerCase()==="true")||W&&(W.outOfStock===!0||String(W.outOfStock).toLowerCase()==="true")){v.style.display="none",ne=document.createElement("button"),ne.id="qv-back-in-stock-notify-btn",ne.className="qv-notify-btn";const K=W?W.label:"Default";$o(J,K)?no(ne):ne.innerHTML=`
+                        `;
+                        if (hasStory) {
+                            qvExpandPage.classList.remove('pill-button');
+                            qvExpandPage.innerHTML = expandSVG;
+                            qvExpandPage.title = "Open Product Page";
+                        } else {
+                            qvExpandPage.classList.add('pill-button');
+                            qvExpandPage.innerHTML = `View Full Product Page ${expandSVG}`;
+                            qvExpandPage.removeAttribute('title');
+                        }
+                    }
+                }
+                const sizeOptionsContainer = modal.querySelector('.size-options');
+                const sizeSelector = modal.querySelector('.size-selector');
+                sizeOptionsContainer.innerHTML = ''; // Clear previous
+
+                const updateQuickViewATC = (sizeObj) => {
+                    let notifyBtn = document.getElementById('qv-back-in-stock-notify-btn');
+                    if (notifyBtn) notifyBtn.remove();
+
+                    const isActuallyOOS = product.sizes && product.sizes.length > 0
+                        ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                        : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                    
+                    const isOOS = isActuallyOOS || (sizeObj && (sizeObj.outOfStock === true || String(sizeObj.outOfStock).toLowerCase() === 'true'));
+
+                    if (isOOS) {
+                        qvAddToCart.style.display = 'none';
+                        notifyBtn = document.createElement('button');
+                        notifyBtn.id = 'qv-back-in-stock-notify-btn';
+                        notifyBtn.className = 'qv-notify-btn';
+
+                        const qvSizeLabel = sizeObj ? sizeObj.label : 'Default';
+                        // Check localStorage — if already subscribed, show persisted state
+                        if (isNotifySubscribed(id, qvSizeLabel)) {
+                            applySubscribedState(notifyBtn);
+                        } else {
+                            notifyBtn.innerHTML = `
                                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                 </svg>
                                 Notify Me When Back in Stock
-                            `,v.before(ne),ne.addEventListener("click",async()=>{ne.disabled||(window.triggerHaptic("medium"),ne.classList.add("loading"),ne.disabled=!0,await so(J,K,ne),ne.classList.remove("loading"),ne.classList.contains("subscribed")||(ne.disabled=!1))})}else{const K=W?W.label:"Default";try{localStorage.removeItem(Yt(J,K))}catch{}v.style.display="flex",v.disabled=!1;const q='<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';v.querySelector("span").innerHTML=q+"Add to Cart",v.style.backgroundColor="",v.style.cursor="pointer"}};if(D&&D.sizes&&D.sizes.length>0){be.style.display="block";const W=D.sizes.map((me,he)=>({...me,i:he})).sort((me,he)=>parseFloat(me.price)-parseFloat(he.price)),ne=W.find(me=>!me.outOfStock),P=ne?ne.i:W[0].i;D.sizes.forEach((me,he)=>{const $e=document.createElement("button");$e.className="size-btn",he===P&&$e.classList.add("active"),$e.dataset.size=me.label,$e.dataset.price=me.price,$e.textContent=me.label,$e.addEventListener("click",()=>{if($e.classList.contains("active"))return;window.triggerHaptic("light"),ve.querySelectorAll(".size-btn").forEach(we=>we.classList.remove("active")),$e.classList.add("active");const ye=[r].filter(Boolean);ye.forEach(we=>we.classList.add("text-switch-anim","text-switch-blur")),setTimeout(()=>{const ze=(D.sizes&&D.sizes.length>0?D.sizes.every(je=>je.outOfStock===!0||String(je.outOfStock).toLowerCase()==="true"):D.outOfStock===!0||String(D.outOfStock).toLowerCase()==="true")||me.outOfStock?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";me.originalPrice?r.innerHTML=`<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${me.originalPrice} TND</span> ${me.price} TND ${ze}`:r.innerHTML=`${me.price} TND ${ze}`,ke(me),ye.forEach(je=>je.classList.remove("text-switch-blur","text-switch-anim"))},250)}),me.outOfStock&&($e.style.textDecoration="line-through",$e.style.opacity="0.6"),ve.appendChild($e)});const I=D.sizes[P],Ee=(D.sizes&&D.sizes.length>0?D.sizes.every(me=>me.outOfStock===!0||String(me.outOfStock).toLowerCase()==="true"):D.outOfStock===!0||String(D.outOfStock).toLowerCase()==="true")||I.outOfStock?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";I.originalPrice?r.innerHTML=`<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${I.originalPrice} TND</span> ${I.price} TND ${Ee}`:r.innerHTML=`${I.price} TND ${Ee}`,ke(I)}else{be.style.display="none";const ne=D.outOfStock===!0||String(D.outOfStock).toLowerCase()==="true"?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";r.innerHTML=`${f} TND ${ne}`,ke(null)}i.classList.add("active")}});const E=()=>{window.triggerHaptic("light"),document.body.style.overflow="",i.classList.remove("active");const A=document.getElementById("qv-back-in-stock-notify-btn");A&&A.remove()};e&&e.addEventListener("click",E),i&&i.addEventListener("click",A=>{A.target===i&&E()}),v&&v.addEventListener("click",()=>{window.triggerHaptic("medium");const A=i.querySelector(".size-btn.active"),N=A.dataset.size,J=A.dataset.price,D=`${S.title}-${N}`,R=Be.find(f=>f.id===D);R?R.quantity++:Be.push({id:D,productId:S.id,name:S.title,size:N,price:`${J} TND`,image:S.img,quantity:1}),pt(),E(),Rt()})})(),(()=>{const a=document.querySelector(".product-detail-container"),i=document.querySelector(".foam-hero"),e=document.getElementById("hero"),t=document.getElementById("hero-silk"),n=document.querySelector(".serum-page");if(!a&&!i&&!e&&!t&&!n)return;let r=document.getElementById("related-products-container");if(!r){if(r=document.createElement("section"),r.id="related-products-container",r.classList.add("section-padding","bg-white"),a)a.after(r);else if(i||t||n){const R=document.querySelector("main");R&&R.appendChild(r)}else if(e){const R=document.getElementById("contact"),f=document.querySelector("main");R&&f.contains(R)?f.insertBefore(r,R):f&&f.appendChild(r)}}let v=new URLSearchParams(window.location.search).get("id");i?v="foaming-cleanser":t?v="silk-therapy-mask":n&&(v="advanced-ha-serum"),(!v||!w[v])&&(v="glass-glow-shampoo");const b=w[v],y=Object.keys(w),S=(R,f)=>{const L=R.toLowerCase(),Z=f&&f.name?f.name.toLowerCase():"",xe=f&&f.subtitle?f.subtitle.toLowerCase():"",ue=f&&f.category?f.category.toLowerCase():"";return ue.includes("hair")||L.includes("shampoo")||L.includes("mask")||L.includes("hair")||L.includes("silk")||Z.includes("shampoo")||Z.includes("mask")||Z.includes("hair")||xe.includes("hair")||xe.includes("scalp")?"hair-care":ue.includes("face")||ue.includes("skin")||L.includes("foam")||L.includes("serum")||L.includes("face")||L.includes("cleanser")||L.includes("mellow")||Z.includes("serum")||Z.includes("cleanser")||Z.includes("face")||Z.includes("mellow")||xe.includes("face")||xe.includes("skin")?"skin-care":ue.includes("set")||ue.includes("bundle")||L.includes("set")||Z.includes("set")?"sets":"general"},E=S(v,b);let N=y.filter(R=>R!==v&&w[R]&&!w[R].isPermanentlyUnavailable).filter(R=>S(R,w[R])===E);if(N.sort(()=>.5-Math.random()),N=N.slice(0,4),N.length===0){r&&(r.style.display="none");return}else r&&(r.style.display="block");let J="";N.forEach(R=>{const f=w[R];if(!f)return;const L=kt(f);let Z=f.price,xe="",ue=!1,Q=0;if(f.sizes&&f.sizes.length>0){const W=f.sizes.map(ne=>parseFloat(ne.price)).filter(ne=>!isNaN(ne));if(W.length>0){const ne=f.sizes.findIndex(I=>parseFloat(I.price)===Math.min(...W)),P=f.sizes[ne]||f.sizes[0];Z=parseFloat(P.price).toFixed(2),P.originalPrice&&parseFloat(P.originalPrice)>parseFloat(P.price)&&(ue=!0,Q=Math.round((parseFloat(P.originalPrice)-parseFloat(P.price))/parseFloat(P.originalPrice)*100),xe=`<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(P.originalPrice).toFixed(2)} TND</span>`)}}const ve=f.sizes&&f.sizes.length>0?f.sizes.every(W=>W.outOfStock===!0||String(W.outOfStock).toLowerCase()==="true"):f.outOfStock===!0||String(f.outOfStock).toLowerCase()==="true";let be="";f.isPermanentlyUnavailable?be='<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>':ve?be='<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>':ue&&Q>0&&(be=`<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${Q}%</span>`);let ke="";Z?ke=`${xe}<span style="color: ${ue?"var(--accent-gold-text)":"inherit"}; font-weight: ${ue?"700":"500"};">${Z} TND</span>`:ke='<span class="price-shimmer"></span>',J+=`
-                <div class="product-card reveal" ${ve?'style="opacity: 0.8;"':""} data-product-id="${R}">
-                    <a href="product.html?id=${R}">
-                        <div class="tinted-shadow" style="background-image: url('${L||"https://via.placeholder.com/300"}');"></div>
+                            `;
+                        }
+
+                        qvAddToCart.before(notifyBtn);
+                        
+                        notifyBtn.addEventListener('click', async () => {
+                            if (notifyBtn.disabled) return;
+                            window.triggerHaptic('medium');
+                            notifyBtn.classList.add('loading');
+                            notifyBtn.disabled = true;
+                            await handleBackInStockSubscription(id, qvSizeLabel, notifyBtn);
+                            notifyBtn.classList.remove('loading');
+                            if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
+                        });
+                    } else {
+                        // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
+                        const qvSizeLabelInStock = sizeObj ? sizeObj.label : 'Default';
+                        try { localStorage.removeItem(getNotifyStorageKey(id, qvSizeLabelInStock)); } catch(e) {}
+                        qvAddToCart.style.display = 'flex';
+                        qvAddToCart.disabled = false;
+                        const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
+                        qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
+                        qvAddToCart.style.backgroundColor = "";
+                        qvAddToCart.style.cursor = "pointer";
+                    }
+                };
+
+                if (product && product.sizes && product.sizes.length > 0) {
+                    sizeSelector.style.display = 'block';
+                    const sortedSizes = product.sizes.map((s, i) => ({ ...s, i })).sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+                    const firstInStock = sortedSizes.find(s => !s.outOfStock);
+                    const minIndex = firstInStock ? firstInStock.i : sortedSizes[0].i;
+
+                    product.sizes.forEach((sizeObj, index) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'size-btn';
+
+                        if (index === minIndex) {
+                            btn.classList.add('active'); // Default to lowest
+                        }
+                        btn.dataset.size = sizeObj.label;
+                        btn.dataset.price = sizeObj.price;
+                        btn.textContent = sizeObj.label;
+
+                        btn.addEventListener('click', () => {
+                            if (btn.classList.contains('active')) return;
+                            window.triggerHaptic('light');
+                            sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+
+                            const animTargets = [qvPrice].filter(Boolean);
+                            animTargets.forEach(el => el.classList.add('text-switch-anim', 'text-switch-blur'));
+
+                            setTimeout(() => {
+                                const isActuallyOOS = product.sizes && product.sizes.length > 0
+                                    ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                                    : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                                const isOOS = isActuallyOOS || sizeObj.outOfStock;
+                                const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
+
+                                if (sizeObj.originalPrice) {
+                                    qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND ${outOfStockLabel}`;
+                                } else {
+                                    qvPrice.innerHTML = `${sizeObj.price} TND ${outOfStockLabel}`;
+                                }
+
+                                updateQuickViewATC(sizeObj);
+                                animTargets.forEach(el => el.classList.remove('text-switch-blur', 'text-switch-anim'));
+                            }, 250);
+                        });
+
+                        if (sizeObj.outOfStock) {
+                            btn.style.textDecoration = "line-through";
+                            btn.style.opacity = "0.6";
+                        }
+
+                        sizeOptionsContainer.appendChild(btn);
+                    });
+                    const initialSize = product.sizes[minIndex];
+                    const isActuallyOOS = product.sizes && product.sizes.length > 0
+                        ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                        : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                    const isOOS = isActuallyOOS || initialSize.outOfStock;
+                    const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
+
+                    if (initialSize.originalPrice) {
+                        qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND ${outOfStockLabel}`;
+                    } else {
+                        qvPrice.innerHTML = `${initialSize.price} TND ${outOfStockLabel}`;
+                    }
+                    updateQuickViewATC(initialSize);
+                } else {
+                    sizeSelector.style.display = 'none';
+                    const isActuallyOOS = (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+                    const outOfStockLabel = isActuallyOOS ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
+                    qvPrice.innerHTML = `${price} TND ${outOfStockLabel}`;
+                    updateQuickViewATC(null);
+                }
+
+                modal.classList.add('active');
+            }
+        });
+
+        const closeModal = () => {
+            window.triggerHaptic('light');
+            document.body.style.overflow = '';
+            modal.classList.remove('active');
+            const qvNotify = document.getElementById('qv-back-in-stock-notify-btn');
+            if (qvNotify) qvNotify.remove();
+        };
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (modal) modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        if (qvAddToCart) {
+            qvAddToCart.addEventListener('click', () => {
+                window.triggerHaptic('medium');
+                const activeSizeBtn = modal.querySelector('.size-btn.active');
+                const size = activeSizeBtn.dataset.size;
+                const price = activeSizeBtn.dataset.price;
+
+                const newItemId = `${currentProduct.title}-${size}`;
+                const existingItem = cart.find(item => item.id === newItemId);
+
+                if (existingItem) {
+                    existingItem.quantity++;
+                } else {
+                    cart.push({
+                        id: newItemId,
+                        productId: currentProduct.id, // Pass ID for server verification
+                        name: currentProduct.title,
+                        size: size,
+                        price: `${price} TND`,
+                        image: currentProduct.img,
+                        quantity: 1
+                    });
+                }
+
+                updateCartUI();
+                closeModal();
+                openCart();
+            });
+        }
+    };
+
+    initQuickView();
+    const loadRelatedProducts = () => {
+        const productDetail = document.querySelector('.product-detail-container');
+        const foamHero = document.querySelector('.foam-hero');
+        const homeHero = document.getElementById('hero');
+        const silkHero = document.getElementById('hero-silk');
+        const serumPage = document.querySelector('.serum-page');
+
+        if (!productDetail && !foamHero && !homeHero && !silkHero && !serumPage) return;
+        let container = document.getElementById('related-products-container');
+        if (!container) {
+            container = document.createElement('section');
+            container.id = 'related-products-container';
+            container.classList.add('section-padding', 'bg-white');
+
+            if (productDetail) {
+                productDetail.after(container);
+            } else if (foamHero || silkHero || serumPage) {
+                const main = document.querySelector('main');
+                if (main) main.appendChild(container);
+            } else if (homeHero) {
+                const contactSection = document.getElementById('contact');
+                const main = document.querySelector('main');
+                if (contactSection && main.contains(contactSection)) {
+                    main.insertBefore(container, contactSection);
+                } else if (main) {
+                    main.appendChild(container);
+                }
+            }
+        }
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentId = urlParams.get('id');
+        if (foamHero) {
+            currentId = 'foaming-cleanser';
+        } else if (silkHero) {
+            currentId = 'silk-therapy-mask';
+        } else if (serumPage) {
+            currentId = 'advanced-ha-serum';
+        }
+        if (!currentId || !productCatalog[currentId]) {
+            currentId = 'glass-glow-shampoo';
+        }
+        const currentProduct = productCatalog[currentId];
+        const allProductIds = Object.keys(productCatalog);
+
+        const getProductType = (id, prod) => {
+            const lowerId = id.toLowerCase();
+            const lowerName = (prod && prod.name) ? prod.name.toLowerCase() : '';
+            const lowerSubtitle = (prod && prod.subtitle) ? prod.subtitle.toLowerCase() : '';
+            const lowerCategory = (prod && prod.category) ? prod.category.toLowerCase() : '';
+
+            // Hair Keywords (Matching 'hair-care' sidebar section)
+            if (lowerCategory.includes('hair') || lowerId.includes('shampoo') || lowerId.includes('mask') || lowerId.includes('hair') || lowerId.includes('silk') ||
+                lowerName.includes('shampoo') || lowerName.includes('mask') || lowerName.includes('hair') ||
+                lowerSubtitle.includes('hair') || lowerSubtitle.includes('scalp')) return 'hair-care';
+
+            // Face Keywords (Matching 'skin-care' sidebar section)
+            if (lowerCategory.includes('face') || lowerCategory.includes('skin') || lowerId.includes('foam') || lowerId.includes('serum') || lowerId.includes('face') || lowerId.includes('cleanser') || lowerId.includes('mellow') ||
+                lowerName.includes('serum') || lowerName.includes('cleanser') || lowerName.includes('face') || lowerName.includes('mellow') ||
+                lowerSubtitle.includes('face') || lowerSubtitle.includes('skin')) return 'skin-care';
+
+            if (lowerCategory.includes('set') || lowerCategory.includes('bundle') || lowerId.includes('set') || lowerName.includes('set')) return 'sets';
+
+            return 'general';
+        };
+
+        const currentType = getProductType(currentId, currentProduct);
+        const allRelated = allProductIds.filter(id => id !== currentId && productCatalog[id] && !productCatalog[id].isPermanentlyUnavailable);
+
+        // STRICT filtering: Only find products of the EXACT same type
+        let relatedIds = allRelated.filter(id => getProductType(id, productCatalog[id]) === currentType);
+
+        // Shuffle and limit to 4
+        relatedIds.sort(() => 0.5 - Math.random());
+        relatedIds = relatedIds.slice(0, 4);
+
+        if (relatedIds.length === 0) {
+            if (container) container.style.display = 'none';
+            return;
+        } else {
+            if (container) container.style.display = 'block';
+        }
+
+        let productsHtml = '';
+        relatedIds.forEach(id => {
+            const product = productCatalog[id];
+            if (!product) return;
+            const primaryImg = getProductPrimaryImage(product);
+            let displayPrice = product.price;
+            let originalPriceDisplay = '';
+            let hasDiscount = false;
+            let discountPercentage = 0;
+
+            if (product.sizes && product.sizes.length > 0) {
+                const prices = product.sizes.map(s => parseFloat(s.price)).filter(p => !isNaN(p));
+                if (prices.length > 0) {
+                    const basePriceIndex = product.sizes.findIndex(s => parseFloat(s.price) === Math.min(...prices));
+                    const baseSize = product.sizes[basePriceIndex] || product.sizes[0];
+                    displayPrice = parseFloat(baseSize.price).toFixed(2);
+
+                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
+                        hasDiscount = true;
+                        discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
+                        originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
+                    }
+                }
+            }
+
+            const isActuallyOOS = product.sizes && product.sizes.length > 0
+                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
+                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
+
+            let badgeHTML = '';
+            if (product.isPermanentlyUnavailable) {
+                badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>';
+            } else if (isActuallyOOS) {
+                badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>';
+            } else if (hasDiscount && discountPercentage > 0) {
+                badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
+            }
+
+            let priceHTML = '';
+            if (displayPrice) {
+                priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
+            } else {
+                priceHTML = `<span class="price-shimmer"></span>`;
+            }
+
+            productsHtml += `
+                <div class="product-card reveal" ${isActuallyOOS ? 'style="opacity: 0.8;"' : ''} data-product-id="${id}">
+                    <a href="product.html?id=${id}">
+                        <div class="tinted-shadow" style="background-image: url('${primaryImg || 'https://via.placeholder.com/300'}');"></div>
                         <div class="product-image-wrapper">
-                            ${be}
-                            <img loading="lazy" src="${L||"https://via.placeholder.com/300"}" alt="${f.name}" class="product-card-img" style="${f.style||""}; view-transition-name: prod-img-${R};">
+                            ${badgeHTML}
+                            <img loading="lazy" src="${primaryImg || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}; view-transition-name: prod-img-${id};">
                             <button class="quick-view-btn" 
-                                data-id="${R}" 
-                                data-title="${f.name}" 
-                                data-price="${Z||""}" 
-                                data-img="${L||"https://via.placeholder.com/300"}" 
-                                data-style="${f.style||""}"
-                                data-desc="${f.description||""}">
+                                data-id="${id}" 
+                                data-title="${product.name}" 
+                                data-price="${displayPrice || ''}" 
+                                data-img="${primaryImg || 'https://via.placeholder.com/300'}" 
+                                data-style="${product.style || ''}"
+                                data-desc="${product.description || ''}">
                                 Quick View
                             </button>
                         </div>
                         <div class="product-card-info">
-                            <h3 class="product-card-title" data-name-target="${R}" style="view-transition-name: prod-title-${R};">${Pe?f.name:'<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
-                            <p class="product-card-price" data-price-target="${R}">${ke}</p>
+                            <h3 class="product-card-title" data-name-target="${id}" style="view-transition-name: prod-title-${id};">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
+                            <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
                         </div>
                     </a>
                 </div>
-            `});const D=e?"Explore Our Collection":"You May Also Like";r.innerHTML=`
+            `;
+        });
+
+        const sectionTitle = homeHero ? "Explore Our Collection" : "You May Also Like";
+
+        container.innerHTML = `
             <div class="container">
-                <h2 class="section-title reveal active">${D}</h2>
+                <h2 class="section-title reveal active">${sectionTitle}</h2>
                 <div class="related-products-wrapper">
                     <button class="scroll-arrow prev" id="rel-prev"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
                     <div class="shop-grid related-products-grid">
-                        ${J}
+                        ${productsHtml}
                     </div>
                     <button class="scroll-arrow next" id="rel-next"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
                 </div>
             </div>
-        `,setTimeout(()=>{const R=r.querySelector(".related-products-grid"),f=r.querySelector("#rel-prev"),L=r.querySelector("#rel-next");if(R&&f&&L){const Z=r.querySelector(".related-products-wrapper");f.addEventListener("click",()=>{R.scrollBy({left:-300,behavior:"smooth"})}),L.addEventListener("click",()=>{R.scrollBy({left:300,behavior:"smooth"})});const xe=()=>{if(!(R.scrollWidth>R.clientWidth+10)){f.style.display="none",L.style.display="none",Z&&Z.classList.remove("show-left-fade","show-right-fade");return}f.style.display="flex",L.style.display="flex";const ve=R.scrollLeft<=10,be=R.scrollLeft+R.clientWidth>=R.scrollWidth-10;f.style.opacity=ve?"0.3":"1",f.style.pointerEvents=ve?"none":"auto",L.style.opacity=be?"0.3":"1",L.style.pointerEvents=be?"none":"auto",Z&&(Z.classList.toggle("show-left-fade",!ve),Z.classList.toggle("show-right-fade",!be))};R.addEventListener("scroll",xe),new ResizeObserver(xe).observe(R),xe()}},0),setTimeout(()=>{r.querySelectorAll(".reveal").forEach(f=>f.classList.add("active"))},100)})();const Vo=document.getElementById("search-toggle-btn"),Kt=document.querySelector(".search-container"),vo=document.getElementById("navbar-search-input");if(Vo&&Kt&&vo){let a=!1;Vo.addEventListener("click",i=>{window.triggerHaptic("light"),i.preventDefault(),i.stopPropagation(),Kt.classList.contains("active")||(a=!0,Kt.classList.add("active"),o.classList.add("search-active"),vo.focus(),setTimeout(()=>{a=!1},300))}),vo.addEventListener("keypress",i=>{i.key==="Enter"&&(Kt.classList.remove("active"),o.classList.remove("search-active"))})}window.addEventListener("popstate",()=>{typeof X=="function"&&X(),window.scrollTo({top:0,behavior:"smooth"}),(window.location.pathname.includes("index.html")||window.location.pathname==="/"||window.location.pathname==="")&&(Je(!0),typeof At=="function"&&At(),typeof Lt=="function"&&Lt(),typeof updateMainPageSEO=="function"&&updateMainPageSEO(),window.dodchSEO&&window.dodchSEO.runSEO())});const wo=document.querySelectorAll(".hair-type-btn"),Go=document.querySelectorAll(".hair-panel");wo.length>0&&Go.length>0&&wo.forEach(a=>{a.addEventListener("click",()=>{wo.forEach(t=>t.classList.remove("active")),a.classList.add("active");const i=a.dataset.type,e=document.getElementById(`panel-${i}`);Go.forEach(t=>{t.classList.remove("active")}),e&&(e.offsetWidth,e.classList.add("active"))})})});const Mi=()=>{const p=document.getElementById("tracking-info");if(!p)return;const o=new URLSearchParams(window.location.search),s=o.get("orderId"),d=o.get("trackingNumber"),l=o.get("orderRef"),c=document.getElementById("tracking-order-id"),O=document.getElementById("tracking-number");s&&d&&c&&O?(c.textContent=l||s.slice(0,8).toUpperCase(),O.textContent=d):p.innerHTML=`
+        `;
+
+        setTimeout(() => {
+            const grid = container.querySelector('.related-products-grid');
+            const btnPrev = container.querySelector('#rel-prev');
+            const btnNext = container.querySelector('#rel-next');
+
+            if (grid && btnPrev && btnNext) {
+                const wrapper = container.querySelector('.related-products-wrapper');
+
+                btnPrev.addEventListener('click', () => {
+                    grid.scrollBy({ left: -300, behavior: 'smooth' });
+                });
+                btnNext.addEventListener('click', () => {
+                    grid.scrollBy({ left: 300, behavior: 'smooth' });
+                });
+
+                const updateScrollUI = () => {
+                    const isScrollable = grid.scrollWidth > grid.clientWidth + 10;
+                    
+                    if (!isScrollable) {
+                        btnPrev.style.display = 'none';
+                        btnNext.style.display = 'none';
+                        if (wrapper) {
+                            wrapper.classList.remove('show-left-fade', 'show-right-fade');
+                        }
+                        return;
+                    }
+
+                    btnPrev.style.display = 'flex';
+                    btnNext.style.display = 'flex';
+
+                    const isStart = grid.scrollLeft <= 10;
+                    const isEnd = grid.scrollLeft + grid.clientWidth >= grid.scrollWidth - 10;
+
+                    btnPrev.style.opacity = isStart ? '0.3' : '1';
+                    btnPrev.style.pointerEvents = isStart ? 'none' : 'auto';
+                    btnNext.style.opacity = isEnd ? '0.3' : '1';
+                    btnNext.style.pointerEvents = isEnd ? 'none' : 'auto';
+
+                    if (wrapper) {
+                        wrapper.classList.toggle('show-left-fade', !isStart);
+                        wrapper.classList.toggle('show-right-fade', !isEnd);
+                    }
+                };
+
+                grid.addEventListener('scroll', updateScrollUI);
+                const resizeObserver = new ResizeObserver(updateScrollUI);
+                resizeObserver.observe(grid);
+                updateScrollUI();
+            }
+        }, 0);
+        setTimeout(() => {
+            const newReveals = container.querySelectorAll('.reveal');
+            newReveals.forEach(el => el.classList.add('active'));
+        }, 100);
+    };
+
+    loadRelatedProducts();
+    const searchToggleBtn = document.getElementById('search-toggle-btn');
+    const searchContainer = document.querySelector('.search-container');
+    const searchInput = document.getElementById('navbar-search-input');
+
+    if (searchToggleBtn && searchContainer && searchInput) {
+        let searchJustOpened = false;
+
+        searchToggleBtn.addEventListener('click', (e) => {
+            window.triggerHaptic('light');
+            e.preventDefault();
+            e.stopPropagation(); // Prevent the doc click listener from firing on this same event
+
+            if (!searchContainer.classList.contains('active')) {
+                searchJustOpened = true;
+                searchContainer.classList.add('active');
+                navbar.classList.add('search-active');
+                searchInput.focus();
+                setTimeout(() => { searchJustOpened = false; }, 300);
+            }
+        });
+        // The halo now catches all outside clicks via its pointer-events: auto rule,
+        // so we completely delete the fragile document.addEventListener('click') here.
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchContainer.classList.remove('active');
+                navbar.classList.remove('search-active');
+            }
+        });
+    }
+    window.addEventListener('popstate', () => {
+        if (typeof closeSidebar === 'function') closeSidebar();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname === '') {
+            initShopPage(true);
+            if (typeof updateSidebarActiveState === 'function') updateSidebarActiveState();
+            if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
+            if (typeof updateMainPageSEO === 'function') updateMainPageSEO();
+            if (window.dodchSEO) window.dodchSEO.runSEO();
+        }
+    });
+    const silkTabs = document.querySelectorAll('.hair-type-btn');
+    const silkPanels = document.querySelectorAll('.hair-panel');
+
+    if (silkTabs.length > 0 && silkPanels.length > 0) {
+        silkTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                silkTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const targetType = tab.dataset.type;
+                const targetPanel = document.getElementById(`panel-${targetType}`);
+                silkPanels.forEach(panel => {
+                    panel.classList.remove('active');
+                });
+
+                if (targetPanel) {
+                    void targetPanel.offsetWidth;
+                    targetPanel.classList.add('active');
+                }
+            });
+        });
+    }
+
+});
+const initTrackingPage = () => {
+    const trackingInfoContainer = document.getElementById('tracking-info');
+    if (!trackingInfoContainer) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId');
+    const trackingNumber = urlParams.get('trackingNumber');
+    const orderRef = urlParams.get('orderRef');
+
+    const orderIdEl = document.getElementById('tracking-order-id');
+    const trackingNumberEl = document.getElementById('tracking-number');
+
+    if (orderId && trackingNumber && orderIdEl && trackingNumberEl) {
+        orderIdEl.textContent = orderRef ? orderRef : orderId.slice(0, 8).toUpperCase();
+        trackingNumberEl.textContent = trackingNumber;
+    } else {
+        trackingInfoContainer.innerHTML = `
             <div class="account-header">
                 <h1>Tracking Not Found</h1>
                 <p>The provided order or tracking number is invalid. Please check the link and try again.</p>
                 <a href="my-account.html" class="cta-button" style="margin-top: 2rem; display: inline-block; width: auto;">Go to My Account</a>
             </div>
-        `};Mi();const Fi=()=>{document.querySelectorAll("h1, h2, h3, h4, p, span, .section-title, .subtitle").forEach(o=>{const s=o.textContent.toLowerCase();if((s.includes("elixir")||s.includes("elexir"))&&s.includes("seeds")){if(o.closest(".admin-container")||o.closest(".admin-section"))return;const d=o.closest("section")||o.closest(".hero")||o.closest(".banner");if(d&&!d.querySelector(".bg-video-layer")&&!d.classList.contains("admin-section")){window.getComputedStyle(d).position==="static"&&(d.style.position="relative"),d.style.overflow="hidden";const l=document.createElement("video");l.src="6d3b1f62-a267-49f9-a4fd-5d47d471b174.mp4",l.autoplay=!1,l.loop=!1,l.muted=!0,l.playsInline=!0,l.className="bg-video-layer",Object.assign(l.style,{position:"absolute",top:"-15%",left:"0",width:"100%",height:"130%",objectFit:"cover",zIndex:"0",opacity:"0",transition:"opacity 1.5s ease",willChange:"transform"});const c=document.createElement("div");Object.assign(c.style,{position:"absolute",top:"0",left:"0",width:"100%",height:"100%",backgroundColor:"rgba(0, 0, 0, 0.6)",zIndex:"1",pointerEvents:"none"}),Array.from(d.children).forEach(_=>{_!==l&&_!==c&&(_.style.position="relative",_.style.zIndex="2")}),d.style.color="#FFFFFF",d.querySelectorAll("h1, h2, h3, h4, h5, h6, p, span, .section-title, .subtitle").forEach(_=>{_.style.color="#FFFFFF",_.style.textShadow="0 2px 4px rgba(0,0,0,0.9), 0 8px 24px rgba(0,0,0,0.7)"}),d.insertBefore(c,d.firstChild),d.insertBefore(l,d.firstChild),l.addEventListener("loadeddata",()=>{l.style.opacity="1"});const O=()=>{if(!l.paused&&!l.ended){const _=l.currentTime/l.duration||0;l.style.filter=`blur(${_*2.5}px)`,requestAnimationFrame(O)}};l.addEventListener("play",()=>requestAnimationFrame(O));let le=!1;window.addEventListener("scroll",()=>{le||(window.requestAnimationFrame(()=>{const _=d.getBoundingClientRect(),m=window.innerHeight;if(_.top<m&&_.bottom>0){const re=_.top+_.height/2,U=m/2-re;l.style.transform=`translateY(${U*.15}px)`}le=!1}),le=!0)},{passive:!0}),new IntersectionObserver(_=>{_.forEach(m=>{m.isIntersecting?l.ended||l.play().catch(re=>console.log("Autoplay prevented:",re)):l.pause()})},{threshold:.1}).observe(d)}}})};setTimeout(Fi,800);const Hi=()=>{const p=document.getElementById("sidebar-admin-btn");if(!p)return;const o=We(Re(ae,"orders"),rt("status","in",["Pending","Confirmed"]));io(o,s=>{const d=s.size;let l=p.querySelector(".notification-badge");l||(l=document.createElement("span"),l.className="notification-badge",p.appendChild(l)),d>0?(l.textContent=d,l.classList.add("visible")):l.classList.remove("visible")},s=>{console.error("Admin notification listener failed:",s)})},Oi=p=>{const o=We(Re(ae,"orders"),rt("userId","==",p),oo("timestamp","desc"));let s=!0;io(o,d=>{d.docs.some(c=>c.data().hasUnseenUpdate===!0)?document.body.classList.add("has-notification"):document.body.classList.remove("has-notification"),s||d.docChanges().forEach(c=>{const O=c.doc.data();if(c.type==="modified"&&O.hasUnseenUpdate===!0){const le=O.orderReference||c.doc.id.slice(0,8).toUpperCase();window.showToast(`Order #${le}: Status is now ${O.status}.`,"info"),O.status==="Delivered"&&(console.log("Real-time delivery detected! Refreshing review prompt..."),Co())}}),s=!1},d=>{console.error("User notification listener failed:",d)})};window.location.pathname.includes("my-account.html");const Zo=()=>{const p=document.getElementById("product-reviews-container");if(!p)return;const o=window.location.pathname;let s=null;if(o.includes("glass-glow-shampoo.html")?s="glass-glow-shampoo":o.includes("dodchmellow-pro-v.html")?s="dodchmellow-pro-v":o.includes("face-foam.html")?s="foaming-cleanser":o.includes("silk-mask.html")?s="silk-therapy-mask":o.includes("face-serum.html")&&(s="advanced-ha-serum"),!s&&o.includes("product.html")&&(s=new URLSearchParams(window.location.search).get("id")),!s){const G=document.querySelector(".buy-now-btn, .cta-button[data-id]");G&&(s=G.getAttribute("data-id"))}if(!s)return;const d=document.getElementById("review-modal");d&&d.parentElement!==document.body&&document.body.appendChild(d);const l=document.getElementById("product-review-form"),c=document.getElementById("write-review-toggle-btn"),O=document.getElementById("close-review-modal"),le=document.getElementById("review-images"),fe=document.getElementById("image-preview-container");if(new URLSearchParams(window.location.search).get("open_review")==="true"){const G=document.getElementById("reviews");G&&setTimeout(()=>{G.scrollIntoView({behavior:"smooth"})},800)}let m={loggedIn:!1,eligible:!1,alreadyReviewed:!1,canEditAfterRefund:!1,orderId:null,orderReference:null,allOrderReferences:[],user:null};const re=G=>{if(G.length===0){p.innerHTML='<p class="text-center" style="color: #666; font-style: italic;">No reviews yet. Be the first to share your experience!</p>';return}p.innerHTML="",G.forEach(z=>{const B=document.createElement("div");B.style.cssText=`
+        `;
+    }
+};
+
+initTrackingPage();
+const initVideoBackground = () => {
+    const candidates = document.querySelectorAll('h1, h2, h3, h4, p, span, .section-title, .subtitle');
+    candidates.forEach(el => {
+        const text = el.textContent.toLowerCase();
+        if ((text.includes('elixir') || text.includes('elexir')) && text.includes('seeds')) {
+            if (el.closest('.admin-container') || el.closest('.admin-section')) return;
+
+            const section = el.closest('section') || el.closest('.hero') || el.closest('.banner');
+            if (section && !section.querySelector('.bg-video-layer') && !section.classList.contains('admin-section')) {
+                if (window.getComputedStyle(section).position === 'static') {
+                    section.style.position = 'relative';
+                }
+                section.style.overflow = 'hidden';
+
+                const video = document.createElement('video');
+                video.src = '6d3b1f62-a267-49f9-a4fd-5d47d471b174.mp4';
+                video.autoplay = false;
+                video.loop = false;
+                video.muted = true;
+                video.playsInline = true;
+                video.className = 'bg-video-layer';
+
+                Object.assign(video.style, {
+                    position: 'absolute',
+                    top: '-15%',
+                    left: '0',
+                    width: '100%',
+                    height: '130%',
+                    objectFit: 'cover',
+                    zIndex: '0',
+                    opacity: '0',
+                    transition: 'opacity 1.5s ease',
+                    willChange: 'transform'
+                });
+
+                const overlay = document.createElement('div');
+                Object.assign(overlay.style, {
+                    position: 'absolute',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    zIndex: '1',
+                    pointerEvents: 'none'
+                });
+                Array.from(section.children).forEach(child => {
+                    if (child !== video && child !== overlay) {
+                        child.style.position = 'relative';
+                        child.style.zIndex = '2';
+                    }
+                });
+                section.style.color = '#FFFFFF';
+                section.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, .section-title, .subtitle').forEach(textEl => {
+                    textEl.style.color = '#FFFFFF';
+                    textEl.style.textShadow = '0 2px 4px rgba(0,0,0,0.9), 0 8px 24px rgba(0,0,0,0.7)';
+                });
+
+                section.insertBefore(overlay, section.firstChild);
+                section.insertBefore(video, section.firstChild);
+                video.addEventListener('loadeddata', () => {
+                    video.style.opacity = '1';
+                });
+                const animateBlur = () => {
+                    if (!video.paused && !video.ended) {
+                        const progress = video.currentTime / video.duration || 0;
+                        video.style.filter = `blur(${progress * 2.5}px)`; // Max 8px blur
+                        requestAnimationFrame(animateBlur);
+                    }
+                };
+                video.addEventListener('play', () => requestAnimationFrame(animateBlur));
+                let videoScrollTicking = false;
+                window.addEventListener('scroll', () => {
+                    if (!videoScrollTicking) {
+                        window.requestAnimationFrame(() => {
+                            const rect = section.getBoundingClientRect();
+                            const windowHeight = window.innerHeight;
+                            if (rect.top < windowHeight && rect.bottom > 0) {
+                                const sectionCenter = rect.top + rect.height / 2;
+                                const screenCenter = windowHeight / 2;
+                                const diff = screenCenter - sectionCenter;
+                                video.style.transform = `translateY(${diff * 0.15}px)`;
+                            }
+                            videoScrollTicking = false;
+                        });
+                        videoScrollTicking = true;
+                    }
+                }, { passive: true });
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            if (!video.ended) {
+                                video.play().catch(e => console.log("Autoplay prevented:", e));
+                            }
+                        } else {
+                            video.pause();
+                        }
+                    });
+                }, { threshold: 0.1 });
+
+                observer.observe(section);
+            }
+        }
+    });
+};
+setTimeout(initVideoBackground, 800);
+const listenForAdminNotifications = () => {
+    const adminBtn = document.getElementById('sidebar-admin-btn');
+    if (!adminBtn) return; // Don't run if not on a page with the admin button
+
+    const q = query(collection(db, "orders"), where("status", "in", ["Pending", "Confirmed"]));
+    onSnapshot(q, (snapshot) => {
+        const newOrderCount = snapshot.size;
+
+        let badge = adminBtn.querySelector('.notification-badge');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'notification-badge';
+            adminBtn.appendChild(badge);
+        }
+
+        if (newOrderCount > 0) {
+            badge.textContent = newOrderCount;
+            badge.classList.add('visible');
+        } else {
+            badge.classList.remove('visible');
+        }
+    }, (error) => {
+        console.error("Admin notification listener failed:", error);
+    });
+};
+
+const listenForUserNotifications = (userId) => {
+    // --- Listener 1: Order status updates ---
+    const ordersQ = query(collection(db, "orders"), where("userId", "==", userId), orderBy("timestamp", "desc"));
+    let isInitialLoad = true;
+
+    onSnapshot(ordersQ, (snapshot) => {
+        const hasUnseen = snapshot.docs.some(doc => doc.data().hasUnseenUpdate === true);
+
+        if (hasUnseen) {
+            document.body.classList.add('has-notification');
+        } else {
+            document.body.classList.remove('has-notification');
+        }
+        if (!isInitialLoad) {
+            snapshot.docChanges().forEach((change) => {
+                const data = change.doc.data();
+                if (change.type === "modified" && data.hasUnseenUpdate === true) {
+                    const orderRef = data.orderReference || change.doc.id.slice(0, 8).toUpperCase();
+                    window.showToast(`Order #${orderRef}: Status is now ${data.status}.`, 'info');
+                    if (data.status === 'Delivered') {
+                        console.log("Real-time delivery detected! Refreshing review prompt...");
+                        initGlobalReviewPrompt();
+                    }
+                }
+            });
+        }
+        isInitialLoad = false;
+    }, (error) => {
+        console.error("User notification listener failed:", error);
+    });
+
+    // --- Listener 2: DODCH / general notifications (replies, announcements, etc.) ---
+    const notifQ = query(
+        collection(db, "notifications"),
+        where("userId", "==", userId)
+    );
+    let notifInitialLoad = true;
+
+    onSnapshot(notifQ, (snapshot) => {
+        if (!notifInitialLoad) {
+            snapshot.docChanges().forEach(async (change) => {
+                if (change.type === "added") {
+                    const n = change.doc.data();
+                    // Only show toast for unseen notifications
+                    if (n.isSeen === true) return;
+
+                    const notifId = change.doc.id;
+                    const title = n.title || "New Notification";
+                    const message = n.message || "";
+                    const link = n.link || null;
+
+                    // Show a custom toast that navigates on click
+                    const toastEl = document.createElement('div');
+                    toastEl.style.cssText = `
+                        position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+                        background: linear-gradient(135deg, #18181B 0%, #27272A 100%);
+                        color: #FDFBF7; padding: 1rem 1.4rem;
+                        border-radius: 14px; border-left: 4px solid #D4AF37;
+                        box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+                        z-index: 99999; max-width: 360px; width: calc(100% - 2rem);
+                        cursor: ${link ? 'pointer' : 'default'};
+                        display: flex; align-items: flex-start; gap: 12px;
+                        animation: toastSlideIn 0.35s ease forwards;
+                        font-family: var(--font-sans, sans-serif);
+                    `;
+                    toastEl.innerHTML = `
+                        <span style="font-size:1.4rem; flex-shrink:0;">✨</span>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:0.9rem; margin-bottom:3px; color:#FDFBF7;">${title}</div>
+                            <div style="font-size:0.82rem; color:#D1D5DB; line-height:1.45;">${message}</div>
+                            ${link ? `<div style="margin-top:6px; font-size:0.78rem; color:#D4AF37; font-weight:600;">Tap to view →</div>` : ''}
+                        </div>
+                        <button style="background:none;border:none;color:#9CA3AF;font-size:1.2rem;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" onclick="this.parentElement.remove(); event.stopPropagation();">×</button>
+                    `;
+                    if (link) {
+                        toastEl.addEventListener('click', (e) => {
+                            if (e.target.tagName !== 'BUTTON') {
+                                window.location.href = link;
+                            }
+                        });
+                    }
+                    document.body.appendChild(toastEl);
+
+                    // Auto-dismiss after 8s
+                    setTimeout(() => { if (toastEl.parentNode) toastEl.remove(); }, 8000);
+
+                    // Mark as seen in Firestore
+                    try {
+                        await updateDoc(doc(db, "notifications", notifId), { isSeen: true });
+                    } catch (e) {
+                        console.warn("Could not mark notification as seen:", e);
+                    }
+                }
+            });
+        }
+        notifInitialLoad = false;
+    }, (error) => {
+        console.error("Notification listener error:", error);
+    });
+};
+
+if (window.location.pathname.includes('my-account.html')) {
+}
+const initProductReviews = () => {
+    const reviewsContainer = document.getElementById('product-reviews-container');
+    if (!reviewsContainer) return; // Not on a product page
+    const path = window.location.pathname;
+    let productId = null;
+    if (path.includes('glass-glow-shampoo.html')) productId = 'glass-glow-shampoo';
+    else if (path.includes('dodchmellow-pro-v.html')) productId = 'dodchmellow-pro-v';
+    else if (path.includes('face-foam.html')) productId = 'foaming-cleanser';
+    else if (path.includes('silk-mask.html')) productId = 'silk-therapy-mask';
+    else if (path.includes('face-serum.html')) productId = 'advanced-ha-serum';
+    
+    if (!productId && path.includes('product.html')) {
+        const urlParams = new URLSearchParams(window.location.search);
+        productId = urlParams.get('id');
+    }
+    
+    if (!productId) {
+        const buyBtn = document.querySelector('.buy-now-btn, .cta-button[data-id]');
+        if (buyBtn) productId = buyBtn.getAttribute('data-id');
+    }
+
+    if (!productId) return;
+
+    const reviewModal = document.getElementById('review-modal');
+    if (reviewModal && reviewModal.parentElement !== document.body) {
+        document.body.appendChild(reviewModal);
+    }
+    const reviewForm = document.getElementById('product-review-form');
+    const writeReviewBtn = document.getElementById('write-review-toggle-btn');
+    const closeReviewModal = document.getElementById('close-review-modal');
+    const imageInput = document.getElementById('review-images');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('open_review') === 'true') {
+        const reviewsSection = document.getElementById('reviews');
+        if (reviewsSection) {
+            setTimeout(() => {
+                reviewsSection.scrollIntoView({ behavior: 'smooth' });
+            }, 800);
+        }
+    }
+
+
+    let userState = {
+        loggedIn: false,
+        eligible: false,
+        alreadyReviewed: false,
+        canEditAfterRefund: false,
+        orderId: null,
+        orderReference: null,
+        allOrderReferences: [],
+        user: null
+    };
+
+    const renderReviews = (reviews) => {
+        if (reviews.length === 0) {
+            reviewsContainer.innerHTML = '<p class="text-center" style="color: #666; font-style: italic;">No reviews yet. Be the first to share your experience!</p>';
+            return;
+        }
+
+        reviewsContainer.innerHTML = '';
+        reviews.forEach(review => {
+            const reviewEl = document.createElement('div');
+            reviewEl.id = `review-${review.id}`;
+            reviewEl.className = 'review-card-item content-fade visible';
+            reviewEl.style.cssText = `
                 padding: 1.5rem;
                 background: var(--card-white, #ffffff);
                 border: 1px solid rgba(0, 0, 0, 0.06);
@@ -1192,48 +7919,872 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                 margin-bottom: 1.25rem;
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
                 transition: transform 0.3s ease, box-shadow 0.3s ease;
-            `,B.onmouseenter=()=>{B.style.transform="translateY(-2px)",B.style.boxShadow="0 8px 30px rgba(0, 0, 0, 0.06)"},B.onmouseleave=()=>{B.style.transform="none",B.style.boxShadow="0 4px 20px rgba(0, 0, 0, 0.03)"};const F=Array(5).fill(0).map((Be,Ot)=>`<span style="color: ${Ot<z.rating?"#F5A623":"#E4E4E7"}; font-size: 1.15rem; margin-right: 1px;">\u2605</span>`).join(""),X=z.createdAt?new Date(z.createdAt.seconds*1e3).toLocaleDateString(void 0,{year:"numeric",month:"short",day:"numeric"}):"Just now",te=z.authorName||"Verified Buyer",V=tt.currentUser&&z.userId===tt.currentUser.uid,pe=tt.currentUser&&tt.currentUser.uid===Gt;let Te="";if(pe){const Be=z.refunded?'<span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;margin-left:4px;border:1px solid #FCA5A5;">Refunded</span>':"",Ot=z.orderReferences&&z.orderReferences.length>0?z.orderReferences.join(", "):z.orderReference||"";Te=`
+            `;
+            reviewEl.onmouseenter = () => {
+                reviewEl.style.transform = 'translateY(-2px)';
+                reviewEl.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.06)';
+            };
+            reviewEl.onmouseleave = () => {
+                reviewEl.style.transform = 'none';
+                reviewEl.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.03)';
+            };
+
+            const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#E4E4E7'}; font-size: 1.15rem; margin-right: 1px;">★</span>`).join('');
+            const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Just now';
+            const authorName = review.authorName || 'Verified Buyer';
+
+            const isAuthor = auth.currentUser && review.userId === auth.currentUser.uid;
+            const isAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_UID;
+
+            // Admin-only: show order reference info with sleek modern badge styling & copy button
+            let adminInfoHtml = '';
+            if (isAdmin) {
+                const refundedBadge = review.refunded ? '<span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;margin-left:4px;border:1px solid #FCA5A5;">Refunded</span>' : '';
+                const rawRefs = review.orderReferences && review.orderReferences.length > 0
+                    ? review.orderReferences.join(', ')
+                    : (review.orderReference || '');
+                const displayRefs = review.orderReferences && review.orderReferences.length > 0
+                    ? review.orderReferences.map(r => `#${r}`).join(', ')
+                    : (review.orderReference ? `#${review.orderReference}` : 'N/A');
+
+                adminInfoHtml = `
                     <div style="padding: 0.4rem 0.8rem; background: #F3F4F6; border-radius: 12px; font-size: 0.75rem; color: #4B5563; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 8px; font-weight: 500;">
-                        <span style="font-size: 0.85rem;">\u{1F511}</span>
-                        <span>Order Ref: <strong style="color: #1F2937;">${z.orderReferences&&z.orderReferences.length>0?z.orderReferences.map(Wt=>`#${Wt}`).join(", "):z.orderReference?`#${z.orderReference}`:"N/A"}</strong></span>
-                        ${Ot?`<button onclick="window.copyOrderRefToClipboard('${Ot}', this)" title="Copy Order Reference" style="background: #FFFFFF; border: 1px solid #D1D5DB; color: #374151; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s ease;" onmouseenter="this.style.borderColor='#9CA3AF'" onmouseleave="this.style.borderColor='#D1D5DB'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>`:""}
-                        ${Be}
+                        <span style="font-size: 0.85rem;">🔑</span>
+                        <span>Order Ref: <strong style="color: #1F2937;">${displayRefs}</strong></span>
+                        ${rawRefs ? `<button onclick="window.copyOrderRefToClipboard('${rawRefs}', this)" title="Copy Order Reference" style="background: #FFFFFF; border: 1px solid #D1D5DB; color: #374151; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s ease;" onmouseenter="this.style.borderColor='#9CA3AF'" onmouseleave="this.style.borderColor='#D1D5DB'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>` : ''}
+                        ${refundedBadge}
                     </div>
-                `}let Ce="";V&&(Ce=`<button class="review-delete-btn" onclick="window.handleReviewDelete('${z.id}')" style="background:none;border:none;color:#EF4444;font-size:0.78rem;font-weight:500;cursor:pointer;padding:4px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Delete</button>`);const qe=z.batch?`<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${z.batch}</span>`:"",Ye=(te||"V").charAt(0).toUpperCase(),Qe=z.authorPhoto?`<img src="${z.authorPhoto}" alt="${te}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #F3F4F6; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" />`:`<div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #18181B 0%, #3F3F46 100%); color: #FFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; text-transform: uppercase; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">${Ye}</div>`,Me=z.likedBy||[],ct=z.likesCount||Me.length||0,_e=tt.currentUser?tt.currentUser.uid:null,Pe=_e&&Me.includes(_e),Je=Pe?"background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE;":"background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB;",vt=Pe?"#4F46E5":"currentColor",Ht=Pe?"#4F46E5":"none";B.innerHTML=`
+                `;
+            }
+
+            let deleteBtnHtml = '';
+            // Delete button ONLY for the author of the review
+            if (isAuthor) {
+                deleteBtnHtml = `<button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')" style="background:none;border:none;color:#EF4444;font-size:0.78rem;font-weight:500;cursor:pointer;padding:4px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Delete</button>`;
+            }
+
+            const batchHtml = review.batch ? `<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${review.batch}</span>` : '';
+
+            const initialLetter = (authorName || 'V').charAt(0).toUpperCase();
+            const avatarHtml = review.authorPhoto 
+                ? `<img src="${review.authorPhoto}" alt="${authorName}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #F3F4F6; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" />`
+                : `<div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #18181B 0%, #3F3F46 100%); color: #FFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; text-transform: uppercase; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">${initialLetter}</div>`;
+
+            const likesArray = review.likedBy || [];
+            const likesCount = review.likesCount || likesArray.length || 0;
+            const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
+            const isLikedByCurrentUser = currentUserId && likesArray.includes(currentUserId);
+            
+            const likeBtnStyle = isLikedByCurrentUser 
+                ? 'background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE;' 
+                : 'background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB;';
+            const thumbsColor = isLikedByCurrentUser ? '#4F46E5' : 'currentColor';
+            const thumbsFill = isLikedByCurrentUser ? '#4F46E5' : 'none';
+
+            // Render DODCH Official Reply if present (simple clean indented thread line)
+            let adminReplyDisplayHtml = '';
+            if (review.adminReply) {
+                const rText = typeof review.adminReply === 'object' ? (review.adminReply.text || '') : String(review.adminReply);
+                const rTimestamp = typeof review.adminReply === 'object' && review.adminReply.updatedAt ? review.adminReply.updatedAt : null;
+                const rDateStr = rTimestamp ? new Date(rTimestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+                if (rText.trim()) {
+                    adminReplyDisplayHtml = `
+                        <div class="dodch-reply-thread-wrap" style="margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;">
+                            <div class="dodch-reply-card" style="padding: 0.9rem 1.1rem; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 12px; border-left: 3.5px solid #D4AF37; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%); color: #000; font-weight: 800; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Official</span>
+                                        <strong style="color: #FDFBF7; font-size: 0.9rem; font-family: var(--font-sans);">DODCH Reply</strong>
+                                    </div>
+                                    ${rDateStr ? `<span style="font-size: 0.74rem; color: #9CA3AF;">${rDateStr}</span>` : ''}
+                                </div>
+                                <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${rText}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Admin-only controls to publish / edit / delete DODCH reply
+            let adminReplyControlHtml = '';
+            if (isAdmin) {
+                const hasReply = !!(review.adminReply && (typeof review.adminReply === 'object' ? review.adminReply.text : review.adminReply));
+                const currentReplyText = hasReply ? (typeof review.adminReply === 'object' ? review.adminReply.text : review.adminReply) : '';
+
+                adminReplyControlHtml = `
+                    <div class="admin-reply-wrapper" style="margin-top: 0.75rem; width: 100%;">
+                        <button type="button" class="admin-btn-reply-toggle" onclick="window.toggleAdminReplyForm('${review.id}')" style="background: #27272A; color: #D4AF37; border: 1px solid #3F3F46; padding: 5px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            <span>${hasReply ? 'Edit DODCH Reply' : '💬 Reply as DODCH'}</span>
+                        </button>
+                        <div id="admin-reply-form-${review.id}" style="display: none; margin-top: 0.6rem; background: #27272A; padding: 1rem; border-radius: 12px; border: 1px solid #3F3F46;">
+                            <label style="display: block; color: #D4AF37; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem;">
+                                DODCH Official Reply
+                            </label>
+                            <textarea id="admin-reply-input-${review.id}" class="modern-input" rows="3" placeholder="Write an official response as DODCH..." style="background: #18181B; color: #FFF; border-color: #3F3F46; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0.6rem;">${currentReplyText}</textarea>
+                            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                                ${hasReply ? `<button type="button" onclick="window.handleDeleteAdminReply('${review.id}')" style="background: #7F1D1D; color: #FCA5A5; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Delete Reply</button>` : ''}
+                                <button type="button" onclick="window.toggleAdminReplyForm('${review.id}')" style="background: transparent; color: #A1A1AA; border: 1px solid #52525B; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer;">Cancel</button>
+                                <button type="button" onclick="window.handleSaveAdminReply('${review.id}')" style="background: #D4AF37; color: #000; border: none; padding: 5px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">Publish DODCH Reply</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            reviewEl.innerHTML = `
                 <div style="display: flex; gap: 16px; align-items: flex-start;">
-                    ${Qe}
+                    ${avatarHtml}
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 0.4rem;">
                             <div>
                                 <div style="font-weight: 700; font-size: 1rem; color: #18181B; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                    <span>${te}</span>
+                                    <span>${authorName}</span>
                                     <span style="background: #ECFDF5; color: #059669; padding: 3px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 3px;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                         Verified Buyer
                                     </span>
-                                    ${qe}
+                                    ${batchHtml}
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 0.6rem;">
-                                <div style="color: #9CA3AF; font-size: 0.82rem; font-weight: 400;">${X}</div>
-                                ${Ce}
+                                <div style="color: #9CA3AF; font-size: 0.82rem; font-weight: 400;">${date}</div>
+                                ${deleteBtnHtml}
                             </div>
                         </div>
                         <div style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
-                            <div>${F}</div>
+                            <div>${starsHtml}</div>
                         </div>
-                        <p style="margin: 0 0 1rem 0; line-height: 1.65; color: #374151; font-size: 0.95rem; font-weight: 400; word-break: break-word;">${z.text}</p>
+                        <div class="review-text-bubble" style="background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 4px 14px 14px 14px; padding: 0.9rem 1.1rem; margin-bottom: 0.85rem; color: #212529; font-size: 0.95rem; line-height: 1.65; word-break: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                            ${review.text}
+                        </div>
                         
-                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 0.8rem; padding-top: 0.75rem; border-top: 1px solid #F3F4F6;">
-                            <button onclick="window.handleReviewLike('${z.id}', this)" data-liked="${Pe?"true":"false"}" style="${Je} font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="${Ht}" stroke="${vt}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-                                <span>Helpful (${ct})</span>
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid #F3F4F6;">
+                            <button onclick="window.handleReviewLike('${review.id}', this)" data-liked="${isLikedByCurrentUser ? 'true' : 'false'}" style="${likeBtnStyle} font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="${thumbsFill}" stroke="${thumbsColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                                <span>Helpful (${likesCount})</span>
                             </button>
-                            ${Te}
+                            ${adminInfoHtml}
                         </div>
+                        ${adminReplyDisplayHtml}
+                        ${adminReplyControlHtml}
                     </div>
                 </div>
-            `,p.appendChild(B)})},ce=async()=>{try{const G=We(Re(ae,"product_reviews"),rt("productId","==",s)),z=await nt(G);let B=[];if(z.forEach(F=>{B.push({id:F.id,...F.data()})}),B.sort((F,X)=>{const te=F.createdAt?F.createdAt.seconds:0;return(X.createdAt?X.createdAt.seconds:0)-te}),tt.currentUser&&tt.currentUser.uid===Gt){const F=B.map(async X=>{try{const te=await ft(Ae(ae,"product_reviews",X.id,"private_data","info"));if(te.exists()){const V=te.data();X.orderReference=V.orderReference,X.orderReferences=V.orderReferences}}catch(te){console.warn("Failed to fetch private review data for admin",te)}});await Promise.all(F)}re(B),U(B)}catch(G){console.error("Error fetching reviews:",G),p.innerHTML='<p class="text-center" style="color: red;">Failed to load reviews.</p>'}},U=G=>{const z=document.querySelector(".ratings-dynamic-header");if(!z)return;const B=G.length,F=G.reduce((pe,Te)=>pe+Te.rating,0),X=B>0?(F/B).toFixed(1):0,te=z.querySelector(".stars-display"),V=z.querySelector(".count-display");if(te){const pe=Array(5).fill(0).map((Te,Ce)=>`<span style="color: ${Ce<Math.round(X)?"#F5A623":"#e0e0e0"};">\u2605</span>`).join("");te.innerHTML=pe}V&&(V.textContent=`(${X} / ${B} Reviews)`),B>0&&document.querySelectorAll('script[type="application/ld+json"]').forEach(Te=>{try{let Ce=JSON.parse(Te.textContent);Ce["@type"]==="Product"&&(Ce.aggregateRating={"@type":"AggregateRating",ratingValue:String(X),reviewCount:String(B)},Te.textContent=JSON.stringify(Ce,null,2))}catch{}})};ce();const ie=()=>{d&&d.classList.add("active"),document.body.style.overflow="hidden"},Y=()=>{d&&d.classList.remove("active"),document.body.style.overflow="",l&&l.reset()};c&&c.addEventListener("click",()=>{if(!m.loggedIn){window.showToast("Please log in to post a review.","warning");return}if(m.alreadyReviewed){window.showToast("You have already reviewed this product.","info");return}if(!m.eligible){window.showToast("You must purchase and receive this product before reviewing.","warning");return}ie()}),O&&O.addEventListener("click",Y),d&&d.addEventListener("click",G=>{G.target===d&&Y()}),Vt(tt,async G=>{const B=new URLSearchParams(window.location.search).get("open_review")==="true";if(!G){m={loggedIn:!1,eligible:!1,user:null},c&&(c.classList.remove("eligible"),c.classList.add("ineligible"),c.removeAttribute("style")),B&&window.showToast("Please log in to share your thoughts.","info");return}m.loggedIn=!0,m.user=G;try{const F=`${G.uid}_${s}`,X=await ft(Ae(ae,"product_reviews",F)),te=X.exists()?X.data():null,V=Re(ae,"orders"),pe=We(V,rt("userId","==",G.uid)),Te=await nt(pe);let Ce=[],qe=[],Ye=[];Te.forEach(_e=>{const Pe=_e.data();if(Pe.status==="Delivered"&&Pe.items&&Array.isArray(Pe.items)){const Je=Pe.items.find(vt=>vt.id===s||vt.productId===s);Je&&(Ce.push({id:_e.id,...Pe,matchingItem:Je}),Pe.orderReference&&Ye.push(Pe.orderReference),Je.refunded===!0||Je.refunded==="true"||qe.push({id:_e.id,...Pe,matchingItem:Je}))}});const Qe=(_e,Pe)=>{const Je=_e.timestamp?_e.timestamp.seconds:0;return(Pe.timestamp?Pe.timestamp.seconds:0)-Je};Ce.sort(Qe),qe.sort(Qe);const Me=qe[0]||null,ct=Me?Me.orderReference||Me.id:null;if(m.allOrderReferences=Ye,m.orderId=Me?Me.id:null,m.orderReference=ct,m.batch=Me&&Me.matchingItem&&(Me.matchingItem.batch||Me.matchingItem.batchNumber||Me.matchingItem.batchNo)||null,Ce.length===0){m.eligible=!1,m.alreadyReviewed=!1,c&&(c.classList.remove("eligible"),c.classList.add("ineligible"),c.removeAttribute("style")),B&&window.showToast("Only verified purchasers can leave reviews.","warning");return}if(qe.length===0){m.eligible=!1,m.alreadyReviewed=!1,c&&(c.classList.remove("eligible"),c.classList.add("ineligible"),c.innerText="Product Refunded"),B&&window.showToast("This product was refunded. You cannot review it.","warning");return}if(!te){m.eligible=!0,m.alreadyReviewed=!1,c&&(c.classList.remove("ineligible"),c.classList.add("eligible"),c.removeAttribute("style")),B&&setTimeout(()=>{ie(),window.showToast("Fill in the form to post your review!","success")},1200);return}if(te.reviewedAfterRefund===!0){m.eligible=!1,m.alreadyReviewed=!0,c&&(c.classList.remove("eligible"),c.classList.add("ineligible"),c.innerText="Reviewed \u2705"),B&&window.showToast("You have already reviewed this product. Thank you!","info");return}if(te.refunded===!0){const _e=te.refundedAt?new Date(te.refundedAt).getTime():0;qe.some(Je=>(Je.timestamp?Je.timestamp.seconds*1e3:0)>_e)?(m.eligible=!0,m.alreadyReviewed=!1,m.canEditAfterRefund=!0,c&&(c.classList.remove("ineligible"),c.classList.add("eligible"),c.innerText="Edit Review"),B&&setTimeout(()=>{ie(),window.showToast("You can update your review after reordering!","success")},1200)):(m.eligible=!1,m.alreadyReviewed=!0,c&&(c.classList.remove("eligible"),c.classList.add("ineligible"),c.innerText="Product Refunded"));return}m.eligible=!1,m.alreadyReviewed=!0,c&&(c.classList.remove("eligible"),c.classList.add("ineligible"),c.innerText="Reviewed \u2705"),B&&window.showToast("You have already reviewed this product. Thank you!","info")}catch(F){console.error("Error checking review eligibility:",F)}}),l&&l.addEventListener("submit",async G=>{if(G.preventDefault(),!m.user)return;const z=document.getElementById("submit-review-btn");z.disabled=!0,z.textContent="Submitting...";const B=parseInt(document.getElementById("review-rating").value),F=document.getElementById("review-text").value.trim();if(!B||!F){window.showToast("Please provide both rating and review text.","error"),z.disabled=!1,z.textContent="Submit Review";return}if(F.length>3e3){window.showToast("Review text is too long (max 3000 characters).","error"),z.disabled=!1,z.textContent="Submit Review";return}if(Ge.isProfane(F)){window.showToast("Inappropriate language detected.","error"),z.disabled=!1,z.textContent="Submit Review";return}if(Ge.isGibberish(F)){window.showToast("Review appears to be bot-generated. Please use real text.","error"),z.disabled=!1,z.textContent="Submit Review";return}try{const X=m.allOrderReferences.length>0?m.allOrderReferences:m.orderReference?[m.orderReference]:[],te=`${m.user.uid}_${s}`,V={productId:s,userId:m.user.uid,orderId:m.orderId,batch:m.batch||null,authorName:m.user.displayName||"Verified Buyer",authorPhoto:m.user.photoURL||null,rating:B,text:F,images:[],createdAt:Et(),refunded:!1,reviewedAfterRefund:m.canEditAfterRefund===!0};await at(Ae(ae,"product_reviews",te),V);const pe={orderReference:m.orderReference||null,orderReferences:X};await at(Ae(ae,"product_reviews",te,"private_data","info"),pe),window.showToast("Review submitted successfully!","success"),Y(),ce(),m.alreadyReviewed=!0,c&&(c.classList.remove("eligible"),c.classList.add("ineligible"),c.innerText="Reviewed \u2705")}catch(X){console.error("Error submitting review:",X),window.showToast("Failed to submit review. You might have already reviewed this product.","error")}finally{z.disabled=!1,z.textContent="Submit Review"}})};window.copyOrderRefToClipboard=(p,o)=>{p&&navigator.clipboard.writeText(p).then(()=>{if(window.showToast("Order Reference copied to clipboard!","success"),o){const s=o.innerHTML;o.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',o.style.borderColor="#A7F3D0",o.style.background="#ECFDF5",setTimeout(()=>{o.innerHTML=s,o.style.borderColor="#D1D5DB",o.style.background="#FFFFFF"},1800)}}).catch(s=>{console.error("Copy failed",s),window.showToast("Failed to copy text.","error")})},window.handleReviewDelete=async p=>{const o=prompt("To delete your review, please type 'DELETE' (all caps):");if(o!=="DELETE"){o!==null&&window.showToast("Deletion cancelled. Text mismatch.","info");return}try{await Eo(Ae(ae,"product_reviews",p)),window.showToast("Review deleted successfully.","success"),setTimeout(()=>window.location.reload(),1500)}catch(s){console.error("Error deleting review:",s),window.showToast("Failed to delete review.","error")}},window.handleReviewLike=async(p,o)=>{const s=tt.currentUser;if(!s){window.showToast("Please log in to react to reviews.","warning");return}const d=o||(event?event.currentTarget:null);if(!d)return;const l=d.querySelector("span"),c=d.querySelector("svg"),le=(l?l.textContent:"").match(/\d+/);let fe=le?parseInt(le[0]):0;const _=d.dataset.liked==="true"||d.style.color==="rgb(79, 70, 229)",m=!_,re=m?fe+1:Math.max(0,fe-1);d.dataset.liked=m?"true":"false",l&&(l.textContent=`Helpful (${re})`),d.style.cssText=m?"background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;":"background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;",c&&(c.setAttribute("fill",m?"#4F46E5":"none"),c.setAttribute("stroke",m?"#4F46E5":"currentColor"));try{const ce=Ae(ae,"product_reviews",p),U=await ft(ce);if(!U.exists())return;const ie=U.data();let Y=Array.isArray(ie.likedBy)?ie.likedBy:[];Y.includes(s.uid)?Y=Y.filter(G=>G!==s.uid):Y.push(s.uid),await gt(ce,{likedBy:Y,likesCount:Y.length}),window.showToast(m?"Marked review as helpful!":"Unmarked as helpful.",m?"success":"info")}catch(ce){console.error("Error updating review reaction:",ce),d.dataset.liked=_?"true":"false",l&&(l.textContent=`Helpful (${fe})`),d.style.cssText=_?"background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;":"background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;",c&&(c.setAttribute("fill",_?"#4F46E5":"none"),c.setAttribute("stroke",_?"#4F46E5":"currentColor")),window.showToast("Failed to register reaction.","error")}};const Ni=async p=>{const o=document.getElementById("user-reviews-list"),s=document.getElementById("reviews-loader"),d=document.getElementById("load-more-reviews-container"),l=document.getElementById("load-more-reviews-btn");if(o){s&&s.classList.add("active"),o.classList.remove("visible"),d&&(d.style.display="none");try{const c=We(Re(ae,"product_reviews"),rt("userId","==",p.uid)),O=await nt(c),le=[];O.forEach(m=>le.push({id:m.id,...m.data()})),le.sort((m,re)=>(re.createdAt?.seconds||0)-(m.createdAt?.seconds||0));let fe=10;const _=(m=!1)=>{m||(o.innerHTML="");const re=le.slice(m?fe-10:0,fe);if(!m&&le.length===0){o.innerHTML=`<p style="color: #666; font-style: italic;">You haven't written any reviews yet.</p>`,d&&(d.style.display="none");return}re.forEach(ce=>{const U=document.createElement("div");U.className="review-card-item content-fade visible",U.style.cssText=`
+            `;
+
+            reviewsContainer.appendChild(reviewEl);
+        });
+    };
+    const fetchReviews = async () => {
+        try {
+            const q = query(collection(db, "product_reviews"), where("productId", "==", productId));
+            const querySnapshot = await getDocs(q);
+            let reviews = [];
+            querySnapshot.forEach((doc) => {
+                reviews.push({ id: doc.id, ...doc.data() });
+            });
+            reviews.sort((a, b) => {
+                const timeA = a.createdAt ? a.createdAt.seconds : 0;
+                const timeB = b.createdAt ? b.createdAt.seconds : 0;
+                return timeB - timeA;
+            });
+
+            // Bulk fetch private order references if user is Admin
+            if (auth.currentUser && auth.currentUser.uid === ADMIN_UID) {
+                const privatePromises = reviews.map(async (review) => {
+                    try {
+                        const privateDoc = await getDoc(doc(db, "product_reviews", review.id, "private_data", "info"));
+                        if (privateDoc.exists()) {
+                            const pData = privateDoc.data();
+                            review.orderReference = pData.orderReference;
+                            review.orderReferences = pData.orderReferences;
+                        }
+                    } catch (e) {
+                        console.warn("Failed to fetch private review data for admin", e);
+                    }
+                });
+                await Promise.all(privatePromises);
+            }
+
+            renderReviews(reviews);
+            updateDynamicRatings(reviews);
+
+            // Auto-scroll & highlight target review if opened from a reply notification
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetReviewId = urlParams.get('reviewId');
+            if (targetReviewId) {
+                setTimeout(() => {
+                    const targetEl = document.getElementById(`review-${targetReviewId}`);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetEl.classList.add('review-highlight-pulse');
+                        setTimeout(() => targetEl.classList.remove('review-highlight-pulse'), 3500);
+                    }
+                }, 500);
+            }
+        } catch (error) {
+            console.error("Error fetching reviews:", error);
+            reviewsContainer.innerHTML = '<p class="text-center" style="color: red;">Failed to load reviews.</p>';
+        }
+    };
+
+    const updateDynamicRatings = (reviews) => {
+        const ratingHeader = document.querySelector('.ratings-dynamic-header');
+        if (!ratingHeader) return;
+
+        const count = reviews.length;
+        const totalStars = reviews.reduce((acc, r) => acc + r.rating, 0);
+        const average = count > 0 ? (totalStars / count).toFixed(1) : 0;
+
+        const starsContainer = ratingHeader.querySelector('.stars-display');
+        const countDisplay = ratingHeader.querySelector('.count-display');
+
+        if (starsContainer) {
+            const starsHtml = Array(5).fill(0).map((_, i) =>
+                `<span style="color: ${i < Math.round(average) ? '#F5A623' : '#e0e0e0'};">★</span>`
+            ).join('');
+            starsContainer.innerHTML = starsHtml;
+        }
+
+        if (countDisplay) {
+            countDisplay.textContent = `(${average} / ${count} Reviews)`;
+        }
+
+        // Sync JSON-LD structured data for Google Search & Merchant Center
+        if (count > 0) {
+            const schemas = document.querySelectorAll('script[type="application/ld+json"]');
+            schemas.forEach(schema => {
+                try {
+                    let schemaData = JSON.parse(schema.textContent);
+                    if (schemaData['@type'] === 'Product') {
+                        schemaData.aggregateRating = {
+                            "@type": "AggregateRating",
+                            "ratingValue": String(average),
+                            "reviewCount": String(count)
+                        };
+                        schema.textContent = JSON.stringify(schemaData, null, 2);
+                    }
+                } catch (e) {}
+            });
+        }
+    };
+
+    fetchReviews();
+    const openModal = () => {
+        if (reviewModal) reviewModal.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Prevent scroll
+    };
+
+    const closeModal = () => {
+        if (reviewModal) reviewModal.classList.remove('active');
+        document.body.style.overflow = ''; // Restore scroll
+        if (reviewForm) reviewForm.reset();
+    };
+
+
+    if (writeReviewBtn) {
+        writeReviewBtn.addEventListener('click', () => {
+            if (!userState.loggedIn) {
+                window.showToast("Please log in to post a review.", "warning");
+                return;
+            }
+            if (userState.alreadyReviewed) {
+                window.showToast("You have already reviewed this product.", "info");
+                return;
+            }
+            if (!userState.eligible) {
+                window.showToast("You must purchase and receive this product before reviewing.", "warning");
+                return;
+            }
+            openModal();
+        });
+    }
+
+    if (closeReviewModal) {
+        closeReviewModal.addEventListener('click', closeModal);
+    }
+    if (reviewModal) {
+        reviewModal.addEventListener('click', (e) => {
+            if (e.target === reviewModal) closeModal();
+        });
+    }
+    onAuthStateChanged(auth, async (user) => {
+        const params = new URLSearchParams(window.location.search);
+        const shouldOpenReview = params.get('open_review') === 'true';
+
+        if (!user) {
+            userState = { loggedIn: false, eligible: false, user: null };
+            if (writeReviewBtn) {
+                writeReviewBtn.classList.remove('eligible');
+                writeReviewBtn.classList.add('ineligible');
+                writeReviewBtn.removeAttribute('style');
+            }
+            if (shouldOpenReview) {
+                window.showToast("Please log in to share your thoughts.", "info");
+            }
+            return;
+        }
+
+        userState.loggedIn = true;
+        userState.user = user;
+
+        try {
+            // 1. Fetch existing review for this user+product
+            const reviewDocId = `${user.uid}_${productId}`;
+            const existingReviewSnap = await getDoc(doc(db, "product_reviews", reviewDocId));
+            const existingReview = existingReviewSnap.exists() ? existingReviewSnap.data() : null;
+
+            // 2. Fetch all user orders containing this product
+            const ordersRef = collection(db, "orders");
+            const qOrders = query(ordersRef, where("userId", "==", user.uid));
+            const ordersSnapshot = await getDocs(qOrders);
+
+            let allDeliveredOrders = []; // All delivered orders with this product
+            let nonRefundedDeliveredOrders = []; // Delivered orders where this item is NOT refunded
+            let allOrderRefs = [];
+
+            ordersSnapshot.forEach((docSnap) => {
+                const order = docSnap.data();
+                if (order.status === 'Delivered' && order.items && Array.isArray(order.items)) {
+                    const matchingItem = order.items.find(item => item.id === productId || item.productId === productId);
+                    if (matchingItem) {
+                        allDeliveredOrders.push({ id: docSnap.id, ...order, matchingItem });
+                        if (order.orderReference) allOrderRefs.push(order.orderReference);
+                        const isItemRefunded = matchingItem.refunded === true || matchingItem.refunded === 'true';
+                        if (!isItemRefunded) {
+                            nonRefundedDeliveredOrders.push({ id: docSnap.id, ...order, matchingItem });
+                        }
+                    }
+                }
+            });
+
+            // Sort by timestamp descending to get most recent
+            const sortByTime = (a, b) => {
+                const tA = a.timestamp ? a.timestamp.seconds : 0;
+                const tB = b.timestamp ? b.timestamp.seconds : 0;
+                return tB - tA;
+            };
+            allDeliveredOrders.sort(sortByTime);
+            nonRefundedDeliveredOrders.sort(sortByTime);
+
+            const latestNonRefunded = nonRefundedDeliveredOrders[0] || null;
+            const latestOrderRef = latestNonRefunded ? (latestNonRefunded.orderReference || latestNonRefunded.id) : null;
+
+            userState.allOrderReferences = allOrderRefs;
+            userState.orderId = latestNonRefunded ? latestNonRefunded.id : null;
+            userState.orderReference = latestOrderRef;
+            userState.batch = latestNonRefunded && latestNonRefunded.matchingItem ? (latestNonRefunded.matchingItem.batch || latestNonRefunded.matchingItem.batchNumber || latestNonRefunded.matchingItem.batchNo || null) : null;
+
+            // Decision tree
+            if (allDeliveredOrders.length === 0) {
+                // Never purchased + delivered
+                userState.eligible = false;
+                userState.alreadyReviewed = false;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    writeReviewBtn.removeAttribute('style');
+                }
+                if (shouldOpenReview) window.showToast("Only verified purchasers can leave reviews.", "warning");
+                return;
+            }
+
+            if (nonRefundedDeliveredOrders.length === 0) {
+                // All deliveries were refunded - block reviewing
+                userState.eligible = false;
+                userState.alreadyReviewed = false;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    writeReviewBtn.innerText = 'Product Refunded';
+                }
+                if (shouldOpenReview) window.showToast("This product was refunded. You cannot review it.", "warning");
+                return;
+            }
+
+            // Has at least one non-refunded delivered order
+            if (!existingReview) {
+                // No existing review — standard eligible
+                userState.eligible = true;
+                userState.alreadyReviewed = false;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('ineligible');
+                    writeReviewBtn.classList.add('eligible');
+                    writeReviewBtn.removeAttribute('style');
+                }
+                if (shouldOpenReview) {
+                    setTimeout(() => {
+                        openModal();
+                        window.showToast("Fill in the form to post your review!", "success");
+                    }, 1200);
+                }
+                return;
+            }
+
+            // Has existing review
+            if (existingReview.reviewedAfterRefund === true) {
+                // Already used the one-time post-refund edit — permanently blocked
+                userState.eligible = false;
+                userState.alreadyReviewed = true;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    writeReviewBtn.innerText = 'Reviewed ✅';
+                }
+                if (shouldOpenReview) window.showToast("You have already reviewed this product. Thank you!", "info");
+                return;
+            }
+
+            if (existingReview.refunded === true) {
+                // Review was refunded but user has a new non-refunded order — allow one-time edit
+                const refundedAt = existingReview.refundedAt ? new Date(existingReview.refundedAt).getTime() : 0;
+                const hasNewerOrder = nonRefundedDeliveredOrders.some(o => {
+                    const orderTime = o.timestamp ? o.timestamp.seconds * 1000 : 0;
+                    return orderTime > refundedAt;
+                });
+                if (hasNewerOrder) {
+                    userState.eligible = true;
+                    userState.alreadyReviewed = false;
+                    userState.canEditAfterRefund = true;
+                    if (writeReviewBtn) {
+                        writeReviewBtn.classList.remove('ineligible');
+                        writeReviewBtn.classList.add('eligible');
+                        writeReviewBtn.innerText = 'Edit Review';
+                    }
+                    if (shouldOpenReview) {
+                        setTimeout(() => {
+                            openModal();
+                            window.showToast("You can update your review after reordering!", "success");
+                        }, 1200);
+                    }
+                } else {
+                    userState.eligible = false;
+                    userState.alreadyReviewed = true;
+                    if (writeReviewBtn) {
+                        writeReviewBtn.classList.remove('eligible');
+                        writeReviewBtn.classList.add('ineligible');
+                        writeReviewBtn.innerText = 'Product Refunded';
+                    }
+                }
+                return;
+            }
+
+            // Standard — already reviewed, not refunded
+            userState.eligible = false;
+            userState.alreadyReviewed = true;
+            if (writeReviewBtn) {
+                writeReviewBtn.classList.remove('eligible');
+                writeReviewBtn.classList.add('ineligible');
+                writeReviewBtn.innerText = 'Reviewed ✅';
+            }
+            if (shouldOpenReview) window.showToast("You have already reviewed this product. Thank you!", "info");
+
+        } catch (error) {
+            console.error("Error checking review eligibility:", error);
+        }
+    });
+
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!userState.user) return;
+
+            const submitBtn = document.getElementById('submit-review-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            const rating = parseInt(document.getElementById('review-rating').value);
+            const text = document.getElementById('review-text').value.trim();
+
+            if (!rating || !text) {
+                window.showToast("Please provide both rating and review text.", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+                return;
+            }
+
+            if (text.length > 3000) {
+                window.showToast("Review text is too long (max 3000 characters).", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+                return;
+            }
+
+
+            if (SecurityValidator.isProfane(text)) {
+                window.showToast("Inappropriate language detected.", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+                return;
+            }
+
+            if (SecurityValidator.isGibberish(text)) {
+                window.showToast("Review appears to be bot-generated. Please use real text.", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+                return;
+            }
+
+            try {
+                // Collect all order references for this product
+                const orderRefs = userState.allOrderReferences.length > 0
+                    ? userState.allOrderReferences
+                    : (userState.orderReference ? [userState.orderReference] : []);
+
+                const reviewDocId = `${userState.user.uid}_${productId}`;
+                const newReview = {
+                    productId: productId,
+                    userId: userState.user.uid,
+                    orderId: userState.orderId,
+                    batch: userState.batch || null,
+                    authorName: userState.user.displayName || 'Verified Buyer',
+                    authorPhoto: userState.user.photoURL || null,
+                    rating: rating,
+                    text: text,
+                    images: [],
+                    createdAt: serverTimestamp(),
+                    refunded: false,
+                    reviewedAfterRefund: userState.canEditAfterRefund === true
+                };
+
+                await setDoc(doc(db, "product_reviews", reviewDocId), newReview);
+
+                // Save private data securely in a subcollection
+                const privateData = {
+                    orderReference: userState.orderReference || null,
+                    orderReferences: orderRefs
+                };
+                await setDoc(doc(db, "product_reviews", reviewDocId, "private_data", "info"), privateData);
+
+                window.showToast("Review submitted successfully!", "success");
+                closeModal();
+                fetchReviews();
+                userState.alreadyReviewed = true;
+                if (writeReviewBtn) {
+                    writeReviewBtn.classList.remove('eligible');
+                    writeReviewBtn.classList.add('ineligible');
+                    writeReviewBtn.innerText = "Reviewed ✅";
+                }
+            } catch (error) {
+                console.error("Error submitting review:", error);
+                window.showToast("Failed to submit review. You might have already reviewed this product.", "error");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+            }
+        });
+    }
+};
+window.copyOrderRefToClipboard = (text, btn) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        window.showToast("Order Reference copied to clipboard!", "success");
+        if (btn) {
+            const originalSvg = btn.innerHTML;
+            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            btn.style.borderColor = '#A7F3D0';
+            btn.style.background = '#ECFDF5';
+            setTimeout(() => {
+                btn.innerHTML = originalSvg;
+                btn.style.borderColor = '#D1D5DB';
+                btn.style.background = '#FFFFFF';
+            }, 1800);
+        }
+    }).catch(err => {
+        console.error("Copy failed", err);
+        window.showToast("Failed to copy text.", "error");
+    });
+};
+
+window.handleReviewDelete = async (reviewId) => {
+    const confirmation = prompt("To delete your review, please type 'DELETE' (all caps):");
+    if (confirmation !== 'DELETE') {
+        if (confirmation !== null) window.showToast("Deletion cancelled. Text mismatch.", "info");
+        return;
+    }
+
+    try {
+        await deleteDoc(doc(db, "product_reviews", reviewId));
+        window.showToast("Review deleted successfully.", "success");
+        setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+        console.error("Error deleting review:", error);
+        window.showToast("Failed to delete review.", "error");
+    }
+};
+
+window.handleReviewLike = async (reviewId, btnElement) => {
+    const user = auth.currentUser;
+    if (!user) {
+        window.showToast("Please log in to react to reviews.", "warning");
+        return;
+    }
+
+    const btn = btnElement || (event ? event.currentTarget : null);
+    if (!btn) return;
+
+    // Optimistic UI toggle
+    const span = btn.querySelector('span');
+    const svg = btn.querySelector('svg');
+    const currentText = span ? span.textContent : '';
+    const match = currentText.match(/\d+/);
+    let count = match ? parseInt(match[0]) : 0;
+
+    const isCurrentlyLiked = btn.dataset.liked === 'true' || btn.style.color === 'rgb(79, 70, 229)';
+    const nextLiked = !isCurrentlyLiked;
+    const nextCount = nextLiked ? count + 1 : Math.max(0, count - 1);
+
+    // Apply immediate UI state
+    btn.dataset.liked = nextLiked ? 'true' : 'false';
+    if (span) span.textContent = `Helpful (${nextCount})`;
+    btn.style.cssText = nextLiked 
+        ? 'background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;' 
+        : 'background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;';
+    if (svg) {
+        svg.setAttribute('fill', nextLiked ? '#4F46E5' : 'none');
+        svg.setAttribute('stroke', nextLiked ? '#4F46E5' : 'currentColor');
+    }
+
+    try {
+        const reviewRef = doc(db, "product_reviews", reviewId);
+        const reviewSnap = await getDoc(reviewRef);
+        if (!reviewSnap.exists()) return;
+
+        const data = reviewSnap.data();
+        let likedBy = Array.isArray(data.likedBy) ? data.likedBy : [];
+
+        if (likedBy.includes(user.uid)) {
+            likedBy = likedBy.filter(uid => uid !== user.uid);
+        } else {
+            likedBy.push(user.uid);
+        }
+
+        await updateDoc(reviewRef, {
+            likedBy: likedBy,
+            likesCount: likedBy.length
+        });
+
+        window.showToast(nextLiked ? "Marked review as helpful!" : "Unmarked as helpful.", nextLiked ? "success" : "info");
+    } catch (error) {
+        console.error("Error updating review reaction:", error);
+        // Rollback UI state if failed
+        btn.dataset.liked = isCurrentlyLiked ? 'true' : 'false';
+        if (span) span.textContent = `Helpful (${count})`;
+        btn.style.cssText = isCurrentlyLiked 
+            ? 'background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;' 
+            : 'background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;';
+        if (svg) {
+            svg.setAttribute('fill', isCurrentlyLiked ? '#4F46E5' : 'none');
+            svg.setAttribute('stroke', isCurrentlyLiked ? '#4F46E5' : 'currentColor');
+        }
+        window.showToast("Failed to register reaction.", "error");
+    }
+};
+
+window.toggleAdminReplyForm = (reviewId) => {
+    const form = document.getElementById(`admin-reply-form-${reviewId}`);
+    if (form) {
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+};
+
+window.handleSaveAdminReply = async (reviewId) => {
+    const input = document.getElementById(`admin-reply-input-${reviewId}`);
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) {
+        window.showToast("Please enter reply text.", "error");
+        return;
+    }
+
+    try {
+        const reviewRef = doc(db, "product_reviews", reviewId);
+        const now = Date.now();
+        await updateDoc(reviewRef, {
+            adminReply: {
+                text: text,
+                updatedAt: now
+            }
+        });
+
+        // Live DOM Update — No Page Reload required
+        const reviewCard = document.getElementById(`review-${reviewId}`);
+        if (reviewCard) {
+            const dateStr = new Date(now).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            let threadWrap = reviewCard.querySelector('.dodch-reply-thread-wrap');
+
+            if (threadWrap) {
+                // Update existing reply text & date
+                const replyPara = threadWrap.querySelector('p');
+                if (replyPara) replyPara.textContent = text;
+                const dateSpan = threadWrap.querySelector('.reply-date');
+                if (dateSpan) dateSpan.textContent = dateStr;
+            } else {
+                // Create new reply element dynamically
+                threadWrap = document.createElement('div');
+                threadWrap.className = 'dodch-reply-thread-wrap';
+                threadWrap.style.cssText = 'margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;';
+                threadWrap.innerHTML = `
+                    <div class="dodch-reply-card" style="padding: 0.9rem 1.1rem; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 12px; border-left: 3.5px solid #D4AF37; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%); color: #000; font-weight: 800; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Official</span>
+                                <strong style="color: #FDFBF7; font-size: 0.9rem; font-family: var(--font-sans);">DODCH Reply</strong>
+                            </div>
+                            <span class="reply-date" style="font-size: 0.74rem; color: #9CA3AF;">${dateStr}</span>
+                        </div>
+                        <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${text}</p>
+                    </div>
+                `;
+
+                const adminReplyWrap = reviewCard.querySelector('.admin-reply-wrapper');
+                const contentCol = reviewCard.querySelector('div[style*="flex: 1"]');
+                if (contentCol && adminReplyWrap) {
+                    contentCol.insertBefore(threadWrap, adminReplyWrap);
+                } else if (contentCol) {
+                    contentCol.appendChild(threadWrap);
+                } else {
+                    reviewCard.appendChild(threadWrap);
+                }
+            }
+
+            // Update toggle button label to 'Edit DODCH Reply'
+            const toggleBtnSpan = reviewCard.querySelector('.admin-btn-reply-toggle span');
+            if (toggleBtnSpan) toggleBtnSpan.textContent = 'Edit DODCH Reply';
+
+            // Ensure delete button exists in form
+            const formBtnRow = reviewCard.querySelector(`#admin-reply-form-${reviewId} div[style*="justify-content: flex-end"]`);
+            if (formBtnRow && !formBtnRow.querySelector('button[onclick*="handleDeleteAdminReply"]')) {
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.setAttribute('onclick', `window.handleDeleteAdminReply('${reviewId}')`);
+                delBtn.style.cssText = 'background: #7F1D1D; color: #FCA5A5; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;';
+                delBtn.textContent = 'Delete Reply';
+                formBtnRow.insertBefore(delBtn, formBtnRow.firstChild);
+            }
+
+            // Close form
+            window.toggleAdminReplyForm(reviewId);
+        }
+
+        // Notify user in background
+        try {
+            const reviewSnap = await getDoc(reviewRef);
+            if (reviewSnap.exists()) {
+                const rData = reviewSnap.data();
+                const targetUserId = rData.userId;
+                const productId = rData.productId;
+                let prodName = "your product";
+                if (window.productCatalog && window.productCatalog[productId]) {
+                    prodName = window.productCatalog[productId].name || "your product";
+                }
+                const redirectUrl = `product.html?id=${productId}&reviewId=${reviewId}`;
+
+                if (targetUserId && targetUserId !== auth.currentUser?.uid) {
+                    await addDoc(collection(db, "notifications"), {
+                        userId: targetUserId,
+                        title: "DODCH Replied to Your Review ✨",
+                        message: `We've responded to your review for ${prodName}. Tap to view!`,
+                        link: redirectUrl,
+                        productId: productId,
+                        reviewId: reviewId,
+                        isSeen: false,
+                        createdAt: serverTimestamp()
+                    });
+
+                    if (typeof window.sendTargetedPushNotification === 'function') {
+                        window.sendTargetedPushNotification(
+                            db,
+                            targetUserId,
+                            "DODCH Replied to Your Review ✨",
+                            `We've responded to your review for ${prodName}. Tap to view!`,
+                            redirectUrl
+                        ).catch(pErr => console.warn("Push notification error:", pErr));
+                    }
+                }
+            }
+        } catch (nErr) {
+            console.warn("Notification dispatch error:", nErr);
+        }
+
+        window.showToast("DODCH reply published & notification sent!", "success");
+    } catch (e) {
+        console.error("Error saving admin reply:", e);
+        window.showToast("Failed to save reply: " + e.message, "error");
+    }
+};
+
+window.handleDeleteAdminReply = async (reviewId) => {
+    if (!await window.showConfirm("Are you sure you want to delete this DODCH reply?", "Delete Reply")) return;
+
+    try {
+        const reviewRef = doc(db, "product_reviews", reviewId);
+        await updateDoc(reviewRef, {
+            adminReply: deleteField()
+        });
+
+        // Live DOM Update — No Page Reload
+        const reviewCard = document.getElementById(`review-${reviewId}`);
+        if (reviewCard) {
+            const threadWrap = reviewCard.querySelector('.dodch-reply-thread-wrap');
+            if (threadWrap) threadWrap.remove();
+
+            const toggleBtnSpan = reviewCard.querySelector('.admin-btn-reply-toggle span');
+            if (toggleBtnSpan) toggleBtnSpan.textContent = '💬 Reply as DODCH';
+
+            const delBtn = reviewCard.querySelector(`button[onclick*="handleDeleteAdminReply('${reviewId}')"]`);
+            if (delBtn) delBtn.remove();
+
+            const input = document.getElementById(`admin-reply-input-${reviewId}`);
+            if (input) input.value = '';
+
+            const form = document.getElementById(`admin-reply-form-${reviewId}`);
+            if (form) form.style.display = 'none';
+        }
+
+        window.showToast("DODCH reply removed.", "info");
+    } catch (e) {
+        console.error("Error deleting admin reply:", e);
+        window.showToast("Failed to delete reply: " + e.message, "error");
+    }
+};
+
+const initUserReviewsHistory = async (user) => {
+    const listContainer = document.getElementById('user-reviews-list');
+    const reviewsLoader = document.getElementById('reviews-loader');
+    const loadMoreContainer = document.getElementById('load-more-reviews-container');
+    const loadMoreBtn = document.getElementById('load-more-reviews-btn');
+    if (!listContainer) return;
+
+    if (reviewsLoader) reviewsLoader.classList.add('active');
+    listContainer.classList.remove('visible');
+    if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+
+    try {
+        const q = query(collection(db, "product_reviews"), where("userId", "==", user.uid));
+        const snap = await getDocs(q);
+        const allReviews = [];
+        snap.forEach(doc => allReviews.push({ id: doc.id, ...doc.data() }));
+        allReviews.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+        let visibleReviewsCount = 10;
+
+        const renderReviewChunk = (append = false) => {
+            if (!append) listContainer.innerHTML = '';
+
+            const chunk = allReviews.slice(append ? visibleReviewsCount - 10 : 0, visibleReviewsCount);
+
+            if (!append && allReviews.length === 0) {
+                listContainer.innerHTML = '<p style="color: #666; font-style: italic;">You haven\'t written any reviews yet.</p>';
+                if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+                return;
+            }
+
+            chunk.forEach((review) => {
+                const reviewEl = document.createElement('div');
+                reviewEl.id = `review-${review.id}`;
+                reviewEl.className = 'review-card-item content-fade visible';
+                reviewEl.style.cssText = `
                     padding: 1.5rem;
                     background: #FFFFFF;
                     border: 1px solid rgba(0, 0, 0, 0.06);
@@ -1241,69 +8792,876 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                     margin-bottom: 1.25rem;
                     box-shadow: 0 4px 20px rgba(0,0,0,0.03);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
-                `,U.onmouseenter=()=>{U.style.transform="translateY(-2px)",U.style.boxShadow="0 8px 30px rgba(0, 0, 0, 0.06)"},U.onmouseleave=()=>{U.style.transform="none",U.style.boxShadow="0 4px 20px rgba(0, 0, 0, 0.03)"};let ie="Product",Y="#",G="placeholder-glow.webp";if(ce.productId==="glass-glow-shampoo")ie="Glass Glow Shampoo",Y="glass-glow-shampoo.html",G=w["glass-glow-shampoo"]?.image||"IMG_3489.webp";else if(ce.productId==="dodchmellow-pro-v")ie="DODCHmellow Pro-V",Y="dodchmellow-pro-v.html",G=w["dodchmellow-pro-v"]?.image||"IMG_3851.webp";else if(ce.productId==="foaming-cleanser")ie="Advanced Face Foam",Y="face-foam.html",G=w["foaming-cleanser"]?.image||"IMG_3352.webp";else if(ce.productId==="silk-therapy-mask")ie="Silk Therapy Mask",Y="silk-mask.html",G=w["silk-therapy-mask"]?.image||"IMG_4188 (2).webp";else if(w&&w[ce.productId]){const X=w[ce.productId];ie=X.name||"Product",G=X.image||"placeholder-glow.webp",Y=X.storyUrl||`product.html?id=${ce.productId}`}else ie=`Product (${ce.productId||"Unknown"})`;const z=Array(5).fill(0).map((X,te)=>`<span style="color: ${te<ce.rating?"#F5A623":"#E4E4E7"}; font-size: 1.15rem; margin-right: 1px;">\u2605</span>`).join(""),B=ce.createdAt?new Date(ce.createdAt.seconds*1e3).toLocaleDateString(void 0,{year:"numeric",month:"short",day:"numeric"}):"Recent",F=ce.batch?`<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${ce.batch}</span>`:"";U.innerHTML=`
+                `;
+                reviewEl.onmouseenter = () => {
+                    reviewEl.style.transform = 'translateY(-2px)';
+                    reviewEl.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.06)';
+                };
+                reviewEl.onmouseleave = () => {
+                    reviewEl.style.transform = 'none';
+                    reviewEl.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.03)';
+                };
+
+                let productName = 'Product';
+                let productLink = '#';
+                let productImg = 'placeholder-glow.webp';
+
+                if (review.productId === 'glass-glow-shampoo') {
+                    productName = 'Glass Glow Shampoo';
+                    productLink = 'glass-glow-shampoo.html';
+                    productImg = productCatalog['glass-glow-shampoo']?.image || 'IMG_3489.webp';
+                } else if (review.productId === 'dodchmellow-pro-v') {
+                    productName = 'DODCHmellow Pro-V';
+                    productLink = 'dodchmellow-pro-v.html';
+                    productImg = productCatalog['dodchmellow-pro-v']?.image || 'IMG_3851.webp';
+                } else if (review.productId === 'foaming-cleanser') {
+                    productName = 'Advanced Face Foam';
+                    productLink = 'face-foam.html';
+                    productImg = productCatalog['foaming-cleanser']?.image || 'IMG_3352.webp';
+                } else if (review.productId === 'silk-therapy-mask') {
+                    productName = 'Silk Therapy Mask';
+                    productLink = 'silk-mask.html';
+                    productImg = productCatalog['silk-therapy-mask']?.image || 'IMG_4188 (2).webp';
+                } else if (productCatalog && productCatalog[review.productId]) {
+                    const prod = productCatalog[review.productId];
+                    productName = prod.name || 'Product';
+                    productImg = prod.image || 'placeholder-glow.webp';
+                    productLink = prod.storyUrl || `product.html?id=${review.productId}`;
+                } else {
+                    productName = `Product (${review.productId || 'Unknown'})`;
+                }
+
+                const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#E4E4E7'}; font-size: 1.15rem; margin-right: 1px;">★</span>`).join('');
+                const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recent';
+                const accountBatchBadge = review.batch ? `<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${review.batch}</span>` : '';
+
+                // Render DODCH Official Reply on user account page if present (simple clean indented thread line)
+                let accountAdminReplyHtml = '';
+                if (review.adminReply) {
+                    const rText = typeof review.adminReply === 'object' ? (review.adminReply.text || '') : String(review.adminReply);
+                    const rTimestamp = typeof review.adminReply === 'object' && review.adminReply.updatedAt ? review.adminReply.updatedAt : null;
+                    const rDateStr = rTimestamp ? new Date(rTimestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+                    if (rText.trim()) {
+                        accountAdminReplyHtml = `
+                            <div class="dodch-reply-thread-wrap" style="margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;">
+                                <div class="dodch-reply-card" style="padding: 0.9rem 1.1rem; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 12px; border-left: 3.5px solid #D4AF37; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%); color: #000; font-weight: 800; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Official</span>
+                                            <strong style="color: #FDFBF7; font-size: 0.9rem; font-family: var(--font-sans);">DODCH Reply</strong>
+                                        </div>
+                                        ${rDateStr ? `<span style="font-size: 0.74rem; color: #9CA3AF;">${rDateStr}</span>` : ''}
+                                    </div>
+                                    <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${rText}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                reviewEl.innerHTML = `
                 <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 1rem;">
-                    <img src="${G}" class="account-item-mini-img" alt="${ie}" style="width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 1px solid #F3F4F6;">
+                    <img src="${productImg}" class="account-item-mini-img" alt="${productName}" style="width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 1px solid #F3F4F6;">
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <a href="${Y}" style="text-decoration: none; color: #18181B; font-family: var(--font-serif, 'Playfair Display', serif); font-size: 1.1rem; font-weight: 700;">${ie}</a>
-                            ${F}
+                            <a href="${productLink}" style="text-decoration: none; color: #18181B; font-family: var(--font-serif, 'Playfair Display', serif); font-size: 1.1rem; font-weight: 700;">${productName}</a>
+                            ${accountBatchBadge}
                         </div>
-                        <div style="color: #9CA3AF; font-size: 0.82rem; margin-top: 3px;">Reviewed on ${B}</div>
+                        <div style="color: #9CA3AF; font-size: 0.82rem; margin-top: 3px;">Reviewed on ${date}</div>
                     </div>
                 </div>
-                <div style="margin-bottom: 0.75rem;">${z}</div>
-                <p style="font-size: 0.95rem; line-height: 1.65; color: #374151; margin-bottom: 1.25rem;">${ce.text}</p>
-                <div style="display: flex; justify-content: flex-end; border-top: 1px solid #F3F4F6; padding-top: 0.75rem;">
-                    <button class="review-delete-btn" onclick="window.handleReviewDelete('${ce.id}')" style="background: none; border: none; color: #EF4444; font-size: 0.82rem; font-weight: 500; cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'">Delete My Review</button>
+                <div style="margin-bottom: 0.75rem;">${starsHtml}</div>
+                <div class="review-text-bubble" style="background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 4px 14px 14px 14px; padding: 0.9rem 1.1rem; margin-bottom: 0.85rem; color: #212529; font-size: 0.95rem; line-height: 1.65; word-break: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    ${review.text}
                 </div>
-            `,o.appendChild(U)}),fe<le.length?d&&(d.style.display="flex"):d&&(d.style.display="none")};setTimeout(()=>{s&&s.classList.remove("active"),o.classList.add("visible"),_()},800),l&&(l.onclick=()=>{l.innerText="Loading...",setTimeout(()=>{fe+=10,_(!0),l.innerText="View More Reviews"},500)})}catch(c){console.error("Error loading user reviews:",c),s&&s.classList.remove("active"),o.classList.add("visible"),o.innerHTML='<p style="color: red;">Error loading your reviews.</p>'}}},Co=(p=!1)=>{if(new URLSearchParams(window.location.search).get("open_review")==="true"){console.log("Global review prompt suppressed on review page.");return}Vt(tt,async s=>{if(s)try{const d=Re(ae,"orders");let l=[];const c=We(d,rt("userId","==",s.uid));if((await nt(c)).forEach(Y=>l.push(Y.data())),s.email){const Y=We(d,rt("shipping.email","==",s.email));(await nt(Y)).forEach(z=>{const B=z.data();l.some(F=>F.orderReference===B.orderReference)||l.push(B)})}let le=0;if(l.forEach(Y=>{const G=Y.timestamp?typeof Y.timestamp.toMillis=="function"?Y.timestamp.toMillis():Y.timestamp:0;G>le&&(le=G)}),parseInt(localStorage.getItem("reviewPromptDismissedAt")||"0")>le&&!p){console.log("Global review prompt suppressed by user dismissal (no new purchase since).");return}let _=new Set;if(l.forEach(Y=>{Y.status&&Y.status.toLowerCase()==="delivered"&&Y.items&&Array.isArray(Y.items)&&Y.items.forEach(z=>{z.refunded===!0||z.refunded==="true"||_.add(z.productId||z.id)})}),_.size===0){console.log("No delivered products found for user.");return}console.log("Delivered products found:",[..._]);const m=Re(ae,"product_reviews"),re=We(m,rt("userId","==",s.uid)),ce=await nt(re);let U=new Set;ce.forEach(Y=>{const G=Y.data();G.productId&&U.add(G.productId)}),console.log("Already reviewed items:",[...U]);let ie=null;for(let Y of _)if(!U.has(Y)){ie=Y;break}if(ie){let Y="",G="your recent purchase";if(ie==="glass-glow-shampoo")Y="glass-glow-shampoo.html",G="Glass Glow Shampoo";else if(ie==="dodchmellow-pro-v")Y="dodchmellow-pro-v.html",G="DODCHmellow Pro-V";else if(ie==="foaming-cleanser")Y="face-foam.html",G="Advanced Face Foam";else if(ie==="silk-therapy-mask")Y="silk-mask.html",G="Silk Therapy Mask";else if(ie==="advanced-ha-serum")Y="face-serum.html",G="Advanced HA Serum";else{const z=w[ie];z&&z.storyUrl?(Y=z.storyUrl,G=z.name):Y=`product.html?id=${ie}`}Ri(G,Y)}}catch(d){console.error("Error checking global review eligibility:",d)}})},Ri=(p,o)=>{if(document.getElementById("review-prompt-toast"))return;const s=`
+                ${accountAdminReplyHtml}
+                <div style="display: flex; justify-content: flex-end; border-top: 1px solid #F3F4F6; padding-top: 0.75rem; margin-top: 0.75rem;">
+                    <button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')" style="background: none; border: none; color: #EF4444; font-size: 0.82rem; font-weight: 500; cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'">Delete My Review</button>
+                </div>
+            `;
+                listContainer.appendChild(reviewEl);
+            });
+
+            if (visibleReviewsCount < allReviews.length) {
+                if (loadMoreContainer) loadMoreContainer.style.display = 'flex';
+            } else {
+                if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+            }
+        };
+
+        setTimeout(() => {
+            if (reviewsLoader) reviewsLoader.classList.remove('active');
+            listContainer.classList.add('visible');
+            renderReviewChunk();
+
+            // Auto-scroll & highlight target review if opened from notification
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetReviewId = urlParams.get('reviewId');
+            if (targetReviewId) {
+                setTimeout(() => {
+                    const targetEl = document.getElementById(`review-${targetReviewId}`);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetEl.classList.add('review-highlight-pulse');
+                        setTimeout(() => targetEl.classList.remove('review-highlight-pulse'), 3500);
+                    }
+                }, 400);
+            }
+        }, 800);
+
+        if (loadMoreBtn) {
+            loadMoreBtn.onclick = () => {
+                loadMoreBtn.innerText = "Loading...";
+                setTimeout(() => {
+                    visibleReviewsCount += 10;
+                    renderReviewChunk(true);
+                    loadMoreBtn.innerText = "View More Reviews";
+                }, 500);
+            };
+        }
+    } catch (error) {
+        console.error("Error loading user reviews:", error);
+        if (reviewsLoader) reviewsLoader.classList.remove('active');
+        listContainer.classList.add('visible');
+        listContainer.innerHTML = '<p style="color: red;">Error loading your reviews.</p>';
+    }
+};
+const initGlobalReviewPrompt = (forceShow = false) => {
+    // Suppress popup if the user is already on the page to write a review
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('open_review') === 'true') {
+        console.log("Global review prompt suppressed on review page.");
+        return;
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) return;
+
+        try {
+            const ordersRef = collection(db, "orders");
+            let orders = [];
+            const qOrdersUid = query(ordersRef, where("userId", "==", user.uid));
+            const snapUid = await getDocs(qOrdersUid);
+            snapUid.forEach(doc => orders.push(doc.data()));
+            if (user.email) {
+                const qOrdersEmail = query(ordersRef, where("shipping.email", "==", user.email));
+                const snapEmail = await getDocs(qOrdersEmail);
+                snapEmail.forEach(doc => {
+                    const data = doc.data();
+                    if (!orders.some(o => o.orderReference === data.orderReference)) {
+                        orders.push(data);
+                    }
+                });
+            }
+            let latestOrderTime = 0;
+            orders.forEach(order => {
+                const ts = order.timestamp ? (typeof order.timestamp.toMillis === 'function' ? order.timestamp.toMillis() : order.timestamp) : 0;
+                if (ts > latestOrderTime) latestOrderTime = ts;
+            });
+            const dismissedAt = parseInt(localStorage.getItem('reviewPromptDismissedAt') || '0');
+            if (dismissedAt > latestOrderTime && !forceShow) {
+                console.log("Global review prompt suppressed by user dismissal (no new purchase since).");
+                return;
+            }
+
+            let deliveredProducts = new Set();
+            orders.forEach((order) => {
+                const isDelivered = order.status && order.status.toLowerCase() === 'delivered';
+                if (isDelivered && order.items && Array.isArray(order.items)) {
+                    order.items.forEach(item => {
+                        const isRefunded = item.refunded === true || item.refunded === 'true';
+                        if (!isRefunded) {
+                            deliveredProducts.add(item.productId || item.id);
+                        }
+                    });
+                }
+            });
+
+            if (deliveredProducts.size === 0) {
+                console.log("No delivered products found for user.");
+                return;
+            }
+
+            console.log("Delivered products found:", [...deliveredProducts]);
+            const reviewsRef = collection(db, "product_reviews");
+            const qReviews = query(reviewsRef, where("userId", "==", user.uid));
+            const reviewsSnapshot = await getDocs(qReviews);
+
+            let reviewedProducts = new Set();
+            reviewsSnapshot.forEach((docSnap) => {
+                const review = docSnap.data();
+                if (review.productId) {
+                    reviewedProducts.add(review.productId);
+                }
+            });
+
+            console.log("Already reviewed items:", [...reviewedProducts]);
+            let productToReview = null;
+            for (let pId of deliveredProducts) {
+                if (!reviewedProducts.has(pId)) {
+                    productToReview = pId;
+                    break;
+                }
+            }
+
+            if (productToReview) {
+                let pageUrl = '';
+                let productName = 'your recent purchase';
+
+                if (productToReview === 'glass-glow-shampoo') {
+                    pageUrl = 'glass-glow-shampoo.html';
+                    productName = 'Glass Glow Shampoo';
+                } else if (productToReview === 'dodchmellow-pro-v') {
+                    pageUrl = 'dodchmellow-pro-v.html';
+                    productName = 'DODCHmellow Pro-V';
+                } else if (productToReview === 'foaming-cleanser') {
+                    pageUrl = 'face-foam.html';
+                    productName = 'Advanced Face Foam';
+                } else if (productToReview === 'silk-therapy-mask') {
+                    pageUrl = 'silk-mask.html';
+                    productName = 'Silk Therapy Mask';
+                } else if (productToReview === 'advanced-ha-serum') {
+                    pageUrl = 'face-serum.html';
+                    productName = 'Advanced HA Serum';
+                } else {
+                    const catEntry = productCatalog[productToReview];
+                    if (catEntry && catEntry.storyUrl) {
+                        pageUrl = catEntry.storyUrl;
+                        productName = catEntry.name;
+                    } else {
+                        pageUrl = `product.html?id=${productToReview}`;
+                    }
+                }
+                showReviewPromptToast(productName, pageUrl);
+            }
+
+        } catch (error) {
+            console.error("Error checking global review eligibility:", error);
+        }
+    });
+};
+
+const showReviewPromptToast = (productName, pageUrl) => {
+    if (document.getElementById('review-prompt-toast')) return;
+
+    const toastHTML = `
         <div id="review-prompt-toast" class="review-prompt-toast">
             <div class="rpt-content">
                 <span class="brand-tag">DODCH</span>
-                <p>How was your <strong>${p}</strong>? We'd love to hear your thoughts!</p>
+                <p>How was your <strong>${productName}</strong>? We'd love to hear your thoughts!</p>
                 <div class="rpt-actions">
-                    <a href="${o}?open_review=true" class="rpt-btn">Leave a Review</a>
+                    <a href="${pageUrl}?open_review=true" class="rpt-btn">Leave a Review</a>
                     <button class="rpt-close" id="rpt-close-btn">&times;</button>
                 </div>
             </div>
         </div>
-    `;document.body.insertAdjacentHTML("beforeend",s);const d=document.getElementById("review-prompt-toast"),l=document.getElementById("rpt-close-btn");setTimeout(()=>{d&&d.classList.add("active")},1500),l.addEventListener("click",()=>{d&&d.classList.remove("active"),localStorage.setItem("reviewPromptDismissedAt",Date.now().toString()),setTimeout(()=>{window.showToast("Review dismissed. You can still leave feedback later from your Account or Product pages.","info",6e3),setTimeout(()=>d&&d.remove(),1e3)},800)})},ei=()=>{const p=document.querySelectorAll(".account-tab-btn"),o=document.querySelectorAll(".tab-content");p.length!==0&&p.forEach(s=>{s.addEventListener("click",()=>{const d=s.getAttribute("data-tab");p.forEach(l=>l.classList.remove("active")),s.classList.add("active"),o.forEach(l=>{l.id===`${d}-tab-content`?(l.style.display="block",setTimeout(()=>{l.classList.add("active")},10)):(l.classList.remove("active"),setTimeout(()=>{l.classList.contains("active")||(l.style.display="none")},500))})})})};function Bo(){const p=s=>["#B8995E","#8EA35E","#5DA35E","#2E7D32"][s-1]||"#B8995E";document.querySelectorAll(".perf-item").forEach(s=>{const d=s.querySelectorAll(".level-step"),l=s.querySelectorAll(".level-step.active").length,c=s.querySelector(".perf-value");if(l>0){const O=p(l);d.forEach((le,fe)=>{fe<l&&(le.style.background=O)}),c&&(c.style.color=O)}})}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>{Zo(),Co(),ei(),Bo()}):(Zo(),Co(),ei(),Bo());const _i={shampoo:["shampoing","\u0634\u0627\u0645\u0628\u0648","shampoo"],oil:["huile","\u0632\u064A\u062A","oil","elixir","drops","gouttes","\u0642\u0637\u0631\u0627\u062A"],serum:["\u0633\u064A\u0631\u0648\u0645","concentre","serum","booster","ampoule","essence"],mask:["masque","\u0642\u0646\u0627\u0639","mask","wrap"],pear:["figue","\u0635\u0628\u0627\u0631","barbarie","prickly","cactus","pear"],fig:["figue","\u0635\u0628\u0627\u0631","barbarie","fig"],silk:["soie","\u062D\u0631\u064A\u0631","silk"],glow:["eclat","\u0627\u0644\u0644\u0645\u0639\u0627\u0646","bright","shine","radiant","brillance","glow"],face:["visage","\u0648\u062C\u0647","face"],body:["corps","\u062C\u0633\u0645","body"],hair:["cheveux","\u0634\u0639\u0631","hair"],cleanser:["wash","cleaning","cleanser","nettoyant","\u063A\u0633\u0648\u0644","cleansing"],skin:["skin","peau","\u0628\u0634\u0631\u0629"]},Ui={needs_hydration:["dry","dehydrated","thirsty","brittle","\u062C\u0627\u0641","\u0639\u0637\u0634\u0627\u0646","sec","deshydrate","moisture","hydratation","\u062A\u0631\u0637\u064A\u0628","ashy","flakey"],needs_repair:["damaged","breakage","split ends","weak","\u062A\u0627\u0644\u0641","\u0645\u0643\u0633\u0631","abime","casse","repair","reparer","\u0627\u0635\u0644\u0627\u062D","fragile","weakness"],wants_luxury:["premium","luxury","exclusive","best","\u0641\u0627\u062E\u0631","\u0631\u0627\u0642\u064A","luxe","precieux","high-end","expensive","gold","or"],wants_scent:["smell","scent","fragrance","perfume","neroli","flower","\u0631\u0627\u0626\u062D\u0629","\u0639\u0637\u0631","parfum","fleur","sweet","sucre","odeur"],wants_growth:["grow","loss","thinning","volume","chute","pousse","\u062A\u0633\u0627\u0642\u0637","\u0646\u0645\u0648","thick","density"],wants_smooth:["frizz","frizzy","tangle","smooth","frisottis","lisse","tame","\u0645\u062C\u0639\u062F","\u0646\u0627\u0639\u0645","detangle","demelant"],wants_antiaging:["wrinkle","aging","youth","rides","anti-age","\u062A\u062C\u0627\u0639\u064A\u062F","\u0634\u064A\u062E\u0648\u062E\u0629","firm","lift","fermete"]},ji={shampoo:["sulfate-free","sans sulfate","\u062E\u0627\u0644\u064A \u0645\u0646 \u0627\u0644\u0633\u0644\u0641\u0627\u062A","color-safe","daily use","usage quotidien","\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u064A\u0648\u0645\u064A","cleansing","scalp care","purifying","purifiant","\u062A\u0637\u0647\u064A\u0631","mellow","marshmallow","guimauve"],mask:["deep conditioning","soin profond","\u0639\u0646\u0627\u064A\u0629 \u0639\u0645\u064A\u0642\u0629","protein","keratin","ceramides","10 minutes","overnight","nuit","leave-in","sans rincage","\u0628\u062F\u0648\u0646 \u063A\u0633\u0644","revitalize","revitalisant"],serum:["hyaluronic","vitamin c","niacinamide","glass skin","peau de verre","\u0628\u0634\u0631\u0629 \u0632\u062C\u0627\u062C\u064A\u0629","fast-absorbing","absorbtion rapide","\u0633\u0631\u064A\u0639 \u0627\u0644\u0627\u0645\u062A\u0635\u0627\u0635","lightweight","leger","\u062E\u0641\u064A\u0641","youth booster"],oil:["argan","jojoba","vitamin e","anti-oxidant","antioxydant","\u0645\u0636\u0627\u062F \u0627\u0643\u0633\u062F\u0629","pure","cold-pressed","pressee a froid","\u0639\u0635\u0631\u0629 \u0628\u0627\u0631\u062F\u0629","multipurpose","multi-usages","\u0645\u062A\u0639\u062F\u062F \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0627\u062A","nail cuticles","cuticules","beard","barbe"]};class Vi{constructor(){this.catalog={},this.index=[]}normalize(o){return o?o.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[آأإا]/g,"\u0627").replace(/ة/g,"\u0647").replace(/ى/g,"\u064A").trim():""}init(o){this.catalog=o,this.index=Object.entries(o).map(([s,d])=>{let l=(d.tags||[]).map(m=>this.normalize(m));const c=[],O=Array.isArray(d.subCategory)?d.subCategory.join(" "):d.subCategory||"",le=(d.name+" "+(d.category||"")+" "+O).toLowerCase();for(const[m,re]of Object.entries(_i))(le.includes(m)||re.some(ce=>le.includes(ce)))&&c.push(...re,m);const fe=[];for(const[m,re]of Object.entries(ji))le.includes(m)&&fe.push(...re.map(ce=>this.normalize(ce)));(le.includes("shampoo")||le.includes("mask"))&&l.push("needs_hydration","needs_repair","wants_smooth"),le.includes("shampoo")&&l.push("wants_scent"),(le.includes("serum")||le.includes("oil"))&&l.push("wants_antiaging","wants_glow","needs_repair"),le.includes("oil")&&l.push("wants_growth");const _={id:s,name:this.normalize(d.name),category:this.normalize(d.category||""),description:this.normalize(d.description||""),tags:[...new Set([...l,...c,...fe])],price:d.price,scrapedText:""};return d.storyUrl&&!d.storyUrl.startsWith("http")&&fetch(d.storyUrl).then(m=>m.text()).then(m=>{const U=new DOMParser().parseFromString(m,"text/html").querySelectorAll("main p, main h1, main h2, main h3, main li, .inci-list span, .product-story");let ie="";U.forEach(Y=>{ie+=" "+Y.textContent}),_.scrapedText=this.normalize(ie)}).catch(m=>console.warn(`Silent scrape failed for ${d.storyUrl}:`,m)),_})}levenshtein(o,s){const d=[];if(o.length===0)return s.length;if(s.length===0)return o.length;for(let l=0;l<=s.length;l++)d[l]=[l];for(let l=0;l<=o.length;l++)d[0][l]=l;for(let l=1;l<=s.length;l++)for(let c=1;c<=o.length;c++)s.charAt(l-1)==o.charAt(c-1)?d[l][c]=d[l-1][c-1]:d[l][c]=Math.min(d[l-1][c-1]+1,Math.min(d[l][c-1]+1,d[l-1][c]+1));return d[s.length][o.length]}isFuzzyMatch(o,s){if(s.includes(o))return!0;const d=o.length>6?2:1;if(o.length>3){const l=s.split(/\s+/);for(let c of l)if(c.length>3&&this.levenshtein(o,c)<=d)return!0}return!1}search(o){if(!o||o.trim().length===0)return[];const d=this.normalize(o).split(/\s+/).filter(c=>c.length>0);if(d.length===0)return[];const l=[];for(const c of this.index){let O=0,le=!0,fe=[];for(const _ of d){let m=!1;if(c.name.includes(_))O+=15,m=!0;else if(!m){for(const[re,ce]of Object.entries(Ui))if(ce.includes(_)&&c.tags.includes(re)){O+=12,m=!0,fe.push(`Solves intent for "${re.replace(/_/g," ")}"`);break}}if(!m&&c.tags.some(re=>re.includes(_)||this.isFuzzyMatch(_,re))?(O+=10,m=!0,fe.push(`Matches deep semantic tags related to "${_}"`)):!m&&this.isFuzzyMatch(_,c.name)?(O+=8,m=!0):!m&&c.category.includes(_)?(O+=5,m=!0,fe.push("Category match")):!m&&c.scrapedText&&(c.scrapedText.includes(_)||this.isFuzzyMatch(_,c.scrapedText))?(O+=3,m=!0,fe.push("Content explicitly found inside product details")):!m&&this.isFuzzyMatch(_,c.description)&&(O+=2,m=!0),!m){le=!1;break}}if(le&&O>0){const _=[...new Set(fe)],m=_.length>0?_[0]:"Identified as a strong contextual match";l.push({item:this.catalog[c.id],id:c.id,score:O,matchedReason:m})}}return l.sort((c,O)=>O.score-c.score).slice(0,5)}getHistory(){try{return JSON.parse(localStorage.getItem("dodch_search_history")||"[]")}catch{return[]}}addToHistory(o){if(!o||o.length<2)return;let s=this.getHistory();s=[o,...s.filter(d=>d!==o)].slice(0,5),localStorage.setItem("dodch_search_history",JSON.stringify(s))}}window.dodchSearchEngine=new Vi,document.addEventListener("DOMContentLoaded",()=>{setTimeout(()=>{window.productCatalog&&Object.keys(window.productCatalog).length>0&&(window.dodchSearchEngine.init(window.productCatalog),console.log("Search Engine Initialized with",Object.keys(window.productCatalog).length,"products"))},1500);const p=document.querySelectorAll(".search-container"),o=document.createElement("div");o.id="search-results-halo",document.body.appendChild(o);const s=document.createElement("div");s.id="search-results-dropdown",document.body.appendChild(s),o.addEventListener("click",()=>_(null,d)),o.addEventListener("touchend",B=>{B.preventDefault(),_(null,d)}),document.addEventListener("keydown",B=>{B.key==="Escape"&&o.classList.contains("active")&&_(null,d)});let d=null,l=-1,c=[];function O(B,F){let X;return function(...V){const pe=()=>{clearTimeout(X),B(...V)};clearTimeout(X),X=setTimeout(pe,F)}}window.dodchSearchTrendClick=B=>{const F=document.getElementById("navbar-search-input");F&&(F.value=B,F.focus(),F.dispatchEvent(new Event("input")))};const le=B=>{const F=[{query:"Shampoo",label:"Shampoo for Daily Use"},{query:"Serum",label:"Hydrating Serums"},{query:"Mask",label:"Silk Therapy Mask"}];let X="";F.forEach(V=>{X+=`<div class="search-widget-list-item" onclick="window.dodchSearchTrendClick('${V.query}')" style="padding: 10px 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.03); border-radius: 8px; font-size: 0.9rem; color: #333; cursor: pointer; display: flex; align-items: center; gap: 12px; margin-bottom: 2px;">
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', toastHTML);
+
+    const toast = document.getElementById('review-prompt-toast');
+    const closeBtn = document.getElementById('rpt-close-btn');
+    setTimeout(() => {
+        if (toast) toast.classList.add('active');
+    }, 1500);
+
+    closeBtn.addEventListener('click', () => {
+        if (toast) toast.classList.remove('active');
+        localStorage.setItem('reviewPromptDismissedAt', Date.now().toString());
+        setTimeout(() => {
+            window.showToast("Review dismissed. You can still leave feedback later from your Account or Product pages.", "info", 6000);
+            setTimeout(() => toast && toast.remove(), 1000);
+        }, 800);
+    });
+};
+const initAccountTabs = () => {
+    const tabBtns = document.querySelectorAll('.account-tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    if (tabBtns.length === 0) return;
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.getAttribute('data-tab');
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            tabContents.forEach(content => {
+                if (content.id === `${targetTab}-tab-content`) {
+                    content.style.display = 'block';
+                    setTimeout(() => {
+                        content.classList.add('active');
+                    }, 10);
+                } else {
+                    content.classList.remove('active');
+                    setTimeout(() => {
+                        if (!content.classList.contains('active')) {
+                            content.style.display = 'none';
+                        }
+                    }, 500);
+                }
+            });
+        });
+    });
+};
+
+function applyPerformanceColors() {
+    const getLevelColor = (level) => {
+        const colorScale = ["#B8995E", "#8EA35E", "#5DA35E", "#2E7D32"];
+        return colorScale[level - 1] || "#B8995E";
+    };
+
+    const perfItems = document.querySelectorAll('.perf-item');
+    perfItems.forEach(item => {
+        const steps = item.querySelectorAll('.level-step');
+        const activeSteps = item.querySelectorAll('.level-step.active').length;
+        const valueEl = item.querySelector('.perf-value');
+
+        if (activeSteps > 0) {
+            const color = getLevelColor(activeSteps);
+            steps.forEach((step, i) => {
+                if (i < activeSteps) step.style.background = color;
+            });
+            if (valueEl) valueEl.style.color = color;
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initProductReviews();
+        initGlobalReviewPrompt();
+        initAccountTabs();
+        applyPerformanceColors();
+    });
+} else {
+    initProductReviews();
+    initGlobalReviewPrompt();
+    initAccountTabs();
+    applyPerformanceColors();
+}
+
+const SEARCH_SYNONYMS = {
+    'shampoo': ['shampoing', 'شامبو', 'shampoo'],
+    'oil': ['huile', 'زيت', 'oil', 'elixir', 'drops', 'gouttes', 'قطرات'],
+    'serum': ['سيروم', 'concentre', 'serum', 'booster', 'ampoule', 'essence'],
+    'mask': ['masque', 'قناع', 'mask', 'wrap'],
+    'pear': ['figue', 'صبار', 'barbarie', 'prickly', 'cactus', 'pear'],
+    'fig': ['figue', 'صبار', 'barbarie', 'fig'],
+    'silk': ['soie', 'حرير', 'silk'],
+    'glow': ['eclat', 'اللمعان', 'bright', 'shine', 'radiant', 'brillance', 'glow'],
+    'face': ['visage', 'وجه', 'face'],
+    'body': ['corps', 'جسم', 'body'],
+    'hair': ['cheveux', 'شعر', 'hair'],
+    'cleanser': ['wash', 'cleaning', 'cleanser', 'nettoyant', 'غسول', 'cleansing'],
+    'skin': ['skin', 'peau', 'بشرة']
+};
+
+const SEARCH_INTENTS = {
+    'needs_hydration': ['dry', 'dehydrated', 'thirsty', 'brittle', 'جاف', 'عطشان', 'sec', 'deshydrate', 'moisture', 'hydratation', 'ترطيب', 'ashy', 'flakey'],
+    'needs_repair': ['damaged', 'breakage', 'split ends', 'weak', 'تالف', 'مكسر', 'abime', 'casse', 'repair', 'reparer', 'اصلاح', 'fragile', 'weakness'],
+    'wants_luxury': ['premium', 'luxury', 'exclusive', 'best', 'فاخر', 'راقي', 'luxe', 'precieux', 'high-end', 'expensive', 'gold', 'or'],
+    'wants_scent': ['smell', 'scent', 'fragrance', 'perfume', 'neroli', 'flower', 'رائحة', 'عطر', 'parfum', 'fleur', 'sweet', 'sucre', 'odeur'],
+    'wants_growth': ['grow', 'loss', 'thinning', 'volume', 'chute', 'pousse', 'تساقط', 'نمو', 'thick', 'density'],
+    'wants_smooth': ['frizz', 'frizzy', 'tangle', 'smooth', 'frisottis', 'lisse', 'tame', 'مجعد', 'ناعم', 'detangle', 'demelant'],
+    'wants_antiaging': ['wrinkle', 'aging', 'youth', 'rides', 'anti-age', 'تجاعيد', 'شيخوخة', 'firm', 'lift', 'fermete']
+}; const SITE_SEO_KNOWLEDGE = {
+    'shampoo': [
+        'sulfate-free', 'sans sulfate', 'خالي من السلفات', 'color-safe', 'daily use', 'usage quotidien', 'استخدام يومي',
+        'cleansing', 'scalp care', 'purifying', 'purifiant', 'تطهير', 'mellow', 'marshmallow', 'guimauve'
+    ],
+    'mask': [
+        'deep conditioning', 'soin profond', 'عناية عميقة', 'protein', 'keratin', 'ceramides', '10 minutes',
+        'overnight', 'nuit', 'leave-in', 'sans rincage', 'بدون غسل', 'revitalize', 'revitalisant'
+    ],
+    'serum': [
+        'hyaluronic', 'vitamin c', 'niacinamide', 'glass skin', 'peau de verre', 'بشرة زجاجية', 'fast-absorbing',
+        'absorbtion rapide', 'سريع الامتصاص', 'lightweight', 'leger', 'خفيف', 'youth booster'
+    ],
+    'oil': [
+        'argan', 'jojoba', 'vitamin e', 'anti-oxidant', 'antioxydant', 'مضاد اكسدة', 'pure', 'cold-pressed',
+        'pressee a froid', 'عصرة باردة', 'multipurpose', 'multi-usages', 'متعدد الاستخدامات', 'nail cuticles', 'cuticules', 'beard', 'barbe'
+    ]
+};
+
+class DODCHSearchEngine {
+    constructor() {
+        this.catalog = {};
+        this.index = [];
+    } normalize(str) {
+        if (!str) return '';
+        return str.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove French accents
+            .replace(/[آأإا]/g, 'ا') // Normalize Arabic Alef
+            .replace(/ة/g, 'ه')     // Normalize Arabic Tehmabuta
+            .replace(/ى/g, 'ي')     // Normalize Arabic Alef Maksura
+            .trim();
+    } init(catalog) {
+        this.catalog = catalog;
+        this.index = Object.entries(catalog).map(([id, item]) => {
+            let tags = (item.tags || []).map(t => this.normalize(t)); const synonyms = [];
+            const subCatText = Array.isArray(item.subCategory) ? item.subCategory.join(' ') : (item.subCategory || '');
+            const allText = (item.name + ' ' + (item.category || '') + ' ' + subCatText).toLowerCase();
+
+            for (const [key, list] of Object.entries(SEARCH_SYNONYMS)) {
+                if (allText.includes(key) || list.some(l => allText.includes(l))) {
+                    synonyms.push(...list, key);
+                }
+            } const seoTags = [];
+            for (const [category, knowledgeList] of Object.entries(SITE_SEO_KNOWLEDGE)) {
+                if (allText.includes(category)) {
+                    seoTags.push(...knowledgeList.map(k => this.normalize(k)));
+                }
+            } if (allText.includes('shampoo') || allText.includes('mask')) {
+                tags.push('needs_hydration', 'needs_repair', 'wants_smooth');
+            }
+            if (allText.includes('shampoo')) {
+                tags.push('wants_scent');
+            }
+            if (allText.includes('serum') || allText.includes('oil')) {
+                tags.push('wants_antiaging', 'wants_glow', 'needs_repair');
+            }
+            if (allText.includes('oil')) {
+                tags.push('wants_growth'); // Often used for scalp/beard growth
+            }
+
+            const indexItem = {
+                id: id,
+                name: this.normalize(item.name),
+                category: this.normalize(item.category || ''),
+                description: this.normalize(item.description || ''),
+                tags: [...new Set([...tags, ...synonyms, ...seoTags])],
+                price: item.price,
+                scrapedText: '' // Will be populated asynchronously
+            }; if (item.storyUrl && !item.storyUrl.startsWith('http')) {
+                fetch(item.storyUrl)
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html'); const scrapeTargets = doc.querySelectorAll('main p, main h1, main h2, main h3, main li, .inci-list span, .product-story');
+                        let textAccumulator = '';
+                        scrapeTargets.forEach(el => {
+                            textAccumulator += ' ' + el.textContent;
+                        });
+
+                        indexItem.scrapedText = this.normalize(textAccumulator);
+                    })
+                    .catch(err => console.warn(`Silent scrape failed for ${item.storyUrl}:`, err));
+            }
+
+            return indexItem;
+        });
+    } levenshtein(a, b) {
+        const matrix = [];
+        if (a.length === 0) return b.length;
+        if (b.length === 0) return a.length;
+        for (let i = 0; i <= b.length; i++) { matrix[i] = [i]; }
+        for (let j = 0; j <= a.length; j++) { matrix[0][j] = j; }
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) == a.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+                }
+            }
+        }
+        return matrix[b.length][a.length];
+    } isFuzzyMatch(token, targetString) {
+        if (targetString.includes(token)) return true; const threshold = token.length > 6 ? 2 : 1;
+
+        if (token.length > 3) {
+            const words = targetString.split(/\s+/);
+            for (let word of words) {
+                if (word.length > 3 && this.levenshtein(token, word) <= threshold) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    search(query) {
+        if (!query || query.trim().length === 0) return [];
+
+        const normalizedQuery = this.normalize(query);
+        const tokens = normalizedQuery.split(/\s+/).filter(t => t.length > 0);
+        if (tokens.length === 0) return [];
+
+        const results = [];
+
+        for (const item of this.index) {
+            let score = 0;
+            let matchesAll = true;
+            let matchedReasons = [];
+
+            for (const token of tokens) {
+                let tokenMatched = false; if (item.name.includes(token)) {
+                    score += 15;
+                    tokenMatched = true;
+                } else if (!tokenMatched) {
+                    for (const [intent, keywords] of Object.entries(SEARCH_INTENTS)) {
+                        if (keywords.includes(token) && item.tags.includes(intent)) {
+                            score += 12; // High priority for semantic needs
+                            tokenMatched = true;
+                            matchedReasons.push(`Solves intent for "${intent.replace(/_/g, ' ')}"`);
+                            break;
+                        }
+                    }
+                } if (!tokenMatched && item.tags.some(t => t.includes(token) || this.isFuzzyMatch(token, t))) {
+                    score += 10;
+                    tokenMatched = true;
+                    matchedReasons.push(`Matches deep semantic tags related to "${token}"`);
+                } else if (!tokenMatched && this.isFuzzyMatch(token, item.name)) {
+                    score += 8;
+                    tokenMatched = true;
+                } else if (!tokenMatched && item.category.includes(token)) {
+                    score += 5;
+                    tokenMatched = true;
+                    matchedReasons.push(`Category match`);
+                } else if (!tokenMatched && item.scrapedText && (item.scrapedText.includes(token) || this.isFuzzyMatch(token, item.scrapedText))) {
+                    score += 3;
+                    tokenMatched = true;
+                    matchedReasons.push(`Content explicitly found inside product details`);
+                } else if (!tokenMatched && this.isFuzzyMatch(token, item.description)) {
+                    score += 2;
+                    tokenMatched = true;
+                }
+
+                if (!tokenMatched) {
+                    matchesAll = false;
+                    break;
+                }
+            }
+
+            if (matchesAll && score > 0) {
+                const uniqueReasons = [...new Set(matchedReasons)];
+                const topReason = uniqueReasons.length > 0 ? uniqueReasons[0] : "Identified as a strong contextual match";
+                results.push({ item: this.catalog[item.id], id: item.id, score: score, matchedReason: topReason });
+            }
+        }
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 5);
+    }
+
+    getHistory() {
+        try {
+            return JSON.parse(localStorage.getItem('dodch_search_history') || '[]');
+        } catch (e) { return []; }
+    }
+
+    addToHistory(query) {
+        if (!query || query.length < 2) return;
+        let history = this.getHistory();
+        history = [query, ...history.filter(h => h !== query)].slice(0, 5);
+        localStorage.setItem('dodch_search_history', JSON.stringify(history));
+    }
+}
+
+window.dodchSearchEngine = new DODCHSearchEngine();
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        if (window.productCatalog && Object.keys(window.productCatalog).length > 0) {
+            window.dodchSearchEngine.init(window.productCatalog);
+            console.log("Search Engine Initialized with", Object.keys(window.productCatalog).length, "products");
+        }
+    }, 1500); // Wait for potential firebase load
+
+    // --- SEARCH ENGINE UI LOGIC ---
+    const searchContainers = document.querySelectorAll(".search-container");
+    const halo = document.createElement("div");
+    halo.id = "search-results-halo";
+    document.body.appendChild(halo);
+    const dropdown = document.createElement("div");
+    dropdown.id = "search-results-dropdown";
+    document.body.appendChild(dropdown);
+
+    // Tapping the dimmed halo overlay should always fully dismiss the search
+    halo.addEventListener("click", () => closeSearchUI(null, activeInput));
+    halo.addEventListener("touchend", (e) => { e.preventDefault(); closeSearchUI(null, activeInput); });
+
+    // Safety-net: ESC anywhere always resets everything
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && halo.classList.contains("active")) {
+            closeSearchUI(null, activeInput);
+        }
+    });
+
+    let activeInput = null;
+    let selectedIndex = -1;
+    let currentResults = [];
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    window.dodchSearchTrendClick = (q) => {
+        const inp = document.getElementById('navbar-search-input');
+        if (inp) {
+            inp.value = q;
+            inp.focus();
+            inp.dispatchEvent(new Event('input'));
+        }
+    };
+
+    const populateWidgets = (container) => {
+        const trends = [
+            { query: 'Shampoo', label: 'Shampoo for Daily Use' },
+            { query: 'Serum', label: 'Hydrating Serums' },
+            { query: 'Mask', label: 'Silk Therapy Mask' }
+        ];
+
+        let listHtml = '';
+        trends.forEach(t => {
+            listHtml += `<div class="search-widget-list-item" onclick="window.dodchSearchTrendClick('${t.query}')" style="padding: 10px 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.03); border-radius: 8px; font-size: 0.9rem; color: #333; cursor: pointer; display: flex; align-items: center; gap: 12px; margin-bottom: 2px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #D4AF37; flex-shrink: 0; opacity: 0.8;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <span style="font-weight: 500;">${V.label}</span>
-            </div>`});const te=document.createElement("div");te.className="search-widget",te.innerHTML=`
+                <span style="font-weight: 500;">${t.label}</span>
+            </div>`;
+        });
+
+        const trendingWidget = document.createElement("div");
+        trendingWidget.className = "search-widget";
+        trendingWidget.innerHTML = `
             <div class="search-widget-title">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                 Trending Searches
             </div>
             <div class="search-widget-list-container" style="margin-top: 10px; display: flex; flex-direction: column;">
-                ${X}
+                ${listHtml}
             </div>
-        `,B.innerHTML="",B.appendChild(te)},fe=B=>{const F=B.closest(".search-container");if(F&&s.parentNode!==F&&(F.appendChild(s),!F.querySelector("#search-close-btn"))){const X=document.createElement("button");X.id="search-close-btn",X.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px; stroke: currentColor;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',X.style.position="absolute",F.appendChild(X),X.addEventListener("mousedown",te=>{te.preventDefault(),_(F,B)})}},_=(B,F)=>{F&&(F.value="",F.blur()),s.classList.remove("active"),o.classList.remove("active");const X=document.getElementById("navbar");X&&X.classList.remove("search-active"),B?B.classList.remove("active"):p.forEach(te=>te.classList.remove("active")),document.body.classList.remove("search-active"),document.documentElement.classList.remove("search-active"),l=-1};window.addEventListener("visibilitychange",()=>{document.visibilityState==="hidden"&&_(null,d)});const m=document.createElement("div");m.className="search-dropdown-layout";const re=document.createElement("div");re.className="search-main-results",m.appendChild(re);const U=new URLSearchParams(window.location.search).get("search");U&&setTimeout(()=>{const B=document.getElementById("navbar-search-input"),F=document.getElementById("search-toggle-btn");B&&F&&(document.querySelector(".search-container").classList.contains("active")||F.click(),B.value=U,B.dispatchEvent(new Event("input",{bubbles:!0})))},2e3);const ie=()=>{if(!s||!s.classList.contains("active"))return;s.style.transition="none";const B=s.offsetHeight;s.style.height="auto";const F=Math.min(m.offsetHeight+40,window.innerHeight-110);s.style.height=`${B}px`,s.offsetHeight,requestAnimationFrame(()=>{s.style.transition="height 0.3s ease",s.style.height=`${F}px`,setTimeout(()=>{s.style.transition=""},350)})},Y=(B,F)=>{c=B,l=-1,re.innerHTML="",!F||F.length<2?m.classList.remove("has-query"):m.classList.add("has-query");const X=window.dodchSearchEngine.getHistory();if(s.contains(m)||(s.innerHTML="",s.appendChild(m)),!F||F.length<2){const te=X.length>0?`
+        `;
+
+        container.innerHTML = "";
+        container.appendChild(trendingWidget);
+    };
+
+    const positionDropdown = (inputEl) => {
+        const container = inputEl.closest(".search-container");
+        if (container && dropdown.parentNode !== container) {
+            container.appendChild(dropdown);
+            if (!container.querySelector("#search-close-btn")) {
+                const closeBtn = document.createElement("button");
+                closeBtn.id = "search-close-btn";
+                closeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px; stroke: currentColor;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+                closeBtn.style.position = "absolute";
+                container.appendChild(closeBtn);
+
+                closeBtn.addEventListener("mousedown", (e) => {
+                    e.preventDefault();
+                    closeSearchUI(container, inputEl);
+                });
+            }
+        }
+    };
+
+    const closeSearchUI = (container, inputEl) => {
+        if (inputEl) {
+            inputEl.value = "";
+            inputEl.blur();
+        }
+        dropdown.classList.remove("active");
+        halo.classList.remove("active");
+        const nav = document.getElementById("navbar");
+        if (nav) nav.classList.remove("search-active");
+        if (container) {
+            container.classList.remove("active");
+        } else {
+            searchContainers.forEach(c => c.classList.remove("active"));
+        }
+        document.body.classList.remove("search-active");
+        document.documentElement.classList.remove("search-active");
+        selectedIndex = -1;
+    };
+
+    // Handle tab switching and keyboard dismissal/backgrounding
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') closeSearchUI(null, activeInput);
+    });
+
+    const layoutDiv = document.createElement("div");
+    layoutDiv.className = "search-dropdown-layout";
+
+    const mainResultsDiv = document.createElement("div");
+    mainResultsDiv.className = "search-main-results";
+
+    layoutDiv.appendChild(mainResultsDiv);
+
+    // --- DEEP LINK SEARCH INTEGRATION ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSearch = urlParams.get('search');
+    if (initialSearch) {
+        setTimeout(() => {
+            const inp = document.getElementById('navbar-search-input');
+            const toggle = document.getElementById('search-toggle-btn');
+            if (inp && toggle) {
+                if (!document.querySelector('.search-container').classList.contains('active')) {
+                    toggle.click();
+                }
+                inp.value = initialSearch;
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, 2000);
+    }
+
+
+
+
+    const syncHeight = () => {
+        if (!dropdown || !dropdown.classList.contains("active")) return;
+
+        // 1. Disable transition to measure natural height instantly
+        dropdown.style.transition = 'none';
+        const currentHeight = dropdown.offsetHeight;
+        dropdown.style.height = 'auto';
+
+        // 2. Measure the exact height the content *wants* to be
+        const targetHeight = Math.min(layoutDiv.offsetHeight + 40, window.innerHeight - 110);
+
+        // 3. Snap back to the starting height before the browser paints
+        dropdown.style.height = `${currentHeight}px`;
+
+        // 4. Force a layout recalculation
+        void dropdown.offsetHeight;
+
+        // 5. Apply the transition and target height in the next frame for a smooth glide
+        requestAnimationFrame(() => {
+            dropdown.style.transition = 'height 0.3s ease';
+            dropdown.style.height = `${targetHeight}px`;
+
+            // Clean up inline transition so CSS takes over again
+            setTimeout(() => {
+                dropdown.style.transition = '';
+            }, 350);
+        });
+    };
+
+    const renderResults = (results, query) => {
+        currentResults = results;
+        selectedIndex = -1;
+        mainResultsDiv.innerHTML = ""; // Only clear the results pane
+        if (!query || query.length < 2) {
+            layoutDiv.classList.remove("has-query");
+        } else {
+            layoutDiv.classList.add("has-query");
+        }
+
+        const history = window.dodchSearchEngine.getHistory();
+        if (!dropdown.contains(layoutDiv)) {
+            dropdown.innerHTML = "";
+            dropdown.appendChild(layoutDiv);
+        }
+
+        // --- State 1: Dashboard (Empty Query) ---
+        if (!query || query.length < 2) {
+            const historyPart = history.length > 0 ? `
                 <div class="search-dashboard-section">
                     <div class="search-widget-title" style="margin-bottom: 12px; font-size: 0.8rem; color: var(--accent-gold-text); font-weight: 800;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         Recently Viewed
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 30px;">
-                        ${X.map((V,pe)=>`
-                            <div class="history-pill search-reveal-item" onclick="var inp=document.getElementById('navbar-search-input'); if(inp){ inp.value='${V}'; inp.focus(); inp.dispatchEvent(new Event('input')); }" style="padding: 10px 18px; background: #fafafa; border-radius: 20px; font-size: 0.85rem; color: #333; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); transition: all 0.2s; font-weight: 600; animation-delay: ${.35+pe*.08}s;">
-                                ${V}
+                        ${history.map((h, i) => `
+                            <div class="history-pill search-reveal-item" onclick="var inp=document.getElementById('navbar-search-input'); if(inp){ inp.value='${h}'; inp.focus(); inp.dispatchEvent(new Event('input')); }" style="padding: 10px 18px; background: #fafafa; border-radius: 20px; font-size: 0.85rem; color: #333; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); transition: all 0.2s; font-weight: 600; animation-delay: ${0.35 + (i * 0.08)}s;">
+                                ${h}
                             </div>
-                        `).join("")}
+                        `).join('')}
                     </div>
                 </div>
-            `:"";re.innerHTML=`
+            ` : '';
+
+            mainResultsDiv.innerHTML = `
                 <div class="search-dashboard" style="display: flex; flex-direction: column;">
-                    ${te}
+                    ${historyPart}
                 </div>
-            `,s.classList.add("active"),o.classList.add("active");return}if(B.length===0&&F.length>0){re.innerHTML=`<div class="search-no-results" style="padding: 20px; color: #666;">No products found for "${F}". Try searching for categories like "shampoo" or "mask".</div>`,s.classList.add("active"),o.classList.add("active");return}B.forEach((te,V)=>{const pe=te.item,Te=pe.sizes&&pe.sizes.length>0?Math.min(...pe.sizes.map(Me=>parseFloat(Me.price))):parseFloat(pe.price),Ce=pe.sizes&&pe.sizes.length>0?`From ${Te.toFixed(2)} TND`:`${Te.toFixed(2)} TND`,qe=document.createElement("div");qe.className="search-result-item search-reveal-item"+(V===0?" highlighted":""),qe.style.animationDelay=.15+V*.08+"s",V===0&&(l=0);let Ye=pe.images&&pe.images.length>0?pe.images[0]:pe.image||"";if(qe.innerHTML=`
-                <img src="${Ye}" class="search-result-image" alt="${pe.name}">
+            `;
+            dropdown.classList.add("active");
+            halo.classList.add("active");
+            return;
+        }
+
+        if (results.length === 0 && query.length > 0) {
+            mainResultsDiv.innerHTML = `<div class="search-no-results" style="padding: 20px; color: #666;">No products found for "${query}". Try searching for categories like "shampoo" or "mask".</div>`;
+            dropdown.classList.add("active");
+            halo.classList.add("active");
+            return;
+        }
+
+        // --- State 3: Filtering & Suggestions ---
+        results.forEach((res, index) => {
+            const item = res.item;
+            const minPrice = item.sizes && item.sizes.length > 0
+                ? Math.min(...item.sizes.map(s => parseFloat(s.price)))
+                : parseFloat(item.price);
+
+            const priceStr = item.sizes && item.sizes.length > 0 ? `From ${minPrice.toFixed(2)} TND` : `${minPrice.toFixed(2)} TND`;
+
+            const div = document.createElement("div");
+            div.className = "search-result-item search-reveal-item" + (index === 0 ? " highlighted" : "");
+            div.style.animationDelay = (0.15 + (index * 0.08)) + "s";
+            if (index === 0) selectedIndex = 0;
+
+            let imgUrl = item.images && item.images.length > 0 ? item.images[0] : (item.image || "");
+
+            div.innerHTML = `
+                <img src="${imgUrl}" class="search-result-image" alt="${item.name}">
                 <div class="search-result-info">
-                    <div class="search-result-title">${pe.name}</div>
-                    <div class="search-result-price" style="margin-top: 4px;">${Ce}</div>
+                    <div class="search-result-title">${item.name}</div>
+                    <div class="search-result-price" style="margin-top: 4px;">${priceStr}</div>
                 </div>
-            `,pe.name.toLowerCase().includes(F.toLowerCase())){const Me=new RegExp(`(${F})`,"gi");qe.querySelector(".search-result-title").innerHTML=pe.name.replace(Me,"<strong>$1</strong>")}qe.addEventListener("mousedown",Me=>{Me.preventDefault(),window.dodchSearchEngine.addToHistory(F),window.location.href=`product.html?id=${te.id}`}),qe.addEventListener("mouseenter",()=>{G(V)}),re.appendChild(qe)}),s.classList.add("active"),o.classList.add("active"),ie()},G=B=>{const F=re.querySelectorAll(".search-result-item");F.forEach(X=>X.classList.remove("highlighted")),B>=0&&B<F.length&&(F[B].classList.add("highlighted"),l=B)},z=O(B=>{const F=B.target.value.trim();if(F.length<2){Y([],F);return}s.contains(m)||(s.innerHTML="",s.appendChild(m)),re.innerHTML=`
+            `;
+
+            const lowerTitle = item.name.toLowerCase();
+            if (lowerTitle.includes(query.toLowerCase())) {
+                const regex = new RegExp(`(${query})`, "gi");
+                div.querySelector(".search-result-title").innerHTML = item.name.replace(regex, "<strong>$1</strong>");
+            }
+
+            div.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                window.dodchSearchEngine.addToHistory(query);
+                window.location.href = `product.html?id=${res.id}`;
+            });
+
+            div.addEventListener("mouseenter", () => {
+                updateSelection(index);
+            });
+
+            mainResultsDiv.appendChild(div);
+        });
+
+        dropdown.classList.add("active");
+        halo.classList.add("active");
+        syncHeight();
+    };
+
+    const updateSelection = (index) => {
+        const items = mainResultsDiv.querySelectorAll(".search-result-item");
+        items.forEach(i => i.classList.remove("highlighted"));
+        if (index >= 0 && index < items.length) {
+            items[index].classList.add("highlighted");
+            selectedIndex = index;
+        }
+    };
+
+    const handleSearch = debounce((e) => {
+        const query = e.target.value.trim();
+        if (query.length < 2) {
+            renderResults([], query);
+            return;
+        }
+        if (!dropdown.contains(layoutDiv)) {
+            dropdown.innerHTML = "";
+            dropdown.appendChild(layoutDiv);
+        }
+
+        mainResultsDiv.innerHTML = `
             <div style="padding: 2rem; text-align: center; color: var(--accent-gold-text);">
                 <div class="ai-thinking-dots" style="display: flex; gap: 8px; justify-content: center; margin-bottom: 1rem;">
                     <span style="width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 0.6s infinite alternate;"></span>
@@ -1312,7 +9670,249 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                 </div>
                 <div style="font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; opacity: 0.7;">Thinking...</div>
             </div>
-        `,s.classList.add("active"),o.classList.add("active"),ie(),setTimeout(()=>{Object.keys(window.dodchSearchEngine.catalog).length===0&&window.productCatalog&&window.dodchSearchEngine.init(window.productCatalog);const X=window.dodchSearchEngine.search(F);Y(X,F)},400)},250);p.forEach(B=>{const F=B.querySelector("input"),X=B.querySelector("#search-clear-btn");F&&(X&&X.addEventListener("mousedown",te=>{te.preventDefault(),F.value="",Y([],""),ie(),F.focus()}),F.addEventListener("focus",te=>{window.triggerHaptic("light"),d=te.target,fe(d);const V=te.target.value.trim();document.body.classList.add("search-active"),document.documentElement.classList.add("search-active");const pe=document.getElementById("navbar");pe&&pe.classList.add("search-active"),B.classList.add("active"),o.classList.add("active"),V.length===0?(Y([],""),ie()):z(te)}),F.addEventListener("input",te=>{d=te.target,fe(d),z(te)}),F.addEventListener("keydown",te=>{if(!s.classList.contains("active"))return;const V=s.querySelectorAll(".search-result-item");if(te.key==="ArrowDown")te.preventDefault(),l=(l+1)%V.length,G(l);else if(te.key==="ArrowUp")te.preventDefault(),l=l-1,l<0&&(l=V.length-1),G(l);else if(te.key==="Enter"){if(te.preventDefault(),l>=0&&c[l]){const pe=c[l].id,Te=c[l].item;window.dodchSearchEngine.addToHistory(F.value.trim()),window.location.href=`product.html?id=${pe}`}}else if(te.key==="Escape"){l=-1,s.classList.remove("active"),o.classList.remove("active");const pe=document.getElementById("navbar");pe&&pe.classList.remove("search-active"),B.classList.remove("active"),document.body.classList.remove("search-active"),document.documentElement.classList.remove("search-active"),F.blur()}else te.key==="Tab"&&_(B,F)}))})}),document.addEventListener("submit",async p=>{const o=p.target;if(!o||!o.id?.includes("contact")&&!o.classList.contains("contact-form"))return;const s=localStorage.getItem("dodch_last_contact_ts"),d=Date.now();if(s&&d-parseInt(s)<12e4&&!window.DEBUG_BYPASS_TIMER){p.preventDefault(),p.stopImmediatePropagation();const U=Math.ceil((12e4-(d-parseInt(s)))/1e3);window.showToast&&window.showToast(`Please wait ${U}s before sending another message.`,"error");return}const l=o.querySelector('input[name="__hp_website"]');if(l&&l.value){p.preventDefault(),p.stopImmediatePropagation(),window.showToast&&window.showToast("Message sent successfully!","success"),o.reset();return}p.preventDefault();const c=o.querySelector('button[type="submit"], .cta-button, .contact-submit-btn'),O=c?c.textContent:"Send";c&&(c.textContent="Sending...",c.disabled=!0);const le=o.querySelector('input[type="text"]:not([name="__hp_website"])'),fe=o.querySelector('input[type="email"]'),_=o.querySelector("textarea"),m=le?le.value.trim():"",re=fe?fe.value.trim():"",ce=_?_.value.trim():"";if(!m||!re||!ce){window.showToast&&window.showToast("Please fill in all fields.","error"),c&&(c.textContent=O,c.disabled=!1);return}if(!Ge.validateEmail(re)){window.showToast&&window.showToast("Please enter a valid email address.","error"),c&&(c.textContent=O,c.disabled=!1);return}if(Ge.isProfane(m)||Ge.isProfane(ce)){window.showToast&&window.showToast("Inappropriate language detected.","error"),c&&(c.textContent=O,c.disabled=!1);return}if(Ge.isGibberish(ce)){window.showToast&&window.showToast("Message appears to be bot-generated. Please use real text.","error"),c&&(c.textContent=O,c.disabled=!1);return}if(m.length>Ge.MAX_NAME_LENGTH||ce.length>Ge.MAX_MESSAGE_LENGTH){window.showToast&&window.showToast("Input length exceeds safety limits.","error"),c&&(c.textContent=O,c.disabled=!1);return}if(new Blob([m,re,ce]).size>1e4){window.showToast&&window.showToast("Message payload is too large.","error"),c&&(c.textContent=O,c.disabled=!1);return}try{typeof Ft<"u"&&await Ft,await to(Re(ae,"messages"),{name:m,email:re,message:ce,status:"unread",createdAt:Et()}),localStorage.setItem("dodch_last_contact_ts",Date.now()),window.showToast&&window.showToast("Message sent successfully!","success"),o.reset()}catch(U){console.error("Detailed Submission Error:",U),U.code==="permission-denied"?window.showToast&&window.showToast(`Security check failed (${U.code}). Check for duplicates or refresh.`,"error"):window.showToast&&window.showToast(`Submission Error: ${U.code||U.message}`,"error")}finally{c&&(c.textContent=O,c.disabled=!1)}});function Gi(){const p=/iphone|ipad|ipod/i.test(navigator.userAgent),o=/safari/i.test(navigator.userAgent)&&!/chrome|crios|fxios/i.test(navigator.userAgent),s=window.navigator.standalone===!0,d=localStorage.getItem("dodch_ios_banner_dismissed"),l=localStorage.getItem("dodch_has_ordered")==="1";if(!p||!o||s||d||!l)return;localStorage.setItem("dodch_ios_banner_dismissed","1");const c=document.createElement("style");c.textContent=`
+        `;
+
+        dropdown.classList.add("active");
+        halo.classList.add("active");
+        syncHeight();
+
+        setTimeout(() => {
+            if (Object.keys(window.dodchSearchEngine.catalog).length === 0 && window.productCatalog) {
+                window.dodchSearchEngine.init(window.productCatalog);
+            }
+            const results = window.dodchSearchEngine.search(query);
+            renderResults(results, query);
+        }, 400);
+    }, 250); // 250ms debounce
+
+    searchContainers.forEach(container => {
+        const input = container.querySelector("input");
+        const clearBtn = container.querySelector("#search-clear-btn");
+        if (!input) return;
+
+        if (clearBtn) {
+            clearBtn.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                input.value = "";
+                renderResults([], ""); // Show history immediately
+                syncHeight();
+                input.focus();
+            });
+        }
+
+        input.addEventListener("focus", (e) => {
+            window.triggerHaptic('light');
+            activeInput = e.target;
+            positionDropdown(activeInput);
+            const query = e.target.value.trim();
+
+            document.body.classList.add("search-active");
+            document.documentElement.classList.add("search-active");
+            const nav = document.getElementById("navbar");
+            if (nav) nav.classList.add("search-active");
+
+            container.classList.add("active");
+            halo.classList.add("active");
+            if (query.length === 0) {
+                renderResults([], "");
+                syncHeight();
+            } else {
+                handleSearch(e);
+            }
+        });
+        // The halo now catches all outside interaction via pointer-events: auto
+
+        input.addEventListener("input", (e) => {
+            activeInput = e.target;
+            positionDropdown(activeInput);
+            handleSearch(e);
+        });
+
+        // NOTE: blur listener intentionally removed — it was causing the dropdown to
+        // collapse whenever ANY element inside it was clicked/tapped, because focus
+        // momentarily leaves the input. Outside-click is handled by the mousedown/
+        // touchstart document listeners above instead.
+
+        input.addEventListener("keydown", (e) => {
+            if (!dropdown.classList.contains("active")) return;
+
+            const items = dropdown.querySelectorAll(".search-result-item");
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                selectedIndex = (selectedIndex + 1) % items.length;
+                updateSelection(selectedIndex);
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                selectedIndex = selectedIndex - 1;
+                if (selectedIndex < 0) selectedIndex = items.length - 1;
+                updateSelection(selectedIndex);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (selectedIndex >= 0 && currentResults[selectedIndex]) {
+                    const id = currentResults[selectedIndex].id;
+                    const item = currentResults[selectedIndex].item;
+                    window.dodchSearchEngine.addToHistory(input.value.trim()); // Save to history
+                    window.location.href = `product.html?id=${id}`;
+                }
+            } else if (e.key === "Escape") {
+                selectedIndex = -1;
+                dropdown.classList.remove("active");
+                halo.classList.remove("active");
+                const nav = document.getElementById("navbar");
+                if (nav) nav.classList.remove("search-active");
+                container.classList.remove("active");
+                document.body.classList.remove("search-active");
+                document.documentElement.classList.remove("search-active");
+                input.blur();
+            } else if (e.key === "Tab") {
+                // Tab navigating away — close cleanly
+                closeSearchUI(container, input);
+            }
+        });
+
+    });
+});
+
+// --- Consolidated Contact Form Submission Handler ---
+document.addEventListener('submit', async (e) => {
+    const form = e.target;
+    if (!form || (!form.id?.includes('contact') && !form.classList.contains('contact-form'))) return;
+    const lastSubmit = localStorage.getItem('dodch_last_contact_ts');
+    const now = Date.now();
+    if (lastSubmit && (now - parseInt(lastSubmit)) < 120000 && !window.DEBUG_BYPASS_TIMER) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const waitSec = Math.ceil((120000 - (now - parseInt(lastSubmit))) / 1000);
+        if (window.showToast) window.showToast(`Please wait ${waitSec}s before sending another message.`, "error");
+        return;
+    }
+    const honeypot = form.querySelector('input[name="__hp_website"]');
+    if (honeypot && honeypot.value) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (window.showToast) window.showToast("Message sent successfully!", "success");
+        form.reset();
+        return;
+    }
+    e.preventDefault();
+    const submitBtn = form.querySelector('button[type="submit"], .cta-button, .contact-submit-btn');
+    const originalText = submitBtn ? submitBtn.textContent : 'Send';
+
+    if (submitBtn) {
+        submitBtn.textContent = 'Sending...';
+        submitBtn.disabled = true;
+    }
+
+    const nameInput = form.querySelector('input[type="text"]:not([name="__hp_website"])');
+    const emailInput = form.querySelector('input[type="email"]');
+    const messageInput = form.querySelector('textarea');
+
+    const name = nameInput ? nameInput.value.trim() : "";
+    const email = emailInput ? emailInput.value.trim() : "";
+    const message = messageInput ? messageInput.value.trim() : "";
+
+    // --- SMART VALIDATION ---
+    if (!name || !email || !message) {
+        if (window.showToast) window.showToast("Please fill in all fields.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
+
+    if (!SecurityValidator.validateEmail(email)) {
+        if (window.showToast) window.showToast("Please enter a valid email address.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
+
+    if (SecurityValidator.isProfane(name) || SecurityValidator.isProfane(message)) {
+        if (window.showToast) window.showToast("Inappropriate language detected.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
+
+    if (SecurityValidator.isGibberish(message)) {
+        if (window.showToast) window.showToast("Message appears to be bot-generated. Please use real text.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
+
+    if (name.length > SecurityValidator.MAX_NAME_LENGTH || message.length > SecurityValidator.MAX_MESSAGE_LENGTH) {
+        if (window.showToast) window.showToast("Input length exceeds safety limits.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
+
+    // Basic size check to prevent multi-megabyte payloads hitting the network
+    if (new Blob([name, email, message]).size > 10000) {
+        if (window.showToast) window.showToast("Message payload is too large.", "error");
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+        return;
+    }
+    // --- END SMART VALIDATION ---
+
+    try {
+        if (typeof appCheckReady !== 'undefined') {
+            await appCheckReady;
+        }
+        // Direct Firestore write (Spark-compatible)
+        // Using addDoc to ensure every message is stored uniquely
+        await addDoc(collection(db, "messages"), {
+            name,
+            email,
+            message,
+            status: 'unread',
+            createdAt: serverTimestamp()
+        });
+
+        localStorage.setItem('dodch_last_contact_ts', Date.now());
+        if (window.showToast) window.showToast("Message sent successfully!", "success");
+        form.reset();
+    } catch (error) {
+        console.error("Detailed Submission Error:", error);
+        if (error.code === 'permission-denied') {
+            if (window.showToast) window.showToast(`Security check failed (${error.code}). Check for duplicates or refresh.`, "error");
+        } else {
+            if (window.showToast) window.showToast(`Submission Error: ${error.code || error.message}`, "error");
+        }
+    } finally {
+        if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+});
+
+// --- iOS Add to Home Screen Banner ---
+function showIOSInstallBanner() {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
+    const isStandalone = window.navigator.standalone === true;
+    const dismissed = localStorage.getItem('dodch_ios_banner_dismissed');
+    const hasOrdered = localStorage.getItem('dodch_has_ordered') === '1';
+
+    if (!isIOS || !isSafari || isStandalone || dismissed || !hasOrdered) return;
+    localStorage.setItem('dodch_ios_banner_dismissed', '1');
+    const styles = document.createElement('style');
+    styles.textContent = `
         #dodch-ios-banner {
             position: fixed;
             bottom: 0; left: 0; right: 0;
@@ -1419,7 +10019,12 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(4px); }
         }
-    `,document.head.appendChild(c);const O=document.createElement("div");O.id="dodch-ios-banner",O.innerHTML=`
+    `;
+    document.head.appendChild(styles);
+
+    const banner = document.createElement('div');
+    banner.id = 'dodch-ios-banner';
+    banner.innerHTML = `
         <div id="dodch-ios-banner-inner">
             <div id="dodch-ios-banner-icon-wrap">
                 <img id="dodch-ios-banner-icon" src="IMG_3352.webp" alt="DODCH">
@@ -1429,15 +10034,72 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                 <p id="dodch-ios-banner-body">Receive order updates &amp; exclusive offers as push notifications.</p>
                 <div id="dodch-ios-banner-steps">
                     <span>Tap</span>
-                    <span class="step-badge">\u2B06\uFE0F Share</span>
+                    <span class="step-badge">⬆️ Share</span>
                     <span>then</span>
-                    <span class="step-badge">\uFF0B Add to Home Screen</span>
+                    <span class="step-badge">＋ Add to Home Screen</span>
                 </div>
             </div>
             <button id="dodch-ios-banner-close" aria-label="Dismiss">&times;</button>
         </div>
-        <div id="dodch-ios-banner-arrow">\u2193</div>
-    `,document.body.appendChild(O),setTimeout(()=>O.classList.add("visible"),1500),document.getElementById("dodch-ios-banner-close").addEventListener("click",()=>{O.classList.remove("visible"),localStorage.setItem("dodch_ios_banner_dismissed","1"),setTimeout(()=>O.remove(),500)}),setTimeout(()=>{O.parentNode&&(O.classList.remove("visible"),setTimeout(()=>{O.parentNode&&O.remove()},500))},18e3)}window.addEventListener("load",Gi);async function ro(p){if(window.location.protocol!=="file:"&&!(!("Notification"in window)||!("serviceWorker"in navigator))&&Notification.permission==="granted")try{if(!await Io())return;xt||(xt=Lo(lt));const d=await Ko(xt,{vapidKey:"BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM"});d&&await at(Ae(ae,"subscribers",d),{token:d,userId:p?p.uid:null,lastSeen:Et()},{merge:!0})}catch(o){console.warn("Silent token sync failed:",o)}}function Yi(){if(/iphone|ipad|ipod/i.test(navigator.userAgent)){const o=document.getElementById("dodch-ios-banner");if(o)return o.classList.add("visible"),!0;if(!document.querySelector("style[data-ios-banner]")){const d=document.createElement("style");d.setAttribute("data-ios-banner","true"),d.textContent=`
+        <div id="dodch-ios-banner-arrow">↓</div>
+    `;
+    document.body.appendChild(banner);
+    setTimeout(() => banner.classList.add('visible'), 1500);
+    document.getElementById('dodch-ios-banner-close').addEventListener('click', () => {
+        banner.classList.remove('visible');
+        localStorage.setItem('dodch_ios_banner_dismissed', '1');
+        setTimeout(() => banner.remove(), 500);
+    });
+    setTimeout(() => {
+        if (banner.parentNode) {
+            banner.classList.remove('visible');
+            setTimeout(() => { if (banner.parentNode) banner.remove(); }, 500);
+        }
+    }, 18000);
+}
+
+window.addEventListener('load', showIOSInstallBanner);
+
+// --- Web Push Notifications ---
+async function syncPushTokenToUser(user) {
+    if (window.location.protocol === 'file:') return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+    if (Notification.permission !== 'granted') return;
+
+    try {
+        const supported = await isSupported();
+        if (!supported) return;
+
+        if (!messaging) messaging = getMessaging(app);
+
+        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
+        const token = await getMessagingToken(messaging, { vapidKey: VAPID });
+
+        if (token) {
+            await setDoc(doc(db, 'subscribers', token), {
+                token,
+                userId: user ? user.uid : null,
+                lastSeen: serverTimestamp()
+            }, { merge: true });
+        }
+    } catch (err) {
+        console.warn('Silent token sync failed:', err);
+    }
+}
+
+function triggerIOSInstallFlow() {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS) {
+        const existing = document.getElementById('dodch-ios-banner');
+        if (existing) {
+            existing.classList.add('visible');
+            return true;
+        }
+
+        if (!document.querySelector('style[data-ios-banner]')) {
+            const styles = document.createElement('style');
+            styles.setAttribute('data-ios-banner', 'true');
+            styles.textContent = `
                 #dodch-ios-banner {
                     position: fixed;
                     bottom: 0; left: 0; right: 0;
@@ -1533,7 +10195,13 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                     0%, 100% { transform: translate(-50%, 0); }
                     50% { transform: translate(-50%, 5px); }
                 }
-            `,document.head.appendChild(d)}const s=document.createElement("div");return s.id="dodch-ios-banner",s.innerHTML=`
+            `;
+            document.head.appendChild(styles);
+        }
+
+        const banner = document.createElement('div');
+        banner.id = 'dodch-ios-banner';
+        banner.innerHTML = `
             <div id="dodch-ios-banner-inner">
                 <div id="dodch-ios-banner-icon-wrap">
                     <img id="dodch-ios-banner-icon" src="IMG_3352.webp" alt="DODCH">
@@ -1543,34 +10211,365 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                     <p id="dodch-ios-banner-body">Receive order updates &amp; exclusive offers as push notifications.</p>
                     <div id="dodch-ios-banner-steps">
                         <span>Tap</span>
-                        <span class="step-badge">\u2B06\uFE0F Share</span>
+                        <span class="step-badge">⬆️ Share</span>
                         <span>then</span>
-                        <span class="step-badge">\uFF0B Add to Home Screen</span>
+                        <span class="step-badge">＋ Add to Home Screen</span>
                     </div>
                 </div>
                 <button id="dodch-ios-banner-close" aria-label="Dismiss">&times;</button>
             </div>
-            <div id="dodch-ios-banner-arrow">\u2193</div>
-        `,document.body.appendChild(s),setTimeout(()=>s.classList.add("visible"),100),document.getElementById("dodch-ios-banner-close").addEventListener("click",()=>{s.classList.remove("visible"),setTimeout(()=>s.remove(),500)}),!0}return!1}function Yt(p,o){return`dodch_notify_${p}_${(o||"default").replace(/\s+/g,"_").toLowerCase()}`}function Wi(p,o){try{localStorage.setItem(Yt(p,o),"1")}catch{}}function $o(p,o){try{return localStorage.getItem(Yt(p,o))==="1"}catch{return!1}}function no(p){p.classList.add("subscribed"),p.innerHTML=`
+            <div id="dodch-ios-banner-arrow">↓</div>
+        `;
+        document.body.appendChild(banner);
+        setTimeout(() => banner.classList.add('visible'), 100);
+        document.getElementById('dodch-ios-banner-close').addEventListener('click', () => {
+            banner.classList.remove('visible');
+            setTimeout(() => banner.remove(), 500);
+        });
+        return true;
+    }
+    return false;
+}
+
+// --- Back In Stock Subscription Logic ---
+// --- Notify-Me localStorage Persistence Helpers ---
+function getNotifyStorageKey(productId, sizeLabel) {
+    return `dodch_notify_${productId}_${(sizeLabel || 'default').replace(/\s+/g, '_').toLowerCase()}`;
+}
+function markNotifySubscribed(productId, sizeLabel) {
+    try { localStorage.setItem(getNotifyStorageKey(productId, sizeLabel), '1'); } catch(e) {}
+}
+function isNotifySubscribed(productId, sizeLabel) {
+    try { return localStorage.getItem(getNotifyStorageKey(productId, sizeLabel)) === '1'; } catch(e) { return false; }
+}
+function applySubscribedState(btnEl) {
+    btnEl.classList.add('subscribed');
+    btnEl.innerHTML = `
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
         </svg>
         You're On the List!
-    `,p.disabled=!0}async function so(p,o,s){if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!(window.navigator.standalone===!0)){Yi();return}if(!("Notification"in window)){window.showToast("Notifications are not supported by this browser.","warning");return}try{if(await Notification.requestPermission()!=="granted"){window.showToast("Notifications must be enabled to receive stock updates.","info");return}if(!await Io())return;xt||(xt=Lo(lt));const le=await Ko(xt,{vapidKey:"BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM"});if(!le){window.showToast("Failed to retrieve notification registration token.","error");return}const fe=So(lt).currentUser,_=`${le.substring(0,30)}_${p}_${o.replace(/\s+/g,"")}`;await at(Ae(ae,"back_in_stock_subscriptions",_),{token:le,productId:p,size:o,userId:fe?fe.uid:null,createdAt:Et(),active:!0},{merge:!0}),await at(Ae(ae,"subscribers",le),{token:le,userId:fe?fe.uid:null,lastSeen:Et()},{merge:!0}),Wi(p,o),s&&no(s),window.showToast("Radiance is returning! You will be notified the instant it's back in stock. \u2728","success",5e3)}catch(l){console.error("Back-in-stock subscription error:",l),window.showToast("Failed to register back-in-stock alert. Please try again.","error")}}async function ti(p,o,s){try{const d=We(Re(ae,"back_in_stock_subscriptions"),rt("productId","==",p),rt("active","==",!0)),l=await nt(d);if(l.empty){console.log(`No back-in-stock subscribers for ${p} / ${o}`);return}const c=[];if(l.forEach(X=>{const te=X.data();(o==="Standard"||!te.size||te.size===o)&&c.push({id:X.id,...te})}),c.length===0)return;const O=localStorage.getItem("dodchUrlFCMCreds");if(!O){console.warn("Cannot send back-in-stock push: Missing FCM credentials."),window.showToast(`${c.length} subscriber(s) waiting \u2014 push not sent (missing FCM creds).`,"info");return}const{importPKCS8:le,SignJWT:fe}=await import("https://cdn.jsdelivr.net/npm/jose@5.2.3/dist/browser/index.js"),_=JSON.parse(O),m=await le(_.private_key,"RS256"),re=await new fe({iss:_.client_email,scope:"https://www.googleapis.com/auth/firebase.messaging",aud:"https://oauth2.googleapis.com/token"}).setProtectedHeader({alg:"RS256",typ:"JWT"}).setIssuedAt().setExpirationTime("1h").sign(m),ce=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",assertion:re})});if(!ce.ok)throw new Error("Failed to get Google Access Token for back-in-stock push.");const{access_token:U}=await ce.json(),ie=o&&o!=="Standard"?` (${o})`:"",Y=`${s||"Your product"} is Back in Stock! \u{1F389}`,G=`${s}${ie} is now available again. Shop before it sells out!`,z=`/product.html?id=${p}`;let B=0;const F=[];for(const X of c){const te={message:{token:X.token,webpush:{notification:{title:Y,body:G,icon:"/IMG_3352.webp"},fcmOptions:{link:z}},data:{title:Y,body:G,url:z}}};(await fetch(`https://fcm.googleapis.com/v1/projects/${_.project_id}/messages:send`,{method:"POST",headers:{Authorization:`Bearer ${U}`,"Content-Type":"application/json"},body:JSON.stringify(te)})).ok&&(B++,F.push(gt(Ae(ae,"back_in_stock_subscriptions",X.id),{active:!1})))}await Promise.all(F),console.log(`Back-in-stock: sent ${B}/${c.length} notifications for ${p} / ${o}`),window.showToast&&window.showToast(`\u2705 ${B} back-in-stock notification(s) sent!`,"success")}catch(d){console.error("triggerBackInStockNotifications error:",d)}}async function Ji(){if(window.location.protocol==="file:")return;const p=So(lt);if(Vt(p,async o=>{if("Notification"in window&&Notification.permission==="granted"&&ro(o),o&&(oi(o),window.location.pathname.includes("my-account.html"))){const s=We(Re(ae,"orders"),rt("userId","==",o.uid),rt("hasUnseenUpdate","==",!0));(await nt(s)).forEach(async O=>{await gt(Ae(ae,"orders",O.id),{hasUnseenUpdate:!1})}),document.body.classList.remove("has-notification");const l=document.querySelectorAll(".account-tab-btn"),c=document.querySelectorAll(".tab-content");l.forEach(O=>{O.dataset.tabBound||(O.dataset.tabBound="true",O.addEventListener("click",()=>{const le=O.getAttribute("data-tab");l.forEach(fe=>fe.classList.remove("active")),O.classList.add("active"),c.forEach(fe=>{fe.id===`${le}-tab-content`?(fe.classList.add("active"),le==="shipping"&&oi(o)):fe.classList.remove("active")})}))}),setTimeout(()=>Ni(o),500)}}),!(!("Notification"in window)||!("serviceWorker"in navigator)))try{if(!await Io())return;xt||(xt=Lo(lt)),await navigator.serviceWorker.register("/firebase-messaging-sw.js"),zi(xt,l=>{const c=l.notification?.title||l.data?.title||"DODCH",O=l.notification?.body||l.data?.body||"";window.showToast&&window.showToast(`\u{1F514} ${c} \u2014 ${O}`,"info",6e3)});const s="BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM",d=()=>{if(document.getElementById("push-bell-container"))return;const l=document.createElement("div");l.id="push-bell-container",l.setAttribute("role","button"),l.setAttribute("aria-label","Enable Push Notifications"),l.innerHTML=`
+    `;
+    btnEl.disabled = true;
+}
+
+async function handleBackInStockSubscription(productId, sizeLabel, btnEl) {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS) {
+        const isStandalone = window.navigator.standalone === true;
+        if (!isStandalone) {
+            // App not installed — show the install prompt every click.
+            // Do NOT change the button or save to localStorage; the notification
+            // hasn't actually been registered yet.
+            triggerIOSInstallFlow();
+            return;
+        }
+        // Standalone (PWA installed) — fall through to the real notification
+        // flow below so the subscription is actually registered and the button
+        // only turns to "You're On the List!" on genuine success.
+    }
+
+    if (!('Notification' in window)) {
+        window.showToast("Notifications are not supported by this browser.", "warning");
+        return;
+    }
+
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            window.showToast("Notifications must be enabled to receive stock updates.", "info");
+            return;
+        }
+
+        const supported = await isSupported();
+        if (!supported) return;
+
+        if (!messaging) messaging = getMessaging(app);
+        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
+        const token = await getMessagingToken(messaging, { vapidKey: VAPID });
+
+        if (!token) {
+            window.showToast("Failed to retrieve notification registration token.", "error");
+            return;
+        }
+
+        const user = getAuth(app).currentUser;
+        const subId = `${token.substring(0, 30)}_${productId}_${sizeLabel.replace(/\s+/g, '')}`;
+        
+        await setDoc(doc(db, 'back_in_stock_subscriptions', subId), {
+            token,
+            productId,
+            size: sizeLabel,
+            userId: user ? user.uid : null,
+            createdAt: serverTimestamp(),
+            active: true
+        }, { merge: true });
+
+        // Save token to general subscribers collection to ensure device is tracked
+        await setDoc(doc(db, 'subscribers', token), {
+            token,
+            userId: user ? user.uid : null,
+            lastSeen: serverTimestamp()
+        }, { merge: true });
+
+        // Persist to localStorage so button state survives page reload
+        markNotifySubscribed(productId, sizeLabel);
+
+        // Update button to subscribed state
+        if (btnEl) applySubscribedState(btnEl);
+
+        window.showToast("Radiance is returning! You will be notified the instant it's back in stock. ✨", "success", 5000);
+    } catch (err) {
+        console.error("Back-in-stock subscription error:", err);
+        window.showToast("Failed to register back-in-stock alert. Please try again.", "error");
+    }
+}
+
+// --- Trigger Back In Stock Notifications (called by admin when marking product back in stock) ---
+async function triggerBackInStockNotifications(productId, sizeLabel, productName) {
+    try {
+        // Query all active back-in-stock subscriptions for this product + size
+        const q = query(
+            collection(db, 'back_in_stock_subscriptions'),
+            where('productId', '==', productId),
+            where('active', '==', true)
+        );
+        const snap = await getDocs(q);
+        if (snap.empty) {
+            console.log(`No back-in-stock subscribers for ${productId} / ${sizeLabel}`);
+            return;
+        }
+
+        // Filter to matching size (or notify all if size is 'Standard')
+        const subs = [];
+        snap.forEach(docSnap => {
+            const d = docSnap.data();
+            if (sizeLabel === 'Standard' || !d.size || d.size === sizeLabel) {
+                subs.push({ id: docSnap.id, ...d });
+            }
+        });
+
+        if (subs.length === 0) return;
+
+        const credsStr = localStorage.getItem('dodchUrlFCMCreds');
+        if (!credsStr) {
+            console.warn('Cannot send back-in-stock push: Missing FCM credentials.');
+            window.showToast(`${subs.length} subscriber(s) waiting — push not sent (missing FCM creds).`, 'info');
+            return;
+        }
+
+        // Use the existing push infrastructure from admin-push.js
+        const { importPKCS8, SignJWT } = await import('https://cdn.jsdelivr.net/npm/jose@5.2.3/dist/browser/index.js');
+        const creds = JSON.parse(credsStr);
+        const privateKey = await importPKCS8(creds.private_key, 'RS256');
+        const jwt = await new SignJWT({
+            iss: creds.client_email,
+            scope: 'https://www.googleapis.com/auth/firebase.messaging',
+            aud: 'https://oauth2.googleapis.com/token'
+        })
+        .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+        .setIssuedAt()
+        .setExpirationTime('1h')
+        .sign(privateKey);
+
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                assertion: jwt
+            })
+        });
+        if (!tokenRes.ok) throw new Error('Failed to get Google Access Token for back-in-stock push.');
+        const { access_token: accessToken } = await tokenRes.json();
+
+        const displaySize = sizeLabel && sizeLabel !== 'Standard' ? ` (${sizeLabel})` : '';
+        const notifTitle = `${productName || 'Your product'} is Back in Stock! 🎉`;
+        const notifBody = `${productName}${displaySize} is now available again. Shop before it sells out!`;
+        const notifUrl = `/product.html?id=${productId}`;
+
+        let sent = 0;
+        const deactivatePromises = [];
+        for (const sub of subs) {
+            const payload = {
+                message: {
+                    token: sub.token,
+                    webpush: {
+                        notification: {
+                            title: notifTitle,
+                            body: notifBody,
+                            icon: '/IMG_3352.webp'
+                        },
+                        fcmOptions: { link: notifUrl }
+                    },
+                    data: { title: notifTitle, body: notifBody, url: notifUrl }
+                }
+            };
+            const res = await fetch(`https://fcm.googleapis.com/v1/projects/${creds.project_id}/messages:send`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                sent++;
+                // Deactivate the subscription so they're not notified again for the same restock
+                deactivatePromises.push(updateDoc(doc(db, 'back_in_stock_subscriptions', sub.id), { active: false }));
+            }
+        }
+        await Promise.all(deactivatePromises);
+        console.log(`Back-in-stock: sent ${sent}/${subs.length} notifications for ${productId} / ${sizeLabel}`);
+        if (window.showToast) window.showToast(`✅ ${sent} back-in-stock notification(s) sent!`, 'success');
+    } catch (err) {
+        console.error('triggerBackInStockNotifications error:', err);
+    }
+}
+
+async function initPushNotifications() {
+    if (window.location.protocol === 'file:') return;
+
+    // Auth listener - runs regardless of push support so shipping info + credits load on mobile
+    const authObj = getAuth(app);
+    onAuthStateChanged(authObj, async (user) => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            syncPushTokenToUser(user);
+        }
+        if (user) {
+            initShippingInfo(user);
+            if (window.location.pathname.includes('my-account.html')) {
+                const q = query(collection(db, "orders"), where("userId", "==", user.uid), where("hasUnseenUpdate", "==", true));
+                const snap = await getDocs(q);
+                snap.forEach(async (orderDoc) => {
+                    await updateDoc(doc(db, "orders", orderDoc.id), { hasUnseenUpdate: false });
+                });
+                document.body.classList.remove('has-notification');
+                const tabBtns = document.querySelectorAll('.account-tab-btn');
+                const tabContents = document.querySelectorAll('.tab-content');
+
+                tabBtns.forEach(btn => {
+                    if (btn.dataset.tabBound) return;
+                    btn.dataset.tabBound = "true";
+
+                    btn.addEventListener('click', () => {
+                        const targetTab = btn.getAttribute('data-tab');
+                        tabBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        tabContents.forEach(content => {
+                            if (content.id === `${targetTab}-tab-content`) {
+                                content.classList.add('active');
+                                if (targetTab === 'shipping') initShippingInfo(user);
+                            } else {
+                                content.classList.remove('active');
+                            }
+                        });
+                    });
+                });
+                setTimeout(() => initUserReviewsHistory(user), 500);
+            }
+        }
+    });
+
+    // Push notification setup - only if the browser supports it
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+    try {
+        const supported = await isSupported();
+        if (!supported) return;
+
+        if (!messaging) messaging = getMessaging(app);
+
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        onMessage(messaging, (payload) => {
+            const title = payload.notification?.title || payload.data?.title || 'DODCH';
+            const body = payload.notification?.body || payload.data?.body || '';
+            if (window.showToast) window.showToast(`🔔 ${title} — ${body}`, 'info', 6000);
+        });
+
+        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
+        const showBell = () => {
+            if (document.getElementById('push-bell-container')) return;
+            const bell = document.createElement('div');
+            bell.id = 'push-bell-container';
+            bell.setAttribute('role', 'button');
+            bell.setAttribute('aria-label', 'Enable Push Notifications');
+            bell.innerHTML = `
                 <div class="bell-pulse"></div>
                 <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            `,document.body.appendChild(l),setTimeout(()=>l.classList.add("visible"),100),l.addEventListener("click",async()=>{const c=await Notification.requestPermission();c==="granted"?(l.classList.remove("visible"),setTimeout(()=>l.remove(),400),ro(p.currentUser),window.showToast&&window.showToast("Notifications enabled! \u{1F389}","success")):c==="denied"&&window.showToast&&window.showToast("Notifications blocked. Please enable them in your browser settings.","info")})};Notification.permission==="default"&&setTimeout(d,2e3)}catch(o){console.error("Push init failed:",o)}}async function oi(p){if(!p)return;const o=document.getElementById("shipping-profiles-panel"),s=document.getElementById("save-profile-row"),d=m=>{const re={"checkout-email":m.email,"checkout-name":m.fullName,"checkout-phone":m.phone,"checkout-address":m.address,"checkout-city":m.city,"checkout-postal-code":m.postalCode};for(const[ce,U]of Object.entries(re)){const ie=document.getElementById(ce);ie&&U!==void 0&&(ie.value=U)}},c=["Ariana","B\xE9ja","Ben Arous","Bizerte","Gab\xE8s","Gafsa","Jendouba","Kairouan","Kasserine","Kebili","Kef","Mahdia","Manouba","Medenine","Monastir","Nabeul","Sfax","Sidi Bouzid","Siliana","Sousse","Tataouine","Tozeur","Tunis","Zaghouan"].map(m=>`<option value="${m}">${m==="Kef"?"Le Kef":m==="Kebili"?"K\xE9bili":m}</option>`).join(""),O=(m,re)=>{if(!o)return;if(m.length===0){o.style.display="none",s&&(s.style.display="flex");return}o.style.display="block",s&&(s.style.display="none");const ce=m.map((U,ie)=>`
-            <div class="shipping-profile-card ${ie===re?"selected":""}" data-index="${ie}" onclick="window.selectShippingProfile(${ie})" style="cursor:pointer;">
+            `;
+            document.body.appendChild(bell);
+            setTimeout(() => bell.classList.add('visible'), 100);
+
+            bell.addEventListener('click', async () => {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    bell.classList.remove('visible');
+                    setTimeout(() => bell.remove(), 400);
+                    syncPushTokenToUser(authObj.currentUser);
+                    if (window.showToast) window.showToast("Notifications enabled! 🎉", "success");
+                } else if (permission === 'denied') {
+                    if (window.showToast) window.showToast("Notifications blocked. Please enable them in your browser settings.", "info");
+                }
+            });
+        };
+
+        if (Notification.permission === 'default') {
+            setTimeout(showBell, 2000);
+        }
+
+    } catch (err) {
+        console.error('Push init failed:', err);
+    }
+}
+
+// --- Shipping Profiles Logic ---
+async function initShippingInfo(user) {
+    if (!user) return;
+
+    // ── Checkout-page side (profiles panel + auto-fill) ──────────────────────
+    const profilesPanel = document.getElementById('shipping-profiles-panel');
+    const saveProfileRow = document.getElementById('save-profile-row');
+
+    const fillCheckoutForm = (profile) => {
+        const map = {
+            'checkout-email': profile.email,
+            'checkout-name': profile.fullName,
+            'checkout-phone': profile.phone,
+            'checkout-address': profile.address,
+            'checkout-city': profile.city,
+            'checkout-postal-code': profile.postalCode
+        };
+        for (const [id, val] of Object.entries(map)) {
+            const el = document.getElementById(id);
+            if (el && val !== undefined) el.value = val;
+        }
+    };
+
+    const GOVS = ["Ariana","Béja","Ben Arous","Bizerte","Gabès","Gafsa","Jendouba","Kairouan","Kasserine","Kebili","Kef","Mahdia","Manouba","Medenine","Monastir","Nabeul","Sfax","Sidi Bouzid","Siliana","Sousse","Tataouine","Tozeur","Tunis","Zaghouan"];
+    const govOptions = GOVS.map(g => `<option value="${g}">${g === 'Kef' ? 'Le Kef' : g === 'Kebili' ? 'Kébili' : g}</option>`).join('');
+
+    const renderCheckoutProfilesPanel = (profiles, selectedIndex) => {
+        if (!profilesPanel) return;
+        if (profiles.length === 0) {
+            profilesPanel.style.display = 'none';
+            if (saveProfileRow) saveProfileRow.style.display = 'flex';
+            return;
+        }
+        profilesPanel.style.display = 'block';
+        if (saveProfileRow) saveProfileRow.style.display = 'none';
+
+        const cards = profiles.map((p, i) => `
+            <div class="shipping-profile-card ${i === selectedIndex ? 'selected' : ''}" data-index="${i}" onclick="window.selectShippingProfile(${i})" style="cursor:pointer;">
                 <div class="profile-card-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 </div>
                 <div class="profile-card-info">
-                    <div class="profile-card-name">${U.label||U.fullName}</div>
-                    <div class="profile-card-detail">${U.address}, ${U.city}</div>
-                    <div class="profile-card-detail">${U.phone}</div>
+                    <div class="profile-card-name">${p.label || p.fullName}</div>
+                    <div class="profile-card-detail">${p.address}, ${p.city}</div>
+                    <div class="profile-card-detail">${p.phone}</div>
                 </div>
-                ${ie===re?'<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>':""}
-            </div>`).join("");o.innerHTML=`
+                ${i === selectedIndex ? `<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>` : ''}
+            </div>`).join('');
+
+        profilesPanel.innerHTML = `
             <div class="profiles-panel-header">
                 <span class="profiles-panel-title">Saved Addresses</span>
                 <button id="add-new-profile-btn" class="add-profile-btn" onclick="window.toggleNewProfileForm()">
@@ -1578,82 +10577,785 @@ The DODCH Team`;window.location.href=`mailto:${k.shipping.email}?subject=${encod
                     New Address
                 </button>
             </div>
-            <div class="shipping-profiles-list">${ce}</div>
+            <div class="shipping-profiles-list">${cards}</div>
             <div id="new-profile-form-wrapper" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.06);">
-                <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.75rem;">Fill in details and place your order \u2014 it will be saved automatically.</p>
+                <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.75rem;">Fill in details and place your order — it will be saved automatically.</p>
                 <div class="form-group" style="margin-bottom: 0.5rem;">
                     <input type="text" id="new-profile-label" placeholder='Profile name (e.g. "Home", "Work")' style="width:100%; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-family: inherit; font-size: 0.9rem;">
                 </div>
-            </div>`,window.toggleNewProfileForm=()=>{const U=document.getElementById("new-profile-form-wrapper"),ie=document.getElementById("add-new-profile-btn"),Y=U.style.display!=="none";if(U.style.display=Y?"none":"block",s&&(s.style.display=Y?"none":"flex"),ie.innerHTML=Y?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Address':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel',!Y){["checkout-email","checkout-name","checkout-phone","checkout-address","checkout-postal-code"].forEach(z=>{const B=document.getElementById(z);B&&(B.value="")});const G=document.getElementById("checkout-city");G&&(G.value=""),document.querySelectorAll(".shipping-profile-card").forEach(z=>z.classList.remove("selected"))}}},le=document.getElementById("account-shipping-root"),fe=(m={},re=!1)=>`
+            </div>`;
+
+        window.toggleNewProfileForm = () => {
+            const wrapper = document.getElementById('new-profile-form-wrapper');
+            const btn = document.getElementById('add-new-profile-btn');
+            const isShowing = wrapper.style.display !== 'none';
+            wrapper.style.display = isShowing ? 'none' : 'block';
+            if (saveProfileRow) saveProfileRow.style.display = isShowing ? 'none' : 'flex';
+            btn.innerHTML = isShowing
+                ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Address`
+                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel`;
+            if (!isShowing) {
+                ['checkout-email','checkout-name','checkout-phone','checkout-address','checkout-postal-code'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                const city = document.getElementById('checkout-city'); if (city) city.value = '';
+                document.querySelectorAll('.shipping-profile-card').forEach(c => c.classList.remove('selected'));
+            }
+        };
+    };
+
+    // ── Account-page side (full profile manager) ─────────────────────────────
+    const accountRoot = document.getElementById('account-shipping-root');
+
+    // Build the inline edit form HTML
+    const buildProfileForm = (p = {}, isNew = false) => `
         <form id="acct-profile-form" class="acct-profile-form" style="margin-top: 1.25rem;">
             <div style="margin-bottom: 1rem;">
                 <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Address Label</label>
-                <input type="text" id="acct-label" value="${m.label||""}" placeholder='e.g. "Home", "Work"' style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                <input type="text" id="acct-label" value="${p.label || ''}" placeholder='e.g. "Home", "Work"' style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:0.75rem;margin-bottom:0.75rem;">
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Full Name</label>
-                    <input type="text" id="acct-name" value="${m.fullName||""}" placeholder="Nom Complet" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                    <input type="text" id="acct-name" value="${p.fullName || ''}" placeholder="Nom Complet" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
                 </div>
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Phone</label>
-                    <input type="tel" id="acct-phone" value="${m.phone||""}" placeholder="e.g. 21654321" required pattern="[24579][0-9]{7}" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                    <input type="tel" id="acct-phone" value="${p.phone || ''}" placeholder="e.g. 21654321" required pattern="[24579][0-9]{7}" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
                 </div>
             </div>
             <div style="margin-bottom:0.75rem;">
                 <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Email</label>
-                <input type="email" id="acct-email" value="${m.email||""}" placeholder="nom@exemple.tn" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                <input type="email" id="acct-email" value="${p.email || ''}" placeholder="nom@exemple.tn" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
             </div>
             <div style="margin-bottom:0.75rem;">
                 <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Address</label>
-                <input type="text" id="acct-address" value="${m.address||""}" placeholder="Rue, Appartement, Bureau..." required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                <input type="text" id="acct-address" value="${p.address || ''}" placeholder="Rue, Appartement, Bureau..." required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:0.75rem;margin-bottom:1.25rem;">
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Governorate</label>
                     <select id="acct-city" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
-                        <option value="" disabled ${m.city?"":"selected"}>Select region</option>
-                        ${c}
+                        <option value="" disabled ${!p.city ? 'selected' : ''}>Select region</option>
+                        ${govOptions}
                     </select>
                 </div>
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Postal Code</label>
-                    <input type="text" id="acct-postal" value="${m.postalCode||""}" placeholder="e.g. 1000" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                    <input type="text" id="acct-postal" value="${p.postalCode || ''}" placeholder="e.g. 1000" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
                 </div>
             </div>
             <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
                 <button type="submit" style="flex:1;min-width:140px;padding:0.8rem 1.2rem;background:var(--text-charcoal);color:#fff;border:none;border-radius:30px;font-family:inherit;font-weight:600;font-size:0.9rem;cursor:pointer;transition:background 0.2s;">
-                    ${re?"Add Address":"Save Changes"}
+                    ${isNew ? 'Add Address' : 'Save Changes'}
                 </button>
                 <button type="button" id="acct-form-cancel" style="flex:1;min-width:100px;padding:0.8rem 1.2rem;background:transparent;color:#888;border:1.5px solid #e0e0e0;border-radius:30px;font-family:inherit;font-weight:500;font-size:0.9rem;cursor:pointer;">
                     Cancel
                 </button>
             </div>
-        </form>`,_=(m,re=null,ce=!1)=>{if(!le)return;const U=m.length>0,ie=m.map((z,B)=>`
+        </form>`;
+
+    const renderAccountShipping = (profiles, editingIndex = null, isAdding = false) => {
+        if (!accountRoot) return;
+
+        const hasProfiles = profiles.length > 0;
+
+        const profileCards = profiles.map((p, i) => `
             <div class="shipping-profile-card" style="margin-bottom:0.5rem;">
                 <div class="profile-card-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 </div>
                 <div class="profile-card-info" style="flex:1;min-width:0;">
-                    <div class="profile-card-name">${z.label||z.fullName||"Address"}</div>
-                    <div class="profile-card-detail">${z.address||""}, ${z.city||""}</div>
-                    <div class="profile-card-detail">${z.phone||""}${z.email?" \xB7 "+z.email:""}</div>
+                    <div class="profile-card-name">${p.label || p.fullName || 'Address'}</div>
+                    <div class="profile-card-detail">${p.address || ''}, ${p.city || ''}</div>
+                    <div class="profile-card-detail">${p.phone || ''}${p.email ? ' · ' + p.email : ''}</div>
                 </div>
                 <div style="display:flex;gap:0.4rem;flex-shrink:0;">
-                    <button onclick="window.__acctEditProfile(${B})" title="Edit" style="background:rgba(212,175,55,0.1);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--accent-gold-text);">
+                    <button onclick="window.__acctEditProfile(${i})" title="Edit" style="background:rgba(212,175,55,0.1);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--accent-gold-text);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
-                    <button onclick="window.__acctDeleteProfile(${B})" title="Delete" style="background:rgba(231,76,60,0.08);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#e74c3c;">
+                    <button onclick="window.__acctDeleteProfile(${i})" title="Delete" style="background:rgba(231,76,60,0.08);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#e74c3c;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                     </button>
                 </div>
             </div>
-            ${re===B?fe(z,!1):""}`).join("");le.innerHTML=`
+            ${editingIndex === i ? buildProfileForm(p, false) : ''}`).join('');
+
+        accountRoot.innerHTML = `
             <h3 style="margin-bottom:0.5rem;font-family:var(--font-serif);font-size:1.4rem;">Delivery Addresses</h3>
             <p style="margin-bottom:1.5rem;color:#888;font-size:0.88rem;">Manage your saved addresses for faster checkout.</p>
-            ${U?`<div class="shipping-profiles-list" style="margin-bottom:1rem;">${ie}</div>`:'<p style="color:#aaa;font-style:italic;margin-bottom:1.5rem;">No addresses saved yet.</p>'}
-            ${ce?fe({},!0):`
+            ${hasProfiles ? `<div class="shipping-profiles-list" style="margin-bottom:1rem;">${profileCards}</div>` : `<p style="color:#aaa;font-style:italic;margin-bottom:1.5rem;">No addresses saved yet.</p>`}
+            ${!isAdding ? `
                 <button id="acct-add-btn" onclick="window.__acctStartAdd()" style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1.4rem;background:transparent;border:1.5px dashed rgba(0,0,0,0.18);border-radius:12px;color:#666;font-family:inherit;font-size:0.88rem;cursor:pointer;width:100%;justify-content:center;transition:all 0.2s;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Add New Address
-                </button>`}`;const Y=document.getElementById("acct-city");if(Y){const z=re!==null?m[re]:{};z.city&&(Y.value=z.city)}const G=document.getElementById("acct-profile-form");if(G){document.getElementById("acct-form-cancel")?.addEventListener("click",()=>_(m));const z=document.getElementById("acct-label"),B=document.getElementById("acct-name"),F=document.getElementById("acct-phone"),X=document.getElementById("acct-email"),te=document.getElementById("acct-address"),V=document.getElementById("acct-city"),pe=document.getElementById("acct-postal"),Te=G.querySelector('button[type="submit"]'),Ce=()=>({label:z?z.value.trim():"",fullName:B?B.value.trim():"",phone:F?F.value.trim():"",email:X?X.value.trim():"",address:te?te.value.trim():"",city:V?V.value:"",postalCode:pe?pe.value.trim():""}),qe=Ce(),Ye=()=>{if(ce)return;const Qe=Ce(),Me=Object.keys(qe).some(ct=>qe[ct]!==Qe[ct]);Te.disabled=!Me,Te.style.opacity=Me?"1":"0.5",Te.style.cursor=Me?"pointer":"not-allowed"};!ce&&Te&&(Te.disabled=!0,Te.style.opacity="0.5",Te.style.cursor="not-allowed",[z,B,F,X,te,V,pe].forEach(Qe=>{Qe&&(Qe.addEventListener("input",Ye),Qe.addEventListener("change",Ye))})),G.addEventListener("submit",async Qe=>{Qe.preventDefault();const Me=Te.textContent;Te.textContent="Saving...",Te.disabled=!0;const ct={label:document.getElementById("acct-label").value.trim()||"Address",fullName:document.getElementById("acct-name").value.trim(),phone:document.getElementById("acct-phone").value.trim(),email:document.getElementById("acct-email").value.trim(),address:document.getElementById("acct-address").value.trim(),city:document.getElementById("acct-city").value,postalCode:document.getElementById("acct-postal").value.trim(),updatedAt:new Date().toISOString()},_e=[...m];ce?_e.push(ct):_e[re]=ct;try{await at(Ae(ae,"users",p.uid),{shippingProfiles:_e,shippingInfo:_e[0],lastSelectedProfile:ce?_e.length-1:re},{merge:!0}),window._dodchShippingProfiles=_e,window.showToast("Address saved! \u2728","success"),_(_e)}catch(Pe){console.error(Pe),window.showToast("Failed to save. Please try again.","error"),Te.textContent=Me,Te.disabled=!1}})}};try{const m=await ft(Ae(ae,"users",p.uid));let re=[],ce=0;if(m.exists()){const U=m.data();Array.isArray(U.shippingProfiles)&&U.shippingProfiles.length>0?(re=U.shippingProfiles,ce=typeof U.lastSelectedProfile=="number"?U.lastSelectedProfile:0):U.shippingInfo&&(re=[{label:"Default",...U.shippingInfo}]);const ie=typeof U.credits=="number"?U.credits:0;window._dodchUserCredits=ie;const Y=document.getElementById("account-rewards-badge"),G=document.getElementById("account-rewards-balance");Y&&G&&(Y.style.display="block",G.innerText=`${ie.toFixed(2)} TND`);const z=document.getElementById("checkout-rewards-row"),B=document.getElementById("available-rewards-display");z&&B&&ie>0&&(z.style.display="flex",B.innerText=ie.toFixed(2))}window._dodchShippingProfiles=re,window._dodchSelectedProfileIndex=ce,window._dodchCurrentUser=p,window.__acctEditProfile=U=>_(window._dodchShippingProfiles,U,!1),window.__acctStartAdd=()=>_(window._dodchShippingProfiles,null,!0),window.__acctDeleteProfile=async U=>{if(!confirm("Remove this address?"))return;const ie=window._dodchShippingProfiles.filter((Y,G)=>G!==U);try{await at(Ae(ae,"users",p.uid),{shippingProfiles:ie,shippingInfo:ie[0]||null},{merge:!0}),window._dodchShippingProfiles=ie,window.showToast("Address removed.","info"),_(ie)}catch{window.showToast("Failed to delete. Try again.","error")}},window.selectShippingProfile=async U=>{window._dodchSelectedProfileIndex=U,d(window._dodchShippingProfiles[U]),document.querySelectorAll(".shipping-profile-card").forEach((Y,G)=>{Y.classList.toggle("selected",G===U);const z=Y.querySelector(".profile-card-check");G===U&&!z?Y.innerHTML+='<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>':G!==U&&z&&z.remove()});try{await at(Ae(ae,"users",p.uid),{lastSelectedProfile:U},{merge:!0})}catch{}const ie=document.getElementById("new-profile-form-wrapper");ie&&ie.style.display!=="none"&&window.toggleNewProfileForm?.()},O(re,ce),_(re),re.length>0&&o&&d(re[ce]||re[0])}catch(m){console.error("Error loading shipping profiles:",m),le&&(le.innerHTML='<p style="color:#e74c3c;font-size:0.9rem;">Failed to load addresses. Please refresh.</p>')}}window.saveShippingFromCheckout=async function(p){if(!p||p==="guest")return;const o=document.getElementById("save-shipping-info");if(!(!o||!o.checked))try{const s=document.getElementById("new-profile-label"),d={label:s&&s.value.trim()||"Address",email:document.getElementById("checkout-email").value.trim(),fullName:document.getElementById("checkout-name").value.trim(),phone:document.getElementById("checkout-phone").value.trim(),address:document.getElementById("checkout-address").value.trim(),city:document.getElementById("checkout-city").value,postalCode:document.getElementById("checkout-postal-code").value.trim(),savedAt:new Date().toISOString()};let l=window._dodchShippingProfiles?[...window._dodchShippingProfiles]:[];const c=l.findIndex(le=>le.phone===d.phone);c>=0?l[c]={...l[c],...d}:(l.push(d),l.length>5&&l.shift());const O=c>=0?c:l.length-1;await at(Ae(ae,"users",p),{shippingProfiles:l,shippingInfo:d,lastSelectedProfile:O},{merge:!0}),window._dodchShippingProfiles=l,window._dodchSelectedProfileIndex=O,window.showToast&&window.showToast("Address saved to your profile! \u2728","success")}catch(s){console.error("Firestore Save Error:",s),window.showToast&&window.showToast(`Save Error: ${s.message}`,"error")}},document.addEventListener("DOMContentLoaded",()=>{});const Xi={settings:{maxBlur:4.5,velocityMult:.15,lerpFactor:.1},state:{lastScroll:window.pageYOffset||document.documentElement.scrollTop,currentBlur:0,ticking:!1},update(){const p=window.pageYOffset||document.documentElement.scrollTop,o=Math.abs(p-this.state.lastScroll),s=Math.min(o*this.settings.velocityMult,this.settings.maxBlur);this.state.currentBlur+=(s-this.state.currentBlur)*this.settings.lerpFactor,this.state.currentBlur<.01&&o<1?(this.state.currentBlur=0,document.documentElement.style.setProperty("--scroll-blur","0px")):document.documentElement.style.setProperty("--scroll-blur",this.state.currentBlur.toFixed(3)+"px"),this.state.lastScroll=p,this.state.currentBlur>.01?requestAnimationFrame(()=>this.update()):this.state.ticking=!1},init(){window.addEventListener("scroll",()=>{this.state.ticking||(this.state.ticking=!0,requestAnimationFrame(()=>this.update()))},{passive:!0})}},Ki=new URLSearchParams(window.location.search),ii=Ki.get("search");ii&&setTimeout(()=>{const p=document.getElementById("navbar-search-input"),o=document.getElementById("search-toggle-btn");p&&o&&(document.querySelector(".search-container").classList.contains("active")||o.click(),p.value=ii,p.dispatchEvent(new Event("input",{bubbles:!0})))},2e3),Xi.init(),window.addEventListener("load",Ji),(()=>{const p=document.getElementById("scroll-indicator"),o=document.getElementById("product-grid-start"),s=document.querySelector(".hero-carousel-container");if(!p||!o||!s)return;let d=!1,l=!1;const c=_=>{l||d||(l=!0,o.scrollIntoView({behavior:"smooth",block:"start"}),setTimeout(()=>{l=!1,_&&_()},700))},O=()=>{c(()=>{d=!0,p.style.opacity="0.3",p.style.pointerEvents="none"})};p.addEventListener("click",O);let le=window.scrollY;const fe=()=>s.offsetTop+s.offsetHeight*.5;window.addEventListener("scroll",()=>{if(l)return;const _=window.scrollY,m=_<le;d&&_>fe()+100&&(p.style.opacity="1",p.style.pointerEvents="auto"),d&&m&&_<=fe()&&_>0&&(d=!1,p.style.opacity="1",p.style.pointerEvents="auto",s.scrollIntoView({behavior:"smooth",block:"start"})),le=_},{passive:!0})})(),(()=>{const p=document.querySelector(".hero-carousel-wrapper"),o=document.querySelectorAll(".hero-dot"),s=document.getElementById("hair-duo-bg"),d=document.getElementById("hair-duo-hero"),l=document.querySelector(".hero-carousel-container"),c=document.querySelectorAll(".hero-rewards-bg");if(!p||o.length===0||!l)return;let O=0,le,fe=!1;const _=6e3,m=V=>{const Te=((window.innerHeight-V.top)/(window.innerHeight+V.height)-.5)*80;c.forEach(Ce=>{Ce.style.transform=`translateY(${Te}px)`})},re=V=>{o.forEach(Ce=>{const qe=Ce.querySelector(".hero-dot-progress");qe&&(qe.style.transition="none",qe.style.width="0%")});const pe=V%2,Te=o[pe];if(Te){const Ce=Te.querySelector(".hero-dot-progress");Ce&&(Te.offsetHeight,Ce.style.transition=`width ${_}ms linear`,Ce.style.width="100%")}},ce=V=>{const pe=document.querySelector(".hero-carousel-container");if(!pe||pe.classList.contains("collapsed"))return;const Ce=V%2===1;window._activeHeroSlideIsDark=Ce;const qe=document.getElementById("navbar");qe&&!qe.classList.contains("scrolled")&&(Ce?qe.classList.remove("text-dark"):qe.classList.add("text-dark"))},U=V=>{if(fe)return;O=V,p.style.transition="transform 0.8s cubic-bezier(0.25, 1, 0.25, 1)",p.style.transform=`translateX(-${V*33.3333}%)`;const pe=V%2;o.forEach((Te,Ce)=>{Ce===pe?Te.classList.add("active"):Te.classList.remove("active")}),d&&(pe===1?d.classList.add("in-view"):d.classList.remove("in-view")),re(V),ce(V),V===2&&(fe=!0,setTimeout(()=>{p.style.transition="none",p.style.transform="translateX(0%)",O=0,p.offsetHeight,fe=!1,re(0),ce(0)},800))},ie=()=>{Y(),re(O),le=setInterval(()=>{if(fe)return;const V=O+1;U(V)},_)},Y=()=>{le&&clearInterval(le),o.forEach(V=>{const pe=V.querySelector(".hero-dot-progress");pe&&(pe.style.transition="none",pe.style.width="0%")})};o.forEach(V=>{V.addEventListener("click",()=>{if(fe)return;const pe=parseInt(V.getAttribute("data-slide"));U(pe),ie()})}),ie(),l.addEventListener("mouseenter",Y),l.addEventListener("mouseleave",ie);let G=0,z=0,B=!1;l.addEventListener("pointerdown",V=>{V.button!==0&&V.pointerType==="mouse"||V.target.closest("button")||V.target.closest("a")||(G=V.clientX,z=V.clientY,B=!0)}),document.addEventListener("pointerup",V=>{if(!B)return;B=!1;const pe=V.clientX,Te=V.clientY,Ce=G-pe,qe=z-Te;if(Math.abs(Ce)>Math.abs(qe)&&Math.abs(Ce)>50)if(Ce>0)U(O+1),ie();else{let Ye=O-1;Ye<0?(fe=!0,p.style.transition="none",p.style.transform="translateX(-66.6666%)",O=2,p.offsetHeight,fe=!1,setTimeout(()=>{U(1)},50)):U(Ye),ie()}}),document.addEventListener("pointercancel",()=>{B=!1});let F=0,X=!1;l.addEventListener("wheel",V=>{if(Math.abs(V.deltaX)>Math.abs(V.deltaY)){if(V.preventDefault(),X)return;if(F+=V.deltaX,Math.abs(F)>35){if(X=!0,F>0)U(O+1);else{let pe=O-1;pe<0?(fe=!0,p.style.transition="none",p.style.transform="translateX(-66.6666%)",O=2,p.offsetHeight,fe=!1,setTimeout(()=>U(1),50)):U(pe)}ie(),setTimeout(()=>{X=!1,F=0},800)}}},{passive:!1});let te=!1;window.addEventListener("scroll",()=>{te||(te=!0,requestAnimationFrame(()=>{const V=l.getBoundingClientRect();if(V.bottom>0&&V.top<window.innerHeight){if(O%2===1){const Ce=((window.innerHeight-V.top)/(window.innerHeight+V.height)-.5)*80;s&&(s.style.transform=`translateY(${Ce}px)`)}m(V)}te=!1}))},{passive:!0})})();let ri;window.addEventListener("scroll",function(){document.body.classList.contains("is-scrolling")||document.body.classList.add("is-scrolling"),clearTimeout(ri),ri=setTimeout(function(){document.body.classList.remove("is-scrolling")},150)},{passive:!0});
+                </button>` : buildProfileForm({}, true)}`;
+
+        // Wire up city select after render
+        const cityEl = document.getElementById('acct-city');
+        if (cityEl) {
+            const profile = editingIndex !== null ? profiles[editingIndex] : {};
+            if (profile.city) cityEl.value = profile.city;
+        }
+
+        // Form submit handler
+        const form = document.getElementById('acct-profile-form');
+        if (form) {
+            document.getElementById('acct-form-cancel')?.addEventListener('click', () => renderAccountShipping(profiles));
+
+            const labelEl = document.getElementById('acct-label');
+            const nameEl = document.getElementById('acct-name');
+            const phoneEl = document.getElementById('acct-phone');
+            const emailEl = document.getElementById('acct-email');
+            const addressEl = document.getElementById('acct-address');
+            const cityEl = document.getElementById('acct-city');
+            const postalEl = document.getElementById('acct-postal');
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            const getFormValues = () => ({
+                label: labelEl ? labelEl.value.trim() : '',
+                fullName: nameEl ? nameEl.value.trim() : '',
+                phone: phoneEl ? phoneEl.value.trim() : '',
+                email: emailEl ? emailEl.value.trim() : '',
+                address: addressEl ? addressEl.value.trim() : '',
+                city: cityEl ? cityEl.value : '',
+                postalCode: postalEl ? postalEl.value.trim() : ''
+            });
+
+            const initialValues = getFormValues();
+
+            const checkChanges = () => {
+                if (isAdding) return;
+                const currentValues = getFormValues();
+                const hasChanges = Object.keys(initialValues).some(key => initialValues[key] !== currentValues[key]);
+                submitBtn.disabled = !hasChanges;
+                submitBtn.style.opacity = hasChanges ? '1' : '0.5';
+                submitBtn.style.cursor = hasChanges ? 'pointer' : 'not-allowed';
+            };
+
+            if (!isAdding && submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
+
+                [labelEl, nameEl, phoneEl, emailEl, addressEl, cityEl, postalEl].forEach(el => {
+                    if (el) {
+                        el.addEventListener('input', checkChanges);
+                        el.addEventListener('change', checkChanges);
+                    }
+                });
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const orig = submitBtn.textContent;
+                submitBtn.textContent = 'Saving...';
+                submitBtn.disabled = true;
+
+                const updated = {
+                    label: document.getElementById('acct-label').value.trim() || 'Address',
+                    fullName: document.getElementById('acct-name').value.trim(),
+                    phone: document.getElementById('acct-phone').value.trim(),
+                    email: document.getElementById('acct-email').value.trim(),
+                    address: document.getElementById('acct-address').value.trim(),
+                    city: document.getElementById('acct-city').value,
+                    postalCode: document.getElementById('acct-postal').value.trim(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                const newProfiles = [...profiles];
+                if (isAdding) {
+                    newProfiles.push(updated);
+                } else {
+                    newProfiles[editingIndex] = updated;
+                }
+
+                try {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        shippingProfiles: newProfiles,
+                        shippingInfo: newProfiles[0],
+                        lastSelectedProfile: isAdding ? newProfiles.length - 1 : editingIndex
+                    }, { merge: true });
+                    window._dodchShippingProfiles = newProfiles;
+                    window.showToast('Address saved! ✨', 'success');
+                    renderAccountShipping(newProfiles);
+                } catch (err) {
+                    console.error(err);
+                    window.showToast('Failed to save. Please try again.', 'error');
+                    submitBtn.textContent = orig;
+                    submitBtn.disabled = false;
+                }
+            });
+        }
+    };
+
+    // ── Load from Firestore ───────────────────────────────────────────────────
+    try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        let profiles = [];
+        let selectedIndex = 0;
+
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            if (Array.isArray(data.shippingProfiles) && data.shippingProfiles.length > 0) {
+                profiles = data.shippingProfiles;
+                selectedIndex = typeof data.lastSelectedProfile === 'number' ? data.lastSelectedProfile : 0;
+            } else if (data.shippingInfo) {
+                profiles = [{ label: 'Default', ...data.shippingInfo }];
+            }
+            
+            // --- Rewards / Credits System ---
+            const credits = typeof data.credits === 'number' ? data.credits : 0;
+            window._dodchUserCredits = credits;
+            
+            // Update Account UI
+            const accountRewardsBadge = document.getElementById('account-rewards-badge');
+            const accountRewardsBalance = document.getElementById('account-rewards-balance');
+            if (accountRewardsBadge && accountRewardsBalance) {
+                accountRewardsBadge.style.display = 'block';
+                accountRewardsBalance.innerText = `${credits.toFixed(2)} TND`;
+            }
+
+            // Update Checkout UI
+            const checkoutRewardsRow = document.getElementById('checkout-rewards-row');
+            const availableRewardsDisplay = document.getElementById('available-rewards-display');
+            if (checkoutRewardsRow && availableRewardsDisplay && credits > 0) {
+                checkoutRewardsRow.style.display = 'flex';
+                availableRewardsDisplay.innerText = credits.toFixed(2);
+            }
+        }
+
+        window._dodchShippingProfiles = profiles;
+        window._dodchSelectedProfileIndex = selectedIndex;
+        window._dodchCurrentUser = user;
+
+        // Account page actions
+        window.__acctEditProfile = (index) => renderAccountShipping(window._dodchShippingProfiles, index, false);
+        window.__acctStartAdd = () => renderAccountShipping(window._dodchShippingProfiles, null, true);
+        window.__acctDeleteProfile = async (index) => {
+            if (!confirm('Remove this address?')) return;
+            const newProfiles = window._dodchShippingProfiles.filter((_, i) => i !== index);
+            try {
+                await setDoc(doc(db, 'users', user.uid), {
+                    shippingProfiles: newProfiles,
+                    shippingInfo: newProfiles[0] || null
+                }, { merge: true });
+                window._dodchShippingProfiles = newProfiles;
+                window.showToast('Address removed.', 'info');
+                renderAccountShipping(newProfiles);
+            } catch (err) {
+                window.showToast('Failed to delete. Try again.', 'error');
+            }
+        };
+
+        // Checkout page selector
+        window.selectShippingProfile = async (index) => {
+            window._dodchSelectedProfileIndex = index;
+            fillCheckoutForm(window._dodchShippingProfiles[index]);
+            document.querySelectorAll('.shipping-profile-card').forEach((card, i) => {
+                card.classList.toggle('selected', i === index);
+                const checkDiv = card.querySelector('.profile-card-check');
+                if (i === index && !checkDiv) {
+                    card.innerHTML += `<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+                } else if (i !== index && checkDiv) {
+                    checkDiv.remove();
+                }
+            });
+            try { await setDoc(doc(db, 'users', user.uid), { lastSelectedProfile: index }, { merge: true }); } catch(e) {}
+            const wrapper = document.getElementById('new-profile-form-wrapper');
+            if (wrapper && wrapper.style.display !== 'none') window.toggleNewProfileForm?.();
+        };
+
+        // Render both sides
+        renderCheckoutProfilesPanel(profiles, selectedIndex);
+        renderAccountShipping(profiles);
+
+        // Auto-fill checkout form with selected profile
+        if (profiles.length > 0 && profilesPanel) fillCheckoutForm(profiles[selectedIndex] || profiles[0]);
+
+    } catch (err) {
+        console.error('Error loading shipping profiles:', err);
+        if (accountRoot) accountRoot.innerHTML = `<p style="color:#e74c3c;font-size:0.9rem;">Failed to load addresses. Please refresh.</p>`;
+    }
+}
+
+
+
+window.saveShippingFromCheckout = async function (userId) {
+    if (!userId || userId === 'guest') return;
+    const checkbox = document.getElementById('save-shipping-info');
+    if (!checkbox || !checkbox.checked) return;
+
+    try {
+        const labelInput = document.getElementById('new-profile-label');
+        const newProfile = {
+            label: (labelInput && labelInput.value.trim()) || 'Address',
+            email: document.getElementById('checkout-email').value.trim(),
+            fullName: document.getElementById('checkout-name').value.trim(),
+            phone: document.getElementById('checkout-phone').value.trim(),
+            address: document.getElementById('checkout-address').value.trim(),
+            city: document.getElementById('checkout-city').value,
+            postalCode: document.getElementById('checkout-postal-code').value.trim(),
+            savedAt: new Date().toISOString()
+        };
+
+        // Load existing profiles
+        let profiles = window._dodchShippingProfiles ? [...window._dodchShippingProfiles] : [];
+
+        // Check if this phone already exists — update in place instead of duplicating
+        const existingIdx = profiles.findIndex(p => p.phone === newProfile.phone);
+        if (existingIdx >= 0) {
+            profiles[existingIdx] = { ...profiles[existingIdx], ...newProfile };
+        } else {
+            profiles.push(newProfile);
+            // Cap at 5 profiles; remove the oldest (index 0) if over limit
+            if (profiles.length > 5) profiles.shift();
+        }
+
+        const newSelectedIndex = existingIdx >= 0 ? existingIdx : profiles.length - 1;
+
+        await setDoc(doc(db, "users", userId), {
+            shippingProfiles: profiles,
+            shippingInfo: newProfile, // Keep legacy field in sync
+            lastSelectedProfile: newSelectedIndex
+        }, { merge: true });
+
+        window._dodchShippingProfiles = profiles;
+        window._dodchSelectedProfileIndex = newSelectedIndex;
+
+        if (window.showToast) window.showToast("Address saved to your profile! ✨", "success");
+    } catch (err) {
+        console.error("Firestore Save Error:", err);
+        if (window.showToast) window.showToast(`Save Error: ${err.message}`, "error");
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Prefetching removed due to WKWebView (iOS in-app browser) script execution bugs.
+});
+
+// --- GLOBAL MOTION BLUR ENGINE ---
+const MotionBlurEngine = {
+    settings: {
+        maxBlur: 4.5,
+        velocityMult: 0.15,
+        lerpFactor: 0.1,
+    },
+    state: {
+        lastScroll: window.pageYOffset || document.documentElement.scrollTop,
+        currentBlur: 0,
+        ticking: false
+    },
+    update() {
+        const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+        const delta = Math.abs(currentScroll - this.state.lastScroll);
+        const targetBlur = Math.min(delta * this.settings.velocityMult, this.settings.maxBlur);
+        this.state.currentBlur += (targetBlur - this.state.currentBlur) * this.settings.lerpFactor;
+        if (this.state.currentBlur < 0.01 && delta < 1) {
+            this.state.currentBlur = 0;
+            document.documentElement.style.setProperty('--scroll-blur', '0px');
+        } else {
+            document.documentElement.style.setProperty('--scroll-blur', this.state.currentBlur.toFixed(3) + 'px');
+        }
+        this.state.lastScroll = currentScroll;
+        if (this.state.currentBlur > 0.01) {
+            requestAnimationFrame(() => this.update());
+        } else {
+            this.state.ticking = false;
+        }
+    },
+    init() {
+        window.addEventListener('scroll', () => {
+            if (!this.state.ticking) {
+                this.state.ticking = true;
+                requestAnimationFrame(() => this.update());
+            }
+        }, { passive: true });
+    }
+};
+
+// --- DEEP LINK SEARCH INTEGRATION ---
+const urlParams = new URLSearchParams(window.location.search);
+const initialSearch = urlParams.get('search');
+if (initialSearch) {
+    setTimeout(() => {
+        const inp = document.getElementById('navbar-search-input');
+        const toggle = document.getElementById('search-toggle-btn');
+        if (inp && toggle) {
+            if (!document.querySelector('.search-container').classList.contains('active')) {
+                toggle.click();
+            }
+            inp.value = initialSearch;
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }, 2000);
+}
+
+MotionBlurEngine.init();
+window.addEventListener('load', initPushNotifications);
+
+// --- SPRING SCROLL INDICATOR (Index page only) ---
+(() => {
+    const indicator = document.getElementById('scroll-indicator');
+    const productGrid = document.getElementById('product-grid-start');
+    const container = document.querySelector('.hero-carousel-container');
+    if (!indicator || !productGrid || !container) return;
+
+    let springUsed = false;
+    let isScrolling = false;
+
+    const scrollToProducts = (callback) => {
+        if (isScrolling || springUsed) return;
+        isScrolling = true;
+        productGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => {
+            isScrolling = false;
+            if (callback) callback();
+        }, 700);
+    };
+
+    const doSpringDown = () => {
+        scrollToProducts(() => {
+            springUsed = true;
+            indicator.style.opacity = '0.3';
+            indicator.style.pointerEvents = 'none';
+        });
+    };
+
+    indicator.addEventListener('click', doSpringDown);
+
+    let lastScrollY = window.scrollY;
+    const getThreshold = () => container.offsetTop + container.offsetHeight * 0.5;
+
+    window.addEventListener('scroll', () => {
+        if (isScrolling) return;
+        const currentY = window.scrollY;
+        const up = currentY < lastScrollY;
+
+        if (springUsed && currentY > getThreshold() + 100) {
+            indicator.style.opacity = '1';
+            indicator.style.pointerEvents = 'auto';
+        }
+
+        if (springUsed && up && currentY <= getThreshold() && currentY > 0) {
+            springUsed = false;
+            indicator.style.opacity = '1';
+            indicator.style.pointerEvents = 'auto';
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        lastScrollY = currentY;
+    }, { passive: true });
+})();
+
+// --- HERO CAROUSEL CONTROLLER ---
+(() => {
+    const wrapper = document.querySelector('.hero-carousel-wrapper');
+    const dots = document.querySelectorAll('.hero-dot');
+    const hairDuoBg = document.getElementById('hair-duo-bg');
+    const hairDuoHero = document.getElementById('hair-duo-hero');
+    const container = document.querySelector('.hero-carousel-container');
+    const rewardsBgs = document.querySelectorAll('.hero-rewards-bg'); // Get all rewards backgrounds (including cloned)
+    if (!wrapper || dots.length === 0 || !container) return;
+
+    let currentSlide = 0;
+    let slideInterval;
+    let isTransitioning = false;
+    const slideDuration = 6000; // 6 seconds auto-slide
+    
+    // Parallax effect for the first hero slide
+    const handleRewardsParallax = (rect) => {
+        const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
+        const shift = (progress - 0.5) * 80; // Unified shift speed (80) and direction
+        rewardsBgs.forEach(bg => {
+            bg.style.transform = `translateY(${shift}px)`;
+        });
+    };
+
+    const startProgressAnimation = (index) => {
+        // Reset all progress spans
+        dots.forEach(dot => {
+            const p = dot.querySelector('.hero-dot-progress');
+            if (p) {
+                p.style.transition = 'none';
+                p.style.width = '0%';
+            }
+        });
+
+        // Trigger transition on the active slide's dot
+        const dotIndex = index % 2;
+        const activeDot = dots[dotIndex];
+        if (activeDot) {
+            const p = activeDot.querySelector('.hero-dot-progress');
+            if (p) {
+                // Force reflow
+                activeDot.offsetHeight;
+                p.style.transition = `width ${slideDuration}ms linear`;
+                p.style.width = '100%';
+            }
+        }
+    };
+
+    // Dynamic Navbar Contrast based on Slide Background
+    const updateNavbarContrastForSlide = (index) => {
+        const heroContainer = document.querySelector('.hero-carousel-container');
+        if (!heroContainer || heroContainer.classList.contains('collapsed')) return;
+
+        const dotIndex = index % 2;
+        const isDarkSlide = (dotIndex === 1);
+        window._activeHeroSlideIsDark = isDarkSlide;
+        
+        const navbar = document.getElementById('navbar');
+        if (navbar && !navbar.classList.contains('scrolled')) {
+            if (isDarkSlide) {
+                navbar.classList.remove('text-dark');
+            } else {
+                navbar.classList.add('text-dark');
+            }
+        }
+    };
+
+    const updateActiveSlide = (index) => {
+        if (isTransitioning) return;
+        currentSlide = index;
+
+        wrapper.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.25, 1)';
+        wrapper.style.transform = `translateX(-${index * 33.3333}%)`;
+
+        const dotIndex = index % 2;
+        // Update dots active class
+        dots.forEach((dot, idx) => {
+            if (idx === dotIndex) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+
+        // Trigger animations for the hair duo hero slide when active
+        if (hairDuoHero) {
+            if (dotIndex === 1) {
+                hairDuoHero.classList.add('in-view');
+            } else {
+                hairDuoHero.classList.remove('in-view');
+            }
+        }
+
+        // Animate the progress bars
+        startProgressAnimation(index);
+        
+        // Update navbar contrast dynamically
+        updateNavbarContrastForSlide(index);
+
+        // Snap back to Slide 0 instantly after Slide 2 transition completes
+        if (index === 2) {
+            isTransitioning = true;
+            setTimeout(() => {
+                wrapper.style.transition = 'none';
+                wrapper.style.transform = 'translateX(0%)';
+                currentSlide = 0;
+                wrapper.offsetHeight; // Reflow
+                isTransitioning = false;
+                startProgressAnimation(0);
+                updateNavbarContrastForSlide(0);
+            }, 800); // 800ms transition duration
+        }
+    };
+
+    const startAutoSlide = () => {
+        stopAutoSlide();
+        startProgressAnimation(currentSlide);
+        slideInterval = setInterval(() => {
+            if (isTransitioning) return;
+            const nextSlide = currentSlide + 1;
+            updateActiveSlide(nextSlide);
+        }, slideDuration);
+    };
+
+    const stopAutoSlide = () => {
+        if (slideInterval) clearInterval(slideInterval);
+        // Reset progress animation
+        dots.forEach(dot => {
+            const p = dot.querySelector('.hero-dot-progress');
+            if (p) {
+                p.style.transition = 'none';
+                p.style.width = '0%';
+            }
+        });
+    };
+
+    dots.forEach(dot => {
+        dot.addEventListener('click', () => {
+            if (isTransitioning) return;
+            const targetSlide = parseInt(dot.getAttribute('data-slide'));
+            updateActiveSlide(targetSlide);
+            startAutoSlide(); // Reset interval
+        });
+    });
+
+    // Start auto slide on page load
+    startAutoSlide();
+
+    // Pause on hover
+    container.addEventListener('mouseenter', stopAutoSlide);
+    container.addEventListener('mouseleave', startAutoSlide);
+
+    // Pointer-based Gestures (Mouse Drag + Mobile Swiping)
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let isDragging = false;
+
+    container.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        // Don't intercept clicks on buttons or links
+        if (e.target.closest('button') || e.target.closest('a')) return;
+        pointerStartX = e.clientX;
+        pointerStartY = e.clientY;
+        isDragging = true;
+    });
+
+    document.addEventListener('pointerup', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        const pointerEndX = e.clientX;
+        const pointerEndY = e.clientY;
+        const diffX = pointerStartX - pointerEndX;
+        const diffY = pointerStartY - pointerEndY;
+
+        // Verify swipe is primarily horizontal and passes threshold of 50px
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+            if (diffX > 0) {
+                updateActiveSlide(currentSlide + 1);
+                startAutoSlide();
+            } else {
+                let prevSlide = currentSlide - 1;
+                if (prevSlide < 0) {
+                    isTransitioning = true;
+                    wrapper.style.transition = 'none';
+                    wrapper.style.transform = `translateX(-66.6666%)`;
+                    currentSlide = 2;
+                    wrapper.offsetHeight; // Reflow
+                    isTransitioning = false;
+                    
+                    setTimeout(() => {
+                        updateActiveSlide(1);
+                    }, 50);
+                } else {
+                    updateActiveSlide(prevSlide);
+                }
+                startAutoSlide();
+            }
+        }
+    });
+
+    document.addEventListener('pointercancel', () => {
+        isDragging = false;
+    });
+
+    // Touchpad Two-finger horizontal swipe handling
+    let wheelAccumulator = 0;
+    let wheelDebounce = false;
+    container.addEventListener('wheel', (e) => {
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+            e.preventDefault();
+            if (wheelDebounce) return;
+            wheelAccumulator += e.deltaX;
+            if (Math.abs(wheelAccumulator) > 35) {
+                wheelDebounce = true;
+                if (wheelAccumulator > 0) {
+                    updateActiveSlide(currentSlide + 1);
+                } else {
+                    let prevSlide = currentSlide - 1;
+                    if (prevSlide < 0) {
+                        isTransitioning = true;
+                        wrapper.style.transition = 'none';
+                        wrapper.style.transform = `translateX(-66.6666%)`;
+                        currentSlide = 2;
+                        wrapper.offsetHeight;
+                        isTransitioning = false;
+                        setTimeout(() => updateActiveSlide(1), 50);
+                    } else {
+                        updateActiveSlide(prevSlide);
+                    }
+                }
+                startAutoSlide();
+                setTimeout(() => {
+                    wheelDebounce = false;
+                    wheelAccumulator = 0;
+                }, 800);
+            }
+        }
+    }, { passive: false });
+
+    // Scroll Parallax effect on the Hair Duo background image (Slide 2)
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+            const rect = container.getBoundingClientRect();
+            const visible = rect.bottom > 0 && rect.top < window.innerHeight;
+            if (visible) {
+                if (currentSlide % 2 === 1) { // Hair Duo slide
+                    const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
+                    const shift = (progress - 0.5) * 80;
+                    if (hairDuoBg) hairDuoBg.style.transform = `translateY(${shift}px)`;
+                }
+                handleRewardsParallax(rect); // Always apply to the rewards hero
+            }
+            ticking = false;
+        });
+    }, { passive: true });
+})();
+
+// import "./admin-edit.js"; // Conflict resolved: logic centralized in Inventory Dashboard
+
+// Scroll performance optimization
+let scrollTimeout;
+window.addEventListener('scroll', function() {
+    if (!document.body.classList.contains('is-scrolling')) {
+        document.body.classList.add('is-scrolling');
+    }
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(function() {
+        document.body.classList.remove('is-scrolling');
+    }, 150);
+}, { passive: true });
+
+// --- Liquid Glass WebGL Engine Integration ---
+(async () => {
+    try {
+        const rootEl = document.querySelector('#hair-duo-hero');
+        const glassEl = document.querySelector('#hair-duo-hero .liquid-glass-btn');
+        if (!rootEl || !glassEl) return;
+
+        let LiquidGlass;
+        try {
+            const mod = await import('./liquidglass.js');
+            LiquidGlass = mod.LiquidGlass;
+        } catch (e) {
+            const mod = await import('https://cdn.jsdelivr.net/npm/@ybouane/liquidglass/dist/index.js');
+            LiquidGlass = mod.LiquidGlass;
+        }
+
+        if (LiquidGlass && typeof LiquidGlass.init === 'function') {
+            window.liquidGlassInstance = await LiquidGlass.init({
+                root: rootEl,
+                glassElements: [glassEl],
+                defaults: {
+                    button: true,
+                    blurAmount: 0.25,
+                    refraction: 0.69,
+                    cornerRadius: 30,
+                    zRadius: 25,
+                    specular: 0.5,
+                    edgeHighlight: 0.2,
+                    chromAberration: 0.05
+                }
+            });
+            console.log('✨ Liquid Glass WebGL Engine initialized successfully on Shop Hair Care button');
+        }
+    } catch (err) {
+        console.warn('⚠️ Liquid Glass WebGL initialization skipped or failed:', err);
+    }
+})();
+

@@ -1,4 +1,4 @@
-﻿// Universal Image WebP Fallback Fix
+// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -11320,3 +11320,91 @@ window.addEventListener('scroll', function() {
         document.body.classList.remove('is-scrolling');
     }, 150);
 }, { passive: true });
+
+// --- Liquid Glass WebGL Engine Integration ---
+(async () => {
+    try {
+            // --- Rewards Hero (Slide 1) ---
+            const rewardsRootEl = document.querySelector('#hero-rewards-hero') || document.querySelector('.hero-rewards-section');
+            const rewardsGlassEl = document.querySelector('#hero-rewards-hero .liquid-glass-btn') || document.querySelector('#hero-login-google-btn');
+
+            if (rewardsRootEl && rewardsGlassEl) {
+                let LiquidGlass;
+                try {
+                    const mod = await import('./liquidglass.js');
+                    LiquidGlass = mod.LiquidGlass;
+                } catch (e) {
+                    const mod = await import('https://cdn.jsdelivr.net/npm/@ybouane/liquidglass/dist/index.js');
+                    LiquidGlass = mod.LiquidGlass;
+                }
+
+                if (LiquidGlass && typeof LiquidGlass.init === 'function') {
+                    window.liquidGlassRewardsInstance = await LiquidGlass.init({
+                        root: rewardsRootEl,
+                        glassElements: [rewardsGlassEl],
+                        defaults: {
+                            button: true,
+                            blurAmount: 0.11,
+                            refraction: 0.76,
+                            chromAberration: 0.21,
+                            edgeHighlight: 0.05,
+                            specular: 0,
+                            fresnel: 1,
+                            distortion: 0,
+                            cornerRadius: 40,
+                            zRadius: 40,
+                            opacity: 1,
+                            saturation: 0,
+                            brightness: 0,
+                            shadowOpacity: 0.3,
+                            shadowSpread: 10,
+                            bevelMode: 0
+                        }
+                    });
+                    console.log('✨ Liquid Glass initialized on Rewards hero button.');
+                }
+            }
+
+            // --- Hair Duo Hero (Slide 2) ---
+        const rootEl = document.querySelector('#hair-duo-hero');
+        const glassEl = document.querySelector('#hair-duo-hero .liquid-glass-btn');
+        if (!rootEl || !glassEl) return;
+
+        let LiquidGlass;
+        try {
+            const mod = await import('./liquidglass.js');
+            LiquidGlass = mod.LiquidGlass;
+        } catch (e) {
+            const mod = await import('https://cdn.jsdelivr.net/npm/@ybouane/liquidglass/dist/index.js');
+            LiquidGlass = mod.LiquidGlass;
+        }
+
+        if (LiquidGlass && typeof LiquidGlass.init === 'function') {
+            window.liquidGlassInstance = await LiquidGlass.init({
+                root: rootEl,
+                glassElements: [glassEl],
+                defaults: {
+                    button: true,
+                    blurAmount: 0.11,
+                    refraction: 0.76,
+                    chromAberration: 0.21,
+                    edgeHighlight: 0.05,
+                    specular: 0,
+                    fresnel: 1,
+                    distortion: 0,
+                    cornerRadius: 40,
+                    zRadius: 40,
+                    opacity: 1,
+                    saturation: 0,
+                    brightness: 0,
+                    shadowOpacity: 0.3,
+                    shadowSpread: 10,
+                    bevelMode: 0
+                }
+            });
+            console.log('✨ Liquid Glass WebGL Engine initialized successfully on Shop Hair Care button');
+        }
+    } catch (err) {
+        console.warn('⚠️ Liquid Glass WebGL initialization skipped or failed:', err);
+    }
+})();
