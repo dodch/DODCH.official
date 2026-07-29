@@ -1,157 +1,7 @@
-// Universal Image WebP Fallback Fix
-window.addEventListener('error', function (e) {
-    if (e.target && e.target.tagName === 'IMG') {
-        const src = e.target.getAttribute('src') || '';
-        if (src.match(/\.(png|jpg|jpeg)(\?.*)?$/i)) {
-            if (!e.target.dataset.webpRetried) {
-                e.target.dataset.webpRetried = 'true';
-                e.target.src = src.replace(/\.(png|jpg|jpeg)(\?.*)?$/i, '.webp$2');
-            }
-        }
-    }
-}, true);
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
-import { initializeAppCheck, ReCaptchaV3Provider, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, collection, addDoc, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp, updateDoc, limit, orderBy, startAfter, deleteDoc, onSnapshot, deleteField } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
-import { getMessaging, getToken as getMessagingToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
-import { firebaseConfig } from "./firebase-config.js";
-import { WebHaptics } from 'https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/+esm';
-// import "./admin-edit.js"; // Moved to bottom
-
-const haptics = new WebHaptics({ debug: true });
-window.triggerHaptic = (type = 'light') => {
-    if (type === 'quickview') {
-        haptics.trigger([30, 50, 30]);
-    } else {
-        haptics.trigger(type);
-    }
-};
-
-const ADMIN_UID = '4JAqYb2fnEhpqaBv7xWwsFDUXun2';
-// --- SECURITY & VALIDATION ENGINE ---
-const SecurityValidator = {
-    TUNISIA_GOVERNORATES: ["Ariana", "Béja", "Ben Arous", "Bizerte", "Gabès", "Gafsa", "Jendouba", "Kairouan", "Kasserine", "Kebili", "Kef", "Mahdia", "Manouba", "Medenine", "Monastir", "Nabeul", "Sfax", "Sidi Bouzid", "Siliana", "Sousse", "Tataouine", "Tozeur", "Tunis", "Zaghouan"],
-
-    MAX_NAME_LENGTH: 100,
-    MAX_MESSAGE_LENGTH: 3000,
-    validatePhone: (num) => {
-        const cleaned = num.replace(/[^0-9]/g, '');
-        return /^[24579]\d{7}$/.test(cleaned);
-    },
-    PROFANITY_LIST: [
-        "fuck", "shit", "asshole", "bitch", "nigger", "cunt", "dick", "pussy",
-        "putain", "merde", "connard", "salope", "encule", "bite", "chatte",
-        "zbi", "z*bi", "nek", "n**k", "mnyek", "zab", "kahba", "asba", "kr*z", "ms*k"
-    ],
-
-    isProfane: (text) => {
-        if (!text) return false;
-        const normalized = text.toLowerCase();
-        return SecurityValidator.PROFANITY_LIST.some(word =>
-            normalized.includes(word) ||
-            normalized.replace(/[*#@!]/g, '').includes(word)
-        );
-    },
-
-    isGibberish: (text) => {
-        if (!text) return false;
-        if (/(.)\1{5,}/.test(text)) return true;
-        if (text.length > 30 && !text.includes(' ') && !text.includes('\n')) return true;
-        return false;
-    },
-
-    validateEmail: (email) => {
-        return /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email);
-    }
-};
-
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-    console.info("🛡️ App Check: Localhost detected. Enabling Debug Mode...");
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-}
-
-const appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy'),
-    isTokenAutoRefreshEnabled: true
-});
-// Store the AppCheck token promise so we can race it before Firestore calls.
-// The SDK attaches tokens internally, but on first load the token may not be ready
-// in time — causing permission-denied errors from Firestore.
-const appCheckReady = getToken(appCheck)
-    .then(() => {
-        console.log("🛡️ App Check: Token ready.");
-    })
-    .catch((err) => {
-        console.warn("⚠️ App Check: Token exchange failed.", err);
-    });
-
-const auth = getAuth(app);
-// Intelligent Caching: Enable persistent local cache so products load instantly on repeat visits
-let db;
-try {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    const isInAppBrowser = /FBAN|FBAV|Instagram|Snapchat|TikTok|Twitter|Line/i.test(navigator.userAgent);
-
-    if (isInAppBrowser || isIOS || isSafari) {
-        console.info("⚡ Firestore: iOS/Safari/In-App browser detected. Using memory cache to prevent IndexedDB hangs.");
-        db = getFirestore(app);
-    } else {
-        db = initializeFirestore(app, {
-            localCache: persistentLocalCache(),
-            experimentalForceLongPolling: true
-        });
-        console.info("⚡ Firestore: single-tab persistent cache and long polling enabled.");
-    }
-} catch (e) {
-    console.warn("⚠️ Firestore: persistent cache failed, falling back to memory cache:", e);
-    db = getFirestore(app);
-}
-const functions = getFunctions(app, "europe-west1");
-const storage = getStorage(app);
-const provider = new GoogleAuthProvider();
-
-let messaging = null;
-let productCatalog = {};
-const escapeHTML = (str) => {
-    if (!str) return "";
-    return String(str).replace(/[&<>'"]/g,
-        tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag] || tag)
-    );
-};
-
-window.printCheckoutReceipt = (fileName) => {
-    const receiptEl = document.querySelector('.order-receipt-sheet');
-    if (!receiptEl) return;
-
-    // Create a clone to strip UI elements
-    const clone = receiptEl.cloneNode(true);
-    const actions = clone.querySelector('.receipt-actions');
-    if (actions) actions.remove();
-    const receiptHTML = clone.innerHTML;
-
-    const win = window.open('', '_blank', 'width=960,height=800');
-    if (!win) {
-        window.showToast("Please allow popups to save the receipt.", "warning");
-        return;
-    }
-
-    win.document.write(`<!DOCTYPE html><html><head>
+window.addEventListener("error",function(c){if(c.target&&c.target.tagName==="IMG"){const t=c.target.getAttribute("src")||"";t.match(/\.(png|jpg|jpeg)(\?.*)?$/i)&&(c.target.dataset.webpRetried||(c.target.dataset.webpRetried="true",c.target.src=t.replace(/\.(png|jpg|jpeg)(\?.*)?$/i,".webp$2")))}},!0);import{initializeApp as gi}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";import{getAnalytics as hi}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";import{initializeAppCheck as yi,ReCaptchaV3Provider as bi,getToken as vi}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";import{getAuth as So,signInWithPopup as wi,GoogleAuthProvider as xi,signOut as ki,onAuthStateChanged as Yt,signInWithEmailAndPassword as Ei,createUserWithEmailAndPassword as Si}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";import{getFirestore as Xo,initializeFirestore as Li,persistentLocalCache as Ii,collection as Ne,addDoc as Wt,doc as Ae,setDoc as lt,getDoc as mt,query as Ye,where as ot,getDocs as nt,serverTimestamp as kt,updateDoc as at,limit as Ti,orderBy as io,startAfter as Ci,deleteDoc as Lo,onSnapshot as Jt,deleteField as Bi}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";import{getFunctions as $i}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";import{getStorage as Ai}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";import{getMessaging as Io,getToken as Ko,onMessage as zi,isSupported as To}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";import{firebaseConfig as Pi}from"./firebase-config.js";import{WebHaptics as Di}from"https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/+esm";const Qo=new Di({debug:!0});window.triggerHaptic=(c="light")=>{c==="quickview"?Qo.trigger([30,50,30]):Qo.trigger(c)};const Xt="4JAqYb2fnEhpqaBv7xWwsFDUXun2",We={TUNISIA_GOVERNORATES:["Ariana","B\xE9ja","Ben Arous","Bizerte","Gab\xE8s","Gafsa","Jendouba","Kairouan","Kasserine","Kebili","Kef","Mahdia","Manouba","Medenine","Monastir","Nabeul","Sfax","Sidi Bouzid","Siliana","Sousse","Tataouine","Tozeur","Tunis","Zaghouan"],MAX_NAME_LENGTH:100,MAX_MESSAGE_LENGTH:3e3,validatePhone:c=>{const t=c.replace(/[^0-9]/g,"");return/^[24579]\d{7}$/.test(t)},PROFANITY_LIST:["fuck","shit","asshole","bitch","nigger","cunt","dick","pussy","putain","merde","connard","salope","encule","bite","chatte","zbi","z*bi","nek","n**k","mnyek","zab","kahba","asba","kr*z","ms*k"],isProfane:c=>{if(!c)return!1;const t=c.toLowerCase();return We.PROFANITY_LIST.some(n=>t.includes(n)||t.replace(/[*#@!]/g,"").includes(n))},isGibberish:c=>c?!!(/(.)\1{5,}/.test(c)||c.length>30&&!c.includes(" ")&&!c.includes(`
+`)):!1,validateEmail:c=>/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(c)},ct=gi(Pi),Ir=hi(ct);(location.hostname==="localhost"||location.hostname==="127.0.0.1")&&(console.info("\u{1F6E1}\uFE0F App Check: Localhost detected. Enabling Debug Mode..."),self.FIREBASE_APPCHECK_DEBUG_TOKEN=!0);const Fi=yi(ct,{provider:new bi("6LfTGaAsAAAAADCsKCdrr1gmC29C-hUn_ord_gEy"),isTokenAutoRefreshEnabled:!0}),Ot=vi(Fi).then(()=>{console.log("\u{1F6E1}\uFE0F App Check: Token ready.")}).catch(c=>{console.warn("\u26A0\uFE0F App Check: Token exchange failed.",c)}),Qe=So(ct);let se;try{const c=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream,t=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);/FBAN|FBAV|Instagram|Snapchat|TikTok|Twitter|Line/i.test(navigator.userAgent)||c||t?(console.info("\u26A1 Firestore: iOS/Safari/In-App browser detected. Using memory cache to prevent IndexedDB hangs."),se=Xo(ct)):(se=Li(ct,{localCache:Ii(),experimentalForceLongPolling:!0}),console.info("\u26A1 Firestore: single-tab persistent cache and long polling enabled."))}catch(c){console.warn("\u26A0\uFE0F Firestore: persistent cache failed, falling back to memory cache:",c),se=Xo(ct)}const Tr=$i(ct,"europe-west1"),Cr=Ai(ct),qi=new xi;let Et=null,x={};const je=c=>c?String(c).replace(/[&<>'"]/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[t]||t):"";window.printCheckoutReceipt=c=>{const t=document.querySelector(".order-receipt-sheet");if(!t)return;const n=t.cloneNode(!0),p=n.querySelector(".receipt-actions");p&&p.remove();const a=n.innerHTML,l=window.open("","_blank","width=960,height=800");if(!l){window.showToast("Please allow popups to save the receipt.","warning");return}l.document.write(`<!DOCTYPE html><html><head>
         <meta charset='UTF-8'>
-        <title>${fileName}</title>
+        <title>${c}</title>
         <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700&display=swap' rel='stylesheet'>
         <style>
             :root { --gold: #D4AF37; --gold-text: #866F00; --charcoal: #1a1a1a; }
@@ -182,50 +32,8 @@ window.printCheckoutReceipt = (fileName) => {
         </style>
         </head><body>
         <div class='receipt-brand'>DODCH</div>
-        ${receiptHTML}
-        </body></html>`);
-    win.document.close();
-    win.document.title = fileName;
-    win.focus();
-    setTimeout(() => { win.print(); }, 800);
-};
-
-const getProductImages = (product) => {
-    if (!product) return [];
-    let images = [];
-    if (Array.isArray(product.images) && product.images.length > 0) {
-        images = [...product.images];
-    } else if (product.image) {
-        images = [product.image];
-    } else {
-        return [];
-    }
-    return images.map(img => {
-        if (img && typeof img === 'string' && !img.startsWith('http') && !img.startsWith('data:')) {
-            return window.location.origin + '/' + img.replace(/^\/+/, '');
-        }
-        return img;
-    });
-};
-
-const getProductPrimaryImage = (product) => {
-    const images = getProductImages(product);
-    return images.length > 0 ? images[0] : '';
-};
-
-const fileToDataUrl = (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-    });
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject cart layout fixes so they apply even when pages load the minified CSS
-    try {
-        const cartFixCss = `
+        ${a}
+        </body></html>`),l.document.close(),l.document.title=c,l.focus(),setTimeout(()=>{l.print()},800)};const Co=c=>{if(!c)return[];let t=[];if(Array.isArray(c.images)&&c.images.length>0)t=[...c.images];else if(c.image)t=[c.image];else return[];return t.map(n=>n&&typeof n=="string"&&!n.startsWith("http")&&!n.startsWith("data:")?window.location.origin+"/"+n.replace(/^\/+/,""):n)},St=c=>{const t=Co(c);return t.length>0?t[0]:""},Br=c=>new Promise((t,n)=>{const p=new FileReader;p.onload=()=>t(p.result),p.onerror=()=>n(new Error("Failed to read file")),p.readAsDataURL(c)});document.addEventListener("DOMContentLoaded",()=>{try{const d=`
             /* Cart fixes injected at runtime */
             #cart-drawer .cart-footer .checkout-btn { border-radius: 9999px; padding: 1.25rem 1.75rem; display: inline-flex; align-items: center; justify-content: center; min-width: 160px; background-color: var(--text-charcoal); color: #fff; font-weight:700; box-shadow: 0 12px 30px rgba(0,0,0,0.15); transition: transform 0.18s ease, box-shadow 0.18s ease; }
             @media (max-width: 480px) { #cart-drawer .cart-footer .checkout-btn { min-width: 120px; padding: 0.9rem 1.2rem; } }
@@ -287,960 +95,35 @@ document.addEventListener('DOMContentLoaded', () => {
             .batch-tooltip-content { display: none; position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); background: #1a1a1a; color: #fff; font-size: 0.75rem; padding: 8px 12px; border-radius: 8px; width: 220px; line-height: 1.4; z-index: 100; pointer-events: none; }
             .batch-tooltip-icon:hover .batch-tooltip-content,
             .batch-tooltip-icon:focus .batch-tooltip-content { display: block; }
-        `;
-        const s = document.createElement('style');
-        s.id = 'cart-fixes-style';
-        s.appendChild(document.createTextNode(cartFixCss));
-        document.head.appendChild(s);
-    } catch (err) { console.warn('Failed to inject cart fixes CSS', err); }
-    // FIX: Reveal the body now that CSS is guaranteed to be applied (prevents FOUC).
-    document.body.classList.add('page-ready');
-    const initialHash = window.location.hash;
-
-    window.showToast = (message, type = 'info', duration = 4000) => {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            document.body.appendChild(container);
-        }
-
-        const toast = document.createElement('div');
-        toast.className = `custom-toast ${type}`;
-        toast.innerHTML = `
+        `,i=document.createElement("style");i.id="cart-fixes-style",i.appendChild(document.createTextNode(d)),document.head.appendChild(i)}catch(d){console.warn("Failed to inject cart fixes CSS",d)}document.body.classList.add("page-ready");const c=window.location.hash;window.showToast=(d,i="info",e=4e3)=>{let o=document.getElementById("toast-container");o||(o=document.createElement("div"),o.id="toast-container",document.body.appendChild(o));const s=document.createElement("div");s.className=`custom-toast ${i}`,s.innerHTML=`
             <div class="toast-content">
-                <span class="toast-message">${message}</span>
+                <span class="toast-message">${d}</span>
             </div>
             <div class="toast-progress"></div>
-        `;
-
-        const existingToasts = [...container.querySelectorAll('.custom-toast')];
-        const firstRects = existingToasts.map(t => t.getBoundingClientRect());
-
-        container.insertBefore(toast, container.firstChild);
-
-        existingToasts.forEach((t, i) => {
-            const lastRect = t.getBoundingClientRect();
-            const dy = firstRects[i].top - lastRect.top;
-            if (dy !== 0) {
-                t.style.transition = 'none';
-                t.style.transform = `translateX(0) translateY(${dy}px)`;
-            }
-        });
-
-        requestAnimationFrame(() => {
-            existingToasts.forEach(t => {
-                t.style.transition = '';
-                t.style.transform = 'translateX(0) translateY(0)';
-            });
-            setTimeout(() => toast.classList.add('active'), 10);
-        });
-
-        const removeToast = (t) => {
-            if (!t.parentNode) return;
-            const container = document.getElementById('toast-container');
-            const others = [...container.querySelectorAll('.custom-toast')].filter(x => x !== t);
-            const beforeRects = others.map(x => x.getBoundingClientRect());
-
-            t.classList.remove('active');
-            setTimeout(() => {
-                if (t.parentNode) t.remove();
-                const afterRects = others.map(x => x.getBoundingClientRect());
-                others.forEach((x, i) => {
-                    const dy = beforeRects[i].top - afterRects[i].top;
-                    if (dy !== 0) {
-                        x.style.transition = 'none';
-                        x.style.transform = `translateX(0) translateY(${dy}px)`;
-                        requestAnimationFrame(() => {
-                            x.style.transition = '';
-                            x.style.transform = 'translateX(0) translateY(0)';
-                        });
-                    }
-                });
-            }, 550);
-        };
-
-        setTimeout(() => removeToast(toast), duration);
-    };
-
-    window.showConfirm = (message, title = "Confirm Action") => {
-        return new Promise((resolve) => {
-            document.body.style.overflow = 'hidden'; // Lock scroll
-            const overlay = document.createElement('div');
-            overlay.className = 'confirm-overlay';
-            window.triggerHaptic('medium');
-            overlay.innerHTML = `
+        `;const r=[...o.querySelectorAll(".custom-toast")],R=r.map(b=>b.getBoundingClientRect());o.insertBefore(s,o.firstChild),r.forEach((b,y)=>{const S=b.getBoundingClientRect(),L=R[y].top-S.top;L!==0&&(b.style.transition="none",b.style.transform=`translateX(0) translateY(${L}px)`)}),requestAnimationFrame(()=>{r.forEach(b=>{b.style.transition="",b.style.transform="translateX(0) translateY(0)"}),setTimeout(()=>s.classList.add("active"),10)});const v=b=>{if(!b.parentNode)return;const S=[...document.getElementById("toast-container").querySelectorAll(".custom-toast")].filter(z=>z!==b),L=S.map(z=>z.getBoundingClientRect());b.classList.remove("active"),setTimeout(()=>{b.parentNode&&b.remove();const z=S.map(j=>j.getBoundingClientRect());S.forEach((j,Z)=>{const q=L[Z].top-z[Z].top;q!==0&&(j.style.transition="none",j.style.transform=`translateX(0) translateY(${q}px)`,requestAnimationFrame(()=>{j.style.transition="",j.style.transform="translateX(0) translateY(0)"}))})},550)};setTimeout(()=>v(s),e)},window.showConfirm=(d,i="Confirm Action")=>new Promise(e=>{document.body.style.overflow="hidden";const o=document.createElement("div");o.className="confirm-overlay",window.triggerHaptic("medium"),o.innerHTML=`
                 <div class="confirm-box">
-                    <h3 class="confirm-title">${title}</h3>
-                    <p class="confirm-message">${message}</p>
+                    <h3 class="confirm-title">${i}</h3>
+                    <p class="confirm-message">${d}</p>
                     <div class="confirm-actions">
                         <button class="confirm-btn cancel">Cancel</button>
                         <button class="confirm-btn confirm">Confirm</button>
                     </div>
                 </div>
-            `;
-            document.body.appendChild(overlay);
-            setTimeout(() => overlay.classList.add('active'), 10);
-
-            const close = (result) => {
-                overlay.classList.remove('active');
-                setTimeout(() => overlay.remove(), 300);
-                if (!document.querySelector('#cart-drawer.active, #desktop-sidebar.active, #qv-modal.active, #contact-popup.active')) {
-                    document.body.style.overflow = '';
-                }
-                resolve(result);
-            };
-
-            overlay.querySelector('.confirm-btn.confirm').addEventListener('click', () => close(true));
-            overlay.querySelector('.confirm-btn.cancel').addEventListener('click', () => close(false));
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) close(false);
-            });
-        });
-    };
-    if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual';
-    }
-    document.documentElement.style.scrollBehavior = 'auto';
-    window.scrollTo(0, 0);
-    if (window.location.hash) {
-        history.replaceState(null, null, window.location.pathname);
-    }
-    setTimeout(() => {
-        document.documentElement.style.scrollBehavior = 'smooth';
-    }, 50);
-    const navbar = document.getElementById('navbar');
-    const hero = document.getElementById('hero') || document.querySelector('.foam-hero') || document.getElementById('hero-silk') || document.querySelector('.pro-v-hero');
-    const heroOverlay = document.querySelector('.hero-overlay');
-    const heroBgParallax = document.querySelector('.hero-bg-parallax');
-    const experienceImageContainers = document.querySelectorAll('.experience-image');
-    const parallaxEls = document.querySelectorAll('.parallax-el');
-    const promiseIcons = document.querySelectorAll('.promise-icon');
-    const progressBar = document.getElementById('scroll-progress');
-    const stickyCTA = document.getElementById('sticky-cta');
-    const footer = document.querySelector('footer');
-    const staticCTA = document.querySelector('#purchase .add-to-cart-btn') ||
-        document.querySelector('#purchase-cta .buy-now-btn') ||
-        document.querySelector('.product-info .add-to-cart-btn');
-
-    // Cache hero dark/light state — detect once, update on resize
-    const detectAndCacheHeroDark = () => {
-        const detect = () => {
-            if (document.querySelector('.hero-carousel-container')) {
-                return !!window._activeHeroSlideIsDark;
-            }
-            // Product/Story pages have dark heroes by design
-            const isProductPage = document.body.classList.contains('pro-v-page') || 
-                                  document.body.classList.contains('silk-mask-page') || 
-                                  document.body.classList.contains('serum-page');
-            if (isProductPage) {
-                return true;
-            }
-            const navH = navbar.offsetHeight;
-            const el = document.elementFromPoint(window.innerWidth / 2, navH + 30);
-            if (!el) return false;
-            let node = el;
-            while (node && node !== document.body) {
-                const style = window.getComputedStyle(node);
-                const bg = style.backgroundColor;
-                if (style.backgroundImage && style.backgroundImage !== 'none') {
-                    // Has background image — check for dark overlay child
-                    const darkOverlay = [...(node.querySelectorAll('*'))].find(c => {
-                        const cs = window.getComputedStyle(c);
-                        const rgb = cs.backgroundColor.match(/\d+/g);
-                        return rgb && parseFloat(rgb[3] || 1) > 0.2 &&
-                            (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 80;
-                    });
-                    return !!darkOverlay;
-                }
-                const rgb = bg.match(/\d+/g);
-                if (rgb && !bg.includes('rgba(0, 0, 0, 0)')) {
-                    const a = rgb[3] !== undefined ? parseFloat(rgb[3]) : 1;
-                    if (a > 0.1) {
-                        return (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 140;
-                    }
-                }
-                node = node.parentElement;
-            }
-            return false;
-        };
-        window._pageHeroDark = detect();
-        if (typeof updateNavbar === 'function') {
-            updateNavbar();
-        }
-    };
-    // Detect on load and resize
-    window.addEventListener('load', detectAndCacheHeroDark);
-    window.addEventListener('resize', detectAndCacheHeroDark);
-    setTimeout(detectAndCacheHeroDark, 200);
-
-    const updateNavbar = () => {
-        const scrollY = window.scrollY;
-        const isSerumPage = document.body.classList.contains('serum-page');
-        const serumHero = document.querySelector('.scrollytelling-container');
-        const heroCarousel = document.querySelector('.hero-carousel-container');
-        const hairDuoHero = document.querySelector('.hair-duo-hero');
-        const pageHero = document.getElementById('hero') || document.querySelector('.foam-hero') || document.getElementById('hero-silk') || document.querySelector('.pro-v-hero');
-        
-        // A hero is active if it exists and is not collapsed/hidden
-        const isHeroCarouselActive = heroCarousel && !heroCarousel.classList.contains('collapsed');
-        const isSerumHeroActive = serumHero && !serumHero.classList.contains('collapsed');
-        const isPageHeroActive = pageHero && !pageHero.classList.contains('collapsed');
-
-        // Check if there's an active (visible) hero section at the top
-        const hasHeroAtTop = isHeroCarouselActive || isSerumHeroActive || isPageHeroActive;
-
-        if (isSerumPage && isSerumHeroActive) {
-            const threshold = serumHero.offsetHeight - 80;
-            if (scrollY > threshold) {
-                navbar.classList.add('scrolled');
-                navbar.classList.add('text-dark');
-            } else {
-                navbar.classList.remove('scrolled');
-                navbar.classList.remove('text-dark');
-            }
-        } else if (!hasHeroAtTop) {
-            // Normal page without a hero (e.g., Shop) - always dark text
-            if (scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-            navbar.classList.add('text-dark');
-        } else if (scrollY > 50) {
-            // Scrolled past hero
-            navbar.classList.add('scrolled');
-            navbar.classList.add('text-dark');
-        } else {
-            // At the top of a hero page
-            navbar.classList.remove('scrolled');
-            // For carousel, always use slide-based state
-            if (isHeroCarouselActive) {
-                window._activeHeroSlideIsDark ? navbar.classList.remove('text-dark') : navbar.classList.add('text-dark');
-            } else {
-                window._pageHeroDark ? navbar.classList.remove('text-dark') : navbar.classList.add('text-dark');
-            }
-        }
-    };
-    const revealObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('active');
-                observer.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
-
-    let mainScrollTicking = false;
-    window.addEventListener('scroll', () => {
-        if (!mainScrollTicking) {
-            window.requestAnimationFrame(() => {
-                const scrollY = window.scrollY;
-
-                updateNavbar();
-                if (hero && heroOverlay) {
-                    const heroHeight = hero.offsetHeight;
-                    let ratio = scrollY / (heroHeight * 0.8);
-                    if (ratio > 1) ratio = 1;
-
-                    heroOverlay.style.opacity = ratio;
-                    heroOverlay.style.backdropFilter = `blur(${ratio * 10}px)`;
-                    heroOverlay.style.webkitBackdropFilter = `blur(${ratio * 10}px)`; // Safari support
-                }
-                if (stickyCTA && hero) {
-                    const footerRect = footer ? footer.getBoundingClientRect() : null;
-                    const isFooterVisible = footerRect ? footerRect.top < window.innerHeight : false;
-
-                    let isStaticBtnVisible = false;
-                    if (staticCTA) {
-                        const btnRect = staticCTA.getBoundingClientRect();
-                        isStaticBtnVisible = btnRect.top < window.innerHeight && btnRect.bottom > 0;
-                    }
-
-                    if (scrollY > hero.offsetHeight && !isFooterVisible && !isStaticBtnVisible) {
-                        stickyCTA.classList.add('visible');
-                    } else {
-                        stickyCTA.classList.remove('visible');
-                    }
-                }
-                if (hero && heroBgParallax && scrollY < hero.offsetHeight) {
-                    heroBgParallax.style.transform = `translateY(${scrollY * 0.1}px)`;
-                }
-                if (experienceImageContainers.length > 0) {
-                    experienceImageContainers.forEach(container => {
-                        const rect = container.getBoundingClientRect();
-                        const windowHeight = window.innerHeight;
-                        if (rect.top < windowHeight && rect.bottom > 0) {
-                            const elementCenter = rect.top + rect.height / 2;
-                            const difference = (windowHeight / 2) - elementCenter;
-                            const parallaxFactor = 0.1;
-                            container.style.transform = `translateY(${difference * parallaxFactor}px)`;
-                        }
-                    });
-                }
-                if (parallaxEls.length > 0) {
-                    parallaxEls.forEach(el => {
-                        const rect = el.getBoundingClientRect();
-                        const windowHeight = window.innerHeight;
-                        if (rect.top < windowHeight && rect.bottom > 0) {
-                            const speed = parseFloat(el.getAttribute('data-speed')) || 0.05;
-                            const elementCenter = rect.top + rect.height / 2;
-                            const difference = (windowHeight / 2) - elementCenter;
-                            el.style.transform = `translateY(${difference * speed}px)`;
-                        }
-                    });
-                }
-                if (promiseIcons.length > 0) {
-                    promiseIcons.forEach(icon => {
-                        const rect = icon.getBoundingClientRect();
-                        const windowHeight = window.innerHeight;
-                        if (rect.top < windowHeight && rect.bottom > 0) {
-                            const elementCenter = rect.top + rect.height / 2;
-                            const difference = (windowHeight / 2) - elementCenter;
-                            const parallaxFactor = -0.08;
-                            icon.style.transform = `translateY(${difference * parallaxFactor}px)`;
-                        }
-                    });
-                }
-                if (progressBar) {
-                    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-                    const scrollPercent = (scrollY / docHeight) * 100;
-                    progressBar.style.width = `${scrollPercent}%`;
-                }
-                runCounterAnimation();
-
-                mainScrollTicking = false;
-            });
-            mainScrollTicking = true;
-        }
-    }, { passive: true });
-    updateNavbar();
-    // Delay reveal animations until after the page loader overlay fades out (500ms)
-    setTimeout(() => {
-        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-        const heroCarousel = document.querySelector('.hero-carousel-container');
-        if (heroCarousel) {
-            heroCarousel.classList.add('active'); // trigger hero specific intro animations
-        }
-    }, 500);
-    const hamburger = document.querySelector('.hamburger');
-    const sidebar = document.getElementById('desktop-sidebar');
-    if (sidebar) {
-        document.body.classList.add('has-sidebar');
- 
-        // Staggered load-in animations for desktop
-        if (window.matchMedia("(min-width: 768px)").matches) {
-            const heroContent = document.querySelector('#hero .hero-content');
-            const heroBg = document.querySelector('#hero .hero-bg');
-            const navLogo = document.querySelector('.logo');
-            const navItems = document.querySelectorAll('.nav-links li:last-child > *, .nav-search-item');
- 
-            // 1. Sidebar animates in
-            sidebar.classList.add('sidebar-load-in');
- 
-            // 2. Hero background reveals with a slow fade and scale
-            if (heroBg) {
-                heroBg.classList.add('hero-bg-fade-in');
-            }
- 
-            // 3. Hero text elements animate in after a delay
-            if (heroContent) {
-                heroContent.classList.add('hero-content-load-in');
-                heroContent.querySelectorAll('h1, .sub-headline, .cta-button').forEach((el, index) => {
-                    el.style.animationDelay = `${1.4 + index * 0.25}s`;
-                });
-            }
- 
-            // 4. Navbar logo zooms in
-            if (navLogo) {
-                navLogo.classList.add('nav-logo-load-in');
-            }
- 
-            // 5. Staggered navbar items drop in
-            if (navItems.length > 0) {
-                navItems.forEach((item, index) => {
-                    item.classList.add('nav-item-load-in');
-                    item.style.animationDelay = `${0.8 + index * 0.2}s`;
-                });
-            }
-
-            // 6. Staggered sidebar items animation
-            const sidebarItems = sidebar.querySelectorAll('.sidebar-menu > *, .sidebar-bottom > *');
-            sidebarItems.forEach((item, index) => {
-                item.classList.add('sidebar-item-load-in');
-                // Start this animation slightly after the sidebar itself slides in
-                item.style.animationDelay = `${0.5 + index * 0.1}s`;
-            });
-        }
-    }
-
-    const sidebarOverlay = document.querySelector('.sidebar-overlay');
-    const sidebarCloseBtn = document.querySelector('.sidebar-close-btn');
-
-    const closeSidebar = () => {
-        document.body.style.overflow = ''; // Restore scroll
-        if (sidebar) sidebar.classList.remove('active');
-        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-        if (hamburger) hamburger.classList.remove('active');
-        if (navbar) navbar.classList.remove('menu-open');
-    };
-
-    const openSidebar = () => {
-        document.body.style.overflow = 'hidden'; // Lock scroll
-        if (sidebar) sidebar.classList.add('active');
-        if (sidebarOverlay) sidebarOverlay.classList.add('active');
-        if (hamburger) hamburger.classList.add('active');
-        if (navbar) navbar.classList.add('menu-open');
-        setTimeout(() => {
-            const activeLink = sidebar.querySelector('.sidebar-menu a.active');
-            if (activeLink) {
-                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }, 300);
-    };
-
-    if (hamburger && sidebar) {
-        hamburger.addEventListener('click', () => {
-            window.triggerHaptic('light');
-            if (sidebar.classList.contains('active')) {
-                closeSidebar();
-            } else {
-                openSidebar();
-            }
-        });
-
-        if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
-        if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
-        const links = sidebar.querySelectorAll('a');
-        links.forEach(link => link.addEventListener('click', closeSidebar));
-
-        // Ensure logo click also resets state and closes sidebar
-        const logo = document.querySelector('.logo');
-        if (logo) {
-            logo.addEventListener('click', (e) => {
-                const isHomePage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '';
-                if (isHomePage) {
-                    e.preventDefault();
-                    window.history.pushState({}, '', 'index.html');
-                    if (typeof initShopPage === 'function') initShopPage(true);
-                    if (typeof updateSidebarActiveState === 'function') updateSidebarActiveState();
-                    // Recompute breadcrumbs after SPA-style navigation
-                    if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
-                    closeSidebar();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
-        }
-    }
-    const sliderContainer = document.querySelector('.testimonial-slider-container');
-    if (sliderContainer) {
-        const sliderWrapper = document.querySelector('.testimonial-slider-wrapper');
-        const slides = document.querySelectorAll('.testimonial-slide');
-        const prevButton = document.querySelector('.slider-nav.prev');
-        const nextButton = document.querySelector('.slider-nav.next');
-        const paginationContainer = document.querySelector('.slider-pagination');
-
-        let currentIndex = 0;
-        const totalSlides = slides.length;
-        let autoPlayInterval; // To hold the interval ID
-        let isHovering = false; // Track hover state
-        let paginationDots = [];
-
-        function createPaginationDots() {
-            if (!paginationContainer) return;
-            for (let i = 0; i < totalSlides; i++) {
-                const dot = document.createElement('div');
-                dot.classList.add('pagination-dot');
-                dot.addEventListener('click', () => {
-                    currentIndex = i;
-                    updateSliderPosition();
-                    startAutoPlay();
-                });
-                paginationContainer.appendChild(dot);
-                paginationDots.push(dot);
-            }
-        }
-
-        function updatePagination() {
-            paginationDots.forEach((dot, index) => {
-                dot.classList.remove('active');
-            });
-
-            const activeDot = paginationDots[currentIndex];
-            if (activeDot) {
-                void activeDot.offsetWidth;
-                activeDot.classList.add('active');
-            }
-        }
-
-        function updateSliderPosition() {
-            sliderWrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
-            slides.forEach((slide, index) => {
-                slide.classList.toggle('active', index === currentIndex);
-            });
-            if (paginationContainer) updatePagination();
-        }
-
-        function goToNextSlide() {
-            currentIndex = (currentIndex + 1) % totalSlides;
-            updateSliderPosition();
-        }
-
-        function goToPrevSlide() {
-            currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
-            updateSliderPosition();
-        }
-
-        function startAutoPlay() {
-            clearInterval(autoPlayInterval);
-            if (!isHovering) {
-                autoPlayInterval = setInterval(goToNextSlide, 5000); // 5 seconds
-            }
-        }
-
-        nextButton.addEventListener('click', () => {
-            goToNextSlide();
-            startAutoPlay();
-        });
-
-        prevButton.addEventListener('click', () => {
-            goToPrevSlide();
-            startAutoPlay();
-        });
-        sliderContainer.addEventListener('mouseenter', () => {
-            isHovering = true;
-            clearInterval(autoPlayInterval);
-        });
-        sliderContainer.addEventListener('mouseleave', () => {
-            isHovering = false;
-            startAutoPlay();
-        });
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchEndX = 0;
-        const swipeThreshold = 50; // Min distance for a swipe
-        let isSwipeGesture = false; // Flag to track if the current touch is a swipe
-
-        sliderContainer.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-            isSwipeGesture = false; // Reset for each new touch
-        }, { passive: true });
-
-        sliderContainer.addEventListener('touchmove', e => {
-            if (isSwipeGesture) return; // Already determined to be a swipe
-
-            const touchCurrentX = e.changedTouches[0].screenX;
-            const touchCurrentY = e.changedTouches[0].screenY;
-            const deltaX = Math.abs(touchCurrentX - touchStartX);
-            const deltaY = Math.abs(touchCurrentY - touchStartY);
-            if (deltaX > deltaY && deltaX > 10) {
-                isSwipeGesture = true;
-                clearInterval(autoPlayInterval); // It's a swipe, so pause autoplay
-            }
-        }, { passive: true });
-
-        sliderContainer.addEventListener('touchend', e => {
-            if (!isSwipeGesture) {
-                return;
-            }
-
-            touchEndX = e.changedTouches[0].screenX;
-            const swipeDistance = touchEndX - touchStartX;
-
-            if (Math.abs(swipeDistance) > swipeThreshold) {
-                if (swipeDistance > 0) { goToPrevSlide(); } else { goToNextSlide(); }
-            }
-            isHovering = false;
-            startAutoPlay(); // Restart autoplay after swipe gesture ends
-        });
-        createPaginationDots();
-        updateSliderPosition(); // To set initial slide and active dot
-        startAutoPlay();
-    }
-    const isTouchDevice = () => ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
-    if (isTouchDevice()) {
-        const tappableElements = document.querySelectorAll('.action-card, .promise-item, .pillar-card, .inci-list span');
-
-        tappableElements.forEach(el => {
-            el.addEventListener('click', function (e) {
-                if (el.matches('.inci-list span')) {
-                    e.preventDefault();
-                }
-
-                const isAlreadyActive = this.classList.contains('mobile-hover');
-                tappableElements.forEach(otherEl => {
-                    if (otherEl !== this) {
-                        otherEl.classList.remove('mobile-hover');
-                    }
-                });
-                this.classList.toggle('mobile-hover');
-                e.stopPropagation();
-            });
-        });
-        document.addEventListener('click', function (e) {
-            tappableElements.forEach(el => {
-                el.classList.remove('mobile-hover');
-            });
-        });
-    }
-    const counters = document.querySelectorAll('.counter');
-
-    const runCounterAnimation = () => {
-        counters.forEach(counter => {
-            const rect = counter.getBoundingClientRect();
-            const windowHeight = window.innerHeight;
-            if (rect.top < windowHeight - 50 && rect.bottom > 0) {
-                if (counter.classList.contains('counted')) return;
-
-                counter.classList.add('counted');
-
-                const target = +counter.getAttribute('data-target');
-                const duration = 3500; // 3.5 seconds for a gentler effect
-                const startTime = performance.now();
-
-                const step = (currentTime) => {
-                    const elapsed = currentTime - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-
-                    const current = Math.floor(ease * target);
-                    counter.innerText = current.toLocaleString('en-US');
-
-                    if (progress < 1) {
-                        requestAnimationFrame(step);
-                    } else {
-                        counter.innerText = target.toLocaleString('en-US');
-                        counter.classList.add('shine');
-                    }
-                };
-
-                requestAnimationFrame(step);
-            }
-        });
-    };
-
-    runCounterAnimation(); // Initial check on load
-    let docTitle = document.title;
-    window.addEventListener('blur', () => {
-        document.title = "Come back to radiance... ✨";
-    });
-    window.addEventListener('focus', () => {
-        document.title = docTitle;
-    });
-    const heroCTA = document.querySelector('#hero .cta-button');
-    const heroSection = document.getElementById('hero');
-
-    if (heroCTA && heroSection && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
-        const magnetism = 0.4; // How strong the pull is (0 to 1)
-        const distanceThreshold = 120; // Radius in pixels to activate effect
-
-        heroSection.addEventListener('mousemove', (e) => {
-            const rect = heroCTA.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-
-            const deltaX = e.clientX - centerX;
-            const deltaY = e.clientY - centerY;
-
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-            if (distance < distanceThreshold) {
-                const moveX = deltaX * magnetism;
-                const moveY = deltaY * magnetism;
-                heroCTA.style.transform = `translate(${moveX}px, ${moveY}px)`;
-            } else {
-                heroCTA.style.transform = 'translate(0, 0)';
-            }
-        });
-
-        heroSection.addEventListener('mouseleave', () => {
-            heroCTA.style.transform = 'translate(0, 0)';
-        });
-    }
-    if (heroCTA) {
-        heroCTA.addEventListener('click', () => {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(600, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
-
-            gainNode.gain.setValueAtTime(0.04, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-
-            osc.start();
-            osc.stop(ctx.currentTime + 0.1);
-            setTimeout(() => {
-                ctx.close();
-            }, 200);
-        });
-    }
-
-    // --- LOCAL INVENTORY ORDER ---
-    // Change the order of this array to reorder products in the shop grid
-    const LOCAL_INVENTORY = [
-        'dodchmellow-pro-v',
-        'silk-therapy-mask',
-        'foaming-cleanser',
-        'advanced-ha-serum',
-        'retinol-night-cream',
-        'sooth-repair'
-    ];
-
-    // --- PRODUCT CATALOG (Single Source of Truth) ---
-    const defaultProductCatalog = {
-        'glass-glow-shampoo': {
-            name: "Glass Glow Shampoo",
-            category: "hair-care",
-            subCategory: "shampoo",
-            subtitle: "The Elixir of 10,000 Seeds",
-            price: null,
-            image: "IMG_3357.webp",
-            description: "THIS PRODUCT IS NO LONGER AVAILABLE. Experience the legacy of our original Glass Glow formula. While this specific treatment has been retired from our permanent collection, its spirit lives on in our newer innovations.",
-            style: "",
-            storyUrl: "glass-glow-shampoo.html",
-            orderIndex: 0,
-            outOfStock: true,
-            isPermanentlyUnavailable: true,
-            sizes: []
-        },
-        'dodchmellow-pro-v': {
-            name: "DODCHmellow",
-            category: "hair-care",
-            subCategory: "shampoo",
-            subtitle: "The Marshmallow Cloud Shampoo",
-            price: null,
-            image: "IMG_4184.webp",
-            images: ["IMG_4184.webp"],
-            description: "Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5 | Panthenol B5 | Glycerin Complex. Fragrance: Néroli-Sucre.",
-            style: "",
-            storyUrl: "dodchmellow-pro-v.html",
-            orderIndex: 1,
-            sizes: []
-        },
-        'foaming-cleanser': {
-            name: "DODCH Foaming Cleanser",
-            category: "skin-care",
-            subCategory: "cleansers",
-            subtitle: "Luminous Purity",
-            price: null,
-            image: "IMG_4241.webp",
-            description: "A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",
-            style: "filter: brightness(1.05);",
-            storyUrl: "face-foam.html",
-            orderIndex: 3,
-            sizes: []
-        },
-        'silk-therapy-mask': {
-            name: "DODCH Pro-V Silk Therapy Mask",
-            category: "hair-care",
-            subCategory: ["masks", "conditioners", "leave-in"],
-            subtitle: "Deep Repair & Glass Shine",
-            price: null,
-            image: "IMG_4188 (2).webp",
-            description: "Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",
-            style: "",
-            storyUrl: "silk-mask.html",
-            orderIndex: 2,
-            sizes: []
-        },
-        'advanced-ha-serum': {
-            name: "Advanced HA Serum",
-            category: "skin-care",
-            subCategory: "serums",
-            subtitle: "Radiance & Deep Hydration",
-            price: null,
-            image: "IMG_3407.webp",
-            description: "A concentrated Hyaluronic Acid serum that penetrates deep layers for instant plumping and long-lasting hydration.",
-            style: "",
-            storyUrl: "face-serum.html",
-            orderIndex: 4,
-            sizes: []
-        },
-        'retinol-night-cream': {
-            name: "0.5 Retinol Night Cream",
-            category: "skin-care",
-            subCategory: "creams",
-            subtitle: "Youth Renewing Overnight Treatment",
-            price: null,
-            image: "IMG_3783.webp",
-            description: "A powerful overnight cream formulated with 0.5% active retinol to visibly reduce fine lines, refine skin texture, and promote a radiant, youthful complexion.",
-            style: "",
-            storyUrl: null,
-            orderIndex: 5,
-            sizes: []
-        },
-        'sooth-repair': {
-            name: "DODCH Sooth & Repair",
-            category: "skin-care",
-            subCategory: "creams",
-            subtitle: "Intensive Barrier Recovery",
-            price: null,
-            image: "IMG_3799.webp",
-            description: "An intensive recovery treatment designed to soothe inflammation and repair the skin barrier. Formulated with Mediterranean botanicals to restore radiance to stressed skin.",
-            style: "",
-            storyUrl: null,
-            orderIndex: 6,
-            sizes: []
-        }
-    };
-    productCatalog = { ...defaultProductCatalog };
-    window.productCatalog = productCatalog;
-    let shopTransitionTimeout;
-    let firestoreSynced = false;
-
-    function initShopPage(animate = false, loading = false) {
-        if (document.querySelector('.product-detail-container')) return;
-
-        // Reset UI state: scroll to top and close sidebar for a fresh section view
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        if (typeof closeSidebar === 'function') closeSidebar();
-
-        const shopLayout = document.querySelector('.shop-layout');
-        if (!shopLayout) return;
-
-        const renderContent = (loading = false) => {
-            const sortedCatalog = Object.entries(productCatalog).sort(([idA, a], [idB, b]) => {
-                const indexA = LOCAL_INVENTORY.indexOf(idA);
-                const indexB = LOCAL_INVENTORY.indexOf(idB);
-
-                // If both are in inventory, sort by inventory order
-                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                // If only A is in inventory, A comes first
-                if (indexA !== -1) return -1;
-                // If only B is in inventory, B comes first
-                if (indexB !== -1) return 1;
-
-                // Fallback to alphabetical sort if neither are in inventory
-                return a.name.localeCompare(b.name);
-            });
-            const urlParams = new URLSearchParams(window.location.search);
-            const activeCat = urlParams.get('cat');
-            const activeSub = urlParams.get('sub');
-
-            const heroSection = document.querySelector('.hero-carousel-container');
-            const scrollIndicator = document.getElementById('scroll-indicator');
-            const isMainPage = (!activeCat || activeCat === 'all') && (!activeSub || activeSub === 'all');
-
-            if (heroSection) {
-                if (isMainPage) {
-                    heroSection.classList.remove('collapsed');
-                } else {
-                    heroSection.classList.add('collapsed');
-                }
-            }
-            if (scrollIndicator) {
-                if (isMainPage) {
-                    scrollIndicator.classList.remove('collapsed');
-                } else {
-                    scrollIndicator.classList.add('collapsed');
-                }
-            }
-            
-            // Force navbar update to fix contrast when hero collapses
-            if (typeof updateNavbar === 'function') {
-                updateNavbar();
-            }
-
-            const generateCardHTML = (id, product, index = 0) => {
-                const staggerDelay = `${(index % 4) * 0.15}s`;
-                const primaryImg = getProductPrimaryImage(product);
-                let displayPrice = product.price;
-                let originalPriceDisplay = '';
-                let hasDiscount = false;
-                let discountPercentage = 0;
-
-                if (product.sizes && product.sizes.length > 0) {
-                    const prices = product.sizes.map(s => parseFloat(s.price));
-                    const basePriceIndex = product.sizes.findIndex(s => parseFloat(s.price) === Math.min(...prices));
-                    const baseSize = product.sizes[basePriceIndex] || product.sizes[0];
-
-                    displayPrice = parseFloat(baseSize.price).toFixed(2);
-
-                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
-                        hasDiscount = true;
-                        discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
-                        originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
-                    }
-                }
-
-                let targetUrl = `product.html?id=${id}`;
-                let linkAttributes = `href="${targetUrl}"`;
-
-                const isActuallyOOS = product.sizes && product.sizes.length > 0
-                    ? product.sizes.every(s => s.outOfStock)
-                    : product.outOfStock;
-
-                let badgeHTML = '';
-                if (product.isPermanentlyUnavailable) {
-                    badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>';
-                } else if (isActuallyOOS) {
-                    badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>';
-                } else if (hasDiscount && discountPercentage > 0) {
-                    badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
-                }
-                let imgStyle = product.style || '';
-                if (isActuallyOOS) {
-                    imgStyle += ' opacity: 0.55; filter: grayscale(60%); transition: all 0.3s ease;';
-                }
-
-                let priceHTML = '';
-                if (displayPrice) {
-                    priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
-                } else if (!firestoreSynced) {
-                    priceHTML = `<span class="price-shimmer"></span>`;
-                }
-                
-                return `
-                    <div class="product-card reveal" style="--anim-delay: ${staggerDelay};" data-product-id="${id}">
-                        <a ${linkAttributes}>
-                            <div class="tinted-shadow" style="background-image: url('${primaryImg}');"></div>
-                            <div class="product-image-wrapper" style="${isActuallyOOS ? 'background-color: #f0f0f0;' : ''}">
-                                ${badgeHTML}
-                                <img loading="lazy" src="${primaryImg}" alt="${product.name}" class="product-card-img" style="${imgStyle}; view-transition-name: prod-img-${id};">
-                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${primaryImg}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
+            `,document.body.appendChild(o),setTimeout(()=>o.classList.add("active"),10);const s=r=>{o.classList.remove("active"),setTimeout(()=>o.remove(),300),document.querySelector("#cart-drawer.active, #desktop-sidebar.active, #qv-modal.active, #contact-popup.active")||(document.body.style.overflow=""),e(r)};o.querySelector(".confirm-btn.confirm").addEventListener("click",()=>s(!0)),o.querySelector(".confirm-btn.cancel").addEventListener("click",()=>s(!1)),o.addEventListener("click",r=>{r.target===o&&s(!1)})}),"scrollRestoration"in history&&(history.scrollRestoration="manual"),document.documentElement.style.scrollBehavior="auto",window.scrollTo(0,0),window.location.hash&&history.replaceState(null,null,window.location.pathname),setTimeout(()=>{document.documentElement.style.scrollBehavior="smooth"},50);const t=document.getElementById("navbar"),n=document.getElementById("hero")||document.querySelector(".foam-hero")||document.getElementById("hero-silk")||document.querySelector(".pro-v-hero"),p=document.querySelector(".hero-overlay"),a=document.querySelector(".hero-bg-parallax"),l=document.querySelectorAll(".experience-image"),D=document.querySelectorAll(".parallax-el"),O=document.querySelectorAll(".promise-icon"),te=document.getElementById("scroll-progress"),M=document.getElementById("sticky-cta"),u=document.querySelector("footer"),U=document.querySelector("#purchase .add-to-cart-btn")||document.querySelector("#purchase-cta .buy-now-btn")||document.querySelector(".product-info .add-to-cart-btn"),G=()=>{const d=()=>{if(document.querySelector(".hero-carousel-container"))return!!window._activeHeroSlideIsDark;if(document.body.classList.contains("pro-v-page")||document.body.classList.contains("silk-mask-page")||document.body.classList.contains("serum-page"))return!0;const e=t.offsetHeight,o=document.elementFromPoint(window.innerWidth/2,e+30);if(!o)return!1;let s=o;for(;s&&s!==document.body;){const r=window.getComputedStyle(s),R=r.backgroundColor;if(r.backgroundImage&&r.backgroundImage!=="none")return!![...s.querySelectorAll("*")].find(y=>{const L=window.getComputedStyle(y).backgroundColor.match(/\d+/g);return L&&parseFloat(L[3]||1)>.2&&.299*L[0]+.587*L[1]+.114*L[2]<80});const v=R.match(/\d+/g);if(v&&!R.includes("rgba(0, 0, 0, 0)")&&(v[3]!==void 0?parseFloat(v[3]):1)>.1)return .299*v[0]+.587*v[1]+.114*v[2]<140;s=s.parentElement}return!1};window._pageHeroDark=d(),typeof N=="function"&&N()};window.addEventListener("load",G),window.addEventListener("resize",G),setTimeout(G,200);const N=()=>{const d=window.scrollY,i=document.body.classList.contains("serum-page"),e=document.querySelector(".scrollytelling-container"),o=document.querySelector(".hero-carousel-container"),s=document.querySelector(".hair-duo-hero"),r=document.getElementById("hero")||document.querySelector(".foam-hero")||document.getElementById("hero-silk")||document.querySelector(".pro-v-hero"),R=o&&!o.classList.contains("collapsed"),v=e&&!e.classList.contains("collapsed"),b=r&&!r.classList.contains("collapsed"),y=R||v||b;if(i&&v){const S=e.offsetHeight-80;d>S?(t.classList.add("scrolled"),t.classList.add("text-dark")):(t.classList.remove("scrolled"),t.classList.remove("text-dark"))}else y?d>50?(t.classList.add("scrolled"),t.classList.add("text-dark")):(t.classList.remove("scrolled"),R?window._activeHeroSlideIsDark?t.classList.remove("text-dark"):t.classList.add("text-dark"):window._pageHeroDark?t.classList.remove("text-dark"):t.classList.add("text-dark")):(d>50?t.classList.add("scrolled"):t.classList.remove("scrolled"),t.classList.add("text-dark"))},le=new IntersectionObserver((d,i)=>{d.forEach(e=>{e.isIntersecting&&(e.target.classList.add("active"),i.unobserve(e.target))})},{threshold:.1,rootMargin:"0px 0px -50px 0px"});let K=!1;window.addEventListener("scroll",()=>{K||(window.requestAnimationFrame(()=>{const d=window.scrollY;if(N(),n&&p){const i=n.offsetHeight;let e=d/(i*.8);e>1&&(e=1),p.style.opacity=e,p.style.backdropFilter=`blur(${e*10}px)`,p.style.webkitBackdropFilter=`blur(${e*10}px)`}if(M&&n){const i=u?u.getBoundingClientRect():null,e=i?i.top<window.innerHeight:!1;let o=!1;if(U){const s=U.getBoundingClientRect();o=s.top<window.innerHeight&&s.bottom>0}d>n.offsetHeight&&!e&&!o?M.classList.add("visible"):M.classList.remove("visible")}if(n&&a&&d<n.offsetHeight&&(a.style.transform=`translateY(${d*.1}px)`),l.length>0&&l.forEach(i=>{const e=i.getBoundingClientRect(),o=window.innerHeight;if(e.top<o&&e.bottom>0){const s=e.top+e.height/2,r=o/2-s,R=.1;i.style.transform=`translateY(${r*R}px)`}}),D.length>0&&D.forEach(i=>{const e=i.getBoundingClientRect(),o=window.innerHeight;if(e.top<o&&e.bottom>0){const s=parseFloat(i.getAttribute("data-speed"))||.05,r=e.top+e.height/2,R=o/2-r;i.style.transform=`translateY(${R*s}px)`}}),O.length>0&&O.forEach(i=>{const e=i.getBoundingClientRect(),o=window.innerHeight;if(e.top<o&&e.bottom>0){const s=e.top+e.height/2,r=o/2-s,R=-.08;i.style.transform=`translateY(${r*R}px)`}}),te){const i=document.documentElement.scrollHeight-window.innerHeight,e=d/i*100;te.style.width=`${e}%`}Ce(),K=!1}),K=!0)},{passive:!0}),N(),setTimeout(()=>{document.querySelectorAll(".reveal").forEach(i=>le.observe(i));const d=document.querySelector(".hero-carousel-container");d&&d.classList.add("active")},500);const X=document.querySelector(".hamburger"),w=document.getElementById("desktop-sidebar");if(w&&(document.body.classList.add("has-sidebar"),window.matchMedia("(min-width: 768px)").matches)){const d=document.querySelector("#hero .hero-content"),i=document.querySelector("#hero .hero-bg"),e=document.querySelector(".logo"),o=document.querySelectorAll(".nav-links li:last-child > *, .nav-search-item");w.classList.add("sidebar-load-in"),i&&i.classList.add("hero-bg-fade-in"),d&&(d.classList.add("hero-content-load-in"),d.querySelectorAll("h1, .sub-headline, .cta-button").forEach((r,R)=>{r.style.animationDelay=`${1.4+R*.25}s`})),e&&e.classList.add("nav-logo-load-in"),o.length>0&&o.forEach((r,R)=>{r.classList.add("nav-item-load-in"),r.style.animationDelay=`${.8+R*.2}s`}),w.querySelectorAll(".sidebar-menu > *, .sidebar-bottom > *").forEach((r,R)=>{r.classList.add("sidebar-item-load-in"),r.style.animationDelay=`${.5+R*.1}s`})}const I=document.querySelector(".sidebar-overlay"),Y=document.querySelector(".sidebar-close-btn"),ce=()=>{document.body.style.overflow="",w&&w.classList.remove("active"),I&&I.classList.remove("active"),X&&X.classList.remove("active"),t&&t.classList.remove("menu-open")},J=()=>{document.body.style.overflow="hidden",w&&w.classList.add("active"),I&&I.classList.add("active"),X&&X.classList.add("active"),t&&t.classList.add("menu-open"),setTimeout(()=>{const d=w.querySelector(".sidebar-menu a.active");d&&d.scrollIntoView({behavior:"smooth",block:"center"})},300)};if(X&&w){X.addEventListener("click",()=>{window.triggerHaptic("light"),w.classList.contains("active")?ce():J()}),I&&I.addEventListener("click",ce),Y&&Y.addEventListener("click",ce),w.querySelectorAll("a").forEach(e=>e.addEventListener("click",ce));const i=document.querySelector(".logo");i&&i.addEventListener("click",e=>{(window.location.pathname.endsWith("index.html")||window.location.pathname==="/"||window.location.pathname==="")&&(e.preventDefault(),window.history.pushState({},"","index.html"),typeof Xe=="function"&&Xe(!0),typeof Ft=="function"&&Ft(),typeof It=="function"&&It(),ce(),window.scrollTo({top:0,behavior:"smooth"}))})}const _=document.querySelector(".testimonial-slider-container");if(_){let S=function(){if(s)for(let me=0;me<R;me++){const oe=document.createElement("div");oe.classList.add("pagination-dot"),oe.addEventListener("click",()=>{r=me,z(),q()}),s.appendChild(oe),y.push(oe)}},L=function(){y.forEach((oe,ve)=>{oe.classList.remove("active")});const me=y[r];me&&(me.offsetWidth,me.classList.add("active"))},z=function(){d.style.transform=`translateX(-${r*100}%)`,i.forEach((me,oe)=>{me.classList.toggle("active",oe===r)}),s&&L()},j=function(){r=(r+1)%R,z()},Z=function(){r=(r-1+R)%R,z()},q=function(){clearInterval(v),b||(v=setInterval(j,5e3))};var sr=S,ar=L,lr=z,cr=j,dr=Z,pr=q;const d=document.querySelector(".testimonial-slider-wrapper"),i=document.querySelectorAll(".testimonial-slide"),e=document.querySelector(".slider-nav.prev"),o=document.querySelector(".slider-nav.next"),s=document.querySelector(".slider-pagination");let r=0;const R=i.length;let v,b=!1,y=[];o.addEventListener("click",()=>{j(),q()}),e.addEventListener("click",()=>{Z(),q()}),_.addEventListener("mouseenter",()=>{b=!0,clearInterval(v)}),_.addEventListener("mouseleave",()=>{b=!1,q()});let V=0,f=0,T=0;const re=50;let xe=!1;_.addEventListener("touchstart",me=>{V=me.changedTouches[0].screenX,f=me.changedTouches[0].screenY,xe=!1},{passive:!0}),_.addEventListener("touchmove",me=>{if(xe)return;const oe=me.changedTouches[0].screenX,ve=me.changedTouches[0].screenY,be=Math.abs(oe-V),ke=Math.abs(ve-f);be>ke&&be>10&&(xe=!0,clearInterval(v))},{passive:!0}),_.addEventListener("touchend",me=>{if(!xe)return;T=me.changedTouches[0].screenX;const oe=T-V;Math.abs(oe)>re&&(oe>0?Z():j()),b=!1,q()}),S(),z(),q()}if("ontouchstart"in window||navigator.maxTouchPoints>0){const d=document.querySelectorAll(".action-card, .promise-item, .pillar-card, .inci-list span");d.forEach(i=>{i.addEventListener("click",function(e){i.matches(".inci-list span")&&e.preventDefault();const o=this.classList.contains("mobile-hover");d.forEach(s=>{s!==this&&s.classList.remove("mobile-hover")}),this.classList.toggle("mobile-hover"),e.stopPropagation()})}),document.addEventListener("click",function(i){d.forEach(e=>{e.classList.remove("mobile-hover")})})}const Le=document.querySelectorAll(".counter"),Ce=()=>{Le.forEach(d=>{const i=d.getBoundingClientRect(),e=window.innerHeight;if(i.top<e-50&&i.bottom>0){if(d.classList.contains("counted"))return;d.classList.add("counted");const o=+d.getAttribute("data-target"),s=3500,r=performance.now(),R=v=>{const b=v-r,y=Math.min(b/s,1),S=y===1?1:1-Math.pow(2,-10*y),L=Math.floor(S*o);d.innerText=L.toLocaleString("en-US"),y<1?requestAnimationFrame(R):(d.innerText=o.toLocaleString("en-US"),d.classList.add("shine"))};requestAnimationFrame(R)}})};Ce();let De=document.title;window.addEventListener("blur",()=>{document.title="Come back to radiance... \u2728"}),window.addEventListener("focus",()=>{document.title=De});const Je=document.querySelector("#hero .cta-button"),Ze=document.getElementById("hero");Je&&Ze&&window.matchMedia("(hover: hover) and (pointer: fine)").matches&&(Ze.addEventListener("mousemove",e=>{const o=Je.getBoundingClientRect(),s=o.left+o.width/2,r=o.top+o.height/2,R=e.clientX-s,v=e.clientY-r;if(Math.sqrt(R*R+v*v)<120){const y=R*.4,S=v*.4;Je.style.transform=`translate(${y}px, ${S}px)`}else Je.style.transform="translate(0, 0)"}),Ze.addEventListener("mouseleave",()=>{Je.style.transform="translate(0, 0)"})),Je&&Je.addEventListener("click",()=>{const d=window.AudioContext||window.webkitAudioContext;if(!d)return;const i=new d,e=i.createOscillator(),o=i.createGain();e.connect(o),o.connect(i.destination),e.type="sine",e.frequency.setValueAtTime(600,i.currentTime),e.frequency.exponentialRampToValueAtTime(100,i.currentTime+.1),o.gain.setValueAtTime(.04,i.currentTime),o.gain.exponentialRampToValueAtTime(.001,i.currentTime+.1),e.start(),e.stop(i.currentTime+.1),setTimeout(()=>{i.close()},200)});const qe=["dodchmellow-pro-v","silk-therapy-mask","foaming-cleanser","advanced-ha-serum","retinol-night-cream","sooth-repair"],dt={"glass-glow-shampoo":{name:"Glass Glow Shampoo",category:"hair-care",subCategory:"shampoo",subtitle:"The Elixir of 10,000 Seeds",price:null,image:"IMG_3357.webp",description:"THIS PRODUCT IS NO LONGER AVAILABLE. Experience the legacy of our original Glass Glow formula. While this specific treatment has been retired from our permanent collection, its spirit lives on in our newer innovations.",style:"",storyUrl:"glass-glow-shampoo.html",orderIndex:0,outOfStock:!0,isPermanentlyUnavailable:!0,sizes:[]},"dodchmellow-pro-v":{name:"DODCHmellow",category:"hair-care",subCategory:"shampoo",subtitle:"The Marshmallow Cloud Shampoo",price:null,image:"IMG_4184.webp",images:["IMG_4184.webp"],description:"Imagine a lather so dense and soft it feels like a whipped cloud. Sulfate-Free | Silk-Polymer Infusion | pH 5.5 | Panthenol B5 | Glycerin Complex. Fragrance: N\xE9roli-Sucre.",style:"",storyUrl:"dodchmellow-pro-v.html",orderIndex:1,sizes:[]},"foaming-cleanser":{name:"DODCH Foaming Cleanser",category:"skin-care",subCategory:"cleansers",subtitle:"Luminous Purity",price:null,image:"IMG_4241.webp",description:"A gentle yet powerful daily cleanser with AHA + BHA exfoliation, hydrating Panthenol & Glycerin, and soothing Allantoin.",style:"filter: brightness(1.05);",storyUrl:"face-foam.html",orderIndex:3,sizes:[]},"silk-therapy-mask":{name:"DODCH Pro-V Silk Therapy Mask",category:"hair-care",subCategory:["masks","conditioners","leave-in"],subtitle:"Deep Repair & Glass Shine",price:null,image:"IMG_4188 (2).webp",description:"Infused with Pro-Vitamin B5 and hydrolyzed silk for deep conditioning, hydration, and strength. Use as a rinse-off mask or lightweight leave-in for silky, frizz-free hair.",style:"",storyUrl:"silk-mask.html",orderIndex:2,sizes:[]},"advanced-ha-serum":{name:"Advanced HA Serum",category:"skin-care",subCategory:"serums",subtitle:"Radiance & Deep Hydration",price:null,image:"IMG_3407.webp",description:"A concentrated Hyaluronic Acid serum that penetrates deep layers for instant plumping and long-lasting hydration.",style:"",storyUrl:"face-serum.html",orderIndex:4,sizes:[]},"retinol-night-cream":{name:"0.5 Retinol Night Cream",category:"skin-care",subCategory:"creams",subtitle:"Youth Renewing Overnight Treatment",price:null,image:"IMG_3783.webp",description:"A powerful overnight cream formulated with 0.5% active retinol to visibly reduce fine lines, refine skin texture, and promote a radiant, youthful complexion.",style:"",storyUrl:null,orderIndex:5,sizes:[]},"sooth-repair":{name:"DODCH Sooth & Repair",category:"skin-care",subCategory:"creams",subtitle:"Intensive Barrier Recovery",price:null,image:"IMG_3799.webp",description:"An intensive recovery treatment designed to soothe inflammation and repair the skin barrier. Formulated with Mediterranean botanicals to restore radiance to stressed skin.",style:"",storyUrl:null,orderIndex:6,sizes:[]}};x={...dt},window.productCatalog=x;let Ue,Pe=!1;function Xe(d=!1,i=!1){if(document.querySelector(".product-detail-container"))return;window.scrollTo({top:0,behavior:"smooth"}),typeof ce=="function"&&ce();const e=document.querySelector(".shop-layout");if(!e)return;const o=(s=!1)=>{const r=Object.entries(x).sort(([f,T],[re,xe])=>{const me=qe.indexOf(f),oe=qe.indexOf(re);return me!==-1&&oe!==-1?me-oe:me!==-1?-1:oe!==-1?1:T.name.localeCompare(xe.name)}),R=new URLSearchParams(window.location.search),v=R.get("cat"),b=R.get("sub"),y=document.querySelector(".hero-carousel-container"),S=document.getElementById("scroll-indicator"),L=(!v||v==="all")&&(!b||b==="all");y&&(L?y.classList.remove("collapsed"):y.classList.add("collapsed")),S&&(L?S.classList.remove("collapsed"):S.classList.add("collapsed")),typeof N=="function"&&N();const z=(f,T,re=0)=>{const xe=`${re%4*.15}s`,me=St(T);let oe=T.price,ve="",be=!1,ke=0;if(T.sizes&&T.sizes.length>0){const Se=T.sizes.map($e=>parseFloat($e.price)),fe=T.sizes.findIndex($e=>parseFloat($e.price)===Math.min(...Se)),he=T.sizes[fe]||T.sizes[0];oe=parseFloat(he.price).toFixed(2),he.originalPrice&&parseFloat(he.originalPrice)>parseFloat(he.price)&&(be=!0,ke=Math.round((parseFloat(he.originalPrice)-parseFloat(he.price))/parseFloat(he.originalPrice)*100),ve=`<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(he.originalPrice).toFixed(2)} TND</span>`)}let de=`href="${`product.html?id=${f}`}"`;const P=T.sizes&&T.sizes.length>0?T.sizes.every(Se=>Se.outOfStock):T.outOfStock;let C="";T.isPermanentlyUnavailable?C='<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>':P?C='<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>':be&&ke>0&&(C=`<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${ke}%</span>`);let ee=T.style||"";P&&(ee+=" opacity: 0.55; filter: grayscale(60%); transition: all 0.3s ease;");let F="";return oe?F=`${ve}<span style="color: ${be?"var(--accent-gold-text)":"inherit"}; font-weight: ${be?"700":"500"};">${oe} TND</span>`:Pe||(F='<span class="price-shimmer"></span>'),`
+                    <div class="product-card reveal" style="--anim-delay: ${xe};" data-product-id="${f}">
+                        <a ${de}>
+                            <div class="tinted-shadow" style="background-image: url('${me}');"></div>
+                            <div class="product-image-wrapper" style="${P?"background-color: #f0f0f0;":""}">
+                                ${C}
+                                <img loading="lazy" src="${me}" alt="${T.name}" class="product-card-img" style="${ee}; view-transition-name: prod-img-${f};">
+                                <button class="quick-view-btn" data-id="${f}" data-title="${T.name}" data-price="${oe||""}" data-img="${me}" data-style="${T.style||""}" data-desc="${T.description}">Quick View</button>
                             </div>
-                            <div class="product-card-info" style="${isActuallyOOS ? 'opacity: 0.7;' : ''}">
-                                <h3 class="product-card-title" data-name-target="${id}" style="view-transition-name: prod-title-${id};">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
-                                <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
+                            <div class="product-card-info" style="${P?"opacity: 0.7;":""}">
+                                <h3 class="product-card-title" data-name-target="${f}" style="view-transition-name: prod-title-${f};">${Pe?T.name:'<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
+                                <p class="product-card-price" data-price-target="${f}">${F}</p>
                             </div>
                         </a>
-                    </div>`;
-            };
-            shopLayout.innerHTML = '';
-            const allSections = [
-                { id: 'hair-care', title: 'Hair Care' },
-                { id: 'skin-care', title: 'Skin Care' },
-                { id: 'sets', title: 'Sets & Bundles' }
-            ];
-            const subCatDisplay = {
-                'shampoo': 'Shampoos',
-                'conditioners': 'Conditioners',
-                'masks': 'Masks & Treatments',
-                'leave-in': 'Leave-In Treatments',
-                'cleansers': 'Cleansers',
-                'serums': 'Serums',
-                'creams': 'Creams',
-                'sets': 'Sets'
-            };
-            let sectionsToShow = allSections;
-            if (activeCat && activeCat !== 'all') {
-                sectionsToShow = allSections.filter(s => s.id === activeCat);
-            }
-
-            const isSpecificSub = activeSub && activeSub !== 'all';
-
-            if (loading) {
-                const skeletonCards = Array(4).fill(0).map((_, i) => `
+                    </div>`};e.innerHTML="";const j=[{id:"hair-care",title:"Hair Care"},{id:"skin-care",title:"Skin Care"},{id:"sets",title:"Sets & Bundles"}],Z={shampoo:"Shampoos",conditioners:"Conditioners",masks:"Masks & Treatments","leave-in":"Leave-In Treatments",cleansers:"Cleansers",serums:"Serums",creams:"Creams",sets:"Sets"};let q=j;v&&v!=="all"&&(q=j.filter(f=>f.id===v));const V=b&&b!=="all";if(s){const f=Array(4).fill(0).map((T,re)=>`
                     <div class="product-card" style="opacity: 1; pointer-events: none;">
                         <div class="skeleton-img" style="border-radius: 20px; aspect-ratio: 4/5; width: 100%;"></div>
                         <div class="product-card-info" style="margin-top: 1rem;">
@@ -1248,1283 +131,62 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="skeleton-text" style="width: 40%; height: 1rem;"></div>
                         </div>
                     </div>
-                `).join('');
-
-                if (!isSpecificSub) {
-                    sectionsToShow.forEach(section => {
-                        const sectionHTML = `
+                `).join("");if(!V)q.forEach(T=>{const re=`
                             <div class="shop-category-section">
                                 <h2 class="shop-category-title skeleton-text" style="width: 200px; height: 2rem; margin-bottom: 2rem; border-radius: 4px;"></h2>
                                 <div class="shop-grid horizontal-scroll">
-                                    ${skeletonCards}
+                                    ${f}
                                 </div>
                             </div>
-                        `;
-                        shopLayout.insertAdjacentHTML('beforeend', sectionHTML);
-                    });
-                } else {
-                    const gridHTML = `
+                        `;e.insertAdjacentHTML("beforeend",re)});else{const T=`
                         <div class="shop-category-section">
                             <h2 class="shop-category-title skeleton-text" style="width: 200px; height: 2rem; margin-bottom: 2rem; border-radius: 4px;"></h2>
                             <div class="shop-grid">
-                                ${skeletonCards}
+                                ${f}
                             </div>
                         </div>
-                    `;
-                    shopLayout.innerHTML = gridHTML;
-                }
-                return;
-            }
-
-            if (!isSpecificSub) {
-                let hasProducts = false;
-                sectionsToShow.forEach(section => {
-                    const sectionProducts = sortedCatalog.filter(([, p]) => p.category === section.id && !p.isPermanentlyUnavailable);
-
-                    if (sectionProducts.length > 0) {
-                        hasProducts = true;
-                        const contentHTML = `
-                            <div class="shop-grid horizontal-scroll">
-                                ${sectionProducts.map(([id, p], i) => generateCardHTML(id, p, i)).join('')}
-                            </div>
-                        `;
-
-                        const sectionHTML = `
-                            <div class="shop-category-section">
-                                <h2 class="shop-category-title">${section.title}</h2>
-                                ${contentHTML}
-                            </div>
-                        `;
-                        shopLayout.insertAdjacentHTML('beforeend', sectionHTML);
-                    }
-                });
-
-                if (!hasProducts) {
-                    shopLayout.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>`;
-                }
-            } else {
-                const filteredProducts = sortedCatalog.filter(([, p]) => {
-                    const matchesCat = !activeCat || activeCat === 'all' || p.category === activeCat;
-                    const matchesSub = !activeSub || activeSub === 'all' || (Array.isArray(p.subCategory) ? p.subCategory.includes(activeSub) : p.subCategory === activeSub);
-                    return matchesCat && matchesSub && !p.isPermanentlyUnavailable;
-                });
-
-                if (filteredProducts.length > 0) {
-                    const gridHTML = `
+                    `;e.innerHTML=T}return}if(V){const f=r.filter(([,T])=>{const re=!v||v==="all"||T.category===v,xe=!b||b==="all"||(Array.isArray(T.subCategory)?T.subCategory.includes(b):T.subCategory===b);return re&&xe&&!T.isPermanentlyUnavailable});if(f.length>0){const T=`
                         <div class="shop-category-section">
-                            <h2 class="shop-category-title">${subCatDisplay[activeSub] || (activeSub.charAt(0).toUpperCase() + activeSub.slice(1))}</h2>
+                            <h2 class="shop-category-title">${Z[b]||b.charAt(0).toUpperCase()+b.slice(1)}</h2>
                             <div class="shop-grid">
-                                ${filteredProducts.map(([id, p], i) => generateCardHTML(id, p, i)).join('')}
+                                ${f.map(([re,xe],me)=>z(re,xe,me)).join("")}
                             </div>
                         </div>
-                    `;
-                    shopLayout.innerHTML = gridHTML;
-                } else {
-                    shopLayout.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>`;
-                }
-            }
-            document.querySelectorAll('.shop-layout .product-card.reveal').forEach(el => {
-                if (typeof revealObserver !== 'undefined') {
-                    revealObserver.observe(el);
-                    if (window.dodchSEO) window.dodchSEO.runSEO();
-                }
-            });
-        };
-
-        if (animate) {
-            shopLayout.classList.add('fade-out');
-            if (shopTransitionTimeout) clearTimeout(shopTransitionTimeout);
-
-            shopTransitionTimeout = setTimeout(() => { // Pass loading state
-                renderContent(loading);
-                shopLayout.classList.remove('fade-out');
-            }, 300);
-        } else {
-            renderContent(loading);
-        }
-    };
-    async function loadProductCatalog() {
-        let syncError = null;
-        try {
-            if (typeof appCheckReady !== 'undefined') {
-                try {
-                    await appCheckReady;
-                } catch (err) {
-                    console.warn("⚠️ App Check: Proceeding with product sync without waiting further.", err);
-                }
-            }
-            // No AppCheck wait needed — products are public read (allow read: if true in rules).
-            // AppCheck is only required for sensitive writes (contact form, newsletter, reviews).
-            // Firebase Console: App Check → Cloud Firestore must be "Monitoring" not "Enforced".
-            console.log("📡 Syncing prices & stock from Firestore...");
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore sync timeout")), 15000));
-            const querySnapshot = await Promise.race([
-                getDocs(collection(db, "products")),
-                timeoutPromise
-            ]);
-
-            if (!querySnapshot.empty) {
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const productId = doc.id;
-
-                    if (data.deleted) {
-                        delete productCatalog[productId];
-                    } else if (productCatalog[productId]) {
-                        // HYBRID SYNC: Database (Firestore) is the source of truth for Price, Stock, Sizes, name, subtitle, description, and admin-approved image paths.
-                        if (data.name) {
-                            productCatalog[productId].name = data.name;
-                        }
-                        if (data.subtitle) {
-                            productCatalog[productId].subtitle = data.subtitle;
-                        }
-                        if (data.description) {
-                            productCatalog[productId].description = data.description;
-                        }
-                        productCatalog[productId].notice = data.notice || "";
-                        productCatalog[productId].price = data.price || null;
-                        productCatalog[productId].originalPrice = data.originalPrice || null;
-                        productCatalog[productId].storyUrl = data.storyUrl || null;
-                        productCatalog[productId].outOfStock = data.outOfStock === true;
-                        productCatalog[productId].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
-
-                        // Target specific name elements in the DOM to avoid full re-render
-                        const nameTargets = document.querySelectorAll(`[data-name-target="${productId}"]`);
-                        nameTargets.forEach(target => {
-                            target.textContent = productCatalog[productId].name;
-                        });
-
-                        if (data.image) {
-                            productCatalog[productId].image = data.image;
-                        }
-                        if (Array.isArray(data.images) && data.images.length > 0) {
-                            productCatalog[productId].images = data.images;
-                        } else if (data.image && !productCatalog[productId].images) {
-                            productCatalog[productId].images = [data.image];
-                        }
-
-                        // LIVE IMAGE SYNC: Update the rendered shop-grid card img src so changes
-                        // made in the admin inventory are immediately visible without a page reload.
-                        const newPrimaryImg = getProductPrimaryImage(productCatalog[productId]);
-                        if (newPrimaryImg) {
-                            const gridCard = document.querySelector(`.product-card[data-product-id="${productId}"]`);
-                            if (gridCard) {
-                                const cardImg = gridCard.querySelector('.product-card-img');
-                                if (cardImg && cardImg.src !== newPrimaryImg) {
-                                    cardImg.src = newPrimaryImg;
-                                }
-                                const tintedShadow = gridCard.querySelector('.tinted-shadow');
-                                if (tintedShadow) {
-                                    tintedShadow.style.backgroundImage = `url('${newPrimaryImg}')`;
-                                }
-                                const qvBtn = gridCard.querySelector('.quick-view-btn');
-                                if (qvBtn) qvBtn.dataset.img = newPrimaryImg;
-                            }
-                        }
-
-                        // CRITICAL: Overwrite sizes. If Firestore has no sizes, clear the local sizes to use single price logic.
-                        productCatalog[productId].sizes = data.sizes || [];
-
-                        // Sync dynamic performance metrics
-                        if (data.performance) {
-                            productCatalog[productId].performance = data.performance;
-                        }
-                        
-                        // Sync INCI ingredients
-                        if (data.inci) {
-                            productCatalog[productId].inci = data.inci;
-                        }
-
-                        // Sync Batch History
-                        if (data.batchHistory) {
-                            productCatalog[productId].batchHistory = data.batchHistory;
-                        }
-
-                        // Target specific price elements in the DOM to avoid full re-render
-                        const priceTargets = document.querySelectorAll(`[data-price-target="${productId}"]`);
-                        if (priceTargets.length > 0) {
-                            let updatedDisplayPrice = productCatalog[productId].price;
-                            let originalPriceDisplay = '';
-                            let hasDiscount = false;
-
-                            if (data.sizes) {
-                                let sizesArray = [];
-                                if (Array.isArray(data.sizes)) {
-                                    sizesArray = data.sizes;
-                                } else {
-                                    // Convert object { "250ml": 42.99 } to array for frontend
-                                    sizesArray = Object.entries(data.sizes).map(([label, price]) => ({ label, price }));
-                                }
-
-                                if (sizesArray.length > 0) {
-                                    const prices = sizesArray.map(s => parseFloat(s.price));
-                                    const baseSize = sizesArray.find(s => parseFloat(s.price) === Math.min(...prices)) || sizesArray[0];
-                                    updatedDisplayPrice = parseFloat(baseSize.price).toFixed(2);
-
-                                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
-                                        hasDiscount = true;
-                                        originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
-                                    }
-                                }
-                            }
-
-                            if (updatedDisplayPrice) {
-                                 // Sync JSON-LD structured data and Meta Tags for Google Merchant Center / Facebook Pixel / Crawlers
-                                 const schemas = document.querySelectorAll('script[type="application/ld+json"]');
-                                 schemas.forEach(schema => {
-                                     try {
-                                         let schemaData = JSON.parse(schema.textContent);
-                                         if (schemaData['@type'] === 'Product' && schemaData.offers && schemaData.offers['@type'] === 'Offer') {
-                                             // Robust match: check if URL contains product ID, filename matches product's storyUrl, or query parameter id matches
-                                             const currentFilename = window.location.pathname.split('/').pop() || '';
-                                             const urlParams = new URLSearchParams(window.location.search);
-                                             const activeIdParam = urlParams.get('id');
-                                             const isMatchingProduct = window.location.pathname.includes(productId) ||
-                                                                       (productCatalog[productId] && productCatalog[productId].storyUrl === currentFilename) ||
-                                                                       activeIdParam === productId ||
-                                                                       Object.keys(productCatalog).length === 1;
-
-                                             if (isMatchingProduct) {
-                                                 schemaData.offers.price = String(updatedDisplayPrice);
-                                                 schema.textContent = JSON.stringify(schemaData, null, 2);
-
-                                                 // Also sync the OpenGraph & standard Meta Price tags live in the DOM!
-                                                 const ogPriceMeta = document.querySelector('meta[property="product:price:amount"]');
-                                                 if (ogPriceMeta) {
-                                                     ogPriceMeta.setAttribute('content', String(updatedDisplayPrice));
-                                                 }
-                                                 const priceMeta = document.querySelector('meta[name="price"]');
-                                                 if (priceMeta) {
-                                                     priceMeta.setAttribute('content', String(updatedDisplayPrice));
-                                                 }
-                                             }
-                                         }
-                                     } catch (e) {}
-                                 });
-
-                                const newPriceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${updatedDisplayPrice} TND</span>`;
-                                priceTargets.forEach(target => {
-                                    target.innerHTML = newPriceHTML;
-
-                                    const card = target.closest('.product-card');
-                                    if (card) {
-                                        // Update/Add Discount Badge
-                                        const imgWrapper = card.querySelector('.product-image-wrapper');
-                                        if (imgWrapper) {
-                                            // Clear any existing badges first
-                                            const existingBadges = imgWrapper.querySelectorAll('.product-badge');
-                                            existingBadges.forEach(b => b.remove());
-
-                                            const isActuallyOOS = data.sizes && data.sizes.length > 0
-                                                ? data.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                                                : (productCatalog[productId].outOfStock === true || String(productCatalog[productId].outOfStock).toLowerCase() === 'true');
-                                
-                                // Apply/remove grayscale effect based on the new stock status
-                                const cardImg = card.querySelector('.product-card-img');
-                                if (cardImg) {
-                                    if (isActuallyOOS) {
-                                        cardImg.style.opacity = '0.55';
-                                        cardImg.style.filter = 'grayscale(60%)';
-                                    } else {
-                                        cardImg.style.opacity = '';
-                                        cardImg.style.filter = '';
-                                    }
-                                }
-                                            if (productCatalog[productId].isPermanentlyUnavailable) {
-                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>');
-                                            } else if (isActuallyOOS) {
-                                                imgWrapper.insertAdjacentHTML('afterbegin', '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>');
-                                            } else if (hasDiscount) {
-                                                const prices = data.sizes.map(s => parseFloat(s.price));
-                                                const baseSize = data.sizes.find(s => parseFloat(s.price) === Math.min(...prices)) || data.sizes[0];
-                                                const discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
-                                                if (discountPercentage > 0) {
-                                                    const badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
-                                                    imgWrapper.insertAdjacentHTML('afterbegin', badgeHTML);
-                                                }
-                                            }
-                                        }
-
-                                        // Update Quick View button data
-                                        const qvBtn = card.querySelector('.quick-view-btn');
-                                        if (qvBtn) qvBtn.dataset.price = updatedDisplayPrice;
-                                    }
-                                });
-                            }
-                        }
-
-                        // Also update individual product page elements if active
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const activeIdParam = urlParams.get('id');
-                        const currentFilename = window.location.pathname.split('/').pop();
-                        const isThisProductPage = activeIdParam === productId ||
-                            productCatalog[productId]?.storyUrl === currentFilename;
-
-                        if (isThisProductPage) {
-                            // Always re-run initProductPage after Firestore sync on a product detail page
-                            // This replaces shimmers with real prices and size buttons
-                            initProductPage();
-                        }
-                    } else {
-                        // If it's a completely new product from database not in local code, add it
-                        if (data.sizes && !Array.isArray(data.sizes)) {
-                            data.sizes = Object.entries(data.sizes).map(([label, price]) => ({ label, price }));
-                        }
-                        productCatalog[productId] = data;
-                    }
-                });
-
-                // RE-INITIALIZE DYNAMIC ELEMENTS (No full refresh, just update prices/stock)
-                console.log("✅ Real-time data synced. Refreshing UI.");
-                firestoreSynced = true;
-                if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
-            }
-            if (typeof window.refreshAdminProducts === 'function') {
-                window.refreshAdminProducts();
-            }
-        } catch (error) {
-            syncError = error;
-            console.error("Error syncing with Firestore:", error);
-        } finally {
-            firestoreSynced = true;
-            // Reveal fallback names for cards if they are still shimmers
-            Object.keys(productCatalog).forEach(productId => {
-                const nameTargets = document.querySelectorAll(`[data-name-target="${productId}"]`);
-                nameTargets.forEach(target => {
-                    if (target.querySelector('.price-shimmer')) {
-                        target.textContent = productCatalog[productId].name;
-                    }
-                });
-            });
-            // Re-run initProductPage to resolve any product detail page shimmers to fallbacks
-            const urlParams = new URLSearchParams(window.location.search);
-            const activeIdParam = urlParams.get('id');
-            const currentFilename = window.location.pathname.split('/').pop();
-            const activeProd = Object.keys(productCatalog).find(id => activeIdParam === id || productCatalog[id]?.storyUrl === currentFilename);
-            if (activeProd) {
-                initProductPage();
-            }
-            if (syncError) {
-                console.warn("⏱️ Prices didn't load. Shimmers stay until next reload (cache will serve data then).");
-            }
-        }
-    };
-
-    const CART_VERSION = 6; // Increment to force reset and clear stale/buggy data
-    let cart = JSON.parse(localStorage.getItem('dodch_cart')) || [];
-    const storedVersion = parseInt(localStorage.getItem('dodch_cart_version') || '0');
-    if (storedVersion < CART_VERSION) {
-        console.warn("Cart version mismatch. Clearing old data to ensure accuracy.");
-        cart = [];
-        localStorage.setItem('dodch_cart', JSON.stringify(cart));
-        localStorage.setItem('dodch_cart_version', CART_VERSION);
-    }
-
-    let currentUser = null;
-
-    const cartToggle = document.getElementById('cart-toggle');
-    const cartDrawer = document.getElementById('cart-drawer');
-    const cartOverlay = document.getElementById('cart-overlay');
-    const closeCartBtn = document.getElementById('close-cart-btn');
-    const cartItemsContainer = document.getElementById('cart-items-container');
-    const cartCountBadge = document.getElementById('cart-count-badge');
-    const cartSubtotalEl = document.getElementById('cart-subtotal');
-    const cartEmptyMsg = document.querySelector('.cart-empty');
-
-    const sizeBtns = document.querySelectorAll('.size-btn');
-    const priceDisplay = document.getElementById('product-price');
-    const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
-    const loginBtn = document.getElementById('login-btn');
-
-    const formatPrice = (value) => {
-        const numeric = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.]/g, '')) : Number(value);
-        return isNaN(numeric) ? '0.00 TND' : `${numeric.toFixed(2)} TND`;
-    };
-
-    const saveCart = () => {
-        localStorage.setItem('dodch_cart', JSON.stringify(cart));
-        localStorage.setItem('dodch_cart_version', CART_VERSION);
-        if (currentUser) {
-            setDoc(doc(db, 'carts', currentUser.uid), { items: cart });
-        }
-    };
-
-    const updateCartTotals = () => {
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        const subtotal = cart.reduce((sum, item) => {
-            const priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
-            return sum + (isNaN(priceVal) ? 0 : priceVal * item.quantity);
-        }, 0);
-
-        if (cartCountBadge) {
-            cartCountBadge.textContent = totalItems > 99 ? '99+' : totalItems;
-            cartCountBadge.classList.toggle('visible', totalItems > 0);
-        }
-
-        if (cartSubtotalEl) {
-            cartSubtotalEl.textContent = `${subtotal.toFixed(2)} TND`;
-        }
-
-        // Disable checkout button if cart is empty
-        const checkoutBtn = document.querySelector('.cart-footer .checkout-btn');
-        if (checkoutBtn) {
-            if (cart.length === 0) {
-                checkoutBtn.classList.add('disabled');
-                checkoutBtn.style.pointerEvents = 'none';
-                checkoutBtn.style.opacity = '0.5';
-            } else {
-                checkoutBtn.classList.remove('disabled');
-                checkoutBtn.style.pointerEvents = 'auto';
-                checkoutBtn.style.opacity = '1';
-            }
-        }
-
-        const cartFooter = document.querySelector('.cart-footer');
-        if (!cartFooter) return;
-
-        let shippingMsg = cartFooter.querySelector('.shipping-promo-msg');
-        if (!shippingMsg) {
-            shippingMsg = document.createElement('p');
-            shippingMsg.className = 'shipping-promo-msg';
-            shippingMsg.style.cssText = 'font-size: 0.75rem; text-align: center; margin-bottom: 1rem; color: #666; border-top: 1px solid #f5f5f5; padding-top: 1rem;';
-            cartFooter.prepend(shippingMsg);
-        }
-
-        const FREE_SHIPPING_THRESHOLD = 100;
-        const isUnlocked = subtotal >= FREE_SHIPPING_THRESHOLD;
-        const currentlyUnlocked = shippingMsg.classList.contains('shipping-promo-unlocked');
-
-        if (isUnlocked !== currentlyUnlocked) {
-            shippingMsg.classList.add('exit');
-            setTimeout(() => {
-                if (isUnlocked) {
-                    const text = "✨ You've unlocked Free Shipping!";
-                    shippingMsg.innerHTML = text.split('').map((char, i) => `<span style="animation-delay: ${i * 0.02}s; display: inline-block; white-space: pre;">${char}</span>`).join('');
-                    shippingMsg.classList.add('shipping-promo-unlocked');
-                } else {
-                    const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
-                    shippingMsg.innerHTML = `Add <strong>${remaining.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`;
-                    shippingMsg.classList.remove('shipping-promo-unlocked');
-                }
-                shippingMsg.classList.remove('exit');
-            }, 400);
-        } else if (!isUnlocked) {
-            const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
-            shippingMsg.innerHTML = `Add <strong>${remaining.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`;
-        }
-    };
-
-    const renderCartItem = (item, index) => {
-        const cartItemEl = document.createElement('div');
-        cartItemEl.classList.add('cart-item');
-        cartItemEl.dataset.index = index;
-        cartItemEl.innerHTML = `
-            <img loading="lazy" src="${item.image}" alt="${item.name}" class="cart-item-img">
+                    `;e.innerHTML=T}else e.innerHTML='<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>'}else{let f=!1;q.forEach(T=>{const re=r.filter(([,xe])=>xe.category===T.id&&!xe.isPermanentlyUnavailable);if(re.length>0){f=!0;const xe=`
+                            <div class="shop-grid horizontal-scroll">
+                                ${re.map(([oe,ve],be)=>z(oe,ve,be)).join("")}
+                            </div>
+                        `,me=`
+                            <div class="shop-category-section">
+                                <h2 class="shop-category-title">${T.title}</h2>
+                                ${xe}
+                            </div>
+                        `;e.insertAdjacentHTML("beforeend",me)}}),f||(e.innerHTML='<div style="grid-column: 1/-1; text-align: center; padding: 4rem 2rem; opacity: 0.6; font-family: var(--font-sans);">No products found in this category.</div>')}document.querySelectorAll(".shop-layout .product-card.reveal").forEach(f=>{typeof le<"u"&&(le.observe(f),window.dodchSEO&&window.dodchSEO.runSEO())})};d?(e.classList.add("fade-out"),Ue&&clearTimeout(Ue),Ue=setTimeout(()=>{o(i),e.classList.remove("fade-out")},300)):o(i)}async function wt(){let d=null;try{if(typeof Ot<"u")try{await Ot}catch(o){console.warn("\u26A0\uFE0F App Check: Proceeding with product sync without waiting further.",o)}console.log("\u{1F4E1} Syncing prices & stock from Firestore...");const i=new Promise((o,s)=>setTimeout(()=>s(new Error("Firestore sync timeout")),15e3)),e=await Promise.race([nt(Ne(se,"products")),i]);e.empty||(e.forEach(o=>{const s=o.data(),r=o.id;if(s.deleted)delete x[r];else if(x[r]){s.name&&(x[r].name=s.name),s.subtitle&&(x[r].subtitle=s.subtitle),s.description&&(x[r].description=s.description),x[r].notice=s.notice||"",x[r].price=s.price||null,x[r].originalPrice=s.originalPrice||null,x[r].storyUrl=s.storyUrl||null,x[r].outOfStock=s.outOfStock===!0,x[r].isPermanentlyUnavailable=s.isPermanentlyUnavailable===!0,document.querySelectorAll(`[data-name-target="${r}"]`).forEach(j=>{j.textContent=x[r].name}),s.image&&(x[r].image=s.image),Array.isArray(s.images)&&s.images.length>0?x[r].images=s.images:s.image&&!x[r].images&&(x[r].images=[s.image]);const v=St(x[r]);if(v){const j=document.querySelector(`.product-card[data-product-id="${r}"]`);if(j){const Z=j.querySelector(".product-card-img");Z&&Z.src!==v&&(Z.src=v);const q=j.querySelector(".tinted-shadow");q&&(q.style.backgroundImage=`url('${v}')`);const V=j.querySelector(".quick-view-btn");V&&(V.dataset.img=v)}}x[r].sizes=s.sizes||[],s.performance&&(x[r].performance=s.performance),s.inci&&(x[r].inci=s.inci),s.batchHistory&&(x[r].batchHistory=s.batchHistory);const b=document.querySelectorAll(`[data-price-target="${r}"]`);if(b.length>0){let j=x[r].price,Z="",q=!1;if(s.sizes){let V=[];if(Array.isArray(s.sizes)?V=s.sizes:V=Object.entries(s.sizes).map(([f,T])=>({label:f,price:T})),V.length>0){const f=V.map(re=>parseFloat(re.price)),T=V.find(re=>parseFloat(re.price)===Math.min(...f))||V[0];j=parseFloat(T.price).toFixed(2),T.originalPrice&&parseFloat(T.originalPrice)>parseFloat(T.price)&&(q=!0,Z=`<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(T.originalPrice).toFixed(2)} TND</span>`)}}if(j){document.querySelectorAll('script[type="application/ld+json"]').forEach(T=>{try{let re=JSON.parse(T.textContent);if(re["@type"]==="Product"&&re.offers&&re.offers["@type"]==="Offer"){const xe=window.location.pathname.split("/").pop()||"",oe=new URLSearchParams(window.location.search).get("id");if(window.location.pathname.includes(r)||x[r]&&x[r].storyUrl===xe||oe===r||Object.keys(x).length===1){re.offers.price=String(j),T.textContent=JSON.stringify(re,null,2);const be=document.querySelector('meta[property="product:price:amount"]');be&&be.setAttribute("content",String(j));const ke=document.querySelector('meta[name="price"]');ke&&ke.setAttribute("content",String(j))}}}catch{}});const f=`${Z}<span style="color: ${q?"var(--accent-gold-text)":"inherit"}; font-weight: ${q?"700":"500"};">${j} TND</span>`;b.forEach(T=>{T.innerHTML=f;const re=T.closest(".product-card");if(re){const xe=re.querySelector(".product-image-wrapper");if(xe){xe.querySelectorAll(".product-badge").forEach(ke=>ke.remove());const ve=s.sizes&&s.sizes.length>0?s.sizes.every(ke=>ke.outOfStock===!0||String(ke.outOfStock).toLowerCase()==="true"):x[r].outOfStock===!0||String(x[r].outOfStock).toLowerCase()==="true",be=re.querySelector(".product-card-img");if(be&&(ve?(be.style.opacity="0.55",be.style.filter="grayscale(60%)"):(be.style.opacity="",be.style.filter="")),x[r].isPermanentlyUnavailable)xe.insertAdjacentHTML("afterbegin",'<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>');else if(ve)xe.insertAdjacentHTML("afterbegin",'<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>');else if(q){const ke=s.sizes.map(P=>parseFloat(P.price)),Q=s.sizes.find(P=>parseFloat(P.price)===Math.min(...ke))||s.sizes[0],de=Math.round((parseFloat(Q.originalPrice)-parseFloat(Q.price))/parseFloat(Q.originalPrice)*100);if(de>0){const P=`<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${de}%</span>`;xe.insertAdjacentHTML("afterbegin",P)}}}const me=re.querySelector(".quick-view-btn");me&&(me.dataset.price=j)}})}}const S=new URLSearchParams(window.location.search).get("id"),L=window.location.pathname.split("/").pop();(S===r||x[r]?.storyUrl===L)&&ho()}else s.sizes&&!Array.isArray(s.sizes)&&(s.sizes=Object.entries(s.sizes).map(([R,v])=>({label:R,price:v}))),x[r]=s}),console.log("\u2705 Real-time data synced. Refreshing UI."),Pe=!0,window.dodchSearchEngine&&window.dodchSearchEngine.init(x)),typeof window.refreshAdminProducts=="function"&&window.refreshAdminProducts()}catch(i){d=i,console.error("Error syncing with Firestore:",i)}finally{Pe=!0,Object.keys(x).forEach(r=>{document.querySelectorAll(`[data-name-target="${r}"]`).forEach(v=>{v.querySelector(".price-shimmer")&&(v.textContent=x[r].name)})});const e=new URLSearchParams(window.location.search).get("id"),o=window.location.pathname.split("/").pop();Object.keys(x).find(r=>e===r||x[r]?.storyUrl===o)&&ho(),d&&console.warn("\u23F1\uFE0F Prices didn't load. Shimmers stay until next reload (cache will serve data then).")}}const Nt=6;let Be=JSON.parse(localStorage.getItem("dodch_cart"))||[];parseInt(localStorage.getItem("dodch_cart_version")||"0")<Nt&&(console.warn("Cart version mismatch. Clearing old data to ensure accuracy."),Be=[],localStorage.setItem("dodch_cart",JSON.stringify(Be)),localStorage.setItem("dodch_cart_version",Nt));let Me=null;const pt=document.getElementById("cart-toggle"),At=document.getElementById("cart-drawer"),zt=document.getElementById("cart-overlay"),zo=document.getElementById("close-cart-btn"),yt=document.getElementById("cart-items-container"),lo=document.getElementById("cart-count-badge"),Po=document.getElementById("cart-subtotal"),Do=document.querySelector(".cart-empty"),Fo=document.querySelectorAll(".size-btn"),Zi=document.getElementById("product-price"),qo=document.querySelectorAll(".add-to-cart-btn"),Ho=document.getElementById("login-btn"),er=d=>{const i=typeof d=="string"?parseFloat(d.replace(/[^0-9.]/g,"")):Number(d);return isNaN(i)?"0.00 TND":`${i.toFixed(2)} TND`},co=()=>{localStorage.setItem("dodch_cart",JSON.stringify(Be)),localStorage.setItem("dodch_cart_version",Nt),Me&&lt(Ae(se,"carts",Me.uid),{items:Be})},po=()=>{const d=Be.reduce((b,y)=>b+y.quantity,0),i=Be.reduce((b,y)=>{const S=parseFloat(String(y.price).replace(/[^0-9.]/g,""));return b+(isNaN(S)?0:S*y.quantity)},0);lo&&(lo.textContent=d>99?"99+":d,lo.classList.toggle("visible",d>0)),Po&&(Po.textContent=`${i.toFixed(2)} TND`);const e=document.querySelector(".cart-footer .checkout-btn");e&&(Be.length===0?(e.classList.add("disabled"),e.style.pointerEvents="none",e.style.opacity="0.5"):(e.classList.remove("disabled"),e.style.pointerEvents="auto",e.style.opacity="1"));const o=document.querySelector(".cart-footer");if(!o)return;let s=o.querySelector(".shipping-promo-msg");s||(s=document.createElement("p"),s.className="shipping-promo-msg",s.style.cssText="font-size: 0.75rem; text-align: center; margin-bottom: 1rem; color: #666; border-top: 1px solid #f5f5f5; padding-top: 1rem;",o.prepend(s));const r=100,R=i>=r,v=s.classList.contains("shipping-promo-unlocked");if(R!==v)s.classList.add("exit"),setTimeout(()=>{if(R){const b="\u2728 You've unlocked Free Shipping!";s.innerHTML=b.split("").map((y,S)=>`<span style="animation-delay: ${S*.02}s; display: inline-block; white-space: pre;">${y}</span>`).join(""),s.classList.add("shipping-promo-unlocked")}else{const b=r-i;s.innerHTML=`Add <strong>${b.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`,s.classList.remove("shipping-promo-unlocked")}s.classList.remove("exit")},400);else if(!R){const b=r-i;s.innerHTML=`Add <strong>${b.toFixed(2)} TND</strong> more for <strong>Free Shipping</strong>`}},ni=(d,i)=>{const e=document.createElement("div");return e.classList.add("cart-item"),e.dataset.index=i,e.innerHTML=`
+            <img loading="lazy" src="${d.image}" alt="${d.name}" class="cart-item-img">
             <div class="cart-item-info">
-                <h4 class="cart-item-title">${item.name}</h4>
-                <p class="cart-item-details">Size: ${item.size}</p>
+                <h4 class="cart-item-title">${d.name}</h4>
+                <p class="cart-item-details">Size: ${d.size}</p>
                 <div class="cart-item-quantity">
-                    <button class="qty-btn minus" type="button" data-index="${index}" aria-label="Decrease quantity" ${item.quantity <= 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed; pointer-events: none;"' : ''}>-</button>
-                    <span class="qty-display" data-index="${index}" data-editable="true" title="Click to edit">${item.quantity}</span>
-                    <button class="qty-btn plus" type="button" data-index="${index}" aria-label="Increase quantity">+</button>
+                    <button class="qty-btn minus" type="button" data-index="${i}" aria-label="Decrease quantity" ${d.quantity<=1?'disabled style="opacity: 0.4; cursor: not-allowed; pointer-events: none;"':""}>-</button>
+                    <span class="qty-display" data-index="${i}" data-editable="true" title="Click to edit">${d.quantity}</span>
+                    <button class="qty-btn plus" type="button" data-index="${i}" aria-label="Increase quantity">+</button>
                 </div>
             </div>
             <div class="cart-item-actions">
-                <p class="cart-item-price">${item.price}</p>
-                <button class="cart-item-remove-btn" type="button" data-index="${index}">Remove</button>
+                <p class="cart-item-price">${d.price}</p>
+                <button class="cart-item-remove-btn" type="button" data-index="${i}">Remove</button>
             </div>
-        `;
-        return cartItemEl;
-    };
-
-    const animateQtyChange = (displayEl) => {
-        if (!displayEl) return;
-        displayEl.classList.add('animate-bump');
-        displayEl.addEventListener('animationend', () => displayEl.classList.remove('animate-bump'), { once: true });
-    };
-
-    const handleCartControlClick = (e) => {
-        const button = e.target.closest('.qty-btn, .cart-item-remove-btn');
-        if (!button || !cartItemsContainer) return;
-        const index = Number(button.dataset.index);
-        if (Number.isNaN(index) || index < 0 || index >= cart.length) return;
-
-        window.triggerHaptic('light');
-
-        if (button.classList.contains('cart-item-remove-btn')) {
-            cart.splice(index, 1);
-            updateCartUI();
-            return;
-        }
-
-        const item = cart[index];
-        if (!item) return;
-
-        const displayEl = cartItemsContainer.querySelector(`.cart-item[data-index="${index}"] .qty-display`);
-
-        if (button.classList.contains('plus')) {
-            if (item.quantity < 99) item.quantity += 1;
-        } else if (button.classList.contains('minus')) {
-            if (item.quantity > 1) {
-                item.quantity -= 1;
-            } else {
-                cart.splice(index, 1);
-                updateCartUI();
-                return;
-            }
-        }
-
-        if (displayEl) {
-            displayEl.textContent = item.quantity;
-            animateQtyChange(displayEl);
-        }
-
-        const minusBtn = cartItemsContainer.querySelector(`.cart-item[data-index="${index}"] .qty-btn.minus`);
-        if (minusBtn) {
-            if (item.quantity <= 1) {
-                minusBtn.disabled = true;
-                minusBtn.style.opacity = "0.4";
-                minusBtn.style.cursor = "not-allowed";
-                minusBtn.style.pointerEvents = "none";
-            } else {
-                minusBtn.disabled = false;
-                minusBtn.style.opacity = "";
-                minusBtn.style.cursor = "";
-                minusBtn.style.pointerEvents = "";
-            }
-        }
-
-        updateCartTotals();
-        saveCart();
-    };
-
-    const handleQtyDisplayEdit = (e) => {
-        const span = e.target.closest('.qty-display[data-editable]');
-        if (!span) return;
-        const index = Number(span.dataset.index);
-        if (Number.isNaN(index) || index < 0 || index >= cart.length) return;
-
-        const originalText = span.textContent;
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = originalText;
-        input.style.width = '50px';
-        input.style.textAlign = 'center';
-        input.style.fontWeight = '600';
-        input.className = 'qty-edit-input';
-
-        span.replaceWith(input);
-        input.focus();
-        input.select();
-
-        const saveEdit = () => {
-            let qty = parseInt(input.value, 10) || 1;
-            qty = Math.max(1, Math.min(99, qty));
-            cart[index].quantity = qty;
-            
-            const newSpan = document.createElement('span');
-            newSpan.className = 'qty-display';
-            newSpan.dataset.index = index;
-            newSpan.dataset.editable = 'true';
-            newSpan.title = 'Click to edit';
-            newSpan.textContent = qty;
-            newSpan.addEventListener('click', handleQtyDisplayEdit);
-            
-            input.replaceWith(newSpan);
-
-            const minusBtn = cartItemsContainer.querySelector(`.cart-item[data-index="${index}"] .qty-btn.minus`);
-            if (minusBtn) {
-                if (qty <= 1) {
-                    minusBtn.disabled = true;
-                    minusBtn.style.opacity = "0.4";
-                    minusBtn.style.cursor = "not-allowed";
-                    minusBtn.style.pointerEvents = "none";
-                } else {
-                    minusBtn.disabled = false;
-                    minusBtn.style.opacity = "";
-                    minusBtn.style.cursor = "";
-                    minusBtn.style.pointerEvents = "";
-                }
-            }
-
-            updateCartTotals();
-            saveCart();
-        };
-
-        const cancelEdit = () => {
-            span.textContent = originalText;
-            input.replaceWith(span);
-            span.addEventListener('click', handleQtyDisplayEdit);
-        };
-
-        input.addEventListener('blur', saveEdit);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') saveEdit();
-            if (e.key === 'Escape') cancelEdit();
-        });
-    };
-
-    const updateCartUI = () => {
-        saveCart();
-
-        if (!cartItemsContainer) return;
-
-        cartItemsContainer.innerHTML = '';
-
-        if (cart.length === 0) {
-            if (cartEmptyMsg) cartItemsContainer.appendChild(cartEmptyMsg);
-        } else {
-            const fragment = document.createDocumentFragment();
-            cart.forEach((item, index) => {
-                fragment.appendChild(renderCartItem(item, index));
-            });
-            cartItemsContainer.appendChild(fragment);
-        }
-
-        updateCartTotals();
-        updateCheckoutUI();
-    };
-
-    if (cartItemsContainer) {
-        cartItemsContainer.addEventListener('click', (e) => {
-            handleCartControlClick(e);
-            handleQtyDisplayEdit(e);
-        });
-    }
-
-    const handleLogin = async () => {
-        const googleIcon = `<svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 10px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg>`;
-        const confirmed = await window.showConfirm(`${googleIcon} Continue with Google Sign In?`, "Login");
-        if (!confirmed) return;
-
-        try {
-            await signInWithPopup(auth, provider);
-            window.showToast("Successfully logged in!", "success");
-        } catch (error) {
-            console.error("Login failed", error);
-            window.showToast("Login failed. Please try again.", "error");
-        }
-    };
-
-    const handleLogout = async () => {
-        const confirmed = await window.showConfirm("Are you sure you want to log out?", "Logout");
-        if (!confirmed) return;
-
-        try {
-            await signOut(auth);
-            window.showToast("Successfully logged out.", "success");
-        } catch (error) {
-            console.error("Logout failed", error);
-        }
-    };
-    const claimGuestOrders = async (userId) => {
-        const guestOrders = JSON.parse(localStorage.getItem('dodch_guest_orders') || '[]');
-        if (guestOrders.length === 0) return;
-
-        console.log(`Checking for ${guestOrders.length} guest orders to claim...`);
-        let claimedCount = 0;
-
-        for (const orderId of guestOrders) {
-            try {
-                const orderRef = doc(db, "orders", orderId);
-                const orderSnap = await getDoc(orderRef);
-
-                if (orderSnap.exists()) {
-                    const orderData = orderSnap.data();
-                    if (orderData.userId === 'guest') {
-                        await updateDoc(orderRef, {
-                            userId: userId,
-                            hasUnseenUpdate: true // Mark as new for their account
-                        });
-                        claimedCount++;
-                    }
-                }
-            } catch (err) {
-                console.warn(`Could not claim order ${orderId}:`, err);
-            }
-        }
-
-        if (claimedCount > 0) {
-            window.showToast(`Successfully linked ${claimedCount} previous order(s) to your account!`, "success");
-        }
-        localStorage.removeItem('dodch_guest_orders');
-    };
-
-    if (loginBtn) {
-        loginBtn.addEventListener('click', (e) => {
-            window.triggerHaptic('light');
-            e.preventDefault();
-            if (currentUser) {
-                handleLogout();
-            } else {
-                handleLogin();
-            }
-        });
-        
-        const heroLoginBtn = document.getElementById('hero-login-google-btn');
-        if (heroLoginBtn) {
-            heroLoginBtn.addEventListener('click', (e) => {
-                window.triggerHaptic('light');
-                e.preventDefault();
-                if (currentUser) {
-                    window.location.href = 'my-account.html';
-                } else {
-                    handleLogin();
-                }
-            });
-        }
-
-        const heroLoginBtnCloned = document.getElementById('hero-login-google-btn-cloned');
-        if (heroLoginBtnCloned) {
-            heroLoginBtnCloned.addEventListener('click', (e) => {
-                window.triggerHaptic('light');
-                e.preventDefault();
-                if (currentUser) {
-                    window.location.href = 'my-account.html';
-                } else {
-                    handleLogin();
-                }
-            });
-        }
-    }
-
-    // --- Login Page Logic ---
-    const loginForm = document.getElementById('login-form');
-    const googleLoginBtn = document.getElementById('google-login-btn');
-    const toggleAuthMode = document.getElementById('toggle-auth-mode');
-    let isSignUp = false;
-
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const btn = loginForm.querySelector('button');
-
-            btn.innerText = "Processing...";
-            btn.disabled = true;
-
-            try {
-                if (isSignUp) {
-                    await createUserWithEmailAndPassword(auth, email, password);
-                    window.showToast("Account created successfully!", "success");
-                } else {
-                    await signInWithEmailAndPassword(auth, email, password);
-                    window.showToast("Welcome back!", "success");
-                }
-                setTimeout(() => window.location.href = 'my-account.html', 1500);
-            } catch (error) {
-                console.error(error);
-                window.showToast(error.message, "error");
-                btn.innerText = isSignUp ? "Sign Up" : "Sign In";
-                btn.disabled = false;
-            }
-        });
-    }
-
-    if (googleLoginBtn) {
-        googleLoginBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 12px; vertical-align: middle;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg> Sign In with Google`;
-        googleLoginBtn.addEventListener('click', handleLogin);
-    }
-
-    if (toggleAuthMode) toggleAuthMode.addEventListener('click', (e) => {
-        e.preventDefault();
-        isSignUp = !isSignUp;
-        document.querySelector('.auth-header h1').textContent = isSignUp ? "Create Account" : "Welcome Back";
-        document.querySelector('.auth-header p').textContent = isSignUp ? "Join the inner circle." : "Sign in to access your account.";
-        document.querySelector('.auth-btn').textContent = isSignUp ? "Sign Up" : "Sign In";
-        toggleAuthMode.textContent = isSignUp ? "Sign In" : "Sign Up";
-        toggleAuthMode.parentElement.innerHTML = isSignUp ? `Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign In</a>` : `Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign Up</a>`;
-        document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
-            location.reload();
-        });
-    });
-    const checkoutItemsContainer = document.getElementById('checkout-items-container');
-    const checkoutSubtotalEl = document.getElementById('checkout-subtotal');
-    const checkoutTotalEl = document.getElementById('checkout-total');
-
-    const updateCheckoutUI = () => {
-        if (!checkoutItemsContainer) return;
-
-        checkoutItemsContainer.innerHTML = '';
-        let subtotal = 0;
-
-        cart.forEach((item, index) => {
-            let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
-            if (isNaN(priceVal)) priceVal = 0;
-            const itemTotal = priceVal * item.quantity;
-            subtotal += itemTotal;
-
-            const el = document.createElement('div');
-            el.classList.add('summary-item', 'co-item');
-            el.innerHTML = `
-                <img class="co-item-img" src="${item.image}" alt="${item.name}" onerror="this.style.background='#f0f0f0'">
+        `,e},si=d=>{d&&(d.classList.add("animate-bump"),d.addEventListener("animationend",()=>d.classList.remove("animate-bump"),{once:!0}))},ai=d=>{const i=d.target.closest(".qty-btn, .cart-item-remove-btn");if(!i||!yt)return;const e=Number(i.dataset.index);if(Number.isNaN(e)||e<0||e>=Be.length)return;if(window.triggerHaptic("light"),i.classList.contains("cart-item-remove-btn")){Be.splice(e,1),ft();return}const o=Be[e];if(!o)return;const s=yt.querySelector(`.cart-item[data-index="${e}"] .qty-display`);if(i.classList.contains("plus"))o.quantity<99&&(o.quantity+=1);else if(i.classList.contains("minus"))if(o.quantity>1)o.quantity-=1;else{Be.splice(e,1),ft();return}s&&(s.textContent=o.quantity,si(s));const r=yt.querySelector(`.cart-item[data-index="${e}"] .qty-btn.minus`);r&&(o.quantity<=1?(r.disabled=!0,r.style.opacity="0.4",r.style.cursor="not-allowed",r.style.pointerEvents="none"):(r.disabled=!1,r.style.opacity="",r.style.cursor="",r.style.pointerEvents="")),po(),co()},uo=d=>{const i=d.target.closest(".qty-display[data-editable]");if(!i)return;const e=Number(i.dataset.index);if(Number.isNaN(e)||e<0||e>=Be.length)return;const o=i.textContent,s=document.createElement("input");s.type="text",s.value=o,s.style.width="50px",s.style.textAlign="center",s.style.fontWeight="600",s.className="qty-edit-input",i.replaceWith(s),s.focus(),s.select();const r=()=>{let v=parseInt(s.value,10)||1;v=Math.max(1,Math.min(99,v)),Be[e].quantity=v;const b=document.createElement("span");b.className="qty-display",b.dataset.index=e,b.dataset.editable="true",b.title="Click to edit",b.textContent=v,b.addEventListener("click",uo),s.replaceWith(b);const y=yt.querySelector(`.cart-item[data-index="${e}"] .qty-btn.minus`);y&&(v<=1?(y.disabled=!0,y.style.opacity="0.4",y.style.cursor="not-allowed",y.style.pointerEvents="none"):(y.disabled=!1,y.style.opacity="",y.style.cursor="",y.style.pointerEvents="")),po(),co()},R=()=>{i.textContent=o,s.replaceWith(i),i.addEventListener("click",uo)};s.addEventListener("blur",r),s.addEventListener("keydown",v=>{v.key==="Enter"&&r(),v.key==="Escape"&&R()})},ft=()=>{if(co(),!!yt){if(yt.innerHTML="",Be.length===0)Do&&yt.appendChild(Do);else{const d=document.createDocumentFragment();Be.forEach((i,e)=>{d.appendChild(ni(i,e))}),yt.appendChild(d)}po(),Pt()}};yt&&yt.addEventListener("click",d=>{ai(d),uo(d)});const _t=async()=>{if(await window.showConfirm('<svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 10px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg> Continue with Google Sign In?',"Login"))try{await wi(Qe,qi),window.showToast("Successfully logged in!","success")}catch(e){console.error("Login failed",e),window.showToast("Login failed. Please try again.","error")}},Mo=async()=>{if(await window.showConfirm("Are you sure you want to log out?","Logout"))try{await ki(Qe),window.showToast("Successfully logged out.","success")}catch(i){console.error("Logout failed",i)}},li=async d=>{const i=JSON.parse(localStorage.getItem("dodch_guest_orders")||"[]");if(i.length===0)return;console.log(`Checking for ${i.length} guest orders to claim...`);let e=0;for(const o of i)try{const s=Ae(se,"orders",o),r=await mt(s);r.exists()&&r.data().userId==="guest"&&(await at(s,{userId:d,hasUnseenUpdate:!0}),e++)}catch(s){console.warn(`Could not claim order ${o}:`,s)}e>0&&window.showToast(`Successfully linked ${e} previous order(s) to your account!`,"success"),localStorage.removeItem("dodch_guest_orders")};if(Ho){Ho.addEventListener("click",e=>{window.triggerHaptic("light"),e.preventDefault(),Me?Mo():_t()});const d=document.getElementById("hero-login-google-btn");d&&d.addEventListener("click",e=>{window.triggerHaptic("light"),e.preventDefault(),Me?window.location.href="my-account.html":_t()});const i=document.getElementById("hero-login-google-btn-cloned");i&&i.addEventListener("click",e=>{window.triggerHaptic("light"),e.preventDefault(),Me?window.location.href="my-account.html":_t()})}const mo=document.getElementById("login-form"),fo=document.getElementById("google-login-btn"),Qt=document.getElementById("toggle-auth-mode");let xt=!1;mo&&mo.addEventListener("submit",async d=>{d.preventDefault();const i=document.getElementById("login-email").value,e=document.getElementById("login-password").value,o=mo.querySelector("button");o.innerText="Processing...",o.disabled=!0;try{xt?(await Si(Qe,i,e),window.showToast("Account created successfully!","success")):(await Ei(Qe,i,e),window.showToast("Welcome back!","success")),setTimeout(()=>window.location.href="my-account.html",1500)}catch(s){console.error(s),window.showToast(s.message,"error"),o.innerText=xt?"Sign Up":"Sign In",o.disabled=!1}}),fo&&(fo.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 12px; vertical-align: middle;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path><path fill="none" d="M1 1h22v22H1z"></path></svg> Sign In with Google',fo.addEventListener("click",_t)),Qt&&Qt.addEventListener("click",d=>{d.preventDefault(),xt=!xt,document.querySelector(".auth-header h1").textContent=xt?"Create Account":"Welcome Back",document.querySelector(".auth-header p").textContent=xt?"Join the inner circle.":"Sign in to access your account.",document.querySelector(".auth-btn").textContent=xt?"Sign Up":"Sign In",Qt.textContent=xt?"Sign In":"Sign Up",Qt.parentElement.innerHTML=xt?'Already have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign In</a>':`Don't have an account? <a href="#" id="toggle-auth-mode" style="text-decoration: underline; color: var(--accent-gold-text);">Sign Up</a>`,document.getElementById("toggle-auth-mode").addEventListener("click",i=>{location.reload()})});const go=document.getElementById("checkout-items-container"),Ro=document.getElementById("checkout-subtotal"),Oo=document.getElementById("checkout-total"),Pt=()=>{if(!go)return;go.innerHTML="";let d=0;Be.forEach((z,j)=>{let Z=parseFloat(String(z.price).replace(/[^0-9.]/g,""));isNaN(Z)&&(Z=0);const q=Z*z.quantity;d+=q;const V=document.createElement("div");V.classList.add("summary-item","co-item"),V.innerHTML=`
+                <img class="co-item-img" src="${z.image}" alt="${z.name}" onerror="this.style.background='#f0f0f0'">
                 <div class="co-item-info summary-item-info">
-                    <div class="co-item-name">${item.name}</div>
-                    <div class="co-item-meta">Size: ${item.size} · Qty: ${item.quantity}</div>
-                    <button class="checkout-remove-btn co-item-remove" data-index="${index}">Remove</button>
+                    <div class="co-item-name">${z.name}</div>
+                    <div class="co-item-meta">Size: ${z.size} \xB7 Qty: ${z.quantity}</div>
+                    <button class="checkout-remove-btn co-item-remove" data-index="${j}">Remove</button>
                 </div>
-                <div class="co-item-price summary-item-price">${itemTotal.toFixed(2)} TND</div>
-            `;
-            checkoutItemsContainer.appendChild(el);
-        });
-
-        const SHIPPING_FEE = 7;
-        const FREE_SHIPPING_THRESHOLD = 100;
-        const isFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
-        const currentShipping = isFreeShipping ? 0 : SHIPPING_FEE;
-        
-        // --- Rewards Calculation ---
-        const useRewardsCheckbox = document.getElementById('use-rewards-checkbox');
-        const checkoutRewardsDiscountEl = document.getElementById('checkout-rewards-discount');
-        let creditsUsed = 0;
-        let baseTotal = subtotal + currentShipping;
-
-        if (useRewardsCheckbox && useRewardsCheckbox.checked && window._dodchUserCredits > 0) {
-            creditsUsed = Math.min(window._dodchUserCredits, baseTotal);
-            if (checkoutRewardsDiscountEl) {
-                checkoutRewardsDiscountEl.innerText = `-${creditsUsed.toFixed(2)} TND`;
-            }
-        } else {
-            if (checkoutRewardsDiscountEl) checkoutRewardsDiscountEl.innerText = `-0.00 TND`;
-        }
-        window._dodchCreditsUsedForOrder = creditsUsed; // Store for order creation
-
-        const total = Math.max(0, baseTotal - creditsUsed);
-
-        if (checkoutSubtotalEl) checkoutSubtotalEl.innerText = `${subtotal.toFixed(2)} TND`;
-
-        const shippingEl = document.getElementById('checkout-shipping');
-        if (shippingEl) {
-            shippingEl.innerText = isFreeShipping ? 'Free' : `${SHIPPING_FEE.toFixed(2)} TND`;
-        }
-
-        if (checkoutTotalEl) checkoutTotalEl.innerText = `${total.toFixed(2)} TND`;
-        const summaryTotals = document.querySelector('.summary-totals');
-        if (summaryTotals) {
-            let checkoutPromo = summaryTotals.querySelector('.checkout-promo-msg');
-            if (!checkoutPromo) {
-                checkoutPromo = document.createElement('p');
-                checkoutPromo.className = 'checkout-promo-msg';
-                checkoutPromo.style.cssText = 'font-size: 0.75rem; color: #888; margin-top: 1rem; text-align: left; font-style: italic;';
-                summaryTotals.appendChild(checkoutPromo);
-            }
-            checkoutPromo.innerText = subtotal >= FREE_SHIPPING_THRESHOLD
-                ? "Your order qualifies for Free Shipping."
-                : `Free shipping on orders over ${FREE_SHIPPING_THRESHOLD} TND.`;
-        }
-        document.querySelectorAll('.checkout-remove-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                window.triggerHaptic('medium');
-                const index = parseInt(e.target.dataset.index);
-                cart.splice(index, 1);
-                updateCartUI();
-            });
-        });
-        
-        // Ensure listener is added to checkbox
-        if (useRewardsCheckbox && !useRewardsCheckbox.hasAttribute('data-listener-attached')) {
-            useRewardsCheckbox.addEventListener('change', () => {
-                updateCheckoutUI();
-            });
-            useRewardsCheckbox.setAttribute('data-listener-attached', 'true');
-        }
-    };
-
-    const openCart = () => {
-        window.triggerHaptic('light');
-        document.body.style.overflow = 'hidden'; // Lock scroll
-        cartDrawer.classList.add('active');
-        cartOverlay.classList.add('active');
-    };
-
-    const closeCart = () => {
-        window.triggerHaptic('light');
-        document.body.style.overflow = ''; // Restore scroll
-        cartDrawer.classList.remove('active');
-        cartOverlay.classList.remove('active');
-    };
-
-    window.addToCart = (productId, sizeLabel = null) => {
-        window.triggerHaptic('medium');
-        const product = productCatalog[productId];
-        if (!product) {
-            console.error("Product not found in catalog:", productId);
-            window.showToast("Product not found.", "error");
-            return;
-        }
-        let size = sizeLabel;
-        let price = product.price;
-
-        if (product.sizes && product.sizes.length > 0) {
-            if (!size) {
-                size = product.sizes[0].label;
-                price = product.sizes[0].price;
-            } else {
-                const sizeObj = product.sizes.find(s => s.label === size);
-                if (sizeObj) {
-                    price = sizeObj.price;
-                } else {
-                    size = product.sizes[0].label;
-                    price = product.sizes[0].price;
-                }
-            }
-        } else {
-            size = "Standard";
-        }
-
-        const newItemId = `${product.name}-${size}`;
-        const existingItem = cart.find(item => item.id === newItemId);
-        const productImage = getProductPrimaryImage(product);
-
-        if (existingItem) {
-            existingItem.quantity++;
-        } else {
-            cart.push({
-                id: newItemId,
-                productId: productId,
-                name: product.name,
-                size: size,
-                price: `${parseFloat(price).toFixed(2)} TND`,
-                image: productImage,
-                quantity: 1
-            });
-        }
-
-        updateCartUI();
-        openCart();
-        window.showToast(`Added ${product.name} to cart`, 'success');
-    };
-
-    if (cartToggle) cartToggle.addEventListener('click', (e) => {
-        e.preventDefault();
-        openCart();
-    });
-    if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
-    if (cartOverlay) cartOverlay.addEventListener('click', closeCart);
-    const findProductContainer = (element) => {
-        let container = element.closest('.product-card, .product-item, .product-info, .collection-item, .item, .single-product-wrapper');
-        if (!container) {
-            let parent = element.parentElement;
-            for (let i = 0; i < 10; i++) {
-                if (!parent || parent.tagName === 'BODY') break;
-
-                const hasTitle = parent.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5');
-                const hasImg = parent.querySelector('img');
-                const hasPrice = parent.querySelector('.product-price, .price, .money, #product-price');
-                const buttonsInParent = parent.querySelectorAll('.add-to-cart-btn');
-                if (hasTitle && (hasImg || hasPrice) && buttonsInParent.length === 1) {
-                    container = parent;
-                    break;
-                }
-                if ((parent.tagName === 'SECTION' || parent.tagName === 'MAIN') && hasTitle && hasPrice) {
-                    container = parent;
-                    break;
-                }
-
-                parent = parent.parentElement;
-            }
-        }
-        if (!container) {
-            const allButtons = document.querySelectorAll('.add-to-cart-btn');
-            if (allButtons.length === 1) {
-                return document.body;
-            }
-            return element.parentElement;
-        }
-
-        return container;
-    };
-
-    if (sizeBtns.length > 0) {
-        sizeBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const clickedBtn = e.currentTarget;
-                if (clickedBtn.classList.contains('active')) return;
-                window.triggerHaptic('light');
-                const container = findProductContainer(clickedBtn);
-                if (container) {
-                    const containerBtns = container.querySelectorAll('.size-btn');
-                    containerBtns.forEach(b => b.classList.remove('active'));
-                }
-                clickedBtn.classList.add('active');
-                if (container) {
-                    let localPrice = container.querySelector('.product-price, .price, #product-price');
-                    if (localPrice) {
-                        const newPrice = clickedBtn.getAttribute('data-price');
-                        localPrice.innerText = `${newPrice} TND`;
-                    }
-                }
-            });
-        });
-    }
-
-    if (addToCartBtns.length > 0) {
-        addToCartBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const path = window.location.pathname;
-                const page = path.split("/").pop();
-                const isStoryPage = page.includes("face-foam.html") || page.includes("face-serum.html") || page.includes("silk-mask.html") || page.includes("dodchmellow-pro-v.html");
-                
-                if (isStoryPage) {
-                    e.preventDefault();
-                    let productId = 'dodchmellow-pro-v';
-                    if (page.includes('face-foam.html')) productId = 'foaming-cleanser';
-                    else if (page.includes('silk-mask.html')) productId = 'silk-therapy-mask';
-                    else if (page.includes('face-serum.html')) productId = 'advanced-ha-serum';
-                    
-                    window.location.href = `product.html?id=${productId}`;
-                    return;
-                }
-
-                const clickedBtn = e.currentTarget;
-                const container = findProductContainer(clickedBtn);
-                let productName = clickedBtn.dataset.title;
-
-                if (!productName) {
-                    let nameEl = container ? container.querySelector('.product-title, .product-name, h1, h2, h3, h4, h5') : null;
-                    productName = nameEl ? nameEl.textContent.trim() : "Unknown Product";
-                }
-
-                if (productName === "Unknown Product") {
-                    console.error("Could not detect product name. Container:", container);
-                    window.showToast("Error adding to cart. Please refresh.", "error");
-                    return;
-                }
-
-                let size = "Standard";
-                const sizeBtnsInContainer = container ? container.querySelectorAll('.size-btn') : [];
-
-                if (sizeBtnsInContainer.length > 0) {
-                    let activeSizeBtn = Array.from(sizeBtnsInContainer)
-                        .filter(b => b.classList.contains('active'))
-                        .find(b => !b.closest('.qv-modal-content'));
-
-                    if (!activeSizeBtn) {
-                        window.showToast("Please select a size.", "error");
-                        return;
-                    }
-                    size = activeSizeBtn.dataset.size;
-                }
-
-                let productId = clickedBtn.dataset.productId || clickedBtn.dataset.id;
-                let matchedProduct = productCatalog[productId] || Object.values(productCatalog).find(p => p.name.toLowerCase() === productName.toLowerCase());
-                let price = "0.00";
-
-                if (matchedProduct) {
-                    if (matchedProduct.sizes && matchedProduct.sizes.length > 0) {
-                        const matchedSize = matchedProduct.sizes.find(s => s.label === size);
-                        if (matchedSize) {
-                            price = matchedSize.price;
-                        } else {
-                            if (sizeBtnsInContainer.length > 0) {
-                                let activeSizeBtn = Array.from(sizeBtnsInContainer)
-                                    .filter(b => b.classList.contains('active'))
-                                    .find(b => !b.closest('.qv-modal-content'));
-                                if (activeSizeBtn) {
-                                    price = activeSizeBtn.dataset.price;
-                                }
-                            } else {
-                                price = matchedProduct.sizes[0].price;
-                                size = matchedProduct.sizes[0].label;
-                            }
-                        }
-                    } else if (matchedProduct.price) {
-                        price = matchedProduct.price;
-                    }
-                }
-
-                // If price is still null/0/unset, check fallbacks to DOM and datasets
-                if (!price || price === "0.00" || price === "0" || parseFloat(price) === 0) {
-                    if (sizeBtnsInContainer.length > 0) {
-                        let activeSizeBtn = Array.from(sizeBtnsInContainer)
-                            .filter(b => b.classList.contains('active'))
-                            .find(b => !b.closest('.qv-modal-content'));
-                        if (activeSizeBtn) {
-                            price = activeSizeBtn.dataset.price;
-                        }
-                    } else {
-                        const priceEl = container ? container.querySelector('.product-price, .price, #product-price') : null;
-                        if (priceEl) {
-                            price = priceEl.textContent.replace(/[^0-9.]/g, '');
-                        } else if (clickedBtn.dataset.price) {
-                            price = clickedBtn.dataset.price;
-                        }
-                    }
-                }
-
-
-
-                let imageSrc = '';
-                if (matchedProduct) {
-                    imageSrc = getProductPrimaryImage(matchedProduct);
-                }
-                if (!imageSrc) {
-                    imageSrc = clickedBtn.dataset.img || '';
-                    if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
-                        imageSrc = window.location.origin + '/' + imageSrc.replace(/^\/+/, '');
-                    }
-                }
-                if (!imageSrc) {
-                    const imgEl = container ? container.querySelector('img.product-image, img') : null;
-                    if (imgEl) {
-                        imageSrc = imgEl.src;
-                    } else {
-                        const mainImg = document.getElementById('main-product-image');
-                        if (mainImg) imageSrc = mainImg.src;
-                    }
-                }
-
-                const newItemId = `${productName}-${size}`;
-                const existingItem = cart.find(item => item.id === newItemId);
-
-                if (existingItem) {
-                    existingItem.quantity++;
-                } else {
-                    const newItem = {
-                        id: newItemId,
-                        productId: clickedBtn.dataset.productId || clickedBtn.dataset.id, // Pass ID for server verification
-                        name: productName,
-                        size: size,
-                        price: `${parseFloat(price).toFixed(2)} TND`,
-                        image: imageSrc,
-                        quantity: 1
-                    };
-                    cart.push(newItem);
-                }
-
-                updateCartUI();
-                openCart();
-
-                const originalText = clickedBtn.innerText;
-                clickedBtn.innerText = "Added";
-                setTimeout(() => clickedBtn.innerText = originalText, 2000);
-            });
-        });
-    }
-
-    // --- DYNAMIC PRODUCT PAGE LOGIC ---
-    let autoProductImageInterval = null;
-
-    function hasStandaloneStoryPage(product) {
-        if (!product || !product.storyUrl) return false;
-        const storyUrl = product.storyUrl.trim();
-        if (storyUrl === '' || storyUrl === '#' || storyUrl.includes('product.html')) return false;
-
-        // Prevent self-linking: normalize both paths to handle trailing slashes and extensions
-        const currentPath = window.location.pathname;
-        const currentFile = currentPath.split('/').pop() || 'index.html';
-        
-        const normStory = storyUrl.replace(/\.html$/, '').replace(/^\/+/, '');
-        const normCurrent = currentFile.replace(/\.html$/, '');
-        
-        if (normStory === normCurrent) return false;
-
-        return true;
-    }
-
-    function initProductPage() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = urlParams.get('id');
-        const currentFilename = window.location.pathname.split('/').pop() || 'index.html';
-        
-        // Robust product matching for both generic and story pages
-        const product = productCatalog[productId] || 
-                        Object.values(productCatalog).find(p => p.storyUrl === currentFilename) || 
-                        (productId ? null : null);
-
-        if (!product) return;
-
-        const activeId = productId || Object.keys(productCatalog).find(k => productCatalog[k] === product);
-
-        let titleEl = document.getElementById('product-title');
-        if (!titleEl) {
-            const info = document.querySelector('.product-info');
-            if (info) titleEl = info.querySelector('h1');
-        }
-
-        let subtitleEl = document.getElementById('product-subtitle');
-        if (!subtitleEl) {
-            const info = document.querySelector('.product-info');
-            if (info) subtitleEl = info.querySelector('.product-subtitle, h2');
-        }
-
-        const priceEl = document.getElementById('product-price');
-        const descEl = document.getElementById('product-description-text');
-        const imgEl = document.getElementById('main-product-image');
-        const productInfo = document.querySelector('.product-info');
-        const addToCartBtn = productInfo ? productInfo.querySelector('.add-to-cart-btn') : null;
-
-        const updateWithFade = (el, newHtmlOrText, isHtml = false) => {
-            if (!el) return;
-            const hasShimmer = el.querySelector('.price-shimmer');
-            if (isHtml) {
-                el.innerHTML = newHtmlOrText;
-            } else {
-                el.textContent = newHtmlOrText;
-            }
-            if (hasShimmer) {
-                el.classList.remove('fade-in-load');
-                void el.offsetWidth; // Force reflow
-                el.classList.add('fade-in-load');
-            }
-        };
-
-        if (titleEl) {
-            if (activeId) titleEl.style.viewTransitionName = `prod-title-${activeId}`;
-            if (firestoreSynced) {
-                updateWithFade(titleEl, product.name);
-            } else {
-                titleEl.innerHTML = `<span class="price-shimmer" style="width: 250px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>`;
-            }
-        }
-        if (subtitleEl) {
-            if (firestoreSynced) {
-                updateWithFade(subtitleEl, product.subtitle);
-            } else {
-                subtitleEl.innerHTML = `<span class="price-shimmer" style="width: 180px; height: 1.2em; display: inline-block; border-radius: 6px;"></span>`;
-            }
-        }
-
-        // Price: show shimmer until Firestore provides data
-        if (priceEl) {
-            const isActuallyOOS = product.sizes && product.sizes.length > 0
-                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-
-            const priceVal = product.price ? `${product.price} TND` : '';
-            if (firestoreSynced) {
-                if (isActuallyOOS) {
-                    updateWithFade(priceEl, `<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span> <span style="opacity: 0.7;">${priceVal}</span>`, true);
-                } else if (product.price) {
-                    updateWithFade(priceEl, priceVal);
-                    priceEl.style.color = "";
-                }
-            } else {
-                // No price yet — Firestore hasn't synced. Show shimmer.
-                priceEl.innerHTML = `<span class="price-shimmer" style="width: 110px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>`;
-            }
-        }
-
-        // Shared batch display renderer
-        const renderBatchDisplay = (sizeObj, afterEl) => {
-            let el = document.getElementById('product-batch-display');
-            if (!el) {
-                el = document.createElement('div');
-                el.id = 'product-batch-display';
-                el.className = 'product-batch-display';
-                afterEl.after(el);
-            } else {
-                el.style.display = 'inline-flex';
-            }
-
-            const batchNum = typeof sizeObj === 'object' ? (sizeObj.batchNumber || 'Batch #001') : (sizeObj || 'Batch #001');
-            const expiryDate = typeof sizeObj === 'object' ? sizeObj.expiryDate : null;
-            const formulaVersion = typeof sizeObj === 'object' ? (sizeObj.formulaVersion || null) : null;
-
-            el.innerHTML = `
+                <div class="co-item-price summary-item-price">${q.toFixed(2)} TND</div>
+            `,go.appendChild(V)});const i=7,e=100,o=d>=e,s=o?0:i,r=document.getElementById("use-rewards-checkbox"),R=document.getElementById("checkout-rewards-discount");let v=0,b=d+s;r&&r.checked&&window._dodchUserCredits>0?(v=Math.min(window._dodchUserCredits,b),R&&(R.innerText=`-${v.toFixed(2)} TND`)):R&&(R.innerText="-0.00 TND"),window._dodchCreditsUsedForOrder=v;const y=Math.max(0,b-v);Ro&&(Ro.innerText=`${d.toFixed(2)} TND`);const S=document.getElementById("checkout-shipping");S&&(S.innerText=o?"Free":`${i.toFixed(2)} TND`),Oo&&(Oo.innerText=`${y.toFixed(2)} TND`);const L=document.querySelector(".summary-totals");if(L){let z=L.querySelector(".checkout-promo-msg");z||(z=document.createElement("p"),z.className="checkout-promo-msg",z.style.cssText="font-size: 0.75rem; color: #888; margin-top: 1rem; text-align: left; font-style: italic;",L.appendChild(z)),z.innerText=d>=e?"Your order qualifies for Free Shipping.":`Free shipping on orders over ${e} TND.`}document.querySelectorAll(".checkout-remove-btn").forEach(z=>{z.addEventListener("click",j=>{window.triggerHaptic("medium");const Z=parseInt(j.target.dataset.index);Be.splice(Z,1),ft()})}),r&&!r.hasAttribute("data-listener-attached")&&(r.addEventListener("change",()=>{Pt()}),r.setAttribute("data-listener-attached","true"))},Ut=()=>{window.triggerHaptic("light"),document.body.style.overflow="hidden",At.classList.add("active"),zt.classList.add("active")},No=()=>{window.triggerHaptic("light"),document.body.style.overflow="",At.classList.remove("active"),zt.classList.remove("active")};window.addToCart=(d,i=null)=>{window.triggerHaptic("medium");const e=x[d];if(!e){console.error("Product not found in catalog:",d),window.showToast("Product not found.","error");return}let o=i,s=e.price;if(e.sizes&&e.sizes.length>0)if(!o)o=e.sizes[0].label,s=e.sizes[0].price;else{const b=e.sizes.find(y=>y.label===o);b?s=b.price:(o=e.sizes[0].label,s=e.sizes[0].price)}else o="Standard";const r=`${e.name}-${o}`,R=Be.find(b=>b.id===r),v=St(e);R?R.quantity++:Be.push({id:r,productId:d,name:e.name,size:o,price:`${parseFloat(s).toFixed(2)} TND`,image:v,quantity:1}),ft(),Ut(),window.showToast(`Added ${e.name} to cart`,"success")},pt&&pt.addEventListener("click",d=>{d.preventDefault(),Ut()}),zo&&zo.addEventListener("click",No),zt&&zt.addEventListener("click",No);const _o=d=>{let i=d.closest(".product-card, .product-item, .product-info, .collection-item, .item, .single-product-wrapper");if(!i){let e=d.parentElement;for(let o=0;o<10&&!(!e||e.tagName==="BODY");o++){const s=e.querySelector(".product-title, .product-name, h1, h2, h3, h4, h5"),r=e.querySelector("img"),R=e.querySelector(".product-price, .price, .money, #product-price"),v=e.querySelectorAll(".add-to-cart-btn");if(s&&(r||R)&&v.length===1){i=e;break}if((e.tagName==="SECTION"||e.tagName==="MAIN")&&s&&R){i=e;break}e=e.parentElement}}return i||(document.querySelectorAll(".add-to-cart-btn").length===1?document.body:d.parentElement)};Fo.length>0&&Fo.forEach(d=>{d.addEventListener("click",i=>{const e=i.currentTarget;if(e.classList.contains("active"))return;window.triggerHaptic("light");const o=_o(e);if(o&&o.querySelectorAll(".size-btn").forEach(r=>r.classList.remove("active")),e.classList.add("active"),o){let s=o.querySelector(".product-price, .price, #product-price");if(s){const r=e.getAttribute("data-price");s.innerText=`${r} TND`}}})}),qo.length>0&&qo.forEach(d=>{d.addEventListener("click",i=>{const o=window.location.pathname.split("/").pop();if(o.includes("face-foam.html")||o.includes("face-serum.html")||o.includes("silk-mask.html")||o.includes("dodchmellow-pro-v.html")){i.preventDefault();let f="dodchmellow-pro-v";o.includes("face-foam.html")?f="foaming-cleanser":o.includes("silk-mask.html")?f="silk-therapy-mask":o.includes("face-serum.html")&&(f="advanced-ha-serum"),window.location.href=`product.html?id=${f}`;return}const r=i.currentTarget,R=_o(r);let v=r.dataset.title;if(!v){let f=R?R.querySelector(".product-title, .product-name, h1, h2, h3, h4, h5"):null;v=f?f.textContent.trim():"Unknown Product"}if(v==="Unknown Product"){console.error("Could not detect product name. Container:",R),window.showToast("Error adding to cart. Please refresh.","error");return}let b="Standard";const y=R?R.querySelectorAll(".size-btn"):[];if(y.length>0){let f=Array.from(y).filter(T=>T.classList.contains("active")).find(T=>!T.closest(".qv-modal-content"));if(!f){window.showToast("Please select a size.","error");return}b=f.dataset.size}let S=r.dataset.productId||r.dataset.id,L=x[S]||Object.values(x).find(f=>f.name.toLowerCase()===v.toLowerCase()),z="0.00";if(L)if(L.sizes&&L.sizes.length>0){const f=L.sizes.find(T=>T.label===b);if(f)z=f.price;else if(y.length>0){let T=Array.from(y).filter(re=>re.classList.contains("active")).find(re=>!re.closest(".qv-modal-content"));T&&(z=T.dataset.price)}else z=L.sizes[0].price,b=L.sizes[0].label}else L.price&&(z=L.price);if(!z||z==="0.00"||z==="0"||parseFloat(z)===0)if(y.length>0){let f=Array.from(y).filter(T=>T.classList.contains("active")).find(T=>!T.closest(".qv-modal-content"));f&&(z=f.dataset.price)}else{const f=R?R.querySelector(".product-price, .price, #product-price"):null;f?z=f.textContent.replace(/[^0-9.]/g,""):r.dataset.price&&(z=r.dataset.price)}let j="";if(L&&(j=St(L)),j||(j=r.dataset.img||"",j&&!j.startsWith("http")&&!j.startsWith("data:")&&(j=window.location.origin+"/"+j.replace(/^\/+/,""))),!j){const f=R?R.querySelector("img.product-image, img"):null;if(f)j=f.src;else{const T=document.getElementById("main-product-image");T&&(j=T.src)}}const Z=`${v}-${b}`,q=Be.find(f=>f.id===Z);if(q)q.quantity++;else{const f={id:Z,productId:r.dataset.productId||r.dataset.id,name:v,size:b,price:`${parseFloat(z).toFixed(2)} TND`,image:j,quantity:1};Be.push(f)}ft(),Ut();const V=r.innerText;r.innerText="Added",setTimeout(()=>r.innerText=V,2e3)})});let Dt=null;function Uo(d){if(!d||!d.storyUrl)return!1;const i=d.storyUrl.trim();if(i===""||i==="#"||i.includes("product.html"))return!1;const o=window.location.pathname.split("/").pop()||"index.html",s=i.replace(/\.html$/,"").replace(/^\/+/,""),r=o.replace(/\.html$/,"");return s!==r}function ho(){const i=new URLSearchParams(window.location.search).get("id"),e=window.location.pathname.split("/").pop()||"index.html",o=x[i]||Object.values(x).find(P=>P.storyUrl===e)||null;if(!o)return;const s=i||Object.keys(x).find(P=>x[P]===o);let r=document.getElementById("product-title");if(!r){const P=document.querySelector(".product-info");P&&(r=P.querySelector("h1"))}let R=document.getElementById("product-subtitle");if(!R){const P=document.querySelector(".product-info");P&&(R=P.querySelector(".product-subtitle, h2"))}const v=document.getElementById("product-price"),b=document.getElementById("product-description-text"),y=document.getElementById("main-product-image"),S=document.querySelector(".product-info"),L=S?S.querySelector(".add-to-cart-btn"):null,z=(P,C,ee=!1)=>{if(!P)return;const F=P.querySelector(".price-shimmer");ee?P.innerHTML=C:P.textContent=C,F&&(P.classList.remove("fade-in-load"),P.offsetWidth,P.classList.add("fade-in-load"))};if(r&&(s&&(r.style.viewTransitionName=`prod-title-${s}`),Pe?z(r,o.name):r.innerHTML='<span class="price-shimmer" style="width: 250px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>'),R&&(Pe?z(R,o.subtitle):R.innerHTML='<span class="price-shimmer" style="width: 180px; height: 1.2em; display: inline-block; border-radius: 6px;"></span>'),v){const P=o.sizes&&o.sizes.length>0?o.sizes.every(ee=>ee.outOfStock===!0||String(ee.outOfStock).toLowerCase()==="true"):o.outOfStock===!0||String(o.outOfStock).toLowerCase()==="true",C=o.price?`${o.price} TND`:"";Pe?P?z(v,`<span style="color: #ff4d4d; font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Out of Stock</span> <span style="opacity: 0.7;">${C}</span>`,!0):o.price&&(z(v,C),v.style.color=""):v.innerHTML='<span class="price-shimmer" style="width: 110px; height: 1.4em; display: inline-block; border-radius: 6px;"></span>'}const j=(P,C)=>{let ee=document.getElementById("product-batch-display");ee?ee.style.display="inline-flex":(ee=document.createElement("div"),ee.id="product-batch-display",ee.className="product-batch-display",C.after(ee));const F=typeof P=="object"?P.batchNumber||"Batch #001":P||"Batch #001",Se=typeof P=="object"?P.expiryDate:null,fe=typeof P=="object"&&P.formulaVersion||null;ee.innerHTML=`
                 <span>Batch:</span>
-                <span class="batch-num-tag">${batchNum}</span>
+                <span class="batch-num-tag">${F}</span>
                 <button type="button" class="batch-tooltip-trigger" aria-label="Batch details and info">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -2538,575 +200,57 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="batch-tooltip-detail">
                             <span class="label">Batch Code:</span>
-                            <span class="val">${batchNum}</span>
+                            <span class="val">${F}</span>
                         </div>
-                        ${formulaVersion ? `
+                        ${fe?`
                         <div class="batch-tooltip-detail">
                             <span class="label">Formula Version:</span>
-                            <span class="val">${formulaVersion}</span>
-                        </div>` : ''}
-                        ${expiryDate ? `
+                            <span class="val">${fe}</span>
+                        </div>`:""}
+                        ${Se?`
                         <div class="batch-tooltip-detail">
                             <span class="label">Expiry Date:</span>
-                            <span class="val">${expiryDate}</span>
-                        </div>` : ''}
+                            <span class="val">${Se}</span>
+                        </div>`:""}
                         <div class="batch-tooltip-footer">
                             <p style="margin-bottom:4px; font-weight:500;">Hand-poured in small artisanal batches following strict laboratory QA standards.</p>
                             <p style="color:#BBB; font-style:italic;">Each batch may feature subtle variations in INCI composition, expiry date, texture, or performance. Please refer to your product packaging label or contact client care for exact specifications regarding your order.</p>
                         </div>
                     </div>
                 </button>
-            `;
-
-            const triggerBtn = el.querySelector('.batch-tooltip-trigger');
-            if (triggerBtn) {
-                const adjustPosition = () => {
-                    const popup = triggerBtn.querySelector('.batch-tooltip-popup');
-                    if (!popup) return;
-                    popup.style.left = '50%';
-                    popup.style.transform = 'translateX(-50%)';
-                    const rect = popup.getBoundingClientRect();
-                    const margin = 14;
-                    if (rect.left < margin) {
-                        const shift = margin - rect.left;
-                        popup.style.left = `calc(50% + ${shift}px)`;
-                    } else if (rect.right > window.innerWidth - margin) {
-                        const shift = rect.right - (window.innerWidth - margin);
-                        popup.style.left = `calc(50% - ${shift}px)`;
-                    }
-                };
-
-                triggerBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const wasActive = triggerBtn.classList.contains('active');
-                    document.querySelectorAll('.batch-tooltip-trigger.active').forEach(b => b.classList.remove('active'));
-                    if (!wasActive) {
-                        triggerBtn.classList.add('active');
-                        adjustPosition();
-                        if (typeof window.triggerHaptic === 'function') window.triggerHaptic('light');
-                    }
-                });
-
-                triggerBtn.addEventListener('mouseenter', adjustPosition);
-            }
-
-            if (!window._batchTooltipGlobalListener) {
-                window._batchTooltipGlobalListener = true;
-                document.addEventListener('click', (e) => {
-                    if (!e.target.closest('.batch-tooltip-trigger')) {
-                        document.querySelectorAll('.batch-tooltip-trigger.active').forEach(b => b.classList.remove('active'));
-                    }
-                });
-            }
-
-            return el;
-        };
-
-        // Add batch number display
-        const existingBatch = document.getElementById('product-batch-display');
-        if (existingBatch) existingBatch.remove();
-        const sortedSizes = product.sizes && product.sizes.length > 0 ? [...product.sizes].sort((a, b) => parseFloat(a.price) - parseFloat(b.price)) : [];
-        const defaultSize = sortedSizes.find(s => !s.outOfStock) || sortedSizes[0];
-        if (defaultSize?.batchNumber && subtitleEl) {
-            renderBatchDisplay(defaultSize, subtitleEl);
-            if (titleEl && titleEl.classList.contains('fade-in-load')) {
-                document.getElementById('product-batch-display')?.classList.add('fade-in-load');
-            }
-        }
-
-        if (descEl) {
-            if (firestoreSynced) {
-                updateWithFade(descEl, product.description);
-            } else {
-                descEl.innerHTML = `
+            `;const he=ee.querySelector(".batch-tooltip-trigger");if(he){const $e=()=>{const ye=he.querySelector(".batch-tooltip-popup");if(!ye)return;ye.style.left="50%",ye.style.transform="translateX(-50%)";const we=ye.getBoundingClientRect(),Ie=14;if(we.left<Ie){const ze=Ie-we.left;ye.style.left=`calc(50% + ${ze}px)`}else if(we.right>window.innerWidth-Ie){const ze=we.right-(window.innerWidth-Ie);ye.style.left=`calc(50% - ${ze}px)`}};he.addEventListener("click",ye=>{ye.stopPropagation();const we=he.classList.contains("active");document.querySelectorAll(".batch-tooltip-trigger.active").forEach(Ie=>Ie.classList.remove("active")),we||(he.classList.add("active"),$e(),typeof window.triggerHaptic=="function"&&window.triggerHaptic("light"))}),he.addEventListener("mouseenter",$e)}return window._batchTooltipGlobalListener||(window._batchTooltipGlobalListener=!0,document.addEventListener("click",$e=>{$e.target.closest(".batch-tooltip-trigger")||document.querySelectorAll(".batch-tooltip-trigger.active").forEach(ye=>ye.classList.remove("active"))})),ee},Z=document.getElementById("product-batch-display");Z&&Z.remove();const q=o.sizes&&o.sizes.length>0?[...o.sizes].sort((P,C)=>parseFloat(P.price)-parseFloat(C.price)):[],V=q.find(P=>!P.outOfStock)||q[0];V?.batchNumber&&R&&(j(V,R),r&&r.classList.contains("fade-in-load")&&document.getElementById("product-batch-display")?.classList.add("fade-in-load")),b&&(Pe?z(b,o.description):b.innerHTML=`
                     <span class="price-shimmer" style="width: 100%; height: 1.2em; display: inline-block; border-radius: 4px; margin-bottom: 6px;"></span>
                     <span class="price-shimmer" style="width: 90%; height: 1.2em; display: inline-block; border-radius: 4px; margin-bottom: 6px;"></span>
                     <span class="price-shimmer" style="width: 75%; height: 1.2em; display: inline-block; border-radius: 4px;"></span>
-                `;
-            }
-        }
-
-        // Notice Section Display (Generic & Story Pages)
-        let noticeContainer = document.getElementById('product-notice-container');
-        const storyAccordion = document.querySelector('.product-details-accordion');
-        if (firestoreSynced && product.notice) {
-            if (!noticeContainer) {
-                noticeContainer = document.createElement('div');
-                noticeContainer.id = 'product-notice-container';
-                noticeContainer.className = 'product-notice';
-                
-                if (descEl) {
-                    descEl.after(noticeContainer);
-                } else if (storyAccordion) {
-                    storyAccordion.before(noticeContainer);
-                    noticeContainer.style.marginBottom = '2rem';
-                }
-            }
-            if (noticeContainer) {
-                const MAX_NOTICE_LENGTH = 180;
-                const titleHtml = `<div class="product-notice-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Important Notice</div>`;
-                
-                if (product.notice.length > MAX_NOTICE_LENGTH) {
-                    noticeContainer.innerHTML = `${titleHtml}<div class="product-notice-text-wrap"><span>${product.notice}</span></div><button class="read-more-notice-btn" style="background:none;border:none;color:var(--accent-gold-text);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.85rem;text-decoration:underline;padding:0;display:block;margin-top:8px;">Read More</button>`;
-                    
-                    const btn = noticeContainer.querySelector('.read-more-notice-btn');
-                    const wrap = noticeContainer.querySelector('.product-notice-text-wrap');
-                    btn.onclick = () => {
-                        const isExpanded = wrap.classList.toggle('expanded');
-                        btn.textContent = isExpanded ? 'Read Less' : 'Read More';
-
-                        if (isExpanded) {
-                            // Retrigger span fade-in animation
-                            const inner = wrap.querySelector('span');
-                            if (inner) {
-                                inner.style.animation = 'none';
-                                void inner.offsetWidth;
-                                inner.style.animation = '';
-                            }
-                            // Scroll notice into view as it starts opening
-                            setTimeout(() => {
-                                noticeContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            }, 60);
-                        } else {
-                            // After collapse finishes (500ms CSS duration), scroll notice centered
-                            setTimeout(() => {
-                                noticeContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }, 520);
-                        }
-                    };
-                } else {
-                    noticeContainer.innerHTML = `${titleHtml}<span>${product.notice}</span>`;
-                }
-                noticeContainer.style.display = 'block';
-            }
-        } else if (noticeContainer) {
-            noticeContainer.style.display = 'none';
-        }
-
-        const productImages = getProductImages(product);
-        const primaryImage = productImages[0] || '';
-        if (imgEl) {
-            const isPlaceholder = imgEl.src.includes('placeholder-glow.webp') || imgEl.getAttribute('src') === 'placeholder-glow.webp';
-            if (activeId) imgEl.style.viewTransitionName = `prod-img-${activeId}`;
-            imgEl.src = primaryImage;
-            if (product.style) imgEl.style = product.style;
-
-            if (isPlaceholder && firestoreSynced) {
-                imgEl.classList.remove('fade-in-load');
-                void imgEl.offsetWidth; // Force reflow
-                imgEl.classList.add('fade-in-load');
-            }
-
-            // Inject Product Page Tinted Shadow
-            const windowEl = imgEl.closest('.product-image-window');
-            if (windowEl) {
-                let tintedShadow = windowEl.parentElement.querySelector('.product-page-tinted-shadow');
-                const isNewShadow = !tintedShadow;
-                if (!tintedShadow) {
-                    tintedShadow = document.createElement('div');
-                    tintedShadow.className = 'tinted-shadow product-page-tinted-shadow';
-                    windowEl.before(tintedShadow);
-                }
-                tintedShadow.style.backgroundImage = `url('${primaryImage}')`;
-                if (isNewShadow && firestoreSynced) {
-                    tintedShadow.classList.add('fade-in-load');
-                }
-            }
-        }
-
-        const thumbnailsContainer = document.getElementById('product-thumbnails');
-        if (thumbnailsContainer) {
-            const thumbsWereEmpty = !thumbnailsContainer.querySelector('button');
-            thumbnailsContainer.innerHTML = '';
-            productImages.forEach((imageSrc, index) => {
-                const thumb = document.createElement('button');
-                thumb.type = 'button';
-                thumb.className = 'product-thumbnail-btn' + (index === 0 ? ' active' : '');
-                thumb.innerHTML = `<img src="${imageSrc}" alt="Thumbnail ${index + 1}">`;
-                thumb.addEventListener('click', () => {
-                    if (imgEl && imgEl.src !== imageSrc) {
-                        imgEl.classList.add('switching');
-                        setTimeout(() => {
-                            imgEl.src = imageSrc;
-                            imgEl.classList.remove('switching');
-                        }, 260);
-                    }
-                    // Update tinted shadow
-                    const ts = imgEl.closest('.product-gallery')?.querySelector('.product-page-tinted-shadow');
-                    if (ts) ts.style.backgroundImage = `url('${imageSrc}')`;
-
-                    thumbnailsContainer.querySelectorAll('.product-thumbnail-btn').forEach(btn => btn.classList.remove('active'));
-                    thumb.classList.add('active');
-                    if (autoProductImageInterval) {
-                        clearInterval(autoProductImageInterval);
-                        autoProductImageInterval = setInterval(switchProductImage, 4500);
-                    }
-                });
-                thumbnailsContainer.appendChild(thumb);
-            });
-            if (thumbsWereEmpty && firestoreSynced) thumbnailsContainer.classList.add('fade-in-load');
-
-            const switchProductImage = () => {
-                const activeBtn = thumbnailsContainer.querySelector('.product-thumbnail-btn.active');
-                const buttons = Array.from(thumbnailsContainer.querySelectorAll('.product-thumbnail-btn'));
-                const currentIndex = buttons.indexOf(activeBtn);
-                const nextIndex = currentIndex < buttons.length - 1 ? currentIndex + 1 : 0;
-                const nextBtn = buttons[nextIndex];
-                if (nextBtn) {
-                    const nextImage = nextBtn.querySelector('img')?.src;
-                    if (imgEl && nextImage && imgEl.src !== nextImage) {
-                        imgEl.classList.add('switching');
-                        setTimeout(() => {
-                            imgEl.src = nextImage;
-                            imgEl.classList.remove('switching');
-                        }, 260);
-                    }
-                    // Update tinted shadow on auto-switch
-                    const ts = imgEl.closest('.product-gallery')?.querySelector('.product-page-tinted-shadow');
-                    if (ts) ts.style.backgroundImage = `url('${nextImage}')`;
-
-                    buttons.forEach(btn => btn.classList.remove('active'));
-                    nextBtn.classList.add('active');
-                }
-            };
-
-            if (autoProductImageInterval) clearInterval(autoProductImageInterval);
-            if (productImages.length > 1) {
-                autoProductImageInterval = setInterval(switchProductImage, 4500);
-            }
-        }
-
-        if (addToCartBtn) {
-            addToCartBtn.dataset.productId = productId || Object.keys(productCatalog).find(k => productCatalog[k] === product) || '';
-        }
-        document.title = `${product.name} | DODCH`;
-
-        const sizeOptionsContainer = document.querySelector('.size-options');
-        const sizeSelector = document.querySelector('.size-selector');
-        const isFirstSizeSync = firestoreSynced && sizeOptionsContainer && !sizeOptionsContainer.dataset.synced;
-
-        if (sizeOptionsContainer && product.sizes) {
-            if (isFirstSizeSync) sizeOptionsContainer.dataset.synced = '1';
-            sizeOptionsContainer.innerHTML = '';
-
-            if (product.sizes && product.sizes.length > 0) {
-                // Firestore data is loaded — render real size buttons
-                if (sizeSelector) sizeSelector.style.display = 'block';
-                if (isFirstSizeSync && sizeSelector) sizeSelector.classList.add('fade-in-load');
-
-                const sortedSizes = product.sizes.map((s, i) => ({ ...s, i })).sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-                const firstInStock = sortedSizes.find(s => !s.outOfStock);
-                const minIndex = firstInStock ? firstInStock.i : sortedSizes[0].i;
-
-                product.sizes.forEach((sizeObj, index) => {
-                    const btn = document.createElement('button');
-                    btn.className = 'size-btn';
-                    btn.dataset.size = sizeObj.label;
-                    btn.dataset.price = sizeObj.price;
-                    btn.textContent = sizeObj.label;
-
-                    if (index === minIndex) {
-                        btn.classList.add('active');
-                        if (priceEl) {
-                            const isActuallyOOS = product.sizes && product.sizes.length > 0
-                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                            const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
-                            const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
-
-                            if (sizeObj.originalPrice) {
-                                priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
-                            } else {
-                                priceEl.innerHTML = `<span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
-                                priceEl.style.color = "";
-                            }
-                        }
-                        const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
-                        const isActuallyOOS = product.sizes && product.sizes.length > 0
-                            ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                            : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                        
-                        // Handle stock notification button dynamic injection
-                        let notifyBtn = document.getElementById('back-in-stock-notify-btn');
-                        if (notifyBtn) notifyBtn.remove();
-
-                        if (atcBtn) {
-                            if (isActuallyOOS || sizeObj.outOfStock) {
-                                // Out of Stock state
-                                atcBtn.style.display = 'none';
-                                
-                                notifyBtn = document.createElement('button');
-                                notifyBtn.id = 'back-in-stock-notify-btn';
-                                notifyBtn.className = 'notify-back-in-stock-btn';
-
-                                // Check localStorage — if already subscribed, show persisted state
-                                if (isNotifySubscribed(productId, sizeObj.label)) {
-                                    applySubscribedState(notifyBtn);
-                                } else {
-                                    notifyBtn.innerHTML = `
+                `);let f=document.getElementById("product-notice-container");const T=document.querySelector(".product-details-accordion");if(Pe&&o.notice){if(f||(f=document.createElement("div"),f.id="product-notice-container",f.className="product-notice",b?b.after(f):T&&(T.before(f),f.style.marginBottom="2rem")),f){const C='<div class="product-notice-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Important Notice</div>';if(o.notice.length>180){f.innerHTML=`${C}<div class="product-notice-text-wrap"><span>${o.notice}</span></div><button class="read-more-notice-btn" style="background:none;border:none;color:var(--accent-gold-text);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.85rem;text-decoration:underline;padding:0;display:block;margin-top:8px;">Read More</button>`;const ee=f.querySelector(".read-more-notice-btn"),F=f.querySelector(".product-notice-text-wrap");ee.onclick=()=>{const Se=F.classList.toggle("expanded");if(ee.textContent=Se?"Read Less":"Read More",Se){const fe=F.querySelector("span");fe&&(fe.style.animation="none",fe.offsetWidth,fe.style.animation=""),setTimeout(()=>{f.scrollIntoView({behavior:"smooth",block:"nearest"})},60)}else setTimeout(()=>{f.scrollIntoView({behavior:"smooth",block:"center"})},520)}}else f.innerHTML=`${C}<span>${o.notice}</span>`;f.style.display="block"}}else f&&(f.style.display="none");const re=Co(o),xe=re[0]||"";if(y){const P=y.src.includes("placeholder-glow.webp")||y.getAttribute("src")==="placeholder-glow.webp";s&&(y.style.viewTransitionName=`prod-img-${s}`),y.src=xe,o.style&&(y.style=o.style),P&&Pe&&(y.classList.remove("fade-in-load"),y.offsetWidth,y.classList.add("fade-in-load"));const C=y.closest(".product-image-window");if(C){let ee=C.parentElement.querySelector(".product-page-tinted-shadow");const F=!ee;ee||(ee=document.createElement("div"),ee.className="tinted-shadow product-page-tinted-shadow",C.before(ee)),ee.style.backgroundImage=`url('${xe}')`,F&&Pe&&ee.classList.add("fade-in-load")}}const me=document.getElementById("product-thumbnails");if(me){const P=!me.querySelector("button");me.innerHTML="",re.forEach((ee,F)=>{const Se=document.createElement("button");Se.type="button",Se.className="product-thumbnail-btn"+(F===0?" active":""),Se.innerHTML=`<img src="${ee}" alt="Thumbnail ${F+1}">`,Se.addEventListener("click",()=>{y&&y.src!==ee&&(y.classList.add("switching"),setTimeout(()=>{y.src=ee,y.classList.remove("switching")},260));const fe=y.closest(".product-gallery")?.querySelector(".product-page-tinted-shadow");fe&&(fe.style.backgroundImage=`url('${ee}')`),me.querySelectorAll(".product-thumbnail-btn").forEach(he=>he.classList.remove("active")),Se.classList.add("active"),Dt&&(clearInterval(Dt),Dt=setInterval(C,4500))}),me.appendChild(Se)}),P&&Pe&&me.classList.add("fade-in-load");const C=()=>{const ee=me.querySelector(".product-thumbnail-btn.active"),F=Array.from(me.querySelectorAll(".product-thumbnail-btn")),Se=F.indexOf(ee),fe=Se<F.length-1?Se+1:0,he=F[fe];if(he){const $e=he.querySelector("img")?.src;y&&$e&&y.src!==$e&&(y.classList.add("switching"),setTimeout(()=>{y.src=$e,y.classList.remove("switching")},260));const ye=y.closest(".product-gallery")?.querySelector(".product-page-tinted-shadow");ye&&(ye.style.backgroundImage=`url('${$e}')`),F.forEach(we=>we.classList.remove("active")),he.classList.add("active")}};Dt&&clearInterval(Dt),re.length>1&&(Dt=setInterval(C,4500))}L&&(L.dataset.productId=i||Object.keys(x).find(P=>x[P]===o)||""),document.title=`${o.name} | DODCH`;const oe=document.querySelector(".size-options"),ve=document.querySelector(".size-selector"),be=Pe&&oe&&!oe.dataset.synced;if(oe&&o.sizes)if(be&&(oe.dataset.synced="1"),oe.innerHTML="",o.sizes&&o.sizes.length>0){ve&&(ve.style.display="block"),be&&ve&&ve.classList.add("fade-in-load");const P=o.sizes.map((F,Se)=>({...F,i:Se})).sort((F,Se)=>parseFloat(F.price)-parseFloat(Se.price)),C=P.find(F=>!F.outOfStock),ee=C?C.i:P[0].i;o.sizes.forEach((F,Se)=>{const fe=document.createElement("button");if(fe.className="size-btn",fe.dataset.size=F.label,fe.dataset.price=F.price,fe.textContent=F.label,Se===ee){if(fe.classList.add("active"),v){const Ie=(o.sizes&&o.sizes.length>0?o.sizes.every(Ve=>Ve.outOfStock===!0||String(Ve.outOfStock).toLowerCase()==="true"):o.outOfStock===!0||String(o.outOfStock).toLowerCase()==="true")||F.outOfStock,ze=Ie?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";F.originalPrice?v.innerHTML=`<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${F.originalPrice} TND</span> <span style="${Ie?"opacity: 0.7;":""}">${F.price} TND</span> ${ze}`:(v.innerHTML=`<span style="${Ie?"opacity: 0.7;":""}">${F.price} TND</span> ${ze}`,v.style.color="")}const he=document.querySelector(".product-info .add-to-cart-btn"),$e=o.sizes&&o.sizes.length>0?o.sizes.every(we=>we.outOfStock===!0||String(we.outOfStock).toLowerCase()==="true"):o.outOfStock===!0||String(o.outOfStock).toLowerCase()==="true";let ye=document.getElementById("back-in-stock-notify-btn");if(ye&&ye.remove(),he)if($e||F.outOfStock)he.style.display="none",ye=document.createElement("button"),ye.id="back-in-stock-notify-btn",ye.className="notify-back-in-stock-btn",Ao(i,F.label)?no(ye):ye.innerHTML=`
                                         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                         </svg>
                                         Notify Me When Back in Stock
-                                    `;
-                                }
-
-                                atcBtn.before(notifyBtn);
-                                if (isFirstSizeSync) notifyBtn.classList.add('fade-in-load');
-                                
-                                notifyBtn.addEventListener('click', async () => {
-                                    if (notifyBtn.disabled) return;
-                                    window.triggerHaptic('medium');
-                                    notifyBtn.classList.add('loading');
-                                    notifyBtn.disabled = true;
-                                    await handleBackInStockSubscription(productId, sizeObj.label, notifyBtn);
-                                    notifyBtn.classList.remove('loading');
-                                    if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
-                                });
-
-                            } else {
-                                // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
-                                try { localStorage.removeItem(getNotifyStorageKey(productId, sizeObj.label)); } catch(e) {}
-                                atcBtn.style.display = 'block';
-                                if (isFirstSizeSync) atcBtn.classList.add('fade-in-load');
-                                const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                                atcBtn.disabled = false;
-                                atcBtn.innerHTML = cartIcon + "Add to Cart";
-                                atcBtn.style.backgroundColor = "";
-                                atcBtn.style.opacity = "";
-                            }
-                        }
-                    }
-
-                    btn.addEventListener('click', () => {
-                        if (btn.classList.contains('active')) return;
-                        window.triggerHaptic('light');
-                        sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-
-                        const batchDisplay = document.getElementById('product-batch-display');
-                        const animTargets = [priceEl, batchDisplay].filter(Boolean);
-
-                        animTargets.forEach(el => el.classList.add('text-switch-anim', 'text-switch-blur'));
-
-                        setTimeout(() => {
-                            const isActuallyOOS = product.sizes && product.sizes.length > 0
-                                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-
-                            if (priceEl) {
-                                const isOutOfStock = isActuallyOOS || sizeObj.outOfStock;
-                                const outOfStockLabel = isOutOfStock ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
-
-                                if (sizeObj.originalPrice) {
-                                    priceEl.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> <span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
-                                } else {
-                                    priceEl.innerHTML = `<span style="${isOutOfStock ? 'opacity: 0.7;' : ''}">${sizeObj.price} TND</span> ${outOfStockLabel}`;
-                                    priceEl.style.color = "";
-                                }
-                            }
-
-                            // Handle stock notification button dynamic injection
-                            const atcBtn = document.querySelector('.product-info .add-to-cart-btn');
-                            let notifyBtn = document.getElementById('back-in-stock-notify-btn');
-                            if (notifyBtn) notifyBtn.remove();
-
-                            if (atcBtn) {
-                                if (isActuallyOOS || sizeObj.outOfStock) {
-                                    // Out of Stock state
-                                    atcBtn.style.display = 'none';
-                                    
-                                    notifyBtn = document.createElement('button');
-                                    notifyBtn.id = 'back-in-stock-notify-btn';
-                                    notifyBtn.className = 'notify-back-in-stock-btn';
-
-                                    // Check localStorage — if already subscribed, show persisted state
-                                    if (isNotifySubscribed(productId, sizeObj.label)) {
-                                        applySubscribedState(notifyBtn);
-                                    } else {
-                                        notifyBtn.innerHTML = `
+                                    `,he.before(ye),be&&ye.classList.add("fade-in-load"),ye.addEventListener("click",async()=>{ye.disabled||(window.triggerHaptic("medium"),ye.classList.add("loading"),ye.disabled=!0,await so(i,F.label,ye),ye.classList.remove("loading"),ye.classList.contains("subscribed")||(ye.disabled=!1))});else{try{localStorage.removeItem(Kt(i,F.label))}catch{}he.style.display="block",be&&he.classList.add("fade-in-load");const we='<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';he.disabled=!1,he.innerHTML=we+"Add to Cart",he.style.backgroundColor="",he.style.opacity=""}}fe.addEventListener("click",()=>{if(fe.classList.contains("active"))return;window.triggerHaptic("light"),oe.querySelectorAll(".size-btn").forEach(ye=>ye.classList.remove("active")),fe.classList.add("active");const he=document.getElementById("product-batch-display"),$e=[v,he].filter(Boolean);$e.forEach(ye=>ye.classList.add("text-switch-anim","text-switch-blur")),setTimeout(()=>{const ye=o.sizes&&o.sizes.length>0?o.sizes.every(ze=>ze.outOfStock===!0||String(ze.outOfStock).toLowerCase()==="true"):o.outOfStock===!0||String(o.outOfStock).toLowerCase()==="true";if(v){const ze=ye||F.outOfStock,Ve=ze?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";F.originalPrice?v.innerHTML=`<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${F.originalPrice} TND</span> <span style="${ze?"opacity: 0.7;":""}">${F.price} TND</span> ${Ve}`:(v.innerHTML=`<span style="${ze?"opacity: 0.7;":""}">${F.price} TND</span> ${Ve}`,v.style.color="")}const we=document.querySelector(".product-info .add-to-cart-btn");let Ie=document.getElementById("back-in-stock-notify-btn");if(Ie&&Ie.remove(),we)if(ye||F.outOfStock)we.style.display="none",Ie=document.createElement("button"),Ie.id="back-in-stock-notify-btn",Ie.className="notify-back-in-stock-btn",Ao(i,F.label)?no(Ie):Ie.innerHTML=`
                                             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                             </svg>
                                             Notify Me When Back in Stock
-                                        `;
-                                    }
-
-                                    atcBtn.before(notifyBtn);
-                                    
-                                    notifyBtn.addEventListener('click', async () => {
-                                        if (notifyBtn.disabled) return;
-                                        window.triggerHaptic('medium');
-                                        notifyBtn.classList.add('loading');
-                                        notifyBtn.disabled = true;
-                                        await handleBackInStockSubscription(productId, sizeObj.label, notifyBtn);
-                                        notifyBtn.classList.remove('loading');
-                                        if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
-                                    });
-                                } else {
-                                    // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
-                                    try { localStorage.removeItem(getNotifyStorageKey(productId, sizeObj.label)); } catch(e) {}
-                                    atcBtn.style.display = 'block';
-                                    const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                                    atcBtn.disabled = false;
-                                    atcBtn.innerHTML = cartIcon + "Add to Cart";
-                                    atcBtn.style.backgroundColor = "";
-                                    atcBtn.style.opacity = "";
-                                }
-                            }
-
-                            if (batchDisplay) {
-                                if (sizeObj.batchNumber) {
-                                    renderBatchDisplay(sizeObj, subtitleEl || batchDisplay.previousElementSibling);
-                                } else { batchDisplay.style.display = 'none'; }
-                            }
-                            animTargets.forEach(el => el.classList.remove('text-switch-blur', 'text-switch-anim'));
-                        }, 250);
-                    });
-
-                    if (sizeObj.outOfStock) {
-                        btn.style.textDecoration = "line-through";
-                        btn.style.opacity = "0.6";
-                    }
-
-                    sizeOptionsContainer.appendChild(btn);
-                });
-
-            } else if (!product.isPermanentlyUnavailable && !product.outOfStock) {
-                // No sizes yet — Firestore hasn't responded. Show shimmer placeholders.
-                if (sizeSelector) sizeSelector.style.display = 'block';
-                sizeOptionsContainer.innerHTML = `
+                                        `,we.before(Ie),Ie.addEventListener("click",async()=>{Ie.disabled||(window.triggerHaptic("medium"),Ie.classList.add("loading"),Ie.disabled=!0,await so(i,F.label,Ie),Ie.classList.remove("loading"),Ie.classList.contains("subscribed")||(Ie.disabled=!1))});else{try{localStorage.removeItem(Kt(i,F.label))}catch{}we.style.display="block";const ze='<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';we.disabled=!1,we.innerHTML=ze+"Add to Cart",we.style.backgroundColor="",we.style.opacity=""}he&&(F.batchNumber?j(F,R||he.previousElementSibling):he.style.display="none"),$e.forEach(ze=>ze.classList.remove("text-switch-blur","text-switch-anim"))},250)}),F.outOfStock&&(fe.style.textDecoration="line-through",fe.style.opacity="0.6"),oe.appendChild(fe)})}else!o.isPermanentlyUnavailable&&!o.outOfStock?(ve&&(ve.style.display="block"),oe.innerHTML=`
                     <span class="price-shimmer" style="width: 70px; height: 38px; border-radius: 8px; display: inline-block;"></span>
                     <span class="price-shimmer" style="width: 70px; height: 38px; border-radius: 8px; display: inline-block; margin-left: 10px;"></span>
-                `;
-                // Disable Add to Cart until sizes load
-                if (addToCartBtn) {
-                    addToCartBtn.disabled = true;
-                    addToCartBtn.style.opacity = "0.5";
-                }
-            } else {
-                if (sizeSelector) sizeSelector.style.display = 'none';
-            }
-        }
-
-        // Performance Bars Dynamic Rendering
-        // Target the INCI accordion (usually the first one in story pages)
-        const inciAccordionInner = document.querySelector('.accordion-item:first-child .accordion-inner') || 
-                                   document.querySelector('.inci-list-container');
-        if (inciAccordionInner && product.inci) {
-            inciAccordionInner.textContent = product.inci;
-        }
-
-        let perfContainer = document.querySelector('.performance-bars');
-        if (!perfContainer && productInfo) {
-             // If container missing in HTML, inject it before the Add to Cart button
-             perfContainer = document.createElement('div');
-             perfContainer.className = 'performance-bars';
-             perfContainer.style.marginBottom = '2rem';
-             productInfo.querySelector('.add-to-cart-btn')?.before(perfContainer);
-        }
-        if (perfContainer && product.performance && product.performance.length > 0) {
-            perfContainer.innerHTML = product.performance.map(metric => {
-                const level = parseInt(metric.value) || 0;
-                const labels = metric.levels || [];
-                const currentLabel = labels[level - 1] || '';
-                
-                return `
+                `,L&&(L.disabled=!0,L.style.opacity="0.5")):ve&&(ve.style.display="none");const ke=document.querySelector(".accordion-item:first-child .accordion-inner")||document.querySelector(".inci-list-container");ke&&o.inci&&(ke.textContent=o.inci);let Q=document.querySelector(".performance-bars");!Q&&S&&(Q=document.createElement("div"),Q.className="performance-bars",Q.style.marginBottom="2rem",S.querySelector(".add-to-cart-btn")?.before(Q)),Q&&o.performance&&o.performance.length>0&&(Q.innerHTML=o.performance.map(P=>{const C=parseInt(P.value)||0,F=(P.levels||[])[C-1]||"";return`
                     <div class="perf-item">
                         <div class="perf-header">
-                            <span class="perf-label">${metric.label}</span>
-                            <span class="perf-value">${currentLabel}</span>
+                            <span class="perf-label">${P.label}</span>
+                            <span class="perf-value">${F}</span>
                         </div>
                         <div class="perf-levels">
-                            ${[1, 2, 3, 4].map(i => `<div class="level-step ${i <= level ? 'active' : ''}"></div>`).join('')}
+                            ${[1,2,3,4].map(Se=>`<div class="level-step ${Se<=C?"active":""}"></div>`).join("")}
                         </div>
                     </div>
-                `;
-            }).join('');
-            applyPerformanceColors(); // Apply colors to newly injected bars
-        }
-        const existingStoryBtn = document.getElementById('product-story-link');
-        if (existingStoryBtn) existingStoryBtn.remove();
-        // The Add to Cart button state is already managed by the size selection logic above.
-
-        if (addToCartBtn) {
-            const hasStory = hasStandaloneStoryPage(product);
-            if (hasStory) {
-                const storyBtn = document.createElement('a');
-                storyBtn.id = 'product-story-link';
-                storyBtn.className = 'qv-view-details-btn';
-                storyBtn.style.marginBottom = '1rem';
-                storyBtn.style.display = 'block'; // Ensure it takes full width if qv-view-details-btn uses inline-block
-                storyBtn.textContent = 'View Story Page';
-                storyBtn.href = product.storyUrl;
-                addToCartBtn.after(storyBtn);
-            }
-        }
-    };
-    initProductPage();
-    initShopPage();
-    renderSidebarMenu();
-    if (window.dodchSearchEngine) window.dodchSearchEngine.init(productCatalog);
-
-    loadProductCatalog();
-    const sidebarUserName = document.getElementById('sidebar-user-name');
-    const sidebarLoginBtn = document.getElementById('sidebar-login-btn');
-    const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
-
-    if (sidebarLoginBtn) {
-        sidebarLoginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>Login`;
-        sidebarLoginBtn.addEventListener('click', () => handleLogin());
-    }
-
-    if (sidebarLogoutBtn) {
-        sidebarLogoutBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>Logout`;
-        sidebarLogoutBtn.addEventListener('click', () => {
-            handleLogout();
-        });
-    }
-    onAuthStateChanged(auth, async (user) => {
-        currentUser = user;
-
-        if (user) {
-            claimGuestOrders(user.uid);
-            const guestBanner = document.getElementById('guest-convert-banner');
-            if (guestBanner) {
-                guestBanner.style.opacity = '0';
-                guestBanner.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    guestBanner.innerHTML = `
+                `}).join(""),$o());const de=document.getElementById("product-story-link");if(de&&de.remove(),L&&Uo(o)){const C=document.createElement("a");C.id="product-story-link",C.className="qv-view-details-btn",C.style.marginBottom="1rem",C.style.display="block",C.textContent="View Story Page",C.href=o.storyUrl,L.after(C)}}ho(),Xe(),jo(),window.dodchSearchEngine&&window.dodchSearchEngine.init(x),wt();const tr=document.getElementById("sidebar-user-name"),yo=document.getElementById("sidebar-login-btn"),bo=document.getElementById("sidebar-logout-btn");yo&&(yo.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>Login',yo.addEventListener("click",()=>_t())),bo&&(bo.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 10px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>Logout',bo.addEventListener("click",()=>{Mo()})),Yt(Qe,async d=>{if(Me=d,d){li(d.uid);const S=document.getElementById("guest-convert-banner");S&&(S.style.opacity="0",S.style.transform="scale(0.95)",setTimeout(()=>{S.innerHTML=`
                         <svg style="width:40px;height:40px;color:#4CAF50;margin-bottom:0.75rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         <h4 style="margin-bottom:0.4rem;color:var(--text-charcoal);font-size:1.05rem;">You're all set!</h4>
                         <p style="font-size:0.85rem;color:#666;margin-bottom:1.1rem;">Your order has been linked to your account.</p>
                         <a href="my-account.html#orders" class="cta-button cta-button-primary" style="width:auto;padding:0.65rem 1.6rem;font-size:0.9rem;display:inline-block;">View Your Orders</a>
-                    `;
-                    guestBanner.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-                    guestBanner.style.opacity = '1';
-                    guestBanner.style.transform = 'scale(1)';
-                }, 350);
-            }
-        }
-        if (typeof syncPushTokenToUser === 'function') {
-            syncPushTokenToUser();
-        }
-        const loginBtn = document.getElementById('login-btn');
-        const sidebarUserName = document.getElementById('sidebar-user-name');
-        const sidebarLoginBtn = document.getElementById('sidebar-login-btn');
-        const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
-        if (loginBtn) {
-            if (user) {
-                loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="login-text">Logout</span>`;
-            } else {
-                loginBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg><span class="login-text">Login</span>`;
-            }
-        }
-        
-        const updateHeroButton = (btn) => {
-            if (!btn) return;
-            if (user) {
-                btn.innerHTML = `Go to My Account`;
-            } else {
-                btn.innerHTML = `
+                    `,S.style.transition="opacity 0.4s ease, transform 0.4s ease",S.style.opacity="1",S.style.transform="scale(1)"},350))}typeof ro=="function"&&ro();const i=document.getElementById("login-btn"),e=document.getElementById("sidebar-user-name"),o=document.getElementById("sidebar-login-btn"),s=document.getElementById("sidebar-logout-btn");i&&(d?i.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="login-text">Logout</span>':i.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg><span class="login-text">Login</span>');const r=S=>{S&&(d?S.innerHTML="Go to My Account":S.innerHTML=`
                     <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -3114,359 +258,63 @@ document.addEventListener('DOMContentLoaded', () => {
                         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
                     Continue with Google
-                `;
-            }
-        };
-        updateHeroButton(document.getElementById('hero-login-google-btn'));
-        updateHeroButton(document.getElementById('hero-login-google-btn-cloned'));
-        if (sidebarUserName) {
-            const profileIcon = document.querySelector('.profile-icon');
-            if (user) {
-                sidebarUserName.textContent = user.displayName || user.email || "Member";
-                if (profileIcon && user.photoURL) {
-                    profileIcon.innerHTML = `<img src="${user.photoURL}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-                } else if (profileIcon) {
-                    profileIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
-                }
-
-                if (sidebarLoginBtn) sidebarLoginBtn.style.display = 'none';
-                if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'block';
-                let myAccountBtn = document.getElementById('sidebar-my-account-btn');
-                if (!myAccountBtn) {
-                    myAccountBtn = document.createElement('a');
-                    myAccountBtn.id = 'sidebar-my-account-btn';
-                    myAccountBtn.href = 'my-account.html';
-                    myAccountBtn.textContent = 'My Account';
-                    myAccountBtn.style.marginTop = '1rem';
-                    myAccountBtn.style.background = 'transparent';
-                    myAccountBtn.style.border = '1px solid var(--accent-gold)';
-                    myAccountBtn.style.color = 'var(--accent-gold-text)';
-                    myAccountBtn.style.padding = '0.5rem 1.5rem';
-                    myAccountBtn.style.cursor = 'pointer';
-                    myAccountBtn.style.textTransform = 'uppercase';
-                    myAccountBtn.style.fontSize = '0.8rem';
-                    myAccountBtn.style.letterSpacing = '1px';
-                    myAccountBtn.style.textDecoration = 'none';
-                    myAccountBtn.style.transition = 'all 0.3s ease';
-                    myAccountBtn.style.display = 'inline-block';
-                    myAccountBtn.style.borderRadius = '6px';
-
-                    myAccountBtn.addEventListener('mouseenter', () => {
-                        myAccountBtn.style.backgroundColor = 'var(--accent-gold)';
-                        myAccountBtn.style.color = '#fff';
-                    });
-                    myAccountBtn.addEventListener('mouseleave', () => {
-                        myAccountBtn.style.backgroundColor = 'transparent';
-                        myAccountBtn.style.color = 'var(--accent-gold-text)';
-                    });
-
-                    sidebarUserName.after(myAccountBtn);
-                    if (user.uid === ADMIN_UID) {
-                        let adminBtn = document.getElementById('sidebar-admin-btn');
-                        if (!adminBtn) {
-                            adminBtn = myAccountBtn.cloneNode(true);
-                            adminBtn.id = 'sidebar-admin-btn';
-                            adminBtn.href = 'admin.html';
-                            adminBtn.textContent = 'Admin Dashboard';
-                            adminBtn.style.position = 'relative';
-                            adminBtn.style.marginTop = '0.5rem';
-                            adminBtn.style.borderColor = 'var(--text-charcoal)';
-                            adminBtn.style.color = 'var(--text-charcoal)';
-                            myAccountBtn.after(adminBtn);
-                        } else {
-                            adminBtn.style.display = 'inline-block';
-                        }
-                        listenForAdminNotifications();
-                    }
-                } else {
-                    myAccountBtn.style.display = 'inline-block';
-                    const adminBtn = document.getElementById('sidebar-admin-btn');
-                    if (adminBtn) adminBtn.style.display = 'inline-block';
-                }
-                if (user.uid !== ADMIN_UID) {
-                    listenForUserNotifications(user.uid);
-                }
-                const cartRef = doc(db, "carts", user.uid);
-                const docSnap = await getDoc(cartRef);
-
-                if (docSnap.exists() && cart.length === 0) {
-                    cart = docSnap.data().items || [];
-                    updateCartUI();
-                }
-            } else {
-                sidebarUserName.textContent = "Guest";
-                if (profileIcon) {
-                    profileIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
-                }
-                if (sidebarLoginBtn) sidebarLoginBtn.style.display = 'block';
-                if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = 'none';
-                const myAccountBtn = document.getElementById('sidebar-my-account-btn');
-                if (myAccountBtn) myAccountBtn.style.display = 'none';
-                const adminBtn = document.getElementById('sidebar-admin-btn');
-                if (adminBtn) adminBtn.style.display = 'none';
-            }
-        }
-        const checkoutEmailInput = document.getElementById('checkout-email');
-        const checkoutNameInput = document.getElementById('checkout-name');
-
-        if (user && checkoutEmailInput && checkoutNameInput) {
-            checkoutEmailInput.value = user.email || '';
-            checkoutNameInput.value = user.displayName || '';
-        }
-        const ordersList = document.getElementById('orders-list');
-        const accountUserName = document.getElementById('account-user-name');
-
-        if (ordersList) {
-            if (user) {
-                if (accountUserName) accountUserName.textContent = user.displayName || "Member";
-                const ordersLoader = document.getElementById('orders-loader');
-                if (ordersLoader) ordersLoader.classList.add('active');
-                ordersList.classList.remove('visible');
-
-                try {
-                    const reviewsSnap = await getDocs(query(collection(db, "product_reviews"), where("userId", "==", user.uid)));
-                    const reviewedProductIds = new Set();
-                    reviewsSnap.forEach(doc => reviewedProductIds.add(doc.data().productId));
-
-                    const q = query(collection(db, "orders"), where("userId", "==", user.uid));
-                    const querySnapshot = await getDocs(q);
-
-                    let orders = [];
-                    const updatesToClear = [];
-
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        orders.push({ id: doc.id, ...data });
-                        if (data.hasUnseenUpdate) {
-                            updatesToClear.push(updateDoc(doc.ref, { hasUnseenUpdate: false }));
-                        }
-                    });
-                    if (updatesToClear.length > 0) {
-                        Promise.all(updatesToClear).then(() => {
-                            document.body.classList.remove('has-notification');
-                        }).catch(console.error);
-                    }
-
-                    let visibleOrdersCount = 10;
-                    let filteredOrders = [];
-
-                    const renderOrders = (toRender, append = false) => {
-                        if (!append) ordersList.innerHTML = '';
-
-                        const chunk = toRender.slice(append ? visibleOrdersCount - 10 : 0, visibleOrdersCount);
-
-                        if (!append && toRender.length === 0) {
-                            ordersList.innerHTML = '<p>You haven\'t placed any orders yet.</p>';
-                            document.getElementById('load-more-orders-container').style.display = 'none';
-                        } else {
-                            chunk.forEach(order => {
-                                const orderDate = order.timestamp ? new Date(order.timestamp.seconds * 1000) : new Date();
-                                const date = order.timestamp ? orderDate.toLocaleDateString() : 'Recent';
-                                const isWithinTwoWeeks = (new Date() - orderDate) < (14 * 24 * 60 * 60 * 1000);
-                                const total = typeof order.total === 'number' ? order.total.toFixed(2) : order.total;
-                                const status = order.status || 'Pending';
-                                const statusClass = `status-${status.toLowerCase().replace(/\s+/g, '-')}`;
-
-                                let trackButtonHtml = '';
-                                let cancelButtonHtml = '';
-                                let reviewButtonHtml = '';
-
-                                if (status.toLowerCase() === 'shipped') {
-                                    const trackingNumber = order.trackingNumber || `1Z${order.id.slice(0, 10).toUpperCase()}A0${Math.floor(Math.random() * 90 + 10)}`;
-                                    trackButtonHtml = `<a href="tracking.html?orderId=${order.id}&trackingNumber=${trackingNumber}" class="track-order-btn">Track Order</a>`;
-                                } else if (status.toLowerCase() === 'pending') {
-                                    cancelButtonHtml = `<button class="cancel-order-btn" data-id="${order.id}" style="margin-left: 5px; color: #ff4d4d; background: none; border: 1px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer;">Cancel</button>`;
-                                } else if (status.toLowerCase() === 'delivered') {
-                                    const firstUnreviewedItem = order.items.find(item => !reviewedProductIds.has(item.productId || item.id));
-                                    if (firstUnreviewedItem) {
-                                        const firstPId = firstUnreviewedItem.productId || firstUnreviewedItem.id;
-                                        const firstProd = productCatalog[firstPId];
-                                        const reviewPageUrl = (firstProd && firstProd.storyUrl) ? `${firstProd.storyUrl}#reviews` : `product.html?id=${firstPId}#reviews`;
-                                        reviewButtonHtml = `<a href="${reviewPageUrl}" class="review-prompt-btn" style="margin-left: 5px; background: #fdf6ec; color: #e6a23c; border: 1px solid #e6a23c; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;">Rate Products</a>`;
-                                    }
-                                }
-
-
-                                let itemsHtml = order.items.map(item => {
-                                    const pId = item.productId || item.id;
-                                    const img = productCatalog[pId]?.image || 'placeholder-glow.webp';
-                                    const itemPrice = String(item.price).includes('TND') ? item.price : `${item.price} TND`;
-                                    
-                                    const isRefunded = item.refunded === true || item.refunded === 'true';
-                                    const statusText = isRefunded 
-                                        ? `<span class="refunded-badge" style="color: #e74c3c; font-weight: 600; font-size: 0.75rem; margin-left: 8px; border: 1px solid #e74c3c; border-radius: 4px; padding: 1px 4px; display: inline-block;">Refunded</span>` 
-                                        : '';
-
-                                    let reportHtml = '';
-                                    if (status.toLowerCase() === 'delivered' && isWithinTwoWeeks) {
-                                        if (item.report) {
-                                            const rStatus = item.report.status || 'Pending';
-                                            let rColor = '#e6a23c';
-                                            if (rStatus === 'Refunded') rColor = '#27ae60';
-                                            if (rStatus === 'Refused') rColor = '#e74c3c';
-                                            reportHtml = `
-                                                <div style="font-size: 0.75rem; margin-top: 4px; color: ${rColor}; font-weight: 500;">
-                                                     Problem Reported: <strong>${rStatus}</strong>
-                                                     ${item.report.reply ? `<br><span style="color: #666; font-style: italic; font-weight: 400;">Reply: ${item.report.reply}</span>` : ''}
+                `)};if(r(document.getElementById("hero-login-google-btn")),r(document.getElementById("hero-login-google-btn-cloned")),e){const S=document.querySelector(".profile-icon");if(d){e.textContent=d.displayName||d.email||"Member",S&&d.photoURL?S.innerHTML=`<img src="${d.photoURL}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`:S&&(S.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'),o&&(o.style.display="none"),s&&(s.style.display="block");let L=document.getElementById("sidebar-my-account-btn");if(L){L.style.display="inline-block";const Z=document.getElementById("sidebar-admin-btn");Z&&(Z.style.display="inline-block")}else if(L=document.createElement("a"),L.id="sidebar-my-account-btn",L.href="my-account.html",L.textContent="My Account",L.style.marginTop="1rem",L.style.background="transparent",L.style.border="1px solid var(--accent-gold)",L.style.color="var(--accent-gold-text)",L.style.padding="0.5rem 1.5rem",L.style.cursor="pointer",L.style.textTransform="uppercase",L.style.fontSize="0.8rem",L.style.letterSpacing="1px",L.style.textDecoration="none",L.style.transition="all 0.3s ease",L.style.display="inline-block",L.style.borderRadius="6px",L.addEventListener("mouseenter",()=>{L.style.backgroundColor="var(--accent-gold)",L.style.color="#fff"}),L.addEventListener("mouseleave",()=>{L.style.backgroundColor="transparent",L.style.color="var(--accent-gold-text)"}),e.after(L),d.uid===Xt){let Z=document.getElementById("sidebar-admin-btn");Z?Z.style.display="inline-block":(Z=L.cloneNode(!0),Z.id="sidebar-admin-btn",Z.href="admin.html",Z.textContent="Admin Dashboard",Z.style.position="relative",Z.style.marginTop="0.5rem",Z.style.borderColor="var(--text-charcoal)",Z.style.color="var(--text-charcoal)",L.after(Z)),Ri()}d.uid!==Xt&&Oi(d.uid);const z=Ae(se,"carts",d.uid),j=await mt(z);j.exists()&&Be.length===0&&(Be=j.data().items||[],ft())}else{e.textContent="Guest",S&&(S.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 30px; height: 30px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'),o&&(o.style.display="block"),s&&(s.style.display="none");const L=document.getElementById("sidebar-my-account-btn");L&&(L.style.display="none");const z=document.getElementById("sidebar-admin-btn");z&&(z.style.display="none")}}const R=document.getElementById("checkout-email"),v=document.getElementById("checkout-name");d&&R&&v&&(R.value=d.email||"",v.value=d.displayName||"");const b=document.getElementById("orders-list"),y=document.getElementById("account-user-name");if(b)if(d){y&&(y.textContent=d.displayName||"Member");const S=document.getElementById("orders-loader");S&&S.classList.add("active"),b.classList.remove("visible");try{const L=await nt(Ye(Ne(se,"product_reviews"),ot("userId","==",d.uid))),z=new Set;L.forEach(Q=>z.add(Q.data().productId));const j=Ye(Ne(se,"orders"),ot("userId","==",d.uid)),Z=await nt(j);let q=[];const V=[];Z.forEach(Q=>{const de=Q.data();q.push({id:Q.id,...de}),de.hasUnseenUpdate&&V.push(at(Q.ref,{hasUnseenUpdate:!1}))}),V.length>0&&Promise.all(V).then(()=>{document.body.classList.remove("has-notification")}).catch(console.error);let f=10,T=[];const re=(Q,de=!1)=>{de||(b.innerHTML="");const P=Q.slice(de?f-10:0,f);!de&&Q.length===0?(b.innerHTML="<p>You haven't placed any orders yet.</p>",document.getElementById("load-more-orders-container").style.display="none"):(P.forEach(C=>{const ee=C.timestamp?new Date(C.timestamp.seconds*1e3):new Date,F=C.timestamp?ee.toLocaleDateString():"Recent",Se=new Date-ee<336*60*60*1e3,fe=typeof C.total=="number"?C.total.toFixed(2):C.total,he=C.status||"Pending",$e=`status-${he.toLowerCase().replace(/\s+/g,"-")}`;let ye="",we="",Ie="";if(he.toLowerCase()==="shipped"){const Fe=C.trackingNumber||`1Z${C.id.slice(0,10).toUpperCase()}A0${Math.floor(Math.random()*90+10)}`;ye=`<a href="tracking.html?orderId=${C.id}&trackingNumber=${Fe}" class="track-order-btn">Track Order</a>`}else if(he.toLowerCase()==="pending")we=`<button class="cancel-order-btn" data-id="${C.id}" style="margin-left: 5px; color: #ff4d4d; background: none; border: 1px solid #ff4d4d; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer;">Cancel</button>`;else if(he.toLowerCase()==="delivered"){const Fe=C.items.find(et=>!z.has(et.productId||et.id));if(Fe){const et=Fe.productId||Fe.id,ht=x[et];Ie=`<a href="${ht&&ht.storyUrl?`${ht.storyUrl}#reviews`:`product.html?id=${et}#reviews`}" class="review-prompt-btn" style="margin-left: 5px; background: #fdf6ec; color: #e6a23c; border: 1px solid #e6a23c; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;">Rate Products</a>`}}let ze=C.items.map(Fe=>{const et=Fe.productId||Fe.id,ht=x[et]?.image||"placeholder-glow.webp",Vt=String(Fe.price).includes("TND")?Fe.price:`${Fe.price} TND`,Tt=Fe.refunded===!0||Fe.refunded==="true",eo=Tt?'<span class="refunded-badge" style="color: #e74c3c; font-weight: 600; font-size: 0.75rem; margin-left: 8px; border: 1px solid #e74c3c; border-radius: 4px; padding: 1px 4px; display: inline-block;">Refunded</span>':"";let Ct="";if(he.toLowerCase()==="delivered"&&Se)if(Fe.report){const Bt=Fe.report.status||"Pending";let qt="#e6a23c";Bt==="Refunded"&&(qt="#27ae60"),Bt==="Refused"&&(qt="#e74c3c"),Ct=`
+                                                <div style="font-size: 0.75rem; margin-top: 4px; color: ${qt}; font-weight: 500;">
+                                                     Problem Reported: <strong>${Bt}</strong>
+                                                     ${Fe.report.reply?`<br><span style="color: #666; font-style: italic; font-weight: 400;">Reply: ${Fe.report.reply}</span>`:""}
                                                 </div>
-                                            `;
-                                        } else if (order.hasReports === true) {
-                                            reportHtml = `
+                                            `}else C.hasReports===!0?Ct=`
                                                 <div style="font-size: 0.75rem; margin-top: 4px; color: #888; font-weight: 500;">
                                                      Reported
                                                 </div>
-                                            `;
-                                        } else if (!isRefunded) {
-                                            reportHtml = `
+                                            `:Tt||(Ct=`
                                                 <button class="report-problem-btn" 
-                                                    data-order-id="${order.id}" 
-                                                    data-item-id="${pId}" 
-                                                    data-item-size="${item.size}"
-                                                    data-item-name="${item.name.replace(/"/g, '&quot;')}"
+                                                    data-order-id="${C.id}" 
+                                                    data-item-id="${et}" 
+                                                    data-item-size="${Fe.size}"
+                                                    data-item-name="${Fe.name.replace(/"/g,"&quot;")}"
                                                     style="margin-top: 5px; background: none; border: 1px solid #999; border-radius: 6px; padding: 3px 8px; font-size: 0.7rem; cursor: pointer; color: #555; font-family: inherit; font-weight: 500; transition: all 0.2s;">
                                                     Report a Problem
                                                 </button>
-                                            `;
-                                        }
-                                    }
-
-                                    return `
+                                            `);return`
                                          <div class="order-item-row" style="margin-bottom: 0.75rem;">
-                                             <img src="${img}" class="account-item-mini-img" alt="${item.name}">
+                                             <img src="${ht}" class="account-item-mini-img" alt="${Fe.name}">
                                              <div style="flex: 1;">
                                                  <div style="font-weight: 500; display: flex; align-items: center; flex-wrap: wrap;">
-                                                     ${item.name} ${statusText}
+                                                     ${Fe.name} ${eo}
                                                  </div>
-                                                 <div style="color: #888; font-size: 0.85rem;">Size: ${item.size} | Qty: ${item.quantity}</div>
-                                                 ${reportHtml}
+                                                 <div style="color: #888; font-size: 0.85rem;">Size: ${Fe.size} | Qty: ${Fe.quantity}</div>
+                                                 ${Ct}
                                              </div>
-                                             <div style="font-weight: 600;">${itemPrice}</div>
+                                             <div style="font-weight: 600;">${Vt}</div>
                                          </div>
-                                    `;
-                                }).join('');
-
-                                const orderTotal = String(total).includes('TND') ? total : `${total} TND`;
-                                
-                                let rewardsHtml = '';
-                                if (order.creditsUsed > 0) {
-                                    rewardsHtml += `<span style="font-size: 0.75rem; color: #e74c3c; background: #fdecea; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Spent: ${order.creditsUsed} TND Rewards</span>`;
-                                }
-                                if (order.creditsGranted > 0) {
-                                    rewardsHtml += `<span style="font-size: 0.75rem; color: #27ae60; background: #eafaf1; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Earned: ${order.creditsGranted} TND Rewards</span>`;
-                                }
-                                if (rewardsHtml !== '') {
-                                    rewardsHtml = `<div style="margin-top: 5px;">${rewardsHtml}</div>`;
-                                }
-
-                                const orderCard = document.createElement('div');
-                                orderCard.classList.add('order-card', 'reveal', 'active');
-                                orderCard.innerHTML = `
+                                    `}).join("");const Ve=String(fe).includes("TND")?fe:`${fe} TND`;let gt="";C.creditsUsed>0&&(gt+=`<span style="font-size: 0.75rem; color: #e74c3c; background: #fdecea; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Spent: ${C.creditsUsed} TND Rewards</span>`),C.creditsGranted>0&&(gt+=`<span style="font-size: 0.75rem; color: #27ae60; background: #eafaf1; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">Earned: ${C.creditsGranted} TND Rewards</span>`),gt!==""&&(gt=`<div style="margin-top: 5px;">${gt}</div>`);const bt=document.createElement("div");bt.classList.add("order-card","reveal","active"),bt.innerHTML=`
                                     <div class="order-header">
-                                        <span>Order #${order.orderReference || order.id.slice(0, 8).toUpperCase()}</span>
-                                        <span>${date}</span>
+                                        <span>Order #${C.orderReference||C.id.slice(0,8).toUpperCase()}</span>
+                                        <span>${F}</span>
                                     </div>
                                     <div class="order-items">
-                                        ${itemsHtml}
+                                        ${ze}
                                     </div>
                                     <div class="order-footer">
                                         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                            <span class="status-badge ${statusClass}">${status}</span>
-                                            <button class="reorder-btn" data-id="${order.id}">Reorder</button>
-                                            ${trackButtonHtml}
-                                            ${cancelButtonHtml}
-                                            ${reviewButtonHtml}
+                                            <span class="status-badge ${$e}">${he}</span>
+                                            <button class="reorder-btn" data-id="${C.id}">Reorder</button>
+                                            ${ye}
+                                            ${we}
+                                            ${Ie}
                                         </div>
                                         <div style="text-align: right;">
-                                            <span style="color: var(--accent-gold-text); font-weight: 700;">${orderTotal}</span>
-                                            ${rewardsHtml}
+                                            <span style="color: var(--accent-gold-text); font-weight: 700;">${Ve}</span>
+                                            ${gt}
                                         </div>
                                     </div>
-                                `;
-                                ordersList.appendChild(orderCard);
-                            });
-                            if (visibleOrdersCount < toRender.length) {
-                                document.getElementById('load-more-orders-container').style.display = 'flex';
-                            } else {
-                                document.getElementById('load-more-orders-container').style.display = 'none';
-                            }
-                            attachOrderActionListeners(orders);
-                        }
-                    };
-
-                    const attachOrderActionListeners = (allOrders) => {
-                        document.querySelectorAll('.reorder-btn').forEach(btn => {
-                            btn.onclick = (e) => {
-                                const orderId = e.target.getAttribute('data-id');
-                                const order = allOrders.find(o => o.id === orderId);
-                                if (order && order.items) {
-                                    order.items.forEach(item => {
-                                        if (item.image && typeof item.image === 'string' && !item.image.startsWith('http') && !item.image.startsWith('data:')) {
-                                            item.image = window.location.origin + '/' + item.image.replace(/^\/+/, '');
-                                        }
-                                        const existingItem = cart.find(c => c.id === item.id);
-                                        if (existingItem) existingItem.quantity += item.quantity;
-                                        else cart.push({ ...item });
-                                    });
-                                    updateCartUI();
-                                    openCart();
-                                }
-                            };
-                        });
-
-                        document.querySelectorAll('.cancel-order-btn').forEach(btn => {
-                            btn.onclick = async (e) => {
-                                const btnElement = e.currentTarget;
-                                const confirmed = await window.showConfirm("Are you sure you want to cancel this order? This action cannot be undone.", "Cancel Order");
-                                if (!confirmed) return;
-
-                                const orderId = btnElement.getAttribute('data-id');
-                                btnElement.innerText = "Processing...";
-                                btnElement.disabled = true;
-
-                                try {
-                                    await updateDoc(doc(db, "orders", orderId), { status: "Cancelled" });
-                                    const orderCard = btnElement.closest('.order-card');
-                                    const statusBadge = orderCard.querySelector('.status-badge');
-                                    if (statusBadge) {
-                                        statusBadge.textContent = "Cancelled";
-                                        statusBadge.className = "status-badge status-cancelled";
-                                    }
-                                    btnElement.remove();
-                                } catch (error) {
-                                    console.error("Error cancelling order:", error);
-                                    window.showToast("Failed to cancel order.", "error");
-                                    btnElement.innerText = "Cancel";
-                                    btnElement.disabled = false;
-                                }
-                            };
-                        });
-
-                        document.querySelectorAll('.review-prompt-btn').forEach(btn => {
-                            // Now handled via href anchor link — no JS needed
-                        });
-
-
-                        document.querySelectorAll('.report-problem-btn').forEach(btn => {
-                            btn.onclick = (e) => {
-                                const orderId = e.target.getAttribute('data-order-id');
-                                const itemId = e.target.getAttribute('data-item-id');
-                                const itemSize = e.target.getAttribute('data-item-size');
-                                const itemName = e.target.getAttribute('data-item-name');
-                                openReportProblemModal(orderId, itemId, itemSize, itemName);
-                            };
-                        });
-
-                    };
-
-                    const openReportProblemModal = (orderId, itemId, itemSize, itemName) => {
-                        document.getElementById('report-problem-modal')?.remove();
-
-                        const modalHTML = `
+                                `,b.appendChild(bt)}),f<Q.length?document.getElementById("load-more-orders-container").style.display="flex":document.getElementById("load-more-orders-container").style.display="none",xe(q))},xe=Q=>{document.querySelectorAll(".reorder-btn").forEach(de=>{de.onclick=P=>{const C=P.target.getAttribute("data-id"),ee=Q.find(F=>F.id===C);ee&&ee.items&&(ee.items.forEach(F=>{F.image&&typeof F.image=="string"&&!F.image.startsWith("http")&&!F.image.startsWith("data:")&&(F.image=window.location.origin+"/"+F.image.replace(/^\/+/,""));const Se=Be.find(fe=>fe.id===F.id);Se?Se.quantity+=F.quantity:Be.push({...F})}),ft(),Ut())}}),document.querySelectorAll(".cancel-order-btn").forEach(de=>{de.onclick=async P=>{const C=P.currentTarget;if(!await window.showConfirm("Are you sure you want to cancel this order? This action cannot be undone.","Cancel Order"))return;const F=C.getAttribute("data-id");C.innerText="Processing...",C.disabled=!0;try{await at(Ae(se,"orders",F),{status:"Cancelled"});const fe=C.closest(".order-card").querySelector(".status-badge");fe&&(fe.textContent="Cancelled",fe.className="status-badge status-cancelled"),C.remove()}catch(Se){console.error("Error cancelling order:",Se),window.showToast("Failed to cancel order.","error"),C.innerText="Cancel",C.disabled=!1}}}),document.querySelectorAll(".review-prompt-btn").forEach(de=>{}),document.querySelectorAll(".report-problem-btn").forEach(de=>{de.onclick=P=>{const C=P.target.getAttribute("data-order-id"),ee=P.target.getAttribute("data-item-id"),F=P.target.getAttribute("data-item-size"),Se=P.target.getAttribute("data-item-name");me(C,ee,F,Se)}})},me=(Q,de,P,C)=>{document.getElementById("report-problem-modal")?.remove();const ee=`
                             <div id="report-problem-modal" class="confirm-overlay active" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);">
                                 <div class="confirm-box" style="max-width: 450px; width: 90%; padding: 2rem; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
                                     <h3 style="font-family: var(--font-serif); font-size: 1.4rem; margin-top: 0; margin-bottom: 0.5rem; color: var(--text-charcoal);">Report a Problem</h3>
                                     <p style="font-size: 0.88rem; color: #666; margin-bottom: 1.5rem;">
-                                        Product: <strong>${itemName} (${itemSize})</strong>
+                                        Product: <strong>${C} (${P})</strong>
                                     </p>
                                     <form id="report-problem-form">
                                         <div class="form-group" style="margin-bottom: 1.25rem;">
@@ -3491,476 +339,64 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </form>
                                 </div>
                             </div>
-                        `;
-
-                        document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-                        const modal = document.getElementById('report-problem-modal');
-                        const form = document.getElementById('report-problem-form');
-                        const cancelBtn = document.getElementById('cancel-report-btn');
-
-                        const closeModal = () => {
-                            modal.remove();
-                        };
-
-                        cancelBtn.onclick = closeModal;
-                        modal.onclick = (e) => {
-                            if (e.target === modal) closeModal();
-                        };
-
-                        form.onsubmit = async (e) => {
-                            e.preventDefault();
-                            const problem = document.getElementById('report-issue-select').value;
-                            const message = document.getElementById('report-message-input').value.trim();
-                            const submitBtn = form.querySelector('button[type="submit"]');
-
-                            submitBtn.disabled = true;
-                            submitBtn.textContent = 'Submitting...';
-
-                            try {
-                                const orderRef = doc(db, "orders", orderId);
-                                const orderSnap = await getDoc(orderRef);
-
-                                if (!orderSnap.exists()) {
-                                    throw new Error("Order not found.");
-                                }
-
-                                const orderData = orderSnap.data();
-                                const updatedItems = orderData.items.map(item => {
-                                    const pId = item.productId || item.id;
-                                    if (pId === itemId && item.size === itemSize) {
-                                        return {
-                                            ...item,
-                                            report: {
-                                                problem,
-                                                message,
-                                                status: 'Pending',
-                                                createdAt: new Date().toISOString()
-                                            }
-                                        };
-                                    }
-                                    return item;
-                                });
-
-                                await updateDoc(orderRef, {
-                                    items: updatedItems,
-                                    hasReports: true,
-                                    hasUnseenReport: true
-                                });
-
-                                window.showToast("Report submitted successfully! ✨", "success");
-                                closeModal();
-
-                                const ordersTabBtn = document.querySelector('.account-tab-btn[data-tab="orders"]');
-                                if (ordersTabBtn) {
-                                    ordersTabBtn.click();
-                                } else {
-                                    location.reload();
-                                }
-
-                            } catch (err) {
-                                console.error("Error submitting report:", err);
-                                window.showToast("Failed to submit report. Please try again.", "error");
-                                submitBtn.disabled = false;
-                                submitBtn.textContent = 'Submit Report';
-                            }
-                        };
-                    };
-                    setTimeout(() => {
-                        if (ordersLoader) ordersLoader.classList.remove('active');
-                        ordersList.classList.add('visible');
-
-                        orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-                        filteredOrders = [...orders];
-                        renderOrders(filteredOrders);
-                    }, 800);
-                    const sortDateSelect = document.getElementById('order-sort-date');
-                    const filterStatusSelect = document.getElementById('order-filter-status');
-
-                    const applyFilters = () => {
-                        let filtered = [...orders];
-                        const dateSort = sortDateSelect?.value || 'newest';
-                        const statusFilter = filterStatusSelect?.value || 'all';
-
-                        if (statusFilter !== 'all') {
-                            filtered = filtered.filter(o => (o.status || 'Pending') === statusFilter);
-                        }
-
-                        if (dateSort === 'newest') {
-                            filtered.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-                        } else {
-                            filtered.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                        }
-
-                        visibleOrdersCount = 10;
-                        filteredOrders = filtered;
-                        renderOrders(filteredOrders);
-                    };
-
-                    if (sortDateSelect) sortDateSelect.addEventListener('change', applyFilters);
-                    if (filterStatusSelect) filterStatusSelect.addEventListener('change', applyFilters);
-                    const loadMoreOrdersBtn = document.getElementById('load-more-orders-btn');
-                    if (loadMoreOrdersBtn) {
-                        loadMoreOrdersBtn.onclick = () => {
-                            loadMoreOrdersBtn.innerText = "Loading...";
-                            setTimeout(() => {
-                                visibleOrdersCount += 10;
-                                renderOrders(filteredOrders, true);
-                                loadMoreOrdersBtn.innerText = "View More Orders";
-                            }, 500);
-                        };
-                    }
-                } catch (error) {
-                    console.error("Error fetching orders:", error);
-                    if (ordersLoader) ordersLoader.classList.remove('active');
-                    ordersList.classList.add('visible');
-                    ordersList.innerHTML = '<p>Unable to load orders at this time.</p>';
-                }
-            } else {
-                ordersList.innerHTML = '<p>Please <a href="#" onclick="document.getElementById(\'login-btn\').click(); return false;" style="text-decoration: underline;">login</a> to view your order history.</p>';
-                if (accountUserName) accountUserName.textContent = "Guest";
-            }
-        }
-    });
-
-    updateCartUI(); // Initial call to set empty state
-    updateCheckoutUI(); // Initial call for checkout page
-    const placeOrderBtn = document.querySelector('.place-order-btn');
-    const checkoutForm = document.querySelector('.checkout-form form, .co-form-panel form, #checkout-shipping-form');
-
-    if (placeOrderBtn && checkoutForm) {
-        placeOrderBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-
-            if (cart.length === 0) {
-                window.showToast("Your cart is empty.", "error");
-                return;
-            }
-
-            const email = document.getElementById('checkout-email').value.trim();
-            const name = document.getElementById('checkout-name').value.trim();
-            const phone = document.getElementById('checkout-phone').value.trim();
-            const address = document.getElementById('checkout-address').value.trim();
-            const city = document.getElementById('checkout-city').value.trim();
-            const postalCode = document.getElementById('checkout-postal-code').value.trim();
-
-            // --- SMART VALIDATION ---
-            if (!SecurityValidator.validateEmail(email)) {
-                window.showToast("Please provide a real email address.", "error");
-                return;
-            }
-            if (!SecurityValidator.validatePhone(phone)) {
-                window.showToast("Invalid Tunisian phone number. Please enter 8 digits (2,4,5,7,9).", "error");
-                return;
-            }
-            if (!SecurityValidator.TUNISIA_GOVERNORATES.includes(city)) {
-                window.showToast("Please select a valid Tunisian Governorat.", "error");
-                return;
-            }
-            if (SecurityValidator.isProfane(name) || SecurityValidator.isProfane(address)) {
-                window.showToast("Inappropriate language detected.", "error");
-                return;
-            }
-
-            // --- END SMART VALIDATION ---
-
-            if (checkoutForm.checkValidity()) {
-
-                // --- OOS GUARD: Check every cart item against live productCatalog ---
-                const oosItems = cart.filter(item => {
-                    const prod = productCatalog[item.productId || item.id];
-                    if (!prod) return false;
-                    if (prod.sizes && prod.sizes.length > 0) {
-                        const sizeObj = prod.sizes.find(s => s.label === item.size);
-                        return sizeObj
-                            ? (sizeObj.outOfStock === true || String(sizeObj.outOfStock).toLowerCase() === 'true')
-                            : false;
-                    }
-                    return prod.outOfStock === true || String(prod.outOfStock).toLowerCase() === 'true';
-                });
-
-                if (oosItems.length > 0) {
-                    // Remove any existing error panel first
-                    document.getElementById('oos-cart-error-panel')?.remove();
-
-                    const panel = document.createElement('div');
-                    panel.id = 'oos-cart-error-panel';
-                    panel.style.cssText = `
+                        `;document.body.insertAdjacentHTML("beforeend",ee);const F=document.getElementById("report-problem-modal"),Se=document.getElementById("report-problem-form"),fe=document.getElementById("cancel-report-btn"),he=()=>{F.remove()};fe.onclick=he,F.onclick=$e=>{$e.target===F&&he()},Se.onsubmit=async $e=>{$e.preventDefault();const ye=document.getElementById("report-issue-select").value,we=document.getElementById("report-message-input").value.trim(),Ie=Se.querySelector('button[type="submit"]');Ie.disabled=!0,Ie.textContent="Submitting...";try{const ze=Ae(se,"orders",Q),Ve=await mt(ze);if(!Ve.exists())throw new Error("Order not found.");const bt=Ve.data().items.map(et=>(et.productId||et.id)===de&&et.size===P?{...et,report:{problem:ye,message:we,status:"Pending",createdAt:new Date().toISOString()}}:et);await at(ze,{items:bt,hasReports:!0,hasUnseenReport:!0}),window.showToast("Report submitted successfully! \u2728","success"),he();const Fe=document.querySelector('.account-tab-btn[data-tab="orders"]');Fe?Fe.click():location.reload()}catch(ze){console.error("Error submitting report:",ze),window.showToast("Failed to submit report. Please try again.","error"),Ie.disabled=!1,Ie.textContent="Submit Report"}}};setTimeout(()=>{S&&S.classList.remove("active"),b.classList.add("visible"),q.sort((Q,de)=>(de.timestamp?.seconds||0)-(Q.timestamp?.seconds||0)),T=[...q],re(T)},800);const oe=document.getElementById("order-sort-date"),ve=document.getElementById("order-filter-status"),be=()=>{let Q=[...q];const de=oe?.value||"newest",P=ve?.value||"all";P!=="all"&&(Q=Q.filter(C=>(C.status||"Pending")===P)),de==="newest"?Q.sort((C,ee)=>(ee.timestamp?.seconds||0)-(C.timestamp?.seconds||0)):Q.sort((C,ee)=>(C.timestamp?.seconds||0)-(ee.timestamp?.seconds||0)),f=10,T=Q,re(T)};oe&&oe.addEventListener("change",be),ve&&ve.addEventListener("change",be);const ke=document.getElementById("load-more-orders-btn");ke&&(ke.onclick=()=>{ke.innerText="Loading...",setTimeout(()=>{f+=10,re(T,!0),ke.innerText="View More Orders"},500)})}catch(L){console.error("Error fetching orders:",L),S&&S.classList.remove("active"),b.classList.add("visible"),b.innerHTML="<p>Unable to load orders at this time.</p>"}}else b.innerHTML=`<p>Please <a href="#" onclick="document.getElementById('login-btn').click(); return false;" style="text-decoration: underline;">login</a> to view your order history.</p>`,y&&(y.textContent="Guest")}),ft(),Pt();const ut=document.querySelector(".place-order-btn"),vo=document.querySelector(".checkout-form form, .co-form-panel form, #checkout-shipping-form");ut&&vo&&ut.addEventListener("click",async d=>{if(d.preventDefault(),Be.length===0){window.showToast("Your cart is empty.","error");return}const i=document.getElementById("checkout-email").value.trim(),e=document.getElementById("checkout-name").value.trim(),o=document.getElementById("checkout-phone").value.trim(),s=document.getElementById("checkout-address").value.trim(),r=document.getElementById("checkout-city").value.trim(),R=document.getElementById("checkout-postal-code").value.trim();if(!We.validateEmail(i)){window.showToast("Please provide a real email address.","error");return}if(!We.validatePhone(o)){window.showToast("Invalid Tunisian phone number. Please enter 8 digits (2,4,5,7,9).","error");return}if(!We.TUNISIA_GOVERNORATES.includes(r)){window.showToast("Please select a valid Tunisian Governorat.","error");return}if(We.isProfane(e)||We.isProfane(s)){window.showToast("Inappropriate language detected.","error");return}if(vo.checkValidity()){const v=Be.filter(y=>{const S=x[y.productId||y.id];if(!S)return!1;if(S.sizes&&S.sizes.length>0){const L=S.sizes.find(z=>z.label===y.size);return L?L.outOfStock===!0||String(L.outOfStock).toLowerCase()==="true":!1}return S.outOfStock===!0||String(S.outOfStock).toLowerCase()==="true"});if(v.length>0){document.getElementById("oos-cart-error-panel")?.remove();const y=document.createElement("div");y.id="oos-cart-error-panel",y.style.cssText=`
                         background: #fff8f8; border: 1.5px solid #e74c3c; border-radius: 16px;
                         padding: 1.5rem; margin-bottom: 1.5rem; animation: slideUpFade 0.4s ease;
-                    `;
-
-                    const itemRows = oosItems.map(item => {
-                        const pid = item.productId || item.id;
-                        const safeName = item.name.replace(/'/g, "&apos;");
-                        const safeSize = (item.size || 'Default').replace(/'/g, "&apos;");
-                        return `
+                    `;const S=v.map(z=>{const j=z.productId||z.id,Z=z.name.replace(/'/g,"&apos;"),q=(z.size||"Default").replace(/'/g,"&apos;");return`
                             <div style="display:flex;align-items:center;gap:1rem;padding:0.8rem 0;border-bottom:1px solid rgba(231,76,60,0.12);">
                                 <div style="width:48px;height:48px;flex-shrink:0;border-radius:8px;overflow:hidden;border:1px solid #eee;">
-                                    <img src="${item.image || ''}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                                    <img src="${z.image||""}" alt="" style="width:100%;height:100%;object-fit:cover;">
                                 </div>
                                 <div style="flex:1;min-width:0;">
-                                    <p style="margin:0 0 2px;font-weight:600;font-size:0.9rem;color:#1a1a1a;">${item.name}</p>
-                                    <p style="margin:0;font-size:0.8rem;color:#e74c3c;font-weight:500;">⚠ Out of Stock${item.size ? ' &bull; ' + item.size : ''}</p>
+                                    <p style="margin:0 0 2px;font-weight:600;font-size:0.9rem;color:#1a1a1a;">${z.name}</p>
+                                    <p style="margin:0;font-size:0.8rem;color:#e74c3c;font-weight:500;">\u26A0 Out of Stock${z.size?" &bull; "+z.size:""}</p>
                                 </div>
                                 <div style="display:flex;flex-direction:column;gap:0.4rem;flex-shrink:0;">
                                     <button
-                                        onclick="window.__removeOOSItem('${pid}','${safeSize}')"
+                                        onclick="window.__removeOOSItem('${j}','${q}')"
                                         style="font-size:0.78rem;padding:5px 12px;border-radius:20px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;cursor:pointer;font-weight:600;white-space:nowrap;">
                                         Remove
                                     </button>
                                     <button
-                                        onclick="window.__notifyOOSItem('${pid}','${safeSize}',this)"
+                                        onclick="window.__notifyOOSItem('${j}','${q}',this)"
                                         style="font-size:0.78rem;padding:5px 12px;border-radius:20px;border:1.5px solid #c8a400;background:transparent;color:#c8a400;cursor:pointer;font-weight:600;white-space:nowrap;">
                                         Notify Me
                                     </button>
                                 </div>
                             </div>
-                        `;
-                    }).join('');
-
-                    panel.innerHTML = `
+                        `}).join("");y.innerHTML=`
                         <div style="display:flex;align-items:flex-start;gap:0.8rem;margin-bottom:1rem;">
                             <svg style="width:22px;height:22px;flex-shrink:0;color:#e74c3c;margin-top:2px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                             </svg>
                             <div>
                                 <p style="margin:0 0 2px;font-weight:700;font-size:0.95rem;color:#c0392b;">Order Cannot Be Placed</p>
-                                <p style="margin:0;font-size:0.83rem;color:#888;">The following item${oosItems.length > 1 ? 's are' : ' is'} currently out of stock. Please remove ${oosItems.length > 1 ? 'them' : 'it'} or wait for restock.</p>
+                                <p style="margin:0;font-size:0.83rem;color:#888;">The following item${v.length>1?"s are":" is"} currently out of stock. Please remove ${v.length>1?"them":"it"} or wait for restock.</p>
                             </div>
                         </div>
-                        ${itemRows}
-                    `;
-
-                    // Attach helpers
-                    window.__removeOOSItem = (productId, size) => {
-                        cart = cart.filter(i => !((i.productId || i.id) === productId && (i.size || 'Default') === size));
-                        localStorage.setItem('dodch_cart', JSON.stringify(cart));
-                        updateCartUI();
-                        // Refresh the checkout order summary
-                        if (typeof updateCheckoutUI === 'function') updateCheckoutUI();
-                        // If no more OOS items, dismiss the panel
-                        const remaining = cart.filter(item => {
-                            const prod = productCatalog[item.productId || item.id];
-                            if (!prod) return false;
-                            if (prod.sizes && prod.sizes.length > 0) {
-                                const s = prod.sizes.find(s => s.label === item.size);
-                                return s ? (s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true') : false;
-                            }
-                            return prod.outOfStock === true || String(prod.outOfStock).toLowerCase() === 'true';
-                        });
-                        if (remaining.length === 0) {
-                            document.getElementById('oos-cart-error-panel')?.remove();
-                        } else {
-                            // Re-trigger to refresh the panel with the remaining items
-                            placeOrderBtn.click();
-                        }
-                    };
-                    window.__notifyOOSItem = async (productId, size, btnEl) => {
-                        btnEl.disabled = true;
-                        btnEl.textContent = 'Saving...';
-                        await handleBackInStockSubscription(productId, size === 'Default' ? 'Default' : size, btnEl);
-                        if (!btnEl.classList.contains('subscribed')) {
-                            btnEl.disabled = false;
-                            btnEl.textContent = 'Notify Me';
-                        } else {
-                            btnEl.textContent = "You're On the List!";
-                            btnEl.style.background = 'rgba(200,164,0,0.08)';
-                        }
-                    };
-
-                    const checkoutContainer = document.querySelector('.checkout-container, .co-page');
-                    if (checkoutContainer) {
-                        checkoutContainer.insertBefore(panel, checkoutContainer.firstChild);
-                        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                    return; // Stop order placement
-                }
-                // --- END OOS GUARD ---
-
-                placeOrderBtn.innerText = "Processing...";
-                placeOrderBtn.style.opacity = "0.7";
-                placeOrderBtn.style.pointerEvents = "none";
-                const operationTimeout = setTimeout(() => {
-                    console.error("TIMEOUT: Firebase did not respond within 15 seconds.");
-                    window.showToast("Server not responding. Please try again.", "error");
-                    placeOrderBtn.innerText = "Place Order";
-                    placeOrderBtn.style.opacity = "1";
-                    placeOrderBtn.style.pointerEvents = "auto";
-                }, 15000); // 15 seconds
-
-                try {
-                    const orderReference = 'ORD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
-                    let calculatedSubtotal = 0;
-                    const items = cart.map(item => {
-                        let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
-                        if (isNaN(priceVal)) priceVal = 0;
-                        calculatedSubtotal += priceVal * item.quantity;
-                        const prod = productCatalog[item.productId || item.id];
-                        const sizeInfo = prod?.sizes?.find(s => s.label === item.size);
-                        return {
-                            id: item.id,
-                            productId: item.productId || item.id,
-                            name: item.name,
-                            size: item.size,
-                            quantity: item.quantity,
-                            price: priceVal.toFixed(2),
-                            batchNumber: sizeInfo?.batchNumber || prod?.batchNumber || 'N/A',
-                            expiryDate: sizeInfo?.expiryDate || prod?.expiryDate || 'N/A'
-                        };
-                    });
-
-                    const SHIPPING_FEE = 7;
-                    const FREE_SHIPPING_THRESHOLD = 100;
-                    const shippingFee = calculatedSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-                    
-                    // --- REAL-TIME CREDIT VALIDATION ---
-                    let creditsUsed = 0;
-                    const useRewardsCheckbox = document.getElementById('use-rewards-checkbox');
-                    if (useRewardsCheckbox && useRewardsCheckbox.checked && currentUser) {
-                        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-                        const liveCredits = userDoc.exists() ? (userDoc.data().credits || 0) : 0;
-                        
-                        const baseTotalForCreditCalc = calculatedSubtotal + shippingFee;
-                        creditsUsed = Math.min(liveCredits, baseTotalForCreditCalc);
-                    } else {
-                        creditsUsed = 0;
-                    }
-                    // --- END REAL-TIME CREDIT VALIDATION ---
-
-                    let finalTotal = (calculatedSubtotal + shippingFee);
-                    finalTotal = Math.max(0, finalTotal - creditsUsed);
-
-                    const orderData = {
-                        orderReference: orderReference,
-                        items: items,
-                        shipping: {
-                            email: email,
-                            fullName: name,
-                            phone: phone,
-                            address: address,
-                            city: city,
-                            postalCode: postalCode
-                        },
-                        subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
-                        shippingFee: shippingFee,
-                        creditsUsed: parseFloat(creditsUsed.toFixed(2)),
-                        total: parseFloat(finalTotal.toFixed(2)),
-                        status: 'Pending',
-                        userId: currentUser ? currentUser.uid : 'guest',
-                        timestamp: serverTimestamp()
-                    };
-                    if (typeof appCheckReady !== 'undefined') {
-                        await appCheckReady;
-                    }
-                    // --- DIRECT FIRESTORE SAVE (Spark Plan Support) ---
-                    let orderId;
-                    if (creditsUsed > 0 && currentUser) {
-                        const { writeBatch } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-                        const batch = writeBatch(db);
-                        const orderRef = doc(collection(db, "orders"));
-                        batch.set(orderRef, orderData);
-                        
-                        const userRef = doc(db, "users", currentUser.uid);
-                        // Decrement the credits
-                        // We must fetch the current credits to ensure we don't go below 0 (though our UI limits it)
-                        const userDoc = await getDoc(userRef);
-                        const liveCredits = userDoc.exists() ? (userDoc.data().credits || 0) : 0;
-                        batch.update(userRef, {
-                             credits: liveCredits - creditsUsed
-                        });
-                        
-                        await batch.commit();
-                        orderId = orderRef.id;
-                        
-                        // Update local cache to reflect immediate deduction
-                        window._dodchUserCredits -= creditsUsed;
-                        updateCheckoutUI(); // Re-render UI with new credit balance
-                    } else {
-                        const docRef = await addDoc(collection(db, "orders"), orderData);
-                        orderId = docRef.id;
-                    }
-                    const finalOrderReference = orderReference;
-                    // --- END DIRECT SAVE ---
-
-                    // Generate a clean filename for the PDF save dialog
-                    const safeFileName = `DODCH_Receipt_${finalOrderReference}_${name.replace(/[^a-z0-9\s-]/gi, '').replace(/\s+/g, '_')}`;
-
-                    clearTimeout(operationTimeout);
-                    console.log("Order placed successfully with ID: ", orderId);
-                    localStorage.setItem('dodch_has_ordered', '1');
-                    if (currentUser && typeof window.saveShippingFromCheckout === 'function') {
-                        await window.saveShippingFromCheckout(currentUser.uid);
-                    }
-                    if (!currentUser) {
-                        const guestOrders = JSON.parse(localStorage.getItem('dodch_guest_orders') || '[]');
-                        guestOrders.push(orderId);
-                        localStorage.setItem('dodch_guest_orders', JSON.stringify(guestOrders));
-                    }
-
-                    setTimeout(() => {
-                        // Capture customer details for the receipt before clearing form
-                        const customerEmail = document.getElementById('checkout-email').value;
-                        const customerName = document.getElementById('checkout-name').value;
-                        const customerPhone = document.getElementById('checkout-phone').value;
-                        const customerAddress = document.getElementById('checkout-address').value;
-                        const customerCity = document.getElementById('checkout-city').value;
-
-                        // Generate Items HTML before clearing cart
-                        let itemsHtml = '';
-                        cart.forEach(item => {
-                            let priceVal = parseFloat(String(item.price).replace(/[^0-9.]/g, ''));
-                            if (isNaN(priceVal)) priceVal = 0;
-                            const itemTotal = priceVal * item.quantity;
-                            itemsHtml += `
+                        ${S}
+                    `,window.__removeOOSItem=(z,j)=>{Be=Be.filter(q=>!((q.productId||q.id)===z&&(q.size||"Default")===j)),localStorage.setItem("dodch_cart",JSON.stringify(Be)),ft(),typeof Pt=="function"&&Pt(),Be.filter(q=>{const V=x[q.productId||q.id];if(!V)return!1;if(V.sizes&&V.sizes.length>0){const f=V.sizes.find(T=>T.label===q.size);return f?f.outOfStock===!0||String(f.outOfStock).toLowerCase()==="true":!1}return V.outOfStock===!0||String(V.outOfStock).toLowerCase()==="true"}).length===0?document.getElementById("oos-cart-error-panel")?.remove():ut.click()},window.__notifyOOSItem=async(z,j,Z)=>{Z.disabled=!0,Z.textContent="Saving...",await so(z,j==="Default"?"Default":j,Z),Z.classList.contains("subscribed")?(Z.textContent="You're On the List!",Z.style.background="rgba(200,164,0,0.08)"):(Z.disabled=!1,Z.textContent="Notify Me")};const L=document.querySelector(".checkout-container, .co-page");L&&(L.insertBefore(y,L.firstChild),y.scrollIntoView({behavior:"smooth",block:"nearest"}));return}ut.innerText="Processing...",ut.style.opacity="0.7",ut.style.pointerEvents="none";const b=setTimeout(()=>{console.error("TIMEOUT: Firebase did not respond within 15 seconds."),window.showToast("Server not responding. Please try again.","error"),ut.innerText="Place Order",ut.style.opacity="1",ut.style.pointerEvents="auto"},15e3);try{const y="ORD-"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,5).toUpperCase();let S=0;const L=Be.map(oe=>{let ve=parseFloat(String(oe.price).replace(/[^0-9.]/g,""));isNaN(ve)&&(ve=0),S+=ve*oe.quantity;const be=x[oe.productId||oe.id],ke=be?.sizes?.find(Q=>Q.label===oe.size);return{id:oe.id,productId:oe.productId||oe.id,name:oe.name,size:oe.size,quantity:oe.quantity,price:ve.toFixed(2),batchNumber:ke?.batchNumber||be?.batchNumber||"N/A",expiryDate:ke?.expiryDate||be?.expiryDate||"N/A"}}),Z=S>=100?0:7;let q=0;const V=document.getElementById("use-rewards-checkbox");if(V&&V.checked&&Me){const oe=await mt(Ae(se,"users",Me.uid)),ve=oe.exists()&&oe.data().credits||0,be=S+Z;q=Math.min(ve,be)}else q=0;let f=S+Z;f=Math.max(0,f-q);const T={orderReference:y,items:L,shipping:{email:i,fullName:e,phone:o,address:s,city:r,postalCode:R},subtotal:parseFloat(S.toFixed(2)),shippingFee:Z,creditsUsed:parseFloat(q.toFixed(2)),total:parseFloat(f.toFixed(2)),status:"Pending",userId:Me?Me.uid:"guest",timestamp:kt()};typeof Ot<"u"&&await Ot;let re;if(q>0&&Me){const{writeBatch:oe}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"),ve=oe(se),be=Ae(Ne(se,"orders"));ve.set(be,T);const ke=Ae(se,"users",Me.uid),Q=await mt(ke),de=Q.exists()&&Q.data().credits||0;ve.update(ke,{credits:de-q}),await ve.commit(),re=be.id,window._dodchUserCredits-=q,Pt()}else re=(await Wt(Ne(se,"orders"),T)).id;const xe=y,me=`DODCH_Receipt_${xe}_${e.replace(/[^a-z0-9\s-]/gi,"").replace(/\s+/g,"_")}`;if(clearTimeout(b),console.log("Order placed successfully with ID: ",re),localStorage.setItem("dodch_has_ordered","1"),Me&&typeof window.saveShippingFromCheckout=="function"&&await window.saveShippingFromCheckout(Me.uid),!Me){const oe=JSON.parse(localStorage.getItem("dodch_guest_orders")||"[]");oe.push(re),localStorage.setItem("dodch_guest_orders",JSON.stringify(oe))}setTimeout(()=>{const oe=document.getElementById("checkout-email").value,ve=document.getElementById("checkout-name").value,be=document.getElementById("checkout-phone").value,ke=document.getElementById("checkout-address").value,Q=document.getElementById("checkout-city").value;let de="";Be.forEach(C=>{let ee=parseFloat(String(C.price).replace(/[^0-9.]/g,""));isNaN(ee)&&(ee=0);const F=ee*C.quantity;de+=`
                                 <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid #f0f0f0;">
                                     <div style="width: 60px; height: 60px; flex-shrink: 0; border-radius: 8px; overflow: hidden; border: 1px solid #eee;">
-                                        <img src="${item.image}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <img src="${C.image}" alt="${C.name}" style="width: 100%; height: 100%; object-fit: cover;">
                                     </div>
                                     <div style="flex-grow: 1;">
-                                        <h4 style="margin: 0 0 0.3rem 0; font-size: 0.95rem; color: var(--text-charcoal);">${item.name}</h4>
-                                        <p style="margin: 0; font-size: 0.8rem; color: #888;">Size: ${item.size} <span style="margin: 0 0.5rem;">•</span> Qty: ${item.quantity}</p>
+                                        <h4 style="margin: 0 0 0.3rem 0; font-size: 0.95rem; color: var(--text-charcoal);">${C.name}</h4>
+                                        <p style="margin: 0; font-size: 0.8rem; color: #888;">Size: ${C.size} <span style="margin: 0 0.5rem;">\u2022</span> Qty: ${C.quantity}</p>
                                     </div>
                                     <div style="text-align: right; font-weight: 600; color: var(--text-charcoal); font-size: 0.95rem;">
-                                        ${itemTotal.toFixed(2)} TND
+                                        ${F.toFixed(2)} TND
                                     </div>
                                 </div>
-                            `;
-                        });
-
-                        cart = [];
-                        localStorage.setItem('dodch_cart', JSON.stringify(cart));
-                        updateCartUI();
-
-                        const checkoutContainer = document.querySelector('.checkout-container, .co-page');
-
-                        if (checkoutContainer) {
-                            let guestMessage = '';
-                            if (!currentUser) {
-                                const googleIconSmall = `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px; background: white; border-radius: 50%; padding: 2px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>`;
-                                guestMessage = `
+                            `}),Be=[],localStorage.setItem("dodch_cart",JSON.stringify(Be)),ft();const P=document.querySelector(".checkout-container, .co-page");if(P){let C="";Me||(C=`
                                     <div id="guest-convert-banner" class="no-print" style="margin-top: 2rem; padding: 1.5rem; background: #fff; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; transition: all 0.4s ease;">
                                         <h4 style="margin-bottom: 0.5rem; color: var(--text-charcoal); font-size: 1.1rem;">Track Your Luxury Journey</h4>
                                         <p style="font-size: 0.85rem; color: #666; margin-bottom: 1.2rem; max-width: 280px; margin-left: auto; margin-right: auto;">Create an account now to claim this order and access exclusive DODCH rewards.</p>
                                         <button onclick="document.getElementById('login-btn').click()" class="cta-button cta-button-primary" style="width: auto; padding: 0.7rem 1.8rem; font-size: 0.9rem; display: flex; align-items: center; margin: 0 auto;">
-                                            ${googleIconSmall} Sign In with Google
+                                            <svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px; background: white; border-radius: 50%; padding: 2px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg> Sign In with Google
                                         </button>
                                     </div>
-                                `;
-                            }
-
-                            const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-                            // Turn the container into a full-width wrapper
-                            checkoutContainer.style.display = 'block';
-                            checkoutContainer.style.maxWidth = '800px';
-                            checkoutContainer.style.margin = '0 auto';
-
-                            // Inject mobile-responsive styles for the receipt
-                            if (!document.getElementById('receipt-mobile-fix')) {
-                                const mobileStyle = document.createElement('style');
-                                mobileStyle.id = 'receipt-mobile-fix';
-                                mobileStyle.textContent = `
+                                `);const ee=new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});if(P.style.display="block",P.style.maxWidth="800px",P.style.margin="0 auto",!document.getElementById("receipt-mobile-fix")){const F=document.createElement("style");F.id="receipt-mobile-fix",F.textContent=`
                                     @media (max-width: 600px) {
                                         .order-receipt-sheet { padding: 1.25rem !important; border-radius: 16px !important; }
                                         .receipt-header { margin-bottom: 1.5rem !important; padding-bottom: 1.25rem !important; }
@@ -3971,241 +407,87 @@ document.addEventListener('DOMContentLoaded', () => {
                                         .receipt-actions a, .receipt-actions button { flex: none !important; width: 100% !important; box-sizing: border-box !important; }
                                         .receipt-items-section { margin-bottom: 2rem !important; }
                                     }
-                                `;
-                                document.head.appendChild(mobileStyle);
-                            }
-
-                            checkoutContainer.innerHTML = `
+                                `,document.head.appendChild(F)}P.innerHTML=`
                                 <div class="order-receipt-sheet" style="background: #fff; padding: 3rem; border-radius: 24px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 20px 60px rgba(0,0,0,0.04); animation: slideUpFade 0.6s ease;">
                                     <div class="receipt-header" style="text-align: center; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid #eee;">
                                         <div class="no-print" style="width: 64px; height: 64px; background: rgba(212, 175, 55, 0.1); color: var(--accent-gold-text); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
                                             <svg style="width: 32px; height: 32px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                         </div>
                                         <h2 style="margin: 0; font-size: 2.2rem; color: var(--text-charcoal); border: none; padding-bottom: 0.5rem;">Order Confirmed</h2>
-                                        <p style="margin: 0; color: #666; font-size: 1.05rem;">Thank you, ${customerName.split(' ')[0]}. Your order is being processed.</p>
+                                        <p style="margin: 0; color: #666; font-size: 1.05rem;">Thank you, ${ve.split(" ")[0]}. Your order is being processed.</p>
                                     </div>
                                     
                                     <div class="receipt-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem; background: #fafafa; padding: 1.5rem; border-radius: 16px;">
                                         <div>
                                             <h4 style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.8rem;">Order Details</h4>
-                                            <p style="margin: 0 0 0.4rem 0; font-size: 0.95rem; font-weight: 500;"><strong>Ref:</strong> #${finalOrderReference}</p>
-                                            <p style="margin: 0; font-size: 0.95rem;"><strong>Date:</strong> ${today}</p>
+                                            <p style="margin: 0 0 0.4rem 0; font-size: 0.95rem; font-weight: 500;"><strong>Ref:</strong> #${xe}</p>
+                                            <p style="margin: 0; font-size: 0.95rem;"><strong>Date:</strong> ${ee}</p>
                                         </div>
                                         <div>
                                             <h4 style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.8rem;">Shipping To</h4>
-                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.95rem; font-weight: 500;">${customerName}</p>
-                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.9rem; color: #555;">${customerAddress}, ${customerCity}</p>
-                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.9rem; color: #555;">${customerPhone}</p>
-                                            <p style="margin: 0; font-size: 0.9rem; color: #555;">${customerEmail}</p>
+                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.95rem; font-weight: 500;">${ve}</p>
+                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.9rem; color: #555;">${ke}, ${Q}</p>
+                                            <p style="margin: 0 0 0.3rem 0; font-size: 0.9rem; color: #555;">${be}</p>
+                                            <p style="margin: 0; font-size: 0.9rem; color: #555;">${oe}</p>
                                         </div>
                                     </div>
 
                                     <div class="receipt-items-section" style="margin-bottom: 3rem;">
                                         <h4 style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">Order Items</h4>
                                         <div class="receipt-items-list">
-                                            ${itemsHtml}
+                                            ${de}
                                         </div>
                                     </div>
 
                                     <div class="receipt-totals" style="width: 100%; max-width: 300px; margin-left: auto;">
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 0.95rem; color: #666;">
                                             <span>Subtotal</span>
-                                            <span>${calculatedSubtotal.toFixed(2)} TND</span>
+                                            <span>${S.toFixed(2)} TND</span>
                                         </div>
-                                        ${creditsUsed > 0 ? `
+                                        ${q>0?`
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 0.95rem; color: #e74c3c;">
                                             <span>Rewards Discount</span>
-                                            <span>-${creditsUsed.toFixed(2)} TND</span>
-                                        </div>` : ''}
+                                            <span>-${q.toFixed(2)} TND</span>
+                                        </div>`:""}
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 1.2rem; font-size: 0.95rem; color: #666;">
                                             <span>Shipping</span>
-                                            <span>${shippingFee === 0 ? 'Free' : shippingFee.toFixed(2) + ' TND'}</span>
+                                            <span>${Z===0?"Free":Z.toFixed(2)+" TND"}</span>
                                         </div>
                                         <div style="display: flex; justify-content: space-between; padding-top: 1.2rem; border-top: 2px solid #eee; font-size: 1.2rem; font-weight: 600; color: var(--text-charcoal);">
                                             <span>Total</span>
-                                            <span>${finalTotal.toFixed(2)} TND</span>
+                                            <span>${f.toFixed(2)} TND</span>
                                         </div>
                                     </div>
                                      <div class="receipt-actions no-print" style="display: flex; gap: 1rem; margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2.5rem;">
-                                        <button onclick="window.printCheckoutReceipt('${safeFileName}')" class="cta-button cta-button-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: var(--text-charcoal); border: 1px solid #ddd; border-radius: 30px; cursor: pointer;">
+                                        <button onclick="window.printCheckoutReceipt('${me}')" class="cta-button cta-button-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: var(--text-charcoal); border: 1px solid #ddd; border-radius: 30px; cursor: pointer;">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                             Download PDF
                                         </button>
                                         <a href="index.html" class="cta-button cta-button-primary" style="flex: 1; text-align: center; border-radius: 30px; display: flex; align-items: center; justify-content: center; padding: 0;">Continue Shopping</a>
                                     </div>
                                     
-                                    ${guestMessage}
+                                    ${C}
                                 </div>
-                            `;
-                            
-                            checkoutContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    }, 1000);
-
-                } catch (err) {
-                    clearTimeout(operationTimeout);
-                    console.error("Error placing order:", err);
-                    window.showToast(err.message || "Error placing order.", "error");
-                    placeOrderBtn.innerText = "Place Order";
-                    placeOrderBtn.style.opacity = "1";
-                    placeOrderBtn.style.pointerEvents = "auto";
-                }
-            } else {
-                checkoutForm.reportValidity();
-            }
-        });
-    }
-    const newsletterForm = document.getElementById('newsletter-form');
-    if (newsletterForm) {
-        newsletterForm.addEventListener('submit', async (e) => {
-            window.triggerHaptic('medium');
-            e.preventDefault();
-            const btn = newsletterForm.querySelector('button');
-            const originalText = btn.innerText;
-            const emailInput = newsletterForm.querySelector('input[type="email"]');
-            const email = emailInput ? emailInput.value.trim() : "";
-
-            if (!SecurityValidator.validateEmail(email)) {
-                window.showToast("Please use a real email address.", "error");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = "Joining...";
-
-            try {
-                // Direct Firestore write (Spark-compatible)
-                // App Check will verify this request automatically
-                await addDoc(collection(db, "newsletter"), {
-                    email: email,
-                    createdAt: serverTimestamp(),
-                    source: 'footer'
-                });
-
-                window.showToast("Welcome to the Inner Circle!", "success");
-                newsletterForm.reset();
-                btn.style.backgroundColor = "#4CAF50"; // Green for success
-            } catch (err) {
-                console.error("Newsletter Error:", err);
-                if (err.code === 'permission-denied') {
-                    window.showToast("Security verification failed. Please refresh.", "error");
-                } else {
-                    window.showToast("Failed to subscribe. Please try again later.", "error");
-                }
-            } finally {
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.innerText = originalText;
-                    btn.style.backgroundColor = "";
-                }, 3000);
-            }
-        });
-    }
-    const initBreadcrumbs = () => {
-        const existing = document.querySelector('.breadcrumb-wrapper');
-        if (existing) existing.remove();
-        document.body.classList.remove('has-breadcrumbs');
-
-        const path = window.location.pathname;
-        const page = path.split("/").pop();
-        if ((page === "" || page === "index.html" || page === "/") && !window.location.search) return;
-        if (page.includes("face-foam.html") || page.includes("face-serum.html") || page.includes("silk-mask.html") || page.includes("dodchmellow-pro-v.html")) return;
-
-        const main = document.querySelector('main');
-        if (!main) return;
-
-        let crumbs = [{ name: "Home", url: "index.html" }];
-        let currentName = "";
-        if (page.includes("index.html") || page === "/" || page === "") {
-            const urlParams = new URLSearchParams(window.location.search);
-            const cat = urlParams.get('cat');
-            const sub = urlParams.get('sub');
-
-            if (cat) {
-                const catNames = { 'hair-care': 'Hair Care', 'skin-care': 'Skin Care', 'sets': 'Sets & Bundles' };
-                crumbs.push({ name: "Shop", url: "index.html" });
-                currentName = catNames[cat] || cat;
-
-                if (sub && sub !== 'all') {
-                    crumbs.push({ name: currentName, url: `index.html?cat=${cat}` });
-                    const subNames = { 'shampoo': 'Shampoo', 'conditioners': 'Conditioners', 'leave-in': 'Leave-in', 'masks': 'Masks', 'cleansers': 'Cleansers', 'serums': 'Serums', 'creams': 'Creams' };
-                    currentName = subNames[sub] || sub;
-                }
-            } else {
-                currentName = "Shop";
-            }
-        } else if (page.includes("about.html")) {
-            currentName = "About Us";
-        } else if (page.includes("careers.html")) {
-            currentName = "Careers";
-        } else if (page.includes("privacy-policy.html")) {
-            currentName = "Privacy Policy";
-        } else if (page.includes("terms-of-service.html")) {
-            currentName = "Terms of Service";
-        } else if (page.includes("shipping-returns.html")) {
-            currentName = "Shipping & Returns";
-        } else if (page.includes("faq.html")) {
-            currentName = "FAQ";
-        } else if (page.includes("checkout.html")) {
-            crumbs.push({ name: "Shop", url: "index.html" });
-            currentName = "Checkout";
-        } else if (page.includes("my-account.html")) {
-            currentName = "My Account";
-        } else if (page.includes("tracking.html")) {
-            crumbs.push({ name: "My Account", url: "my-account.html" });
-            currentName = "Tracking";
-        } else if (page.includes("admin.html")) {
-            currentName = "Admin Dashboard";
-        } else if (page.includes("product.html")) {
-            crumbs.push({ name: "Shop", url: "index.html" });
-            const urlParams = new URLSearchParams(window.location.search);
-            const productId = urlParams.get('id');
-            const product = productCatalog[productId] || Object.values(productCatalog).find(p => p.storyUrl === window.location.pathname.split('/').pop()) || productCatalog['glass-glow-shampoo'];
-            currentName = product ? product.name : "Product";
-        }
-
-        if (currentName) {
-            crumbs.push({ name: currentName, url: null });
-        }
-        const breadcrumbHTML = `
+                            `,P.scrollIntoView({behavior:"smooth",block:"start"})}},1e3)}catch(y){clearTimeout(b),console.error("Error placing order:",y),window.showToast(y.message||"Error placing order.","error"),ut.innerText="Place Order",ut.style.opacity="1",ut.style.pointerEvents="auto"}}else vo.reportValidity()});const jt=document.getElementById("newsletter-form");jt&&jt.addEventListener("submit",async d=>{window.triggerHaptic("medium"),d.preventDefault();const i=jt.querySelector("button"),e=i.innerText,o=jt.querySelector('input[type="email"]'),s=o?o.value.trim():"";if(!We.validateEmail(s)){window.showToast("Please use a real email address.","error");return}i.disabled=!0,i.innerText="Joining...";try{await Wt(Ne(se,"newsletter"),{email:s,createdAt:kt(),source:"footer"}),window.showToast("Welcome to the Inner Circle!","success"),jt.reset(),i.style.backgroundColor="#4CAF50"}catch(r){console.error("Newsletter Error:",r),r.code==="permission-denied"?window.showToast("Security verification failed. Please refresh.","error"):window.showToast("Failed to subscribe. Please try again later.","error")}finally{setTimeout(()=>{i.disabled=!1,i.innerText=e,i.style.backgroundColor=""},3e3)}});const It=()=>{const d=document.querySelector(".breadcrumb-wrapper");d&&d.remove(),document.body.classList.remove("has-breadcrumbs");const e=window.location.pathname.split("/").pop();if((e===""||e==="index.html"||e==="/")&&!window.location.search||e.includes("face-foam.html")||e.includes("face-serum.html")||e.includes("silk-mask.html")||e.includes("dodchmellow-pro-v.html"))return;const o=document.querySelector("main");if(!o)return;let s=[{name:"Home",url:"index.html"}],r="";if(e.includes("index.html")||e==="/"||e===""){const v=new URLSearchParams(window.location.search),b=v.get("cat"),y=v.get("sub");if(b){const S={"hair-care":"Hair Care","skin-care":"Skin Care",sets:"Sets & Bundles"};s.push({name:"Shop",url:"index.html"}),r=S[b]||b,y&&y!=="all"&&(s.push({name:r,url:`index.html?cat=${b}`}),r={shampoo:"Shampoo",conditioners:"Conditioners","leave-in":"Leave-in",masks:"Masks",cleansers:"Cleansers",serums:"Serums",creams:"Creams"}[y]||y)}else r="Shop"}else if(e.includes("about.html"))r="About Us";else if(e.includes("careers.html"))r="Careers";else if(e.includes("privacy-policy.html"))r="Privacy Policy";else if(e.includes("terms-of-service.html"))r="Terms of Service";else if(e.includes("shipping-returns.html"))r="Shipping & Returns";else if(e.includes("faq.html"))r="FAQ";else if(e.includes("checkout.html"))s.push({name:"Shop",url:"index.html"}),r="Checkout";else if(e.includes("my-account.html"))r="My Account";else if(e.includes("tracking.html"))s.push({name:"My Account",url:"my-account.html"}),r="Tracking";else if(e.includes("admin.html"))r="Admin Dashboard";else if(e.includes("product.html")){s.push({name:"Shop",url:"index.html"});const b=new URLSearchParams(window.location.search).get("id"),y=x[b]||Object.values(x).find(S=>S.storyUrl===window.location.pathname.split("/").pop())||x["glass-glow-shampoo"];r=y?y.name:"Product"}r&&s.push({name:r,url:null});const R=`
             <div class="breadcrumb-wrapper">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb" itemscope itemtype="https://schema.org/BreadcrumbList">
-                    ${crumbs.map((crumb, index) => {
-            const isLast = index === crumbs.length - 1;
-
-            if (isLast) {
-                return `
+                    ${s.map((v,b)=>b===s.length-1?`
                             <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-                                <span itemprop="name" class="breadcrumb-current">${crumb.name}</span>
-                                <meta itemprop="position" content="${index + 1}" />
-                            </li>`;
-            } else {
-                const absoluteUrl = new URL(crumb.url, window.location.href).href;
-                return `
+                                <span itemprop="name" class="breadcrumb-current">${v.name}</span>
+                                <meta itemprop="position" content="${b+1}" />
+                            </li>`:`
                             <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-                                <a itemprop="item" href="${absoluteUrl}">
-                                    <span itemprop="name">${crumb.name}</span>
+                                <a itemprop="item" href="${new URL(v.url,window.location.href).href}">
+                                    <span itemprop="name">${v.name}</span>
                                 </a>
-                                <meta itemprop="position" content="${index + 1}" />
+                                <meta itemprop="position" content="${b+1}" />
                                 <span class="breadcrumb-separator" aria-hidden="true">&gt;</span>
-                            </li>`;
-            }
-        }).join('')}
+                            </li>`).join("")}
                     </ol>
                 </nav>
             </div>
-        `;
-        main.insertAdjacentHTML('afterbegin', breadcrumbHTML);
-        document.body.classList.add('has-breadcrumbs');
-    };
-
-    initBreadcrumbs();
-    function initSmartFooter() {
-        const footer = document.querySelector('footer');
-        if (footer) {
-            if (!document.getElementById('contact')) {
-                const contactSectionHTML = `
+        `;o.insertAdjacentHTML("afterbegin",R),document.body.classList.add("has-breadcrumbs")};It();function ci(){const d=document.querySelector("footer");d&&(document.getElementById("contact")||d.insertAdjacentHTML("beforebegin",`
                     <section id="contact" style="padding: var(--space-12) 0; background: transparent;">
                         <div class="contact-card" style="margin: 0 var(--space-6) var(--space-12) var(--space-6); background: #FFFFFF; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.08); padding: var(--space-12) 0; border: 1px solid rgba(0,0,0,0.05);">
                             <div class="container">
@@ -4247,11 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                     </section>
-                `;
-
-                footer.insertAdjacentHTML('beforebegin', contactSectionHTML);
-            }
-            footer.innerHTML = `
+                `),d.innerHTML=`
                 <div class="container">
                     <div class="footer-content">
                         <div class="footer-col brand-col">
@@ -4299,361 +577,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">Terms of Service</a> apply.
                     </div>
                 </div>
-            `;
-        }
-    };
-
-    initSmartFooter();
-
-    // --- Sidebar Menu Rendering ---
-    function renderSidebarMenu(loading = false) {
-        const sidebarMenu = document.querySelector('.sidebar-menu');
-        if (!sidebarMenu) return;
-
-        sidebarMenu.innerHTML = ''; // Clear existing static links
-
-        if (loading) {
-            const skeletonItems = Array(5).fill(0).map((_, i) => `
+            `)}ci();function jo(d=!1){const i=document.querySelector(".sidebar-menu");if(!i)return;if(i.innerHTML="",d){const b=Array(5).fill(0).map((y,S)=>`
                 <div style="display: flex; align-items: center; padding: 18px 20px; border-bottom: 2px solid rgba(0,0,0,0.03); margin-bottom: 5px;">
-                    <div class="skeleton-text" style="height: 1.15rem; width: ${40 + (i % 3) * 15}%; border-radius: 4px;"></div>
+                    <div class="skeleton-text" style="height: 1.15rem; width: ${40+S%3*15}%; border-radius: 4px;"></div>
                 </div>
-            `).join('');
-            sidebarMenu.innerHTML = skeletonItems;
-            return;
-        }
-
-        const menuItems = [
-            {
-                label: "Home",
-                link: "index.html",
-                type: "link",
-                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`
-            },
-            {
-                label: "Shop",
-                id: "shop-group",
-                type: "group",
-                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
-                children: [
-                    {
-                        label: "Hair Care",
-                        id: "hair-care",
-                        type: "group",
-                        children: [
-                            { label: "All Hair Care", link: "index.html?cat=hair-care", type: "link" },
-                            { label: "Shampoo", link: "index.html?cat=hair-care&sub=shampoo", type: "link" },
-                            { label: "Conditioners", link: "index.html?cat=hair-care&sub=conditioners", type: "link" },
-                            { label: "Masks", link: "index.html?cat=hair-care&sub=masks", type: "link" },
-                            { label: "Leave-in", link: "index.html?cat=hair-care&sub=leave-in", type: "link" }
-                        ]
-                    },
-                    {
-                        label: "Skin Care",
-                        id: "skin-care",
-                        type: "group",
-                        children: [
-                            { label: "All Skin Care", link: "index.html?cat=skin-care", type: "link" },
-                            { label: "Cleansers", link: "index.html?cat=skin-care&sub=cleansers", type: "link" },
-                            { label: "Serums", link: "index.html?cat=skin-care&sub=serums", type: "link" },
-                            { label: "Creams", link: "index.html?cat=skin-care&sub=creams", type: "link" }
-                        ]
-                    },
-                    { label: "Sets & Bundles", link: "index.html?cat=sets", type: "link" }
-                ]
-            },
-            {
-                label: "Our Identity",
-                link: "identity.html",
-                type: "link",
-                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>`
-            },
-            {
-                label: "About Us",
-                link: "about.html",
-                type: "link",
-                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
-            },
-            {
-                label: "Contact",
-                link: "#contact",
-                type: "link",
-                icon: `<svg class="sidebar-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`
-            }
-        ];
-
-        const createMenuNode = (item) => {
-            if (item.type === "group") {
-                const group = document.createElement('div');
-                group.className = 'sidebar-menu-group';
-                if (item.id) group.dataset.id = item.id;
-
-                const toggle = document.createElement('div');
-                toggle.className = 'sidebar-menu-toggle';
-                toggle.innerHTML = `${item.icon || ''}<span>${item.label}</span><span class="toggle-icon"></span>`;
-
-                toggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const siblings = Array.from(group.parentElement.children);
-                    siblings.forEach(sibling => {
-                        if (sibling !== group && sibling.classList.contains('sidebar-menu-group')) {
-                            sibling.classList.remove('active');
-                        }
-                    });
-
-                    group.classList.toggle('active');
-                });
-
-                const submenu = document.createElement('div');
-                submenu.className = 'sidebar-submenu';
-
-                item.children.forEach(child => {
-                    submenu.appendChild(createMenuNode(child));
-                });
-
-                group.appendChild(toggle);
-                group.appendChild(submenu);
-                return group;
-            } else {
-                const link = document.createElement('a');
-                link.href = item.link;
-                link.innerHTML = `${item.icon || ''}<span>${item.label}</span>`;
-                if (item.className) {
-                    item.className.split(' ').forEach(cls => link.classList.add(cls));
-                }
-
-                // Attach click listener to close sidebar on ANY link tap
-                link.addEventListener('click', (e) => {
-                    // Specific logic for in-page 'index.html' routing (Shop grid refresh)
-                    if (item.link && item.link.includes('index.html') && window.location.pathname.includes('index.html')) {
-                        e.preventDefault();
-                        window.history.pushState({}, '', item.link);
-                        initShopPage(true);
-                        updateSidebarActiveState();
-                        if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
-                        updateMainPageSEO();
-                        if (window.dodchSEO) window.dodchSEO.runSEO();
-
-                        // Reset scroll position so new section starts from the top
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
-
-                    // Always forcibly close the sidebar
-                    if (typeof closeSidebar === 'function') {
-                        closeSidebar();
-                    } else {
-                        document.body.style.overflow = '';
-                        const sb = document.getElementById('desktop-sidebar');
-                        const overlay = document.querySelector('.sidebar-overlay');
-                        const hamb = document.querySelector('.hamburger');
-                        if (sb) sb.classList.remove('active');
-                        if (overlay) overlay.classList.remove('active');
-                        if (hamb) hamb.classList.remove('active');
-                    }
-                });
-                return link;
-            }
-        };
-
-        menuItems.forEach(item => {
-            sidebarMenu.appendChild(createMenuNode(item));
-        });
-        const currentPath = window.location.pathname;
-        const urlParams = new URLSearchParams(window.location.search);
-        const cat = urlParams.get('cat');
-        const isShopPage = currentPath.endsWith('/') || currentPath.endsWith('index.html');
-
-        if (isShopPage || currentPath.includes('product.html')) {
-            const homeGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="home"]');
-            if (homeGroup) homeGroup.classList.add('active');
-
-            if (cat === 'hair-care') {
-                const hairGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="hair-care"]');
-                if (hairGroup) hairGroup.classList.add('active');
-            } else if (cat === 'skin-care') {
-                const faceGroup = sidebarMenu.querySelector('.sidebar-menu-group[data-id="skin-care"]');
-                if (faceGroup) faceGroup.classList.add('active');
-            }
-        }
-    };
-
-    renderSidebarMenu(false);
-    const updateSidebarActiveState = () => {
-        const currentUrl = new URL(window.location.href);
-        const isBaseHomePage = (currentUrl.pathname.endsWith('/') || currentUrl.pathname.endsWith('/index.html')) && currentUrl.search === '';
-        if (isBaseHomePage) {
-            currentUrl.searchParams.set('cat', 'all');
-        }
-        document.querySelectorAll('.sidebar-menu-group.active').forEach(g => g.classList.remove('active'));
-        document.querySelectorAll('.sidebar-menu a.active').forEach(l => l.classList.remove('active'));
-
-        let bestMatch = null;
-        let maxScore = -1;
-
-        document.querySelectorAll('.sidebar-menu a').forEach(link => {
-            // Skip pure hash anchors (e.g. #contact) — they are in-page section links,
-            // not page navigation links, and their resolved pathname always matches the
-            // current page, causing them to incorrectly appear as "active".
-            const rawHref = link.getAttribute('href') || '';
-            if (rawHref.startsWith('#')) return;
-
-            const linkUrl = new URL(link.href, window.location.origin);
-            let score = 0;
-            if (linkUrl.pathname !== currentUrl.pathname) {
-                return;
-            }
-            score = 1;
-            const currentParams = currentUrl.searchParams;
-            const linkParams = linkUrl.searchParams;
-
-            if (currentUrl.search === linkUrl.search) {
-                score = 10; // Perfect match is best
-            } else {
-                let paramsMatch = true;
-                let matchCount = 0;
-                for (const [key, value] of linkParams.entries()) {
-                    if (currentParams.get(key) !== value) {
-                        paramsMatch = false;
-                        break;
-                    }
-                    matchCount++;
-                }
-
-                if (paramsMatch) {
-                    score += matchCount;
-                } else {
-                    score = 0; // Not a valid candidate
-                }
-            }
-
-            if (score > maxScore) {
-                maxScore = score;
-                bestMatch = link;
-            }
-        });
-
-        if (bestMatch) {
-            bestMatch.classList.add('active');
-            let parent = bestMatch.closest('.sidebar-menu-group');
-            while (parent) {
-                parent.classList.add('active');
-                parent = parent.parentElement.closest('.sidebar-menu-group');
-            }
-            setTimeout(() => {
-                const sidebar = document.getElementById('desktop-sidebar');
-                if (sidebar && (window.innerWidth >= 768 || sidebar.classList.contains('active'))) {
-                    bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }, 500);
-        }
-    };
-    updateSidebarActiveState();
-    const initContactHighlight = () => {
-        const highlight = () => {
-            const contactSection = document.getElementById('contact');
-            if (contactSection) {
-                contactSection.scrollIntoView({ behavior: 'smooth' });
-                contactSection.classList.remove('highlight-section');
-                void contactSection.offsetWidth; // Trigger reflow
-                contactSection.classList.add('highlight-section');
-
-                setTimeout(() => {
-                    contactSection.classList.remove('highlight-section');
-                }, 2000);
-            }
-        };
-
-        if (initialHash === '#contact') {
-            setTimeout(highlight, 1000);
-        }
-
-        document.addEventListener('click', (e) => {
-            const link = e.target.closest('a');
-            if (link) {
-                const href = link.getAttribute('href');
-                if (href && (href === '#contact' || href.endsWith('#contact'))) {
-                    setTimeout(highlight, 100);
-                }
-            }
-        });
-    };
-    initContactHighlight();
-    const initAdminPage = async () => {
-        const debounce = (func, wait) => {
-            let timeout;
-            return function (...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), wait);
-            };
-        };
-
-        const adminOrdersList = document.getElementById('admin-orders-list');
-        const adminProductsList = document.getElementById('admin-products-list');
-
-        if (!adminOrdersList) return; // Not on admin page
-
-        const checkExportEligibility = async () => {
-            const exportBtn = document.getElementById('admin-export-btn');
-            if (!exportBtn) return;
-            try {
-                // Check system-wide for any orders that are not terminal (Delivered/Cancelled) and not yet exported
-                const q = query(collection(db, "orders"));
-                const querySnapshot = await getDocs(q);
-                let pendingCount = 0;
-                let exportableCount = 0;
-                querySnapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.exported) return;
-                    if (['Pending', 'Confirmed', 'In Delivery'].includes(data.status)) pendingCount++;
-                    else if (['Delivered', 'Cancelled', 'Local Order'].includes(data.status)) exportableCount++;
-                });
-                if (pendingCount > 0) {
-                    exportBtn.disabled = true;
-                    exportBtn.style.opacity = "0.5";
-                    exportBtn.title = `Export locked: ${pendingCount} order(s) still in progress.`;
-                } else if (exportableCount === 0) {
-                    exportBtn.disabled = true;
-                    exportBtn.style.opacity = "0.5";
-                    exportBtn.title = "No new delivered orders to export.";
-                } else {
-                    exportBtn.disabled = false;
-                    exportBtn.style.opacity = "1";
-                    exportBtn.title = `Export ${exportableCount} delivered order(s).`;
-                }
-            } catch (err) { console.warn("Eligibility check failed", err); }
-        };
-
-        onAuthStateChanged(auth, (user) => {
-            if (!user || user.uid !== ADMIN_UID) {
-                window.location.href = 'index.html';
-            } else {
-                loadAdminOrders();
-                loadAdminProducts();
-                loadRevenueChart();
-                
-                // Add "Create Local Order" button - Refined to find the best header element
-                let adminOrdersHeader = document.querySelector('#tab-orders .admin-header');
-                if (!adminOrdersHeader) {
-                    const exportBtnAnchor = document.getElementById('admin-export-btn');
-                    if (exportBtnAnchor) adminOrdersHeader = exportBtnAnchor.parentElement;
-                }
-
-                if (adminOrdersHeader && !document.getElementById('create-local-order-btn')) {
-                    adminOrdersHeader.insertAdjacentHTML('beforeend', '<button id="create-local-order-btn" class="admin-btn btn-add" style="margin-left: 1rem;">+ Create Local Order</button>');
-                    // Fix: Attach listener immediately after dynamic creation
-                    document.getElementById('create-local-order-btn').addEventListener('click', () => {
-                        if (typeof openLocalOrderModal === 'function') openLocalOrderModal();
-                    });
-                }
-                loadAdminMessages();
-                loadAdminReports();
-                checkExportEligibility();
-            }
-        });
-        const tabs = document.querySelectorAll('.admin-tab-btn');
-        const panes = document.querySelectorAll('.tab-pane');
-
-        // --- Local Order Modal HTML ---
-        const localOrderModalHTML = `
+            `).join("");i.innerHTML=b;return}const e=[{label:"Home",link:"index.html",type:"link",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'},{label:"Shop",id:"shop-group",type:"group",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>',children:[{label:"Hair Care",id:"hair-care",type:"group",children:[{label:"All Hair Care",link:"index.html?cat=hair-care",type:"link"},{label:"Shampoo",link:"index.html?cat=hair-care&sub=shampoo",type:"link"},{label:"Conditioners",link:"index.html?cat=hair-care&sub=conditioners",type:"link"},{label:"Masks",link:"index.html?cat=hair-care&sub=masks",type:"link"},{label:"Leave-in",link:"index.html?cat=hair-care&sub=leave-in",type:"link"}]},{label:"Skin Care",id:"skin-care",type:"group",children:[{label:"All Skin Care",link:"index.html?cat=skin-care",type:"link"},{label:"Cleansers",link:"index.html?cat=skin-care&sub=cleansers",type:"link"},{label:"Serums",link:"index.html?cat=skin-care&sub=serums",type:"link"},{label:"Creams",link:"index.html?cat=skin-care&sub=creams",type:"link"}]},{label:"Sets & Bundles",link:"index.html?cat=sets",type:"link"}]},{label:"Our Identity",link:"identity.html",type:"link",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>'},{label:"About Us",link:"about.html",type:"link",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'},{label:"Contact",link:"#contact",type:"link",icon:'<svg class="sidebar-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>'}],o=b=>{if(b.type==="group"){const y=document.createElement("div");y.className="sidebar-menu-group",b.id&&(y.dataset.id=b.id);const S=document.createElement("div");S.className="sidebar-menu-toggle",S.innerHTML=`${b.icon||""}<span>${b.label}</span><span class="toggle-icon"></span>`,S.addEventListener("click",z=>{z.stopPropagation(),Array.from(y.parentElement.children).forEach(Z=>{Z!==y&&Z.classList.contains("sidebar-menu-group")&&Z.classList.remove("active")}),y.classList.toggle("active")});const L=document.createElement("div");return L.className="sidebar-submenu",b.children.forEach(z=>{L.appendChild(o(z))}),y.appendChild(S),y.appendChild(L),y}else{const y=document.createElement("a");return y.href=b.link,y.innerHTML=`${b.icon||""}<span>${b.label}</span>`,b.className&&b.className.split(" ").forEach(S=>y.classList.add(S)),y.addEventListener("click",S=>{if(b.link&&b.link.includes("index.html")&&window.location.pathname.includes("index.html")&&(S.preventDefault(),window.history.pushState({},"",b.link),Xe(!0),Ft(),typeof It=="function"&&It(),updateMainPageSEO(),window.dodchSEO&&window.dodchSEO.runSEO(),window.scrollTo({top:0,behavior:"smooth"})),typeof ce=="function")ce();else{document.body.style.overflow="";const L=document.getElementById("desktop-sidebar"),z=document.querySelector(".sidebar-overlay"),j=document.querySelector(".hamburger");L&&L.classList.remove("active"),z&&z.classList.remove("active"),j&&j.classList.remove("active")}}),y}};e.forEach(b=>{i.appendChild(o(b))});const s=window.location.pathname,R=new URLSearchParams(window.location.search).get("cat");if(s.endsWith("/")||s.endsWith("index.html")||s.includes("product.html")){const b=i.querySelector('.sidebar-menu-group[data-id="home"]');if(b&&b.classList.add("active"),R==="hair-care"){const y=i.querySelector('.sidebar-menu-group[data-id="hair-care"]');y&&y.classList.add("active")}else if(R==="skin-care"){const y=i.querySelector('.sidebar-menu-group[data-id="skin-care"]');y&&y.classList.add("active")}}}jo(!1);const Ft=()=>{const d=new URL(window.location.href);(d.pathname.endsWith("/")||d.pathname.endsWith("/index.html"))&&d.search===""&&d.searchParams.set("cat","all"),document.querySelectorAll(".sidebar-menu-group.active").forEach(s=>s.classList.remove("active")),document.querySelectorAll(".sidebar-menu a.active").forEach(s=>s.classList.remove("active"));let e=null,o=-1;if(document.querySelectorAll(".sidebar-menu a").forEach(s=>{if((s.getAttribute("href")||"").startsWith("#"))return;const R=new URL(s.href,window.location.origin);let v=0;if(R.pathname!==d.pathname)return;v=1;const b=d.searchParams,y=R.searchParams;if(d.search===R.search)v=10;else{let S=!0,L=0;for(const[z,j]of y.entries()){if(b.get(z)!==j){S=!1;break}L++}S?v+=L:v=0}v>o&&(o=v,e=s)}),e){e.classList.add("active");let s=e.closest(".sidebar-menu-group");for(;s;)s.classList.add("active"),s=s.parentElement.closest(".sidebar-menu-group");setTimeout(()=>{const r=document.getElementById("desktop-sidebar");r&&(window.innerWidth>=768||r.classList.contains("active"))&&e.scrollIntoView({behavior:"smooth",block:"center"})},500)}};Ft(),(()=>{const d=()=>{const i=document.getElementById("contact");i&&(i.scrollIntoView({behavior:"smooth"}),i.classList.remove("highlight-section"),i.offsetWidth,i.classList.add("highlight-section"),setTimeout(()=>{i.classList.remove("highlight-section")},2e3))};c==="#contact"&&setTimeout(d,1e3),document.addEventListener("click",i=>{const e=i.target.closest("a");if(e){const o=e.getAttribute("href");o&&(o==="#contact"||o.endsWith("#contact"))&&setTimeout(d,100)}})})(),(async()=>{const d=(m,k)=>{let B;return function(...H){clearTimeout(B),B=setTimeout(()=>m.apply(this,H),k)}},i=document.getElementById("admin-orders-list"),e=document.getElementById("admin-products-list");if(!i)return;const o=async()=>{const m=document.getElementById("admin-export-btn");if(m)try{const k=Ye(Ne(se,"orders")),B=await nt(k);let H=0,A=0;B.forEach(h=>{const g=h.data();g.exported||(["Pending","Confirmed","In Delivery"].includes(g.status)?H++:["Delivered","Cancelled","Local Order"].includes(g.status)&&A++)}),H>0?(m.disabled=!0,m.style.opacity="0.5",m.title=`Export locked: ${H} order(s) still in progress.`):A===0?(m.disabled=!0,m.style.opacity="0.5",m.title="No new delivered orders to export."):(m.disabled=!1,m.style.opacity="1",m.title=`Export ${A} delivered order(s).`)}catch(k){console.warn("Eligibility check failed",k)}};Yt(Qe,m=>{if(!m||m.uid!==Xt)window.location.href="index.html";else{Mt(),Gt(),Wo();let k=document.querySelector("#tab-orders .admin-header");if(!k){const B=document.getElementById("admin-export-btn");B&&(k=B.parentElement)}k&&!document.getElementById("create-local-order-btn")&&(k.insertAdjacentHTML("beforeend",'<button id="create-local-order-btn" class="admin-btn btn-add" style="margin-left: 1rem;">+ Create Local Order</button>'),document.getElementById("create-local-order-btn").addEventListener("click",()=>{typeof de=="function"&&de()})),pi(),ui(),o()}});const s=document.querySelectorAll(".admin-tab-btn"),r=document.querySelectorAll(".tab-pane"),R=`
             <div id="local-order-modal" class="local-order-modal">
                 <div class="local-order-modal-content">
                     <button id="close-local-order-modal" class="qv-close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
@@ -4675,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="form-group">
                             <select id="lo-customer-city" required>
                                 <option value="" disabled selected>Select Governorate</option>
-                                ${SecurityValidator.TUNISIA_GOVERNORATES.map(gov => `<option value="${gov}">${gov}</option>`).join('')}
+                                ${We.TUNISIA_GOVERNORATES.map(m=>`<option value="${m}">${m}</option>`).join("")}
                             </select>
                         </div>
                         <div class="form-group">
@@ -4731,501 +659,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     </form>
                 </div>
             </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', localOrderModalHTML);
-
-        // --- Local Order Modal Elements ---
-        const localOrderModal = document.getElementById('local-order-modal');
-        const closeLocalOrderModalBtn = document.getElementById('close-local-order-modal');
-        const localOrderForm = document.getElementById('local-order-form');
-        const loApplyShippingCheckbox = document.getElementById('lo-apply-shipping');
-        const loProductSearch = document.getElementById('lo-product-search');
-        const loProductSuggestions = document.getElementById('lo-product-suggestions');
-        const loSelectedProductDetails = document.getElementById('lo-selected-product-details');
-        const loSelectedProductName = document.getElementById('lo-selected-product-name');
-        const loSelectedProductImg = document.getElementById('lo-selected-product-img');
-        const loProductSize = document.getElementById('lo-product-size');
-        const loProductQty = document.getElementById('lo-product-qty');
-        const loAddProductBtn = document.getElementById('lo-add-product-btn');
-        const loCurrentItemsList = document.getElementById('lo-current-items-list');
-        const loSubtotalEl = document.getElementById('lo-subtotal');
-        const loShippingEl = document.getElementById('lo-shipping');
-        const loTotalEl = document.getElementById('lo-total');
-        const loCancelBtn = document.getElementById('lo-cancel-btn');
-        const loPlaceOrderBtn = document.getElementById('lo-place-order-btn');
-
-        let localOrderCart = [];
-        let selectedProductForAdd = null;
-
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                panes.forEach(p => p.classList.remove('active'));
-
-                tab.classList.add('active');
-                const targetPane = document.getElementById(`tab-${tab.dataset.tab}`);
-                if (targetPane) targetPane.classList.add('active');
-            });
-        });
-
-        // --- Local Order Modal Functions ---
-        const openLocalOrderModal = () => {
-            localOrderCart = [];
-            renderLocalOrderProducts();
-            updateLocalOrderSummary();
-            localOrderForm.reset();
-            loSelectedProductDetails.style.display = 'none';
-            loProductSuggestions.style.display = 'none';
-            if (localOrderModal) {
-                localOrderModal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
-        };
-
-        const closeLocalOrderModal = () => {
-            if (localOrderModal) {
-                localOrderModal.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-        };
-
-        const renderLocalOrderProducts = () => {
-            loCurrentItemsList.innerHTML = '';
-            if (localOrderCart.length === 0) {
-                loCurrentItemsList.innerHTML = '<p style="opacity: 0.7;">No products added yet.</p>';
-                return;
-            }
-            localOrderCart.forEach((item, index) => {
-                const itemEl = document.createElement('div');
-                itemEl.className = 'local-order-product-item';
-                itemEl.innerHTML = `
-                    <img src="${item.image}" alt="${item.name}">
+        `;document.body.insertAdjacentHTML("beforeend",R);const v=document.getElementById("local-order-modal"),b=document.getElementById("close-local-order-modal"),y=document.getElementById("local-order-form"),S=document.getElementById("lo-apply-shipping"),L=document.getElementById("lo-product-search"),z=document.getElementById("lo-product-suggestions"),j=document.getElementById("lo-selected-product-details"),Z=document.getElementById("lo-selected-product-name"),q=document.getElementById("lo-selected-product-img"),V=document.getElementById("lo-product-size"),f=document.getElementById("lo-product-qty"),T=document.getElementById("lo-add-product-btn"),re=document.getElementById("lo-current-items-list"),xe=document.getElementById("lo-subtotal"),me=document.getElementById("lo-shipping"),oe=document.getElementById("lo-total"),ve=document.getElementById("lo-cancel-btn"),be=document.getElementById("lo-place-order-btn");let ke=[],Q=null;s.forEach(m=>{m.addEventListener("click",()=>{s.forEach(B=>B.classList.remove("active")),r.forEach(B=>B.classList.remove("active")),m.classList.add("active");const k=document.getElementById(`tab-${m.dataset.tab}`);k&&k.classList.add("active")})});const de=()=>{ke=[],C(),ee(),y.reset(),j.style.display="none",z.style.display="none",v&&(v.classList.add("active"),document.body.style.overflow="hidden")},P=()=>{v&&(v.classList.remove("active"),document.body.style.overflow="")},C=()=>{if(re.innerHTML="",ke.length===0){re.innerHTML='<p style="opacity: 0.7;">No products added yet.</p>';return}ke.forEach((m,k)=>{const B=document.createElement("div");B.className="local-order-product-item",B.innerHTML=`
+                    <img src="${m.image}" alt="${m.name}">
                     <div style="flex: 1;">
-                        <p style="margin: 0; font-weight: 600;">${item.name} (${item.size})</p>
-                        <p style="margin: 0; font-size: 0.9rem; color: #666;">Qty: ${item.quantity} @ ${item.price} TND</p>
+                        <p style="margin: 0; font-weight: 600;">${m.name} (${m.size})</p>
+                        <p style="margin: 0; font-size: 0.9rem; color: #666;">Qty: ${m.quantity} @ ${m.price} TND</p>
                     </div>
-                    <button type="button" class="admin-btn btn-delete lo-remove-item-btn" data-index="${index}">Remove</button>
-                `;
-                loCurrentItemsList.appendChild(itemEl);
-            });
-            document.querySelectorAll('.lo-remove-item-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const index = parseInt(e.target.dataset.index);
-                    localOrderCart.splice(index, 1);
-                    renderLocalOrderProducts();
-                    updateLocalOrderSummary();
-                });
-            });
-        };
-
-        const updateLocalOrderSummary = () => {
-            let subtotal = 0;
-            localOrderCart.forEach(item => {
-                subtotal += parseFloat(item.price) * item.quantity;
-            });
-
-            const applyShipping = loApplyShippingCheckbox ? loApplyShippingCheckbox.checked : true;
-            const SHIPPING_FEE = 7;
-            const FREE_SHIPPING_THRESHOLD = 100;
-
-            let shippingFee = 0;
-            if (applyShipping) {
-                shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-            }
-
-            const total = subtotal + shippingFee;
-
-            loSubtotalEl.textContent = `${subtotal.toFixed(2)} TND`;
-            loShippingEl.textContent = `${shippingFee.toFixed(2)} TND`;
-            loTotalEl.textContent = `${total.toFixed(2)} TND`;
-        };
-
-        // --- Event Listeners for Local Order Modal ---
-        if (closeLocalOrderModalBtn) closeLocalOrderModalBtn.addEventListener('click', closeLocalOrderModal);
-        if (loCancelBtn) loCancelBtn.addEventListener('click', closeLocalOrderModal);
-        if (localOrderModal) localOrderModal.addEventListener('click', (e) => {
-            if (e.target === localOrderModal) closeLocalOrderModal();
-        });
-
-        if (loApplyShippingCheckbox) {
-            loApplyShippingCheckbox.addEventListener('change', updateLocalOrderSummary);
-        }
-
-        loProductSearch.addEventListener('input', debounce(() => {
-            const searchTerm = loProductSearch.value.toLowerCase();
-            loProductSuggestions.innerHTML = '';
-            if (searchTerm.length < 2) {
-                loProductSuggestions.style.display = 'none';
-                return;
-            }
-
-            const filteredProducts = Object.entries(productCatalog).filter(([, prod]) =>
-                prod.name.toLowerCase().includes(searchTerm) || prod.subtitle.toLowerCase().includes(searchTerm)
-            );
-
-            if (filteredProducts.length > 0) {
-                filteredProducts.slice(0, 5).forEach(([id, prod]) => {
-                    const suggestionEl = document.createElement('div');
-                    suggestionEl.textContent = prod.name;
-                    suggestionEl.addEventListener('click', () => {
-                        selectedProductForAdd = { id, ...prod };
-                        loProductSearch.value = prod.name;
-                        loProductSuggestions.style.display = 'none';
-                        loSelectedProductDetails.style.display = 'block';
-                        loSelectedProductName.textContent = prod.name;
-                        loSelectedProductImg.src = getProductPrimaryImage(prod);
-                        loProductSize.innerHTML = '';
-                        if (prod.sizes && prod.sizes.length > 0) {
-                            prod.sizes.forEach(size => {
-                                const option = document.createElement('option');
-                                option.value = size.label;
-                                option.textContent = `${size.label} (${size.price} TND)`;
-                                loProductSize.appendChild(option);
-                            });
-                        } else {
-                            const option = document.createElement('option');
-                            option.value = 'Standard';
-                            option.textContent = `Standard (${prod.price} TND)`;
-                            loProductSize.appendChild(option);
-                        }
-                        loProductQty.value = 1;
-                    });
-                    loProductSuggestions.appendChild(suggestionEl);
-                });
-                loProductSuggestions.style.display = 'block';
-            } else {
-                loProductSuggestions.style.display = 'none';
-            }
-        }, 300));
-
-        loAddProductBtn.addEventListener('click', () => {
-            if (!selectedProductForAdd) {
-                window.showToast("Please select a product first.", "error");
-                return;
-            }
-            const sizeLabel = loProductSize.value;
-            const quantity = parseInt(loProductQty.value);
-            if (isNaN(quantity) || quantity <= 0) {
-                window.showToast("Please enter a valid quantity.", "error");
-                return;
-            }
-
-            let price = selectedProductForAdd.price;
-            if (selectedProductForAdd.sizes && selectedProductForAdd.sizes.length > 0) {
-                const selectedSize = selectedProductForAdd.sizes.find(s => s.label === sizeLabel);
-                if (selectedSize) price = selectedSize.price;
-            }
-
-            const existingItemIndex = localOrderCart.findIndex(item => item.productId === selectedProductForAdd.id && item.size === sizeLabel);
-            if (existingItemIndex > -1) {
-                localOrderCart[existingItemIndex].quantity += quantity;
-            } else {
-                localOrderCart.push({
-                    productId: selectedProductForAdd.id,
-                    name: selectedProductForAdd.name,
-                    size: sizeLabel,
-                    price: parseFloat(price).toFixed(2),
-                    image: getProductPrimaryImage(selectedProductForAdd),
-                    quantity: quantity
-                });
-            }
-            renderLocalOrderProducts();
-            updateLocalOrderSummary();
-            loProductSearch.value = '';
-            loSelectedProductDetails.style.display = 'none';
-            selectedProductForAdd = null;
-        });
-
-        localOrderForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (localOrderCart.length === 0) {
-                window.showToast("Please add products to the order.", "error");
-                return;
-            }
-
-            const customerName = document.getElementById('lo-customer-name').value.trim();
-            const customerEmail = document.getElementById('lo-customer-email').value.trim();
-            const customerPhone = document.getElementById('lo-customer-phone').value.trim();
-            const customerAddress = document.getElementById('lo-customer-address').value.trim();
-            const customerCity = document.getElementById('lo-customer-city').value.trim();
-            const customerPostal = document.getElementById('lo-customer-postal').value.trim();
-
-            if (customerEmail && !SecurityValidator.validateEmail(customerEmail)) { window.showToast("Invalid customer email.", "error"); return; }
-            if (customerPhone && !SecurityValidator.validatePhone(customerPhone)) { window.showToast("Invalid customer phone number.", "error"); return; }
-            if (!SecurityValidator.TUNISIA_GOVERNORATES.includes(customerCity)) { window.showToast("Invalid customer city.", "error"); return; }
-            if (SecurityValidator.isProfane(customerName) || SecurityValidator.isProfane(customerAddress)) { window.showToast("Inappropriate language detected in customer details.", "error"); return; }
-
-            loPlaceOrderBtn.disabled = true;
-            loPlaceOrderBtn.textContent = 'Placing Order...';
-
-            try {
-                const orderReference = 'LO-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 5).toUpperCase();
-                let calculatedSubtotal = 0;
-                const itemsForFirestore = localOrderCart.map(item => {
-                    calculatedSubtotal += parseFloat(item.price) * item.quantity;
-                    const prod = productCatalog[item.productId];
-                    const sizeInfo = prod?.sizes?.find(s => s.label === item.size);
-                    return { 
-                        ...item, 
-                        price: parseFloat(item.price),
-                        batchNumber: sizeInfo?.batchNumber || prod?.batchNumber || 'N/A',
-                        expiryDate: sizeInfo?.expiryDate || prod?.expiryDate || 'N/A'
-                    }; 
-                });
-
-                const applyShipping = loApplyShippingCheckbox ? loApplyShippingCheckbox.checked : true;
-                const SHIPPING_FEE = 7;
-                const FREE_SHIPPING_THRESHOLD = 100;
-                const shippingFee = (applyShipping && calculatedSubtotal < FREE_SHIPPING_THRESHOLD) ? SHIPPING_FEE : 0;
-                const finalTotal = calculatedSubtotal + shippingFee;
-
-                const orderData = {
-                    orderReference: orderReference,
-                    items: itemsForFirestore,
-                    shipping: {
-                        email: customerEmail,
-                        fullName: customerName,
-                        phone: customerPhone,
-                        address: customerAddress,
-                        city: customerCity,
-                        postalCode: customerPostal
-                    },
-                    subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
-                    shippingFee: shippingFee,
-                    total: parseFloat(finalTotal.toFixed(2)),
-                    status: 'Local Order', // Custom status for local orders
-                    type: 'local', // Custom type flag
-                    adminId: currentUser.uid, // Track which admin created it
-                    timestamp: serverTimestamp()
-                };
-
-                await addDoc(collection(db, "orders"), orderData);
-                window.showToast("Local order placed successfully!", "success");
-                closeLocalOrderModal();
-                loadAdminOrders(); // Refresh the orders list
-            } catch (error) {
-                console.error("Error placing local order:", error);
-                window.showToast("Failed to place local order.", "error");
-            } finally {
-                loPlaceOrderBtn.disabled = false;
-                loPlaceOrderBtn.textContent = 'Place Local Order';
-            }
-        });
-
-        const addProductModal = document.getElementById('add-product-modal');
-        const addProductBtn = document.getElementById('admin-add-product-btn');
-        const cancelProductEditBtn = document.getElementById('cancel-product-edit');
-        const addProductForm = document.getElementById('add-product-form');
-        const addSizeBtn = document.getElementById('add-size-btn');
-        const sizesContainer = document.getElementById('new-prod-sizes-container');
-        const imagePathInput = document.getElementById('new-prod-image-paths');
-
-        let currentModalProductId = null; // Track if we are editing an existing product
-
-        const checkModalChanges = () => {
-            const submitBtn = document.querySelector('button[type="submit"][form="add-product-form"]');
-            if (!submitBtn) return;
-
-            if (!currentModalProductId) {
-                submitBtn.disabled = false; // Always allow save for "Add New Product"
-                return;
-            }
-
-            const product = productCatalog[currentModalProductId];
-            if (!product) return;
-
-            let hasChanged = false;
-
-            // 1. Basic Fields
-            if (document.getElementById('new-prod-name').value.trim() !== (product.name || '')) hasChanged = true;
-            if (document.getElementById('new-prod-subtitle').value.trim() !== (product.subtitle || '')) hasChanged = true;
-            if (document.getElementById('new-prod-desc').value.trim() !== (product.description || '')) hasChanged = true;
-            if (document.getElementById('new-prod-inci').value.trim() !== (product.inci || '')) hasChanged = true;
-            if ((document.getElementById('new-prod-story-url')?.value.trim() || '') !== (product.storyUrl || '')) hasChanged = true;
-            const noticeVal = document.getElementById('new-prod-notice')?.value.trim() || "";
-            if (noticeVal !== (product.notice || "")) hasChanged = true;
-
-            // 2. Images
-            if (!hasChanged) {
-                const paths = parseImagePaths(imagePathInput.value);
-                const originalPaths = product.images && Array.isArray(product.images) && product.images.length > 0
-                    ? product.images
-                    : (product.image ? [product.image] : []);
-                if (JSON.stringify(paths) !== JSON.stringify(originalPaths)) hasChanged = true;
-            }
-
-            // 3. Sizes
-            if (!hasChanged) {
-                const currentSizes = Array.from(sizesContainer.querySelectorAll('.size-card')).map(row => ({
-                    label: row.querySelector('.size-label-input').value,
-                    price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
-                    originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
-                    batchNumber: row.querySelector('.size-batch-input').value.trim(),
-                    expiryDate: row.querySelector('.size-expiry-input').value
-                }));
-                
-                const originalSizes = (product.sizes || []).map(s => ({
-                    label: s.label,
-                    price: parseFloat(s.price).toFixed(2),
-                    originalPrice: s.originalPrice ? parseFloat(s.originalPrice).toFixed(2) : null,
-                    batchNumber: s.batchNumber || '',
-                    expiryDate: s.expiryDate || ''
-                }));
-                if (JSON.stringify(currentSizes) !== JSON.stringify(originalSizes)) hasChanged = true;
-            }
-
-            // 4. Performance
-            if (!hasChanged) {
-                const currentPerf = Array.from(document.querySelectorAll('.metric-card')).map(row => ({
-                    label: row.querySelector('.metric-label-input').value.trim(),
-                    value: parseInt(row.querySelector('.metric-value-input').value) || 0,
-                    levels: Array.from(row.querySelectorAll('.metric-level-label-input')).map(inp => inp.value.trim())
-                }));
-                
-                const originalPerf = (product.performance || []).map(m => ({
-                    label: m.label || '',
-                    value: parseInt(m.value) || 0,
-                    levels: (m.levels || []).map(l => l.trim())
-                }));
-                if (JSON.stringify(currentPerf) !== JSON.stringify(originalPerf)) hasChanged = true;
-            }
-
-            submitBtn.disabled = !hasChanged;
-        };
-
-        const imagePreviewGallery = document.getElementById('image-preview-gallery');
-        const parseImagePaths = (raw) => {
-            if (!raw) return [];
-            return raw
-                .split(/\r?\n|,\s*/)
-                .map(path => path.trim())
-                .filter(path => path.length > 0);
-        };
-
-        const renderImagePreviews = () => {
-            if (!imagePreviewGallery || !imagePathInput) return;
-            const paths = parseImagePaths(imagePathInput.value);
-            imagePreviewGallery.innerHTML = '';
-
-            if (paths.length === 0) {
-                imagePreviewGallery.style.display = 'none';
-                return;
-            }
-
-            imagePreviewGallery.style.display = 'flex';
-            paths.forEach((path, index) => {
-                const item = document.createElement('div');
-                item.className = 'image-preview-item';
-                item.style.position = 'relative';
-                item.style.marginRight = '0.75rem';
-                item.style.marginBottom = '0.75rem';
-                item.style.maxWidth = '110px';
-                item.style.border = '1px solid #e0e0e0';
-                item.style.borderRadius = '12px';
-                item.style.overflow = 'hidden';
-                item.style.background = '#fff';
-
-                const img = document.createElement('img');
-                img.loading = 'lazy';
-                img.src = path;
-                img.alt = `Preview ${index + 1}`;
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                img.style.display = 'block';
-                item.appendChild(img);
-
-                imagePreviewGallery.appendChild(item);
-            });
-        };
-
-        const addImagePathBtn = document.getElementById('add-image-path-btn');
-
-        if (imagePathInput) {
-            imagePathInput.addEventListener('input', renderImagePreviews);
-        }
-        if (addImagePathBtn && imagePathInput) {
-            addImagePathBtn.addEventListener('click', () => {
-                if (!imagePathInput.value.trim()) {
-                    imagePathInput.value = '';
-                } else if (!imagePathInput.value.endsWith('\n')) {
-                    imagePathInput.value += '\n';
-                }
-                imagePathInput.focus();
-                renderImagePreviews();
-            });
-        }
-
-        const openProductModal = () => {
-            if (addProductModal) {
-                addProductModal.style.display = 'flex';
-                setTimeout(() => addProductModal.classList.add('active'), 10);
-                // Reset to General tab
-                addProductModal.querySelectorAll('.aem-tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'general'));
-                addProductModal.querySelectorAll('.aem-tab-pane').forEach(pane => pane.classList.toggle('active', pane.dataset.tab === 'general'));
-                // Pre-populate default metrics for brand-new products
-                const title = document.getElementById('product-modal-title');
-                const perfContainer = document.getElementById('new-prod-performance-container');
-                if (title && title.textContent === 'Add New Product' && perfContainer && perfContainer.children.length === 0) {
-                    addPerformanceMetricRow({ label: 'Hydration', value: 3, levels: ['Dry', 'Normal', 'Hydrated', 'Intense'] });
-                    addPerformanceMetricRow({ label: 'Shine', value: 2, levels: ['Matte', 'Natural', 'Glow', 'Glass-like'] });
-                }
-            }
-        };
-
-        const closeProductModal = () => {
-            if (addProductModal) {
-                addProductModal.classList.remove('active');
-                currentModalProductId = null;
-                setTimeout(() => {
-                    addProductModal.style.display = 'none';
-                    if (document.getElementById('new-prod-name')) document.getElementById('new-prod-name').value = '';
-                    if (document.getElementById('new-prod-subtitle')) document.getElementById('new-prod-subtitle').value = '';
-                    if (document.getElementById('new-prod-desc')) document.getElementById('new-prod-desc').value = '';
-                    if (document.getElementById('new-prod-inci')) document.getElementById('new-prod-inci').value = '';
-                    if (document.getElementById('new-prod-notice')) document.getElementById('new-prod-notice').value = '';
-                    if (document.getElementById('new-prod-story-url')) document.getElementById('new-prod-story-url').value = '';
-                    if (document.getElementById('new-prod-performance-container')) document.getElementById('new-prod-performance-container').innerHTML = '';
-                    if (sizesContainer) sizesContainer.innerHTML = '';
-                    if (document.getElementById('batch-history-container')) document.getElementById('batch-history-container').innerHTML = '';
-                    // Hide history tab, reset to General
-                    const historyTabBtn = document.getElementById('aem-history-tab-btn');
-                    if (historyTabBtn) historyTabBtn.style.display = 'none';
-                    addProductModal.querySelectorAll('.aem-tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'general'));
-                    addProductModal.querySelectorAll('.aem-tab-pane').forEach(pane => pane.classList.toggle('active', pane.dataset.tab === 'general'));
-                    const productIdInput = document.getElementById('product-id-input');
-                    if (productIdInput) productIdInput.value = '';
-                    if (imagePathInput) imagePathInput.value = '';
-                    renderImagePreviews();
-                }, 300);
-            }
-        };
-
-        if (addProductBtn) {
-            addProductBtn.addEventListener('click', () => {
-                const modalTitle = document.getElementById('product-modal-title');
-                if (modalTitle) modalTitle.textContent = 'Add New Product';
-                currentModalProductId = null;
-                openProductModal();
-                checkModalChanges();
-            });
-        }
-        if (cancelProductEditBtn) cancelProductEditBtn.addEventListener('click', closeProductModal);
-        if (addProductModal) {
-            addProductModal.addEventListener('click', (e) => {
-                if (e.target === addProductModal) closeProductModal();
-            });
-        }
-
-        const addSizeInputRow = (size = { label: '', price: '', originalPrice: '', batchNumber: '', expiryDate: '', formulaVersion: '' }) => {
-            if (!sizesContainer) return;
-            const sizeRow = document.createElement('div');
-            sizeRow.className = 'size-card';
-            sizeRow.innerHTML = `
+                    <button type="button" class="admin-btn btn-delete lo-remove-item-btn" data-index="${k}">Remove</button>
+                `,re.appendChild(B)}),document.querySelectorAll(".lo-remove-item-btn").forEach(m=>{m.addEventListener("click",k=>{const B=parseInt(k.target.dataset.index);ke.splice(B,1),C(),ee()})})},ee=()=>{let m=0;ke.forEach(g=>{m+=parseFloat(g.price)*g.quantity});const k=S?S.checked:!0,B=7,H=100;let A=0;k&&(A=m>=H?0:B);const h=m+A;xe.textContent=`${m.toFixed(2)} TND`,me.textContent=`${A.toFixed(2)} TND`,oe.textContent=`${h.toFixed(2)} TND`};b&&b.addEventListener("click",P),ve&&ve.addEventListener("click",P),v&&v.addEventListener("click",m=>{m.target===v&&P()}),S&&S.addEventListener("change",ee),L.addEventListener("input",d(()=>{const m=L.value.toLowerCase();if(z.innerHTML="",m.length<2){z.style.display="none";return}const k=Object.entries(x).filter(([,B])=>B.name.toLowerCase().includes(m)||B.subtitle.toLowerCase().includes(m));k.length>0?(k.slice(0,5).forEach(([B,H])=>{const A=document.createElement("div");A.textContent=H.name,A.addEventListener("click",()=>{if(Q={id:B,...H},L.value=H.name,z.style.display="none",j.style.display="block",Z.textContent=H.name,q.src=St(H),V.innerHTML="",H.sizes&&H.sizes.length>0)H.sizes.forEach(h=>{const g=document.createElement("option");g.value=h.label,g.textContent=`${h.label} (${h.price} TND)`,V.appendChild(g)});else{const h=document.createElement("option");h.value="Standard",h.textContent=`Standard (${H.price} TND)`,V.appendChild(h)}f.value=1}),z.appendChild(A)}),z.style.display="block"):z.style.display="none"},300)),T.addEventListener("click",()=>{if(!Q){window.showToast("Please select a product first.","error");return}const m=V.value,k=parseInt(f.value);if(isNaN(k)||k<=0){window.showToast("Please enter a valid quantity.","error");return}let B=Q.price;if(Q.sizes&&Q.sizes.length>0){const A=Q.sizes.find(h=>h.label===m);A&&(B=A.price)}const H=ke.findIndex(A=>A.productId===Q.id&&A.size===m);H>-1?ke[H].quantity+=k:ke.push({productId:Q.id,name:Q.name,size:m,price:parseFloat(B).toFixed(2),image:St(Q),quantity:k}),C(),ee(),L.value="",j.style.display="none",Q=null}),y.addEventListener("submit",async m=>{if(m.preventDefault(),ke.length===0){window.showToast("Please add products to the order.","error");return}const k=document.getElementById("lo-customer-name").value.trim(),B=document.getElementById("lo-customer-email").value.trim(),H=document.getElementById("lo-customer-phone").value.trim(),A=document.getElementById("lo-customer-address").value.trim(),h=document.getElementById("lo-customer-city").value.trim(),g=document.getElementById("lo-customer-postal").value.trim();if(B&&!We.validateEmail(B)){window.showToast("Invalid customer email.","error");return}if(H&&!We.validatePhone(H)){window.showToast("Invalid customer phone number.","error");return}if(!We.TUNISIA_GOVERNORATES.includes(h)){window.showToast("Invalid customer city.","error");return}if(We.isProfane(k)||We.isProfane(A)){window.showToast("Inappropriate language detected in customer details.","error");return}be.disabled=!0,be.textContent="Placing Order...";try{const ae="LO-"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,5).toUpperCase();let pe=0;const ue=ke.map(Te=>{pe+=parseFloat(Te.price)*Te.quantity;const Oe=x[Te.productId],Ke=Oe?.sizes?.find(He=>He.label===Te.size);return{...Te,price:parseFloat(Te.price),batchNumber:Ke?.batchNumber||Oe?.batchNumber||"N/A",expiryDate:Ke?.expiryDate||Oe?.expiryDate||"N/A"}}),$=(S?S.checked:!0)&&pe<100?7:0,ge=pe+$,E={orderReference:ae,items:ue,shipping:{email:B,fullName:k,phone:H,address:A,city:h,postalCode:g},subtotal:parseFloat(pe.toFixed(2)),shippingFee:$,total:parseFloat(ge.toFixed(2)),status:"Local Order",type:"local",adminId:Me.uid,timestamp:kt()};await Wt(Ne(se,"orders"),E),window.showToast("Local order placed successfully!","success"),P(),Mt()}catch(ae){console.error("Error placing local order:",ae),window.showToast("Failed to place local order.","error")}finally{be.disabled=!1,be.textContent="Place Local Order"}});const F=document.getElementById("add-product-modal"),Se=document.getElementById("admin-add-product-btn"),fe=document.getElementById("cancel-product-edit"),he=document.getElementById("add-product-form"),$e=document.getElementById("add-size-btn"),ye=document.getElementById("new-prod-sizes-container"),we=document.getElementById("new-prod-image-paths");let Ie=null;const ze=()=>{const m=document.querySelector('button[type="submit"][form="add-product-form"]');if(!m)return;if(!Ie){m.disabled=!1;return}const k=x[Ie];if(!k)return;let B=!1;if(document.getElementById("new-prod-name").value.trim()!==(k.name||"")&&(B=!0),document.getElementById("new-prod-subtitle").value.trim()!==(k.subtitle||"")&&(B=!0),document.getElementById("new-prod-desc").value.trim()!==(k.description||"")&&(B=!0),document.getElementById("new-prod-inci").value.trim()!==(k.inci||"")&&(B=!0),(document.getElementById("new-prod-story-url")?.value.trim()||"")!==(k.storyUrl||"")&&(B=!0),(document.getElementById("new-prod-notice")?.value.trim()||"")!==(k.notice||"")&&(B=!0),!B){const A=gt(we.value),h=k.images&&Array.isArray(k.images)&&k.images.length>0?k.images:k.image?[k.image]:[];JSON.stringify(A)!==JSON.stringify(h)&&(B=!0)}if(!B){const A=Array.from(ye.querySelectorAll(".size-card")).map(g=>({label:g.querySelector(".size-label-input").value,price:parseFloat(g.querySelector(".size-price-input").value).toFixed(2),originalPrice:g.querySelector(".size-original-price-input").value?parseFloat(g.querySelector(".size-original-price-input").value).toFixed(2):null,batchNumber:g.querySelector(".size-batch-input").value.trim(),expiryDate:g.querySelector(".size-expiry-input").value})),h=(k.sizes||[]).map(g=>({label:g.label,price:parseFloat(g.price).toFixed(2),originalPrice:g.originalPrice?parseFloat(g.originalPrice).toFixed(2):null,batchNumber:g.batchNumber||"",expiryDate:g.expiryDate||""}));JSON.stringify(A)!==JSON.stringify(h)&&(B=!0)}if(!B){const A=Array.from(document.querySelectorAll(".metric-card")).map(g=>({label:g.querySelector(".metric-label-input").value.trim(),value:parseInt(g.querySelector(".metric-value-input").value)||0,levels:Array.from(g.querySelectorAll(".metric-level-label-input")).map(ae=>ae.value.trim())})),h=(k.performance||[]).map(g=>({label:g.label||"",value:parseInt(g.value)||0,levels:(g.levels||[]).map(ae=>ae.trim())}));JSON.stringify(A)!==JSON.stringify(h)&&(B=!0)}m.disabled=!B},Ve=document.getElementById("image-preview-gallery"),gt=m=>m?m.split(/\r?\n|,\s*/).map(k=>k.trim()).filter(k=>k.length>0):[],bt=()=>{if(!Ve||!we)return;const m=gt(we.value);if(Ve.innerHTML="",m.length===0){Ve.style.display="none";return}Ve.style.display="flex",m.forEach((k,B)=>{const H=document.createElement("div");H.className="image-preview-item",H.style.position="relative",H.style.marginRight="0.75rem",H.style.marginBottom="0.75rem",H.style.maxWidth="110px",H.style.border="1px solid #e0e0e0",H.style.borderRadius="12px",H.style.overflow="hidden",H.style.background="#fff";const A=document.createElement("img");A.loading="lazy",A.src=k,A.alt=`Preview ${B+1}`,A.style.width="100%",A.style.height="100%",A.style.objectFit="cover",A.style.display="block",H.appendChild(A),Ve.appendChild(H)})},Fe=document.getElementById("add-image-path-btn");we&&we.addEventListener("input",bt),Fe&&we&&Fe.addEventListener("click",()=>{we.value.trim()?we.value.endsWith(`
+`)||(we.value+=`
+`):we.value="",we.focus(),bt()});const et=()=>{if(F){F.style.display="flex",setTimeout(()=>F.classList.add("active"),10),F.querySelectorAll(".aem-tab-btn").forEach(B=>B.classList.toggle("active",B.dataset.tab==="general")),F.querySelectorAll(".aem-tab-pane").forEach(B=>B.classList.toggle("active",B.dataset.tab==="general"));const m=document.getElementById("product-modal-title"),k=document.getElementById("new-prod-performance-container");m&&m.textContent==="Add New Product"&&k&&k.children.length===0&&(Tt({label:"Hydration",value:3,levels:["Dry","Normal","Hydrated","Intense"]}),Tt({label:"Shine",value:2,levels:["Matte","Natural","Glow","Glass-like"]}))}},ht=()=>{F&&(F.classList.remove("active"),Ie=null,setTimeout(()=>{F.style.display="none",document.getElementById("new-prod-name")&&(document.getElementById("new-prod-name").value=""),document.getElementById("new-prod-subtitle")&&(document.getElementById("new-prod-subtitle").value=""),document.getElementById("new-prod-desc")&&(document.getElementById("new-prod-desc").value=""),document.getElementById("new-prod-inci")&&(document.getElementById("new-prod-inci").value=""),document.getElementById("new-prod-notice")&&(document.getElementById("new-prod-notice").value=""),document.getElementById("new-prod-story-url")&&(document.getElementById("new-prod-story-url").value=""),document.getElementById("new-prod-performance-container")&&(document.getElementById("new-prod-performance-container").innerHTML=""),ye&&(ye.innerHTML=""),document.getElementById("batch-history-container")&&(document.getElementById("batch-history-container").innerHTML="");const m=document.getElementById("aem-history-tab-btn");m&&(m.style.display="none"),F.querySelectorAll(".aem-tab-btn").forEach(B=>B.classList.toggle("active",B.dataset.tab==="general")),F.querySelectorAll(".aem-tab-pane").forEach(B=>B.classList.toggle("active",B.dataset.tab==="general"));const k=document.getElementById("product-id-input");k&&(k.value=""),we&&(we.value=""),bt()},300))};Se&&Se.addEventListener("click",()=>{const m=document.getElementById("product-modal-title");m&&(m.textContent="Add New Product"),Ie=null,et(),ze()}),fe&&fe.addEventListener("click",ht),F&&F.addEventListener("click",m=>{m.target===F&&ht()});const Vt=(m={label:"",price:"",originalPrice:"",batchNumber:"",expiryDate:"",formulaVersion:""})=>{if(!ye)return;const k=document.createElement("div");k.className="size-card",k.innerHTML=`
                 <div class="size-card-header">
                     <div class="size-card-chip">
                         <span class="size-card-chip-dot"></span>
-                        <span class="size-card-chip-label">${size.label || 'New Size'}</span>
+                        <span class="size-card-chip-label">${m.label||"New Size"}</span>
                     </div>
                     <button type="button" class="size-card-remove" aria-label="Remove size">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -5235,59 +682,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="size-row-primary">
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Size Label <span class="badge-required">*</span></label>
-                            <input type="text" class="size-label-input modern-input" placeholder="e.g., 50ml" value="${size.label}" required>
+                            <input type="text" class="size-label-input modern-input" placeholder="e.g., 50ml" value="${m.label}" required>
                         </div>
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Price (TND) <span class="badge-required">*</span></label>
-                            <input type="number" step="0.01" class="size-price-input modern-input" placeholder="0.00" value="${size.price}" required>
+                            <input type="number" step="0.01" class="size-price-input modern-input" placeholder="0.00" value="${m.price}" required>
                         </div>
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Old Price</label>
-                            <input type="number" step="0.01" class="size-original-price-input modern-input" placeholder="—" value="${size.originalPrice || ''}">
+                            <input type="number" step="0.01" class="size-original-price-input modern-input" placeholder="\u2014" value="${m.originalPrice||""}">
                         </div>
                     </div>
                     <div class="size-row-batch">
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Batch #</label>
-                            <input type="text" class="size-batch-input modern-input" placeholder="e.g. 001" value="${size.batchNumber || ''}">
+                            <input type="text" class="size-batch-input modern-input" placeholder="e.g. 001" value="${m.batchNumber||""}">
                         </div>
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Expiry Date</label>
-                            <input type="date" class="size-expiry-input modern-input" value="${size.expiryDate || ''}">
+                            <input type="date" class="size-expiry-input modern-input" value="${m.expiryDate||""}">
                         </div>
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Formula Version</label>
-                            <input type="text" class="size-formula-input modern-input" placeholder="e.g. v2.1" value="${size.formulaVersion || ''}">
+                            <input type="text" class="size-formula-input modern-input" placeholder="e.g. v2.1" value="${m.formulaVersion||""}">
                         </div>
                     </div>
                 </div>
-            `;
-            // Live chip label update
-            const labelInput = sizeRow.querySelector('.size-label-input');
-            const chipLabel = sizeRow.querySelector('.size-card-chip-label');
-            labelInput.addEventListener('input', () => {
-                chipLabel.textContent = labelInput.value || 'New Size';
-            });
-            sizeRow.querySelectorAll('input').forEach(inp => inp.addEventListener('input', checkModalChanges));
-            sizeRow.querySelector('.size-card-remove').addEventListener('click', async () => {
-                if (await window.showConfirm("Are you sure you want to remove this size option?", "Remove Size")) {
-                    sizeRow.remove();
-                    checkModalChanges();
-                }
-            });
-            sizesContainer.appendChild(sizeRow);
-        };
-
-        const addPerformanceMetricRow = (metric = { label: '', value: 3, levels: ['Low', 'Moderate', 'High', 'Intense'] }) => {
-            const container = document.getElementById('new-prod-performance-container');
-            if (!container) return;
-            const row = document.createElement('div');
-            row.className = 'metric-card';
-            row.innerHTML = `
+            `;const B=k.querySelector(".size-label-input"),H=k.querySelector(".size-card-chip-label");B.addEventListener("input",()=>{H.textContent=B.value||"New Size"}),k.querySelectorAll("input").forEach(A=>A.addEventListener("input",ze)),k.querySelector(".size-card-remove").addEventListener("click",async()=>{await window.showConfirm("Are you sure you want to remove this size option?","Remove Size")&&(k.remove(),ze())}),ye.appendChild(k)},Tt=(m={label:"",value:3,levels:["Low","Moderate","High","Intense"]})=>{const k=document.getElementById("new-prod-performance-container");if(!k)return;const B=document.createElement("div");B.className="metric-card",B.innerHTML=`
                 <div class="metric-card-header">
                     <div class="size-card-chip">
                         <span class="size-card-chip-dot" style="background:#6c63ff;"></span>
-                        <span class="metric-chip-label size-card-chip-label">${metric.label || 'New Metric'}</span>
+                        <span class="metric-chip-label size-card-chip-label">${m.label||"New Metric"}</span>
                     </div>
                     <button type="button" class="size-card-remove remove-metric-btn" aria-label="Remove metric">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -5297,347 +722,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="form-grid" style="gap:8px;margin-bottom:0;">
                         <div class="form-group" style="margin:0;">
                             <label class="size-field-label">Metric Name <span class="badge-required">*</span></label>
-                            <input type="text" class="metric-label-input modern-input" placeholder="e.g. Hydration" value="${metric.label}" required>
+                            <input type="text" class="metric-label-input modern-input" placeholder="e.g. Hydration" value="${m.label}" required>
                         </div>
                         <div class="form-group" style="margin:0;">
-                            <label class="size-field-label">Active Level (1–4)</label>
-                            <input type="number" min="1" max="4" class="metric-value-input modern-input" value="${metric.value}">
+                            <label class="size-field-label">Active Level (1\u20134)</label>
+                            <input type="number" min="1" max="4" class="metric-value-input modern-input" value="${m.value}">
                         </div>
                     </div>
                     <div>
                         <label class="size-field-label" style="margin-bottom:6px;">Level Labels</label>
                         <div class="metric-levels-grid">
-                            ${[0, 1, 2, 3].map(i => `
+                            ${[0,1,2,3].map(h=>`
                                 <div class="form-group" style="margin:0;">
-                                    <label class="size-field-label">Level ${i + 1}</label>
-                                    <input type="text" class="metric-level-label-input modern-input" data-index="${i}" value="${metric.levels ? (metric.levels[i] || '') : ''}" placeholder="Level ${i + 1}">
+                                    <label class="size-field-label">Level ${h+1}</label>
+                                    <input type="text" class="metric-level-label-input modern-input" data-index="${h}" value="${m.levels&&m.levels[h]||""}" placeholder="Level ${h+1}">
                                 </div>
-                            `).join('')}
+                            `).join("")}
                         </div>
                     </div>
                 </div>
-            `;
-            container.appendChild(row);
-            // Live chip label update
-            const metricLabelInput = row.querySelector('.metric-label-input');
-            const metricChipLabel = row.querySelector('.metric-chip-label');
-            metricLabelInput.addEventListener('input', () => {
-                metricChipLabel.textContent = metricLabelInput.value || 'New Metric';
-            });
-            row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', checkModalChanges));
-            row.querySelector('.remove-metric-btn').addEventListener('click', async () => {
-                if (await window.showConfirm("Are you sure you want to remove this performance metric?", "Remove Metric")) {
-                    row.remove();
-                    checkModalChanges();
-                }
-            });
-        };
-
-        const closeModalTopBtn = document.getElementById('close-modal-top-btn');
-        if (closeModalTopBtn) closeModalTopBtn.addEventListener('click', closeProductModal);
-
-        // Tab switching for admin edit modal (set up once)
-        if (addProductModal) {
-            addProductModal.querySelectorAll('.aem-tab-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const tabName = btn.dataset.tab;
-                    addProductModal.querySelectorAll('.aem-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
-                    addProductModal.querySelectorAll('.aem-tab-pane').forEach(p => p.classList.toggle('active', p.dataset.tab === tabName));
-                });
-            });
-        }
-
-        // Add Metric btn is now static in HTML
-        const addMetricBtn = document.getElementById('add-metric-btn');
-        if (addMetricBtn) addMetricBtn.addEventListener('click', () => { addPerformanceMetricRow(); checkModalChanges(); });
-
-        if (addSizeBtn) addSizeBtn.addEventListener('click', () => { addSizeInputRow(); checkModalChanges(); });
-
-        if (addProductForm) {
-            addProductForm.addEventListener('input', checkModalChanges);
-            addProductForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitBtn = document.querySelector('button[type="submit"][form="add-product-form"]');
-                submitBtn.disabled = true;
-                const spinner = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 18px; height: 18px; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>';
-                submitBtn.innerHTML = `${spinner} Saving...`;
-
-                // --- Step 1: Read local image paths ---
-                const imagePaths = imagePathInput ? parseImagePaths(imagePathInput.value) : [];
-                if (imagePaths.length === 0) {
-                    window.showToast("Please provide at least one local image path for the product.", "error");
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Save Product';
-                    return;
-                }
-
-                const idInput = document.getElementById('product-id-input');
-                const isEdit = idInput && idInput.value;
-                const name = document.getElementById('new-prod-name').value.trim();
-                let newId;
-                if (isEdit) {
-                    newId = idInput.value;
-                } else {
-                    newId = name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
-                    if (!newId || (productCatalog[newId])) {
-                        window.showToast("Product with this name already exists or name is invalid.", "error");
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Save Product';
-                        return;
-                    }
-                }
-
-                const sizes = Array.from(sizesContainer.querySelectorAll('.size-card')).map(row => ({
-                    label: row.querySelector('.size-label-input').value,
-                    price: parseFloat(row.querySelector('.size-price-input').value).toFixed(2),
-                    originalPrice: row.querySelector('.size-original-price-input').value ? parseFloat(row.querySelector('.size-original-price-input').value).toFixed(2) : null,
-                    batchNumber: row.querySelector('.size-batch-input').value.trim(),
-                    expiryDate: row.querySelector('.size-expiry-input').value,
-                    formulaVersion: row.querySelector('.size-formula-input')?.value.trim() || '',
-                    outOfStock: false // Default to false, will be preserved below if editing
-                }));
-
-                const performanceMetrics = Array.from(document.querySelectorAll('.metric-card')).map(row => ({
-                    label: row.querySelector('.metric-label-input').value.trim(),
-                    value: parseInt(row.querySelector('.metric-value-input').value) || 0,
-                    levels: Array.from(row.querySelectorAll('.metric-level-label-input')).map(inp => inp.value.trim())
-                }));
-
-                const existingProduct = isEdit ? productCatalog[newId] : {};
-                if (isEdit && existingProduct.sizes) {
-                    sizes.forEach(newSize => {
-                        const oldSize = existingProduct.sizes.find(s => s.label === newSize.label);
-                        if (oldSize) newSize.outOfStock = oldSize.outOfStock;
-                    });
-                }
-
-                if (sizes.length === 0) { window.showToast("Please add at least one size.", "error"); submitBtn.disabled = false; submitBtn.textContent = 'Save Product'; return; }
-                let orderIndex = isEdit ? (existingProduct.orderIndex || 0) : 0;
-                if (!isEdit) {
-                    const existingIndices = Object.values(productCatalog).map(p => p.orderIndex || 0);
-                    orderIndex = existingIndices.length > 0 ? Math.max(...existingIndices) + 1 : 0;
-                }
-
-                // --- Step 2: Construct Product Object with Final Image URLs ---
-                const batchHistory = existingProduct.batchHistory || [];
-                const currentInci = document.getElementById('new-prod-inci').value.trim();
-                if (isEdit && existingProduct.sizes && Array.isArray(existingProduct.sizes)) {
-                    sizes.forEach(newSize => {
-                        const oldSize = existingProduct.sizes.find(s => s.label === newSize.label);
-                        const oldBatch = oldSize ? (oldSize.batchNumber || '') : '';
-                        const newBatch = newSize.batchNumber || '';
-                        if (newBatch && newBatch !== oldBatch) {
-                            batchHistory.push({
-                                size: newSize.label,
-                                batchNumber: newBatch,
-                                expiryDate: newSize.expiryDate || '',
-                                formulaVersion: newSize.formulaVersion || '',
-                                timestamp: new Date().toISOString(),
-                                inci: currentInci
-                            });
-                        }
-                    });
-                } else {
-                    // For new products or if the product had no sizes, log any initial batches
-                    sizes.forEach(newSize => {
-                        const newBatch = newSize.batchNumber || '';
-                        if (newBatch) {
-                            batchHistory.push({
-                                size: newSize.label,
-                                batchNumber: newBatch,
-                                expiryDate: newSize.expiryDate || '',
-                                formulaVersion: newSize.formulaVersion || '',
-                                timestamp: new Date().toISOString(),
-                                inci: currentInci
-                            });
-                        }
-                    });
-                }
-
-                const newProduct = {
-                    ...existingProduct,
-                    name,
-                    subtitle: document.getElementById('new-prod-subtitle').value.trim(),
-                    description: document.getElementById('new-prod-desc').value.trim(),
-                    inci: currentInci,
-                    storyUrl: document.getElementById('new-prod-story-url')?.value.trim() || null,
-                    notice: document.getElementById('new-prod-notice')?.value.trim() || "",
-                    image: imagePaths[0],
-                    images: imagePaths,
-                    sizes,
-                    performance: performanceMetrics,
-                    price: Math.min(...sizes.map(s => parseFloat(s.price))).toFixed(2),
-                    outOfStock: isEdit ? (existingProduct.outOfStock || false) : false,
-                    style: isEdit ? (existingProduct.style || "") : "",
-                    orderIndex: orderIndex,
-                    batchHistory: batchHistory
-                };
-
-                // --- Step 3: Save to Firestore ---
-                submitBtn.innerHTML = `${spinner} Saving Product...`;
-                try {
-                    const cleanedProduct = JSON.parse(JSON.stringify(newProduct));
-                    await setDoc(doc(db, "products", newId), cleanedProduct);
-                    productCatalog[newId] = cleanedProduct;
-                    await syncCatalogLocally();
-                    loadAdminProducts();
-                    closeProductModal();
-                    window.showToast(isEdit ? "Product updated successfully!" : "Product added successfully!", "success");
-                } catch (error) {
-                    console.error("Error saving product:", error);
-                    window.showToast("Failed to save product.", "error");
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Save Product';
-                }
-            });
-        }
-        const pageSize = 10;
-        let currentPage = 1;
-        let cursors = [null]; // Stores the last document of each page to use as a cursor for the next
-        const filterStatus = document.getElementById('admin-filter-status');
-        const sortDate = document.getElementById('admin-sort-date');
-
-        const refreshOrders = () => {
-            currentPage = 1;
-            cursors = [null];
-            loadAdminOrders(0);
-        };
-
-        if (filterStatus) filterStatus.addEventListener('change', refreshOrders);
-        if (sortDate) sortDate.addEventListener('change', refreshOrders);
-        const exportBtn = document.getElementById('admin-export-btn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', async () => {
-                try {
-                    // Smart Export Prep: Count handled orders before confirming
-                    const querySnapshot = await getDocs(collection(db, "orders"));
-                    
-                    const exportableBatch = [];
-                    let csvCount = 0;
-                    let archiveCount = 0;
-
-                    querySnapshot.forEach(doc => {
-                        const data = doc.data();
-                        if (data.exported || !['Delivered', 'Cancelled', 'Local Order'].includes(data.status)) return;
-                        exportableBatch.push({ id: doc.id, ref: doc.ref, data });
-                        if (data.status === 'Delivered' || data.status === 'Local Order') csvCount++;
-                        archiveCount++;
-                    });
-
-                    if (archiveCount === 0) {
-                        window.showToast("No new handled orders to process.", "info");
-                        checkExportEligibility();
-                        return;
-                    }
-
-                    const confirmed = await window.showConfirm(
-                        `You are about to export <strong>${csvCount}</strong> orders to CSV and archive <strong>${archiveCount}</strong> total terminal records. <br><br>Archived orders will be locked and cannot be modified. Proceed?`,
-                        "Confirm Export"
-                    );
-
-                    if (!confirmed) return;
-
-                    const originalText = exportBtn.innerText;
-                    exportBtn.innerText = "Exporting...";
-                    exportBtn.disabled = true;
-
-                    let csvContent = "data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items\n";
-                    let csvRowsCount = 0;
-                    const updatePromises = [];
-
-                    exportableBatch.forEach(item => {
-                        const data = item.data;
-                        if (data.status === 'Delivered' || data.status === 'Local Order') {
-                            const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
-                            const itemsStr = data.items ? data.items.map(i => `${i.quantity}x ${i.name} (${i.size})`).join('; ') : '';
-                            const row = [
-                                data.orderReference || item.id,
-                                date,
-                                `"${data.shipping?.fullName || ''}"`,
-                                data.shipping?.email || '',
-                                data.status,
-                                data.total || 0,
-                                `"${itemsStr}"`
-                            ].join(",");
-                            
-                            csvContent += row + "\n";
-                            csvRowsCount++;
-                        }
-                        
-                        updatePromises.push(updateDoc(item.ref, { exported: true }));
-                    });
-
-                    await Promise.all(updatePromises);
-
-                    if (csvRowsCount > 0) {
-                    const encodedUri = encodeURI(csvContent);
-                    const link = document.createElement("a");
-                    link.setAttribute("href", encodedUri);
-                    link.setAttribute("download", `orders_export_${new Date().toISOString().slice(0, 10)}.csv`);
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                        window.showToast(`Exported ${csvRowsCount} orders and marked ${archiveCount} as handled.`, "success");
-                    } else {
-                        window.showToast(`Archived ${archiveCount} terminal orders (No CSV needed).`, "success");
-                    }
-
-                    // Refresh the current view to show the dimmed states
-                    loadAdminOrders(currentPage - 1);
-                } catch (error) {
-                    console.error("Export failed:", error);
-                    window.showToast("Export failed. Check console for details.", "error");
-                } finally {
-                    exportBtn.innerText = "Export CSV";
-                    checkExportEligibility();
-                }
-            });
-        }
-
-        const printOrderReceipt = (order) => {
-            const dateStr = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleDateString('en-US', { 
-                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-            }) : 'N/A';
-            
-            const safeFileName = `DODCH_Receipt_${(order.orderReference || order.id.slice(0, 8)).toUpperCase()}_${(order.shipping?.fullName || 'Customer').replace(/[^a-z0-9\s-]/gi, '').replace(/\s+/g, '_')}`;
-
-            let itemsHtml = '';
-            order.items.forEach(item => {
-                const pId = item.productId || item.id;
-                const product = productCatalog[pId];
-                const img = item.image || (product ? getProductPrimaryImage(product) : 'placeholder-glow.webp');
-                const price = parseFloat(item.price);
-                const sub = price * item.quantity;
-                
-                itemsHtml += `
+            `,k.appendChild(B);const H=B.querySelector(".metric-label-input"),A=B.querySelector(".metric-chip-label");H.addEventListener("input",()=>{A.textContent=H.value||"New Metric"}),B.querySelectorAll("input").forEach(h=>h.addEventListener("input",ze)),B.querySelector(".remove-metric-btn").addEventListener("click",async()=>{await window.showConfirm("Are you sure you want to remove this performance metric?","Remove Metric")&&(B.remove(),ze())})},eo=document.getElementById("close-modal-top-btn");eo&&eo.addEventListener("click",ht),F&&F.querySelectorAll(".aem-tab-btn").forEach(m=>{m.addEventListener("click",()=>{const k=m.dataset.tab;F.querySelectorAll(".aem-tab-btn").forEach(B=>B.classList.toggle("active",B===m)),F.querySelectorAll(".aem-tab-pane").forEach(B=>B.classList.toggle("active",B.dataset.tab===k))})});const Ct=document.getElementById("add-metric-btn");Ct&&Ct.addEventListener("click",()=>{Tt(),ze()}),$e&&$e.addEventListener("click",()=>{Vt(),ze()}),he&&(he.addEventListener("input",ze),he.addEventListener("submit",async m=>{m.preventDefault();const k=document.querySelector('button[type="submit"][form="add-product-form"]');k.disabled=!0;const B='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 18px; height: 18px; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>';k.innerHTML=`${B} Saving...`;const H=we?gt(we.value):[];if(H.length===0){window.showToast("Please provide at least one local image path for the product.","error"),k.disabled=!1,k.textContent="Save Product";return}const A=document.getElementById("product-id-input"),h=A&&A.value,g=document.getElementById("new-prod-name").value.trim();let ae;if(h)ae=A.value;else if(ae=g.toLowerCase().replace(/[^a-z0-9\s-]/g,"").replace(/\s+/g,"-"),!ae||x[ae]){window.showToast("Product with this name already exists or name is invalid.","error"),k.disabled=!1,k.textContent="Save Product";return}const pe=Array.from(ye.querySelectorAll(".size-card")).map(E=>({label:E.querySelector(".size-label-input").value,price:parseFloat(E.querySelector(".size-price-input").value).toFixed(2),originalPrice:E.querySelector(".size-original-price-input").value?parseFloat(E.querySelector(".size-original-price-input").value).toFixed(2):null,batchNumber:E.querySelector(".size-batch-input").value.trim(),expiryDate:E.querySelector(".size-expiry-input").value,formulaVersion:E.querySelector(".size-formula-input")?.value.trim()||"",outOfStock:!1})),ue=Array.from(document.querySelectorAll(".metric-card")).map(E=>({label:E.querySelector(".metric-label-input").value.trim(),value:parseInt(E.querySelector(".metric-value-input").value)||0,levels:Array.from(E.querySelectorAll(".metric-level-label-input")).map(Te=>Te.value.trim())})),ne=h?x[ae]:{};if(h&&ne.sizes&&pe.forEach(E=>{const Te=ne.sizes.find(Oe=>Oe.label===E.label);Te&&(E.outOfStock=Te.outOfStock)}),pe.length===0){window.showToast("Please add at least one size.","error"),k.disabled=!1,k.textContent="Save Product";return}let Ee=h&&ne.orderIndex||0;if(!h){const E=Object.values(x).map(Te=>Te.orderIndex||0);Ee=E.length>0?Math.max(...E)+1:0}const W=ne.batchHistory||[],$=document.getElementById("new-prod-inci").value.trim();h&&ne.sizes&&Array.isArray(ne.sizes)?pe.forEach(E=>{const Te=ne.sizes.find(He=>He.label===E.label),Oe=Te&&Te.batchNumber||"",Ke=E.batchNumber||"";Ke&&Ke!==Oe&&W.push({size:E.label,batchNumber:Ke,expiryDate:E.expiryDate||"",formulaVersion:E.formulaVersion||"",timestamp:new Date().toISOString(),inci:$})}):pe.forEach(E=>{const Te=E.batchNumber||"";Te&&W.push({size:E.label,batchNumber:Te,expiryDate:E.expiryDate||"",formulaVersion:E.formulaVersion||"",timestamp:new Date().toISOString(),inci:$})});const ge={...ne,name:g,subtitle:document.getElementById("new-prod-subtitle").value.trim(),description:document.getElementById("new-prod-desc").value.trim(),inci:$,storyUrl:document.getElementById("new-prod-story-url")?.value.trim()||null,notice:document.getElementById("new-prod-notice")?.value.trim()||"",image:H[0],images:H,sizes:pe,performance:ue,price:Math.min(...pe.map(E=>parseFloat(E.price))).toFixed(2),outOfStock:h&&ne.outOfStock||!1,style:h&&ne.style||"",orderIndex:Ee,batchHistory:W};k.innerHTML=`${B} Saving Product...`;try{const E=JSON.parse(JSON.stringify(ge));await lt(Ae(se,"products",ae),E),x[ae]=E,await Eo(),Gt(),ht(),window.showToast(h?"Product updated successfully!":"Product added successfully!","success")}catch(E){console.error("Error saving product:",E),window.showToast("Failed to save product.","error")}finally{k.disabled=!1,k.textContent="Save Product"}}));const Bt=10;let qt=1,ko=[null];const to=document.getElementById("admin-filter-status"),oo=document.getElementById("admin-sort-date"),Yo=()=>{qt=1,ko=[null],Mt(0)};to&&to.addEventListener("change",Yo),oo&&oo.addEventListener("change",Yo);const Ht=document.getElementById("admin-export-btn");Ht&&Ht.addEventListener("click",async()=>{try{const m=await nt(Ne(se,"orders")),k=[];let B=0,H=0;if(m.forEach(ue=>{const ne=ue.data();ne.exported||!["Delivered","Cancelled","Local Order"].includes(ne.status)||(k.push({id:ue.id,ref:ue.ref,data:ne}),(ne.status==="Delivered"||ne.status==="Local Order")&&B++,H++)}),H===0){window.showToast("No new handled orders to process.","info"),o();return}if(!await window.showConfirm(`You are about to export <strong>${B}</strong> orders to CSV and archive <strong>${H}</strong> total terminal records. <br><br>Archived orders will be locked and cannot be modified. Proceed?`,"Confirm Export"))return;const h=Ht.innerText;Ht.innerText="Exporting...",Ht.disabled=!0;let g=`data:text/csv;charset=utf-8,Order ID,Date,Customer Name,Email,Status,Total (TND),Items
+`,ae=0;const pe=[];if(k.forEach(ue=>{const ne=ue.data;if(ne.status==="Delivered"||ne.status==="Local Order"){const Ee=ne.timestamp?new Date(ne.timestamp.seconds*1e3).toLocaleDateString():"N/A",W=ne.items?ne.items.map(ge=>`${ge.quantity}x ${ge.name} (${ge.size})`).join("; "):"",$=[ne.orderReference||ue.id,Ee,`"${ne.shipping?.fullName||""}"`,ne.shipping?.email||"",ne.status,ne.total||0,`"${W}"`].join(",");g+=$+`
+`,ae++}pe.push(at(ue.ref,{exported:!0}))}),await Promise.all(pe),ae>0){const ue=encodeURI(g),ne=document.createElement("a");ne.setAttribute("href",ue),ne.setAttribute("download",`orders_export_${new Date().toISOString().slice(0,10)}.csv`),document.body.appendChild(ne),ne.click(),document.body.removeChild(ne),window.showToast(`Exported ${ae} orders and marked ${H} as handled.`,"success")}else window.showToast(`Archived ${H} terminal orders (No CSV needed).`,"success");Mt(qt-1)}catch(m){console.error("Export failed:",m),window.showToast("Export failed. Check console for details.","error")}finally{Ht.innerText="Export CSV",o()}});const di=m=>{const k=m.timestamp?new Date(m.timestamp.seconds*1e3).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}):"N/A",B=`DODCH_Receipt_${(m.orderReference||m.id.slice(0,8)).toUpperCase()}_${(m.shipping?.fullName||"Customer").replace(/[^a-z0-9\s-]/gi,"").replace(/\s+/g,"_")}`;let H="";m.items.forEach(pe=>{const ue=pe.productId||pe.id,ne=x[ue],Ee=pe.image||(ne?St(ne):"placeholder-glow.webp"),$=parseFloat(pe.price)*pe.quantity;H+=`
                     <div style="display: flex; align-items: center; gap: 1.5rem; padding: 1.25rem 0; border-bottom: 1px solid #f2f2f2; break-inside: avoid;">
                         <div style="width: 70px; height: 70px; flex-shrink: 0; border-radius: 10px; overflow: hidden; border: 1px solid #eee; background: #fafafa;">
-                            <img src="${img}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <img src="${Ee}" alt="${pe.name}" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         <div style="flex-grow: 1;">
-                            <h4 style="margin: 0 0 0.4rem 0; font-size: 1rem; color: #1a1a1a; font-family: 'Montserrat', sans-serif; font-weight: 600;">${item.name}</h4>
-                            <p style="margin: 0; font-size: 0.85rem; color: #777; letter-spacing: 0.5px;">Size: ${item.size} <span style="margin: 0 0.5rem; opacity: 0.3;">|</span> Quantity: ${item.quantity}</p>
-                            <p style="margin: 0.2rem 0 0; font-size: 0.75rem; color: #999;">Batch: ${item.batchNumber || 'N/A'} <span style="margin: 0 0.4rem; opacity: 0.3;">|</span> Exp: ${item.expiryDate || 'N/A'}</p>
+                            <h4 style="margin: 0 0 0.4rem 0; font-size: 1rem; color: #1a1a1a; font-family: 'Montserrat', sans-serif; font-weight: 600;">${pe.name}</h4>
+                            <p style="margin: 0; font-size: 0.85rem; color: #777; letter-spacing: 0.5px;">Size: ${pe.size} <span style="margin: 0 0.5rem; opacity: 0.3;">|</span> Quantity: ${pe.quantity}</p>
+                            <p style="margin: 0.2rem 0 0; font-size: 0.75rem; color: #999;">Batch: ${pe.batchNumber||"N/A"} <span style="margin: 0 0.4rem; opacity: 0.3;">|</span> Exp: ${pe.expiryDate||"N/A"}</p>
                         </div>
                         <div style="text-align: right; font-weight: 700; color: #1a1a1a; font-size: 1rem; font-family: 'Montserrat', sans-serif;">
-                            ${sub.toFixed(2)} TND
+                            ${$.toFixed(2)} TND
                         </div>
                     </div>
-                `;
-            });
-
-            const subtotal = order.subtotal || order.items.reduce((acc, i) => acc + (parseFloat(i.price) * i.quantity), 0);
-            const shipping = order.shippingFee || 0;
-            const total = order.total || (subtotal + shipping);
-
-            const win = window.open('', '_blank', 'width=900,height=900');
-            win.document.write(`
+                `});const A=m.subtotal||m.items.reduce((pe,ue)=>pe+parseFloat(ue.price)*ue.quantity,0),h=m.shippingFee||0,g=m.total||A+h,ae=window.open("","_blank","width=900,height=900");ae.document.write(`
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset='UTF-8'>
-                    <title>${safeFileName}</title>
+                    <title>${B}</title>
                     <link href='https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap' rel='stylesheet'>
                     <style>
                         * { box-sizing: border-box; }
@@ -5680,43 +805,43 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="details-grid">
                             <div>
                                 <span class="section-label">Order Details</span>
-                                <div class="detail-val"><strong>Reference:</strong> #${order.orderReference || order.id.slice(0, 8).toUpperCase()}</div>
-                                <div class="detail-val"><strong>Date:</strong> ${dateStr}</div>
-                                <div class="detail-val"><strong>Status:</strong> ${order.status}</div>
-                                ${order.type === 'local' ? '<div class="detail-val" style="color: #e65100; font-weight: 700; margin-top: 1rem;">LOCAL ORDER</div>' : ''}
+                                <div class="detail-val"><strong>Reference:</strong> #${m.orderReference||m.id.slice(0,8).toUpperCase()}</div>
+                                <div class="detail-val"><strong>Date:</strong> ${k}</div>
+                                <div class="detail-val"><strong>Status:</strong> ${m.status}</div>
+                                ${m.type==="local"?'<div class="detail-val" style="color: #e65100; font-weight: 700; margin-top: 1rem;">LOCAL ORDER</div>':""}
                             </div>
                             <div>
                                 <span class="section-label">Shipping Details</span>
-                                <div class="detail-val"><strong>${escapeHTML(order.shipping?.fullName) || 'N/A'}</strong></div>
-                                <div class="detail-val">${escapeHTML(order.shipping?.address) || 'N/A'}</div>
-                                <div class="detail-val">${escapeHTML(order.shipping?.city) || ''} ${escapeHTML(order.shipping?.postalCode) || ''}</div>
-                                <div class="detail-val">${escapeHTML(order.shipping?.phone) || 'N/A'}</div>
-                                <div class="detail-val" style="font-size: 0.85rem; color: #888;">${escapeHTML(order.shipping?.email) || ''}</div>
+                                <div class="detail-val"><strong>${je(m.shipping?.fullName)||"N/A"}</strong></div>
+                                <div class="detail-val">${je(m.shipping?.address)||"N/A"}</div>
+                                <div class="detail-val">${je(m.shipping?.city)||""} ${je(m.shipping?.postalCode)||""}</div>
+                                <div class="detail-val">${je(m.shipping?.phone)||"N/A"}</div>
+                                <div class="detail-val" style="font-size: 0.85rem; color: #888;">${je(m.shipping?.email)||""}</div>
                             </div>
                         </div>
 
                         <div>
                             <span class="section-label">Order Summary</span>
-                            ${itemsHtml}
+                            ${H}
                         </div>
 
                         <div class="totals-box">
                             <div class="total-row">
                                 <span>Subtotal</span>
-                                <span>${parseFloat(subtotal).toFixed(2)} TND</span>
+                                <span>${parseFloat(A).toFixed(2)} TND</span>
                             </div>
-                            ${order.creditsUsed > 0 ? `
+                            ${m.creditsUsed>0?`
                             <div class="total-row" style="color: #e74c3c; font-weight: 500;">
                                 <span>Rewards Discount</span>
-                                <span>-${parseFloat(order.creditsUsed).toFixed(2)} TND</span>
-                            </div>` : ''}
+                                <span>-${parseFloat(m.creditsUsed).toFixed(2)} TND</span>
+                            </div>`:""}
                             <div class="total-row">
                                 <span>Shipping</span>
-                                <span>${shipping === 0 ? 'Free' : shipping.toFixed(2) + ' TND'}</span>
+                                <span>${h===0?"Free":h.toFixed(2)+" TND"}</span>
                             </div>
                             <div class="total-row grand">
                                 <span>Total</span>
-                                <span>${parseFloat(total).toFixed(2)} TND</span>
+                                <span>${parseFloat(g).toFixed(2)} TND</span>
                             </div>
                         </div>
 
@@ -5727,572 +852,104 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </body>
                 </html>
-            `);
-            win.document.close();
-            win.document.title = safeFileName;
-            win.focus();
-            // Use a slight timeout to ensure OS print driver registers the new title for filename pre-population
-            setTimeout(() => { win.print(); }, 800);
-        };
-
-        const loadAdminMessages = async () => {
-            const adminMessagesList = document.getElementById('admin-messages-list');
-            if (!adminMessagesList) return;
-
-            adminMessagesList.innerHTML = '<p>Loading messages...</p>';
-
-            try {
-                const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'));
-                onSnapshot(q, (snapshot) => {
-                    adminMessagesList.innerHTML = '';
-                    if (snapshot.empty) {
-                        adminMessagesList.innerHTML = '<p>No messages found.</p>';
-                        return;
-                    }
-
-                    let unreadCount = 0;
-                    snapshot.forEach(docSnap => {
-                        const msg = docSnap.data();
-                        const msgId = docSnap.id;
-
-                        if (msg.status === 'unread') unreadCount++;
-
-                        const dateStr = msg.createdAt ? new Date(msg.createdAt.toDate()).toLocaleDateString() : 'N/A';
-                        const safeName = escapeHTML(msg.name);
-                        const safeEmail = escapeHTML(msg.email);
-                        const safeMessage = escapeHTML(msg.message);
-                        const mailtoLink = `mailto:${safeEmail}?subject=Reply from DODCH Cosmetics&body=Dear ${encodeURIComponent(msg.name)},%0D%0A%0D%0AThank you for getting in touch with us at DODCH!%0D%0A%0D%0A`;
-
-                        const el = document.createElement('div');
-                        el.className = 'admin-order-card';
-                        if (msg.status === 'unread') el.classList.add('admin-unread-msg');
-
-                        el.innerHTML = `
+            `),ae.document.close(),ae.document.title=B,ae.focus(),setTimeout(()=>{ae.print()},800)},pi=async()=>{const m=document.getElementById("admin-messages-list");if(m){m.innerHTML="<p>Loading messages...</p>";try{const k=Ye(Ne(se,"messages"),io("createdAt","desc"));Jt(k,B=>{if(m.innerHTML="",B.empty){m.innerHTML="<p>No messages found.</p>";return}let H=0;B.forEach(h=>{const g=h.data(),ae=h.id;g.status==="unread"&&H++;const pe=g.createdAt?new Date(g.createdAt.toDate()).toLocaleDateString():"N/A",ue=je(g.name),ne=je(g.email),Ee=je(g.message),W=`mailto:${ne}?subject=Reply from DODCH Cosmetics&body=Dear ${encodeURIComponent(g.name)},%0D%0A%0D%0AThank you for getting in touch with us at DODCH!%0D%0A%0D%0A`,$=document.createElement("div");$.className="admin-order-card",g.status==="unread"&&$.classList.add("admin-unread-msg"),$.innerHTML=`
                             <div class="admin-order-header">
-                                <strong>${safeName}</strong>
-                                <span>${dateStr}</span>
+                                <strong>${ue}</strong>
+                                <span>${pe}</span>
                             </div>
                             <div class="admin-order-details">
-                                <p><strong>Email:</strong> <a href="mailto:${safeEmail}" style="color: inherit;">${safeEmail}</a></p>
-                                <div style="margin-top: 1rem; line-height: 1.6; color: var(--text-charcoal); font-size: 0.95rem; white-space: pre-wrap;">${safeMessage}</div>
+                                <p><strong>Email:</strong> <a href="mailto:${ne}" style="color: inherit;">${ne}</a></p>
+                                <div style="margin-top: 1rem; line-height: 1.6; color: var(--text-charcoal); font-size: 0.95rem; white-space: pre-wrap;">${Ee}</div>
                             </div>
                             <div class="admin-order-actions" style="margin-top: 1.5rem; border-top: 1px solid #f8f8f8; padding-top: 1rem;">
                                 <div style="display: flex; gap: 0.5rem; width: 100%;">
-                                    <a href="${mailtoLink}" class="admin-btn btn-edit" style="text-decoration: none;">Reply</a>
-                                    ${msg.status === 'unread' ? '<button class="admin-btn btn-save mark-read-btn" data-id="' + msgId + '">Mark Read</button>' : ''}
-                                    <button class="admin-btn btn-delete delete-msg-btn" data-id="${msgId}">
+                                    <a href="${W}" class="admin-btn btn-edit" style="text-decoration: none;">Reply</a>
+                                    ${g.status==="unread"?'<button class="admin-btn btn-save mark-read-btn" data-id="'+ae+'">Mark Read</button>':""}
+                                    <button class="admin-btn btn-delete delete-msg-btn" data-id="${ae}">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                     </button>
                                 </div>
                             </div>
-                        `;
-                        adminMessagesList.appendChild(el);
-                    });
-
-                    const badge = document.getElementById('unread-messages-badge');
-                    if (badge) {
-                        badge.textContent = unreadCount;
-                        badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
-                    }
-
-                    // --- Unified Event Delegation for Messages ---
-                    if (!adminMessagesList.dataset.listenersAttached) {
-                        adminMessagesList.addEventListener('click', async (e) => {
-                            const markBtn = e.target.closest('.mark-read-btn');
-                            const deleteBtn = e.target.closest('.delete-msg-btn');
-
-                            if (markBtn) {
-                                try {
-                                    const id = markBtn.dataset.id;
-                                    await updateDoc(doc(db, 'messages', id), { status: 'read' });
-                                    window.showToast("Message marked as read", "success");
-                                } catch (err) {
-                                    console.error(err);
-                                    window.showToast(`Error updating message: ${err.code || err.message}`, "error");
-                                }
-                            }
-
-                            if (deleteBtn) {
-                                if (confirm("Are you sure you want to delete this message?")) {
-                                    try {
-                                        const id = deleteBtn.dataset.id;
-                                        await deleteDoc(doc(db, 'messages', id));
-                                        window.showToast("Message deleted", "success");
-                                    } catch (err) {
-                                        console.error(err);
-                                        window.showToast("Error deleting message", "error");
-                                    }
-                                }
-                            }
-                        });
-                        adminMessagesList.dataset.listenersAttached = 'true';
-                    }
-                }, (error) => {
-                    console.error("Error fetching messages:", error);
-                    adminMessagesList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied or Error loading messages.</p>';
-                });
-            } catch (err) {
-                console.error("Setup error:", err);
-            }
-        };
-
-        const loadAdminReports = async () => {
-            const adminReportsList = document.getElementById('admin-reports-list');
-            if (!adminReportsList) return;
-
-            adminReportsList.innerHTML = '<p>Loading reports and complaints...</p>';
-
-            try {
-                const q = query(collection(db, 'orders'), where('hasReports', '==', true));
-                onSnapshot(q, (snapshot) => {
-                    adminReportsList.innerHTML = '';
-                    if (snapshot.empty) {
-                        adminReportsList.innerHTML = '<p>No reports or complaints found.</p>';
-                        const badge = document.getElementById('unread-reports-badge');
-                        if (badge) badge.style.display = 'none';
-                        return;
-                    }
-
-                    let unseenCount = 0;
-                    let reportCardsHtml = '';
-
-                    snapshot.forEach(docSnap => {
-                        const order = docSnap.data();
-                        const orderId = docSnap.id;
-
-                        if (order.hasUnseenReport) unseenCount++;
-
-                        order.items.forEach((item, itemIdx) => {
-                            if (item.report) {
-                                const r = item.report;
-                                const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A';
-                                const status = r.status || 'Pending';
-                                
-                                const isPending = status === 'Pending';
-                                
-                                let actionControlsHtml = '';
-                                if (isPending) {
-                                    actionControlsHtml = `
+                        `,m.appendChild($)});const A=document.getElementById("unread-messages-badge");A&&(A.textContent=H,A.style.display=H>0?"inline-block":"none"),m.dataset.listenersAttached||(m.addEventListener("click",async h=>{const g=h.target.closest(".mark-read-btn"),ae=h.target.closest(".delete-msg-btn");if(g)try{const pe=g.dataset.id;await at(Ae(se,"messages",pe),{status:"read"}),window.showToast("Message marked as read","success")}catch(pe){console.error(pe),window.showToast(`Error updating message: ${pe.code||pe.message}`,"error")}if(ae&&confirm("Are you sure you want to delete this message?"))try{const pe=ae.dataset.id;await Lo(Ae(se,"messages",pe)),window.showToast("Message deleted","success")}catch(pe){console.error(pe),window.showToast("Error deleting message","error")}}),m.dataset.listenersAttached="true")},B=>{console.error("Error fetching messages:",B),m.innerHTML='<p style="color: #ff4d4d;">Permission Denied or Error loading messages.</p>'})}catch(k){console.error("Setup error:",k)}}},ui=async()=>{const m=document.getElementById("admin-reports-list");if(m){m.innerHTML="<p>Loading reports and complaints...</p>";try{const k=Ye(Ne(se,"orders"),ot("hasReports","==",!0));Jt(k,B=>{if(m.innerHTML="",B.empty){m.innerHTML="<p>No reports or complaints found.</p>";const g=document.getElementById("unread-reports-badge");g&&(g.style.display="none");return}let H=0,A="";B.forEach(g=>{const ae=g.data(),pe=g.id;ae.hasUnseenReport&&H++,ae.items.forEach((ue,ne)=>{if(ue.report){const Ee=ue.report,W=Ee.createdAt?new Date(Ee.createdAt).toLocaleString():"N/A",$=Ee.status||"Pending",ge=$==="Pending";let E="";ge?E=`
                                         <div style="margin-top: 1rem; border-top: 1px solid #f0f0f0; padding-top: 1rem;">
                                             <div class="form-group" style="margin-bottom: 0.75rem;">
                                                 <label style="display:block; margin-bottom: 0.3rem; font-size: 0.8rem; font-weight: 600; color: #555;">Reply message (Optional)</label>
                                                 <input type="text" class="admin-report-reply-input modern-input" placeholder="Enter message for user..." style="padding: 8px 12px; font-size: 0.85rem; width: 100%; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box; font-family: inherit;">
                                             </div>
                                             <div style="display: flex; gap: 0.5rem;">
-                                                <button class="admin-btn btn-save refund-report-btn" data-order-id="${orderId}" data-item-idx="${itemIdx}" style="background: #27ae60; border-color: #27ae60; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refund</button>
-                                                <button class="admin-btn btn-delete refuse-report-btn" data-order-id="${orderId}" data-item-idx="${itemIdx}" style="background: #e74c3c; border-color: #e74c3c; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refuse</button>
+                                                <button class="admin-btn btn-save refund-report-btn" data-order-id="${pe}" data-item-idx="${ne}" style="background: #27ae60; border-color: #27ae60; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refund</button>
+                                                <button class="admin-btn btn-delete refuse-report-btn" data-order-id="${pe}" data-item-idx="${ne}" style="background: #e74c3c; border-color: #e74c3c; width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; color: #fff; cursor: pointer; border-radius: 6px;">Refuse</button>
                                             </div>
                                         </div>
-                                    `;
-                                } else {
-                                    actionControlsHtml = `
+                                    `:E=`
                                         <div style="margin-top: 1rem; border-top: 1px solid #f0f0f0; padding-top: 1rem; color: #666; font-size: 0.85rem;">
-                                            <div>Status: <strong style="color: ${status === 'Refunded' ? '#27ae60' : '#e74c3c'};">${status}</strong></div>
-                                            ${r.reply ? `<div style="margin-top: 0.25rem;">Reply: <em>"${escapeHTML(r.reply)}"</em></div>` : ''}
+                                            <div>Status: <strong style="color: ${$==="Refunded"?"#27ae60":"#e74c3c"};">${$}</strong></div>
+                                            ${Ee.reply?`<div style="margin-top: 0.25rem;">Reply: <em>"${je(Ee.reply)}"</em></div>`:""}
                                         </div>
-                                    `;
-                                }
-
-                                const card = `
-                                    <div class="admin-order-card ${order.hasUnseenReport ? 'admin-unread-msg' : ''}" style="margin-bottom: 1rem; background: #fff; padding: 1.5rem; border-radius: 12px; border: 1px solid #eaeaea;">
+                                    `;const Te=`
+                                    <div class="admin-order-card ${ae.hasUnseenReport?"admin-unread-msg":""}" style="margin-bottom: 1rem; background: #fff; padding: 1.5rem; border-radius: 12px; border: 1px solid #eaeaea;">
                                         <div class="admin-order-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f9f9f9; padding-bottom: 0.5rem;">
-                                            <strong style="font-size: 1.1rem; color: #1a1a1a;">Report: #${order.orderReference || orderId.slice(0, 8).toUpperCase()}</strong>
-                                            <span style="font-size: 0.8rem; color: #888;">${dateStr}</span>
+                                            <strong style="font-size: 1.1rem; color: #1a1a1a;">Report: #${ae.orderReference||pe.slice(0,8).toUpperCase()}</strong>
+                                            <span style="font-size: 0.8rem; color: #888;">${W}</span>
                                         </div>
                                         <div class="admin-order-details" style="font-size: 0.9rem; line-height: 1.5; color: #444;">
-                                            <p style="margin: 0 0 0.5rem 0;"><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)} (${escapeHTML(order.shipping?.phone || 'N/A')})</p>
-                                            <p style="margin: 0 0 0.5rem 0;"><strong>Product:</strong> ${escapeHTML(item.name)} (${escapeHTML(item.size)}) - Qty: ${item.quantity} - Total: ${(item.price * item.quantity).toFixed(2)} TND</p>
-                                            <p style="margin: 0 0 0.5rem 0;"><strong>Problem Type:</strong> <span style="color: #c0392b; font-weight: 600;">${escapeHTML(r.problem)}</span></p>
-                                            <div style="background: #fafafa; padding: 0.75rem; border-radius: 8px; border-left: 3px solid #e74c3c; margin-top: 0.75rem; font-size: 0.9rem; color: #333; white-space: pre-wrap;">${escapeHTML(r.message || '(No details provided)')}</div>
-                                            ${actionControlsHtml}
+                                            <p style="margin: 0 0 0.5rem 0;"><strong>Customer:</strong> ${je(ae.shipping?.fullName)} (${je(ae.shipping?.phone||"N/A")})</p>
+                                            <p style="margin: 0 0 0.5rem 0;"><strong>Product:</strong> ${je(ue.name)} (${je(ue.size)}) - Qty: ${ue.quantity} - Total: ${(ue.price*ue.quantity).toFixed(2)} TND</p>
+                                            <p style="margin: 0 0 0.5rem 0;"><strong>Problem Type:</strong> <span style="color: #c0392b; font-weight: 600;">${je(Ee.problem)}</span></p>
+                                            <div style="background: #fafafa; padding: 0.75rem; border-radius: 8px; border-left: 3px solid #e74c3c; margin-top: 0.75rem; font-size: 0.9rem; color: #333; white-space: pre-wrap;">${je(Ee.message||"(No details provided)")}</div>
+                                            ${E}
                                         </div>
                                     </div>
-                                `;
-                                reportCardsHtml += card;
-                            }
-                        });
-                    });
-
-                    adminReportsList.innerHTML = reportCardsHtml || '<p>No reports found.</p>';
-
-                    const badge = document.getElementById('unread-reports-badge');
-                    if (badge) {
-                        badge.textContent = unseenCount;
-                        badge.style.display = unseenCount > 0 ? 'inline-block' : 'none';
-                    }
-
-                    if (!adminReportsList.dataset.listenersAttached) {
-                        adminReportsList.addEventListener('click', async (e) => {
-                            const refundBtn = e.target.closest('.refund-report-btn');
-                            const refuseBtn = e.target.closest('.refuse-report-btn');
-                            
-                            if (refundBtn || refuseBtn) {
-                                const isRefund = !!refundBtn;
-                                const btn = isRefund ? refundBtn : refuseBtn;
-                                const oId = btn.dataset.orderId;
-                                const itemIdx = parseInt(btn.dataset.itemIdx);
-                                const card = btn.closest('.admin-order-card');
-                                const replyInput = card.querySelector('.admin-report-reply-input');
-                                const replyVal = replyInput ? replyInput.value.trim() : '';
-
-                                const actionText = isRefund ? 'refund' : 'refuse';
-                                if (confirm(`Are you sure you want to ${actionText} this request?`)) {
-                                    btn.disabled = true;
-                                    btn.textContent = 'Processing...';
-
-                                    try {
-                                        const orderRef = doc(db, "orders", oId);
-                                        const orderSnap = await getDoc(orderRef);
-                                        if (orderSnap.exists()) {
-                                            const orderData = orderSnap.data();
-                                            const items = [...orderData.items];
-                                            
-                                            if (items[itemIdx] && items[itemIdx].report) {
-                                                items[itemIdx].report.status = isRefund ? 'Refunded' : 'Refused';
-                                                items[itemIdx].report.reply = replyVal;
-                                                items[itemIdx].report.handledAt = new Date().toISOString();
-                                                if (isRefund) {
-                                                    items[itemIdx].refunded = true;
-                                                }
-                                            }
-
-                                            const hasPending = items.some(it => it.report && it.report.status === 'Pending');
-                                            
-                                            const { writeBatch, increment } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-                                            const batch = writeBatch(db);
-                                            
-                                            const orderUpdateData = {
-                                                items: items,
-                                                hasUnseenReport: hasPending,
-                                                hasUnseenUpdate: true // Notify the user
-                                            };
-                                            
-                                            if (isRefund && orderData.userId && orderData.userId !== 'guest' && (orderData.status === 'Delivered' || orderData.status === 'Local Order')) {
-                                                // Recalculate credits
-                                                let validSubtotal = 0;
-                                                items.forEach(item => {
-                                                    const isRef = item.refunded === true || item.refunded === 'true';
-                                                    if (!isRef) {
-                                                        let price = parseFloat(item.price) || 0;
-                                                        let qty = parseInt(item.quantity) || 1;
-                                                        validSubtotal += price * qty;
-                                                    }
-                                                });
-                                                const creditsUsed = parseFloat(orderData.creditsUsed) || 0;
-                                                const targetCreditsGranted = Math.floor(Math.max(0, validSubtotal - creditsUsed) / 10);
-                                                const currentGranted = parseFloat(orderData.creditsGranted) || 0;
-                                                
-                                                if (targetCreditsGranted !== currentGranted) {
-                                                    const delta = targetCreditsGranted - currentGranted;
-                                                    orderUpdateData.creditsGranted = targetCreditsGranted;
-                                                    
-                                                    const userRef = doc(db, "users", orderData.userId);
-                                                    batch.update(userRef, { credits: increment(delta) });
-                                                    console.log(`Admin refund adjusting credits by ${delta}`);
-                                                }
-                                            }
-                                            
-                                            batch.update(orderRef, orderUpdateData);
-                                            await batch.commit();
-
-                                            // Sync review refund state when admin approves a refund
-                                            if (isRefund && orderData.userId) {
-                                                const refundedItem = items[itemIdx];
-                                                const pId = refundedItem.productId || refundedItem.id;
-                                                if (pId) {
-                                                    const reviewDocId = `${orderData.userId}_${pId}`;
-                                                    const reviewDocRef = doc(db, "product_reviews", reviewDocId);
-                                                    const reviewSnap = await getDoc(reviewDocRef);
-                                                    if (reviewSnap.exists()) {
-                                                        await updateDoc(reviewDocRef, {
-                                                            refunded: true,
-                                                            refundedAt: new Date().toISOString()
-                                                        });
-                                                    }
-                                                }
-                                            }
-
-                                            window.showToast(`Request ${isRefund ? 'refunded' : 'refused'} successfully!`, "success");
-                                            
-                                            if (orderData.userId && orderData.userId !== 'guest' && typeof window.sendTargetedPushNotification === 'function') {
-                                                const title = isRefund ? "Refund Approved! 💰" : "Report Update";
-                                                const body = isRefund 
-                                                    ? `Your refund request for ${items[itemIdx].name} was approved.`
-                                                    : `Your report for ${items[itemIdx].name} was reviewed.`;
-                                                window.sendTargetedPushNotification(db, orderData.userId, title, body, '/my-account.html#orders');
-                                            }
-
-                                            loadRevenueChart();
-                                        }
-                                    } catch (err) {
-                                        console.error(err);
-                                        window.showToast("Failed to process request.", "error");
-                                        btn.disabled = false;
-                                        btn.textContent = isRefund ? 'Refund' : 'Refuse';
-                                    }
-                                }
-                            }
-                        });
-                        adminReportsList.dataset.listenersAttached = 'true';
-                    }
-                }, (error) => {
-                    console.error("Error fetching reports:", error);
-                    adminReportsList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied or Error loading reports.</p>';
-                });
-            } catch (err) {
-                console.error("Setup reports error:", err);
-            }
-        };
-
-        const loadAdminOrders = async (pageIndex = 0) => {
-            adminOrdersList.innerHTML = '<p>Loading orders...</p>';
-            try {
-                let q = collection(db, "orders");
-                const statusValue = filterStatus ? filterStatus.value : '';
-                const dateDir = sortDate ? sortDate.value : 'desc';
-                if (statusValue) {
-                    q = query(q, where("status", "==", statusValue));
-                }
-                q = query(q, orderBy("timestamp", dateDir));
-
-                const cursor = cursors[pageIndex];
-
-                if (cursor) {
-                    q = query(q, startAfter(cursor));
-                }
-
-                q = query(q, limit(pageSize));
-
-                const querySnapshot = await getDocs(q);
-                const orders = [];
-                querySnapshot.forEach((doc) => {
-                    orders.push({ id: doc.id, ...doc.data() });
-                });
-                if (querySnapshot.docs.length > 0) {
-                    cursors[pageIndex + 1] = querySnapshot.docs[querySnapshot.docs.length - 1];
-                }
-
-                if (orders.length === 0) {
-                    adminOrdersList.innerHTML = '<p>No orders found.</p>';
-                    if (pageIndex > 0) {
-                    }
-                    return;
-                }
-
-                const renderAdminOrdersList = (ordersToRender) => {
-                    adminOrdersList.innerHTML = '';
-                    if (ordersToRender.length === 0) {
-                        adminOrdersList.innerHTML = '<p>No matching orders found.</p>';
-                        return;
-                    }
-                    ordersToRender.forEach(order => {
-                        const date = order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleString() : 'N/A';
-                        const status = order.status || 'Pending';
-                        const isExported = order.exported === true;
-                        const isLocalOrder = order.type === 'local';
-                        const isLocked = status === 'Delivered' || status === 'Cancelled';
-                        
-                        // Badge priority: Exported > Local Order > New
-                        let badgeHTML = isExported 
-                            ? '<span class="export-status-badge status-exported">Exported</span>' 
-                            : (isLocalOrder ? '<span class="export-status-badge local-order-badge">Local Order</span>' : '<span class="export-status-badge status-ready">New</span>');
-
-                        const el = document.createElement('div');
-                        el.className = `admin-order-card ${isExported ? 'exported' : ''}`;
-                        el.innerHTML = `
+                                `;A+=Te}})}),m.innerHTML=A||"<p>No reports found.</p>";const h=document.getElementById("unread-reports-badge");h&&(h.textContent=H,h.style.display=H>0?"inline-block":"none"),m.dataset.listenersAttached||(m.addEventListener("click",async g=>{const ae=g.target.closest(".refund-report-btn"),pe=g.target.closest(".refuse-report-btn");if(ae||pe){const ue=!!ae,ne=ue?ae:pe,Ee=ne.dataset.orderId,W=parseInt(ne.dataset.itemIdx),ge=ne.closest(".admin-order-card").querySelector(".admin-report-reply-input"),E=ge?ge.value.trim():"";if(confirm(`Are you sure you want to ${ue?"refund":"refuse"} this request?`)){ne.disabled=!0,ne.textContent="Processing...";try{const Oe=Ae(se,"orders",Ee),Ke=await mt(Oe);if(Ke.exists()){const He=Ke.data(),Re=[...He.items];Re[W]&&Re[W].report&&(Re[W].report.status=ue?"Refunded":"Refused",Re[W].report.reply=E,Re[W].report.handledAt=new Date().toISOString(),ue&&(Re[W].refunded=!0));const Lt=Re.some(rt=>rt.report&&rt.report.status==="Pending"),{writeBatch:it,increment:_e}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"),Ge=it(se),tt={items:Re,hasUnseenReport:Lt,hasUnseenUpdate:!0};if(ue&&He.userId&&He.userId!=="guest"&&(He.status==="Delivered"||He.status==="Local Order")){let rt=0;Re.forEach(vt=>{if(!(vt.refunded===!0||vt.refunded==="true")){let mi=parseFloat(vt.price)||0,fi=parseInt(vt.quantity)||1;rt+=mi*fi}});const st=parseFloat(He.creditsUsed)||0,Rt=Math.floor(Math.max(0,rt-st)/10),$t=parseFloat(He.creditsGranted)||0;if(Rt!==$t){const vt=Rt-$t;tt.creditsGranted=Rt;const Jo=Ae(se,"users",He.userId);Ge.update(Jo,{credits:_e(vt)}),console.log(`Admin refund adjusting credits by ${vt}`)}}if(Ge.update(Oe,tt),await Ge.commit(),ue&&He.userId){const rt=Re[W],st=rt.productId||rt.id;if(st){const Rt=`${He.userId}_${st}`,$t=Ae(se,"product_reviews",Rt);(await mt($t)).exists()&&await at($t,{refunded:!0,refundedAt:new Date().toISOString()})}}if(window.showToast(`Request ${ue?"refunded":"refused"} successfully!`,"success"),He.userId&&He.userId!=="guest"&&typeof window.sendTargetedPushNotification=="function"){const rt=ue?"Refund Approved! \u{1F4B0}":"Report Update",st=ue?`Your refund request for ${Re[W].name} was approved.`:`Your report for ${Re[W].name} was reviewed.`;window.sendTargetedPushNotification(se,He.userId,rt,st,"/my-account.html#orders")}Wo()}}catch(Oe){console.error(Oe),window.showToast("Failed to process request.","error"),ne.disabled=!1,ne.textContent=ue?"Refund":"Refuse"}}}}),m.dataset.listenersAttached="true")},B=>{console.error("Error fetching reports:",B),m.innerHTML='<p style="color: #ff4d4d;">Permission Denied or Error loading reports.</p>'})}catch(k){console.error("Setup reports error:",k)}}},Mt=async(m=0)=>{i.innerHTML="<p>Loading orders...</p>";try{let k=Ne(se,"orders");const B=to?to.value:"",H=oo?oo.value:"desc";B&&(k=Ye(k,ot("status","==",B))),k=Ye(k,io("timestamp",H));const A=ko[m];A&&(k=Ye(k,Ci(A))),k=Ye(k,Ti(Bt));const h=await nt(k),g=[];if(h.forEach(Ee=>{g.push({id:Ee.id,...Ee.data()})}),h.docs.length>0&&(ko[m+1]=h.docs[h.docs.length-1]),g.length===0){i.innerHTML="<p>No orders found.</p>",m>0;return}const ae=Ee=>{if(i.innerHTML="",Ee.length===0){i.innerHTML="<p>No matching orders found.</p>";return}Ee.forEach(W=>{const $=W.timestamp?new Date(W.timestamp.seconds*1e3).toLocaleString():"N/A",ge=W.status||"Pending",E=W.exported===!0,Te=W.type==="local",Oe=ge==="Delivered"||ge==="Cancelled";let Ke=E?'<span class="export-status-badge status-exported">Exported</span>':Te?'<span class="export-status-badge local-order-badge">Local Order</span>':'<span class="export-status-badge status-ready">New</span>';const He=document.createElement("div");He.className=`admin-order-card ${E?"exported":""}`,He.innerHTML=`
                         <div class="admin-order-header">
-                            <strong>#${order.orderReference || order.id.slice(0, 6)}</strong>
-                            <span>${date}</span>
-                            ${badgeHTML}
+                            <strong>#${W.orderReference||W.id.slice(0,6)}</strong>
+                            <span>${$}</span>
+                            ${Ke}
                         </div>
                         <div class="admin-order-details">
-                            <p><strong>Customer:</strong> ${escapeHTML(order.shipping?.fullName)} (${escapeHTML(order.shipping?.phone || 'N/A')})</p>
-                            <p><strong>Email:</strong> ${escapeHTML(order.shipping?.email || 'N/A')}</p>
-                            <p><strong>Address:</strong> ${escapeHTML(order.shipping?.address || 'N/A')}, ${escapeHTML(order.shipping?.city || '')}</p>
-                            <p><strong>Total:</strong> <span style="color: var(--accent-gold-text); font-weight: 700;">${order.total} TND</span></p>
-                            ${order.creditsUsed > 0 ? `<p style="color: #e74c3c; font-weight: 500;"><strong>Discount:</strong> -${order.creditsUsed.toFixed(2)} TND</p>` : ''}
+                            <p><strong>Customer:</strong> ${je(W.shipping?.fullName)} (${je(W.shipping?.phone||"N/A")})</p>
+                            <p><strong>Email:</strong> ${je(W.shipping?.email||"N/A")}</p>
+                            <p><strong>Address:</strong> ${je(W.shipping?.address||"N/A")}, ${je(W.shipping?.city||"")}</p>
+                            <p><strong>Total:</strong> <span style="color: var(--accent-gold-text); font-weight: 700;">${W.total} TND</span></p>
+                            ${W.creditsUsed>0?`<p style="color: #e74c3c; font-weight: 500;"><strong>Discount:</strong> -${W.creditsUsed.toFixed(2)} TND</p>`:""}
                             <div class="admin-order-items">
-                                ${order.items.map(i => `<div>• ${i.quantity}x ${escapeHTML(i.name)} (${escapeHTML(i.size)})</div>`).join('')}
+                                ${W.items.map(Re=>`<div>\u2022 ${Re.quantity}x ${je(Re.name)} (${je(Re.size)})</div>`).join("")}
                             </div>
                         </div>
                         <div class="admin-order-actions">
-                            <span class="status-badge status-${status.toLowerCase().replace(/\s/g, '-')}">${status}</span>
+                            <span class="status-badge status-${ge.toLowerCase().replace(/\s/g,"-")}">${ge}</span>
                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <select class="admin-status-select" data-id="${order.id}" ${(isExported || isLocked) ? 'disabled title="Order cannot be modified in this status"' : ''} style="margin: 0; min-width: 140px;">
+                                <select class="admin-status-select" data-id="${W.id}" ${E||Oe?'disabled title="Order cannot be modified in this status"':""} style="margin: 0; min-width: 140px;">
                                     <option value="" disabled selected>Update Status</option>
                                 <option value="Confirmed">Confirmed</option>
                                 <option value="In Delivery">In Delivery</option>
                                 <option value="Delivered">Delivered</option>
                                 <option value="Cancelled">Cancelled</option>
                             </select>
-                                <button class="admin-btn btn-save admin-download-receipt-btn" data-id="${order.id}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.75rem;">Download Receipt</button>
+                                <button class="admin-btn btn-save admin-download-receipt-btn" data-id="${W.id}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.75rem;">Download Receipt</button>
                             </div>
                         </div>
-                    `;
-                        adminOrdersList.appendChild(el);
-                    });
-                };
-
-                renderAdminOrdersList(orders);
-                const searchInput = document.getElementById('admin-order-search');
-                if (searchInput) {
-                    searchInput.addEventListener('input', debounce((e) => {
-                        const term = e.target.value.toLowerCase();
-                        const filtered = orders.filter(o =>
-                            (o.id && o.id.toLowerCase().includes(term)) ||
-                            (o.orderReference && o.orderReference.toLowerCase().includes(term)) ||
-                            (o.shipping?.fullName && o.shipping.fullName.toLowerCase().includes(term)) ||
-                            (o.shipping?.email && o.shipping.email.toLowerCase().includes(term))
-                        );
-                        renderAdminOrdersList(filtered);
-                    }, 300));
-                }
-                const existingControls = document.getElementById('admin-pagination-controls');
-                if (existingControls) existingControls.remove();
-
-                const paginationHTML = `
+                    `,i.appendChild(He)})};ae(g);const pe=document.getElementById("admin-order-search");pe&&pe.addEventListener("input",d(Ee=>{const W=Ee.target.value.toLowerCase(),$=g.filter(ge=>ge.id&&ge.id.toLowerCase().includes(W)||ge.orderReference&&ge.orderReference.toLowerCase().includes(W)||ge.shipping?.fullName&&ge.shipping.fullName.toLowerCase().includes(W)||ge.shipping?.email&&ge.shipping.email.toLowerCase().includes(W));ae($)},300));const ue=document.getElementById("admin-pagination-controls");ue&&ue.remove();const ne=`
                     <div id="admin-pagination-controls" class="admin-pagination">
-                        <button id="prev-page-btn" class="pagination-btn" ${pageIndex === 0 ? 'disabled' : ''}>Previous</button>
-                        <span class="page-info">Page ${pageIndex + 1}</span>
-                        <button id="next-page-btn" class="pagination-btn" ${orders.length < pageSize ? 'disabled' : ''}>Next</button>
+                        <button id="prev-page-btn" class="pagination-btn" ${m===0?"disabled":""}>Previous</button>
+                        <span class="page-info">Page ${m+1}</span>
+                        <button id="next-page-btn" class="pagination-btn" ${g.length<Bt?"disabled":""}>Next</button>
                     </div>
-                `;
-                adminOrdersList.insertAdjacentHTML('afterend', paginationHTML);
-
-                document.getElementById('prev-page-btn').addEventListener('click', () => {
-                    if (pageIndex > 0) {
-                        loadAdminOrders(pageIndex - 1);
-                    }
-                });
-
-                document.getElementById('next-page-btn').addEventListener('click', () => {
-                    if (orders.length === pageSize) {
-                        loadAdminOrders(pageIndex + 1);
-                    }
-                });
-                document.querySelectorAll('.admin-status-select').forEach(select => {
-                    select.addEventListener('change', async (e) => {
-                        const newStatus = e.target.value;
-                        const orderId = e.target.dataset.id;
-                        if (!newStatus) return;
-
-                        if (await window.showConfirm(`Change order status to ${newStatus}?`, "Update Order")) {
-                            try {
-                                const order = orders.find(o => o.id === orderId);
-                                
-                                // --- Rewards System (Admin Side Processing) ---
-                                let deltaCredits = 0;
-                                let newGranted = order.creditsGranted || 0;
-                                
-                                if (order && order.userId && order.userId !== 'guest') {
-                                    if (newStatus === 'Cancelled') {
-                                        // Handle refunding spent credits
-                                        const creditsUsed = parseFloat(order.creditsUsed) || 0;
-                                        if (creditsUsed > 0 && !order.creditsRefunded) {
-                                            deltaCredits += creditsUsed;
-                                            // Mark as refunded on order document (handled in batch below)
-                                        }
-                                        
-                                        // Revoke earned credits if previously granted
-                                        const currentGranted = parseFloat(order.creditsGranted) || 0;
-                                        if (currentGranted > 0) {
-                                            deltaCredits -= currentGranted;
-                                            newGranted = 0;
-                                        }
-                                    } else {
-                                        // Calculate earned credits
-                                        let targetCreditsGranted = 0;
-                                        if (newStatus === 'Delivered' || newStatus === 'Local Order') {
-                                            let validSubtotal = 0;
-                                            if (order.items && Array.isArray(order.items)) {
-                                                order.items.forEach(item => {
-                                                    const isRefunded = item.refunded === true || item.refunded === 'true';
-                                                    if (!isRefunded) {
-                                                        let price = parseFloat(item.price) || 0;
-                                                        let qty = parseInt(item.quantity) || 1;
-                                                        validSubtotal += price * qty;
-                                                    }
-                                                });
-                                            }
-                                            const creditsUsed = parseFloat(order.creditsUsed) || 0;
-                                            targetCreditsGranted = Math.floor(Math.max(0, validSubtotal - creditsUsed) / 10);
-                                        }
-                                        
-                                        const currentGranted = parseFloat(order.creditsGranted) || 0;
-                                        if (targetCreditsGranted !== currentGranted) {
-                                            deltaCredits += (targetCreditsGranted - currentGranted);
-                                            newGranted = targetCreditsGranted;
-                                        }
-                                    }
-                                }
-                                
-                                const { writeBatch, increment } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-                                const batch = writeBatch(db);
-                                const orderRef = doc(db, "orders", orderId);
-                                
-                                const orderUpdateData = { status: newStatus, hasUnseenUpdate: true };
-                                
-                                if (order && order.userId && order.userId !== 'guest') {
-                                    if (newStatus === 'Cancelled' && (parseFloat(order.creditsUsed) || 0) > 0 && !order.creditsRefunded) {
-                                        orderUpdateData.creditsRefunded = true;
-                                    }
-                                    if (newGranted !== (order.creditsGranted || 0)) {
-                                        orderUpdateData.creditsGranted = newGranted;
-                                    }
-                                    
-                                    if (deltaCredits !== 0) {
-                                        const userRef = doc(db, "users", order.userId);
-                                        batch.update(userRef, { credits: increment(deltaCredits) });
-                                        console.log(`Admin adjusting credits for user ${order.userId} by ${deltaCredits}`);
-                                    }
-                                }
-                                
-                                batch.update(orderRef, orderUpdateData);
-                                await batch.commit();
-                                
-                                window.showToast("Order status updated", "success");
-                                checkExportEligibility(); // Re-evaluate export button state
-
-                                // --- Automated Target Push Notification ---
-                                if (order && order.userId && order.userId !== 'guest' && typeof window.sendTargetedPushNotification === 'function') {
-                                    let pushTitle = `Order Update`;
-                                    let pushBody = `Your order #${order.orderReference || order.id.slice(-6)} is now ${newStatus}.`;
-
-                                    if (newStatus === 'Confirmed') {
-                                        pushTitle = `Order Confirmed! 🎉`;
-                                        pushBody = `We're preparing your order #${order.orderReference || order.id.slice(-6)} with care.`;
-                                    } else if (newStatus === 'In Delivery') {
-                                        pushTitle = `Order Out for Delivery 🚚`;
-                                        pushBody = `Your order #${order.orderReference || order.id.slice(-6)} is on its way to you!`;
-                                    } else if (newStatus === 'Delivered') {
-                                        pushTitle = `Order Delivered! 📦`;
-                                        pushBody = `We hope you enjoy your DODCH products.`;
-                                    }
-
-                                    window.sendTargetedPushNotification(db, order.userId, pushTitle, pushBody, '/my-account.html#orders');
-                                } else if (order && order.userId === 'guest' && order.type !== 'local') {
-                                    window.showToast("Push Not Sent: Guest order (not linked to a user account).", "info");
-                                }
-                                if (newStatus === 'Confirmed') {
-                                    if (order && order.shipping?.email) {
-                                        const subject = `Order Confirmation: DODCH #${order.orderReference || order.id}`;
-                                        const itemsList = order.items.map(i => `• ${i.quantity}x ${i.name} (${i.size})`).join('\n');
-                                        const totalDisplay = typeof order.total === 'number' ? order.total.toFixed(2) : order.total;
-
-                                        const body = `Dear ${order.shipping.fullName},
+                `;i.insertAdjacentHTML("afterend",ne),document.getElementById("prev-page-btn").addEventListener("click",()=>{m>0&&Mt(m-1)}),document.getElementById("next-page-btn").addEventListener("click",()=>{g.length===Bt&&Mt(m+1)}),document.querySelectorAll(".admin-status-select").forEach(Ee=>{Ee.addEventListener("change",async W=>{const $=W.target.value,ge=W.target.dataset.id;if($)if(await window.showConfirm(`Change order status to ${$}?`,"Update Order"))try{const E=g.find(_e=>_e.id===ge);let Te=0,Oe=E.creditsGranted||0;if(E&&E.userId&&E.userId!=="guest")if($==="Cancelled"){const _e=parseFloat(E.creditsUsed)||0;_e>0&&!E.creditsRefunded&&(Te+=_e);const Ge=parseFloat(E.creditsGranted)||0;Ge>0&&(Te-=Ge,Oe=0)}else{let _e=0;if($==="Delivered"||$==="Local Order"){let tt=0;E.items&&Array.isArray(E.items)&&E.items.forEach(st=>{if(!(st.refunded===!0||st.refunded==="true")){let $t=parseFloat(st.price)||0,vt=parseInt(st.quantity)||1;tt+=$t*vt}});const rt=parseFloat(E.creditsUsed)||0;_e=Math.floor(Math.max(0,tt-rt)/10)}const Ge=parseFloat(E.creditsGranted)||0;_e!==Ge&&(Te+=_e-Ge,Oe=_e)}const{writeBatch:Ke,increment:He}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"),Re=Ke(se),Lt=Ae(se,"orders",ge),it={status:$,hasUnseenUpdate:!0};if(E&&E.userId&&E.userId!=="guest"&&($==="Cancelled"&&(parseFloat(E.creditsUsed)||0)>0&&!E.creditsRefunded&&(it.creditsRefunded=!0),Oe!==(E.creditsGranted||0)&&(it.creditsGranted=Oe),Te!==0)){const _e=Ae(se,"users",E.userId);Re.update(_e,{credits:He(Te)}),console.log(`Admin adjusting credits for user ${E.userId} by ${Te}`)}if(Re.update(Lt,it),await Re.commit(),window.showToast("Order status updated","success"),o(),E&&E.userId&&E.userId!=="guest"&&typeof window.sendTargetedPushNotification=="function"){let _e="Order Update",Ge=`Your order #${E.orderReference||E.id.slice(-6)} is now ${$}.`;$==="Confirmed"?(_e="Order Confirmed! \u{1F389}",Ge=`We're preparing your order #${E.orderReference||E.id.slice(-6)} with care.`):$==="In Delivery"?(_e="Order Out for Delivery \u{1F69A}",Ge=`Your order #${E.orderReference||E.id.slice(-6)} is on its way to you!`):$==="Delivered"&&(_e="Order Delivered! \u{1F4E6}",Ge="We hope you enjoy your DODCH products."),window.sendTargetedPushNotification(se,E.userId,_e,Ge,"/my-account.html#orders")}else E&&E.userId==="guest"&&E.type!=="local"&&window.showToast("Push Not Sent: Guest order (not linked to a user account).","info");if($==="Confirmed"&&E&&E.shipping?.email){const _e=`Order Confirmation: DODCH #${E.orderReference||E.id}`,Ge=E.items.map(st=>`\u2022 ${st.quantity}x ${st.name} (${st.size})`).join(`
+`),tt=typeof E.total=="number"?E.total.toFixed(2):E.total,rt=`Dear ${E.shipping.fullName},
 
 Thank you for choosing DODCH. We are delighted to confirm your order.
 
 ------------------------------------------------------
 ORDER SUMMARY
 ------------------------------------------------------
-Order Reference: ${order.orderReference || order.id}
+Order Reference: ${E.orderReference||E.id}
 
 ITEMS:
-${itemsList}
+${Ge}
 
 ------------------------------------------------------
-TOTAL: ${totalDisplay} TND
+TOTAL: ${tt} TND
 ------------------------------------------------------
 
 We are preparing your order with care. You will receive another notification once it has been shipped.
@@ -6300,34 +957,7 @@ We are preparing your order with care. You will receive another notification onc
 Visit us: https://dodch.com
 
 Warm regards,
-The DODCH Team`;
-                                        window.location.href = `mailto:${order.shipping.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                                    }
-                                }
-                            } catch (err) {
-                                console.error(err);
-                                window.showToast("Failed to update status", "error");
-                            }
-                        } else {
-                            e.target.value = ""; // Reset
-                        }
-                    });
-                });
-
-                adminOrdersList.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.admin-download-receipt-btn');
-                    if (btn) {
-                        const orderId = btn.dataset.id;
-                        const order = orders.find(o => o.id === orderId);
-                        if (order) printOrderReceipt(order);
-                    }
-                });
-            } catch (error) {
-                console.error("Error loading orders:", error);
-                if (error.code === 'permission-denied') {
-                    adminOrdersList.innerHTML = '<p style="color: #ff4d4d;">Permission Denied. Please update Firestore Rules to allow Admin access.</p>';
-                } else if (error.code === 'failed-precondition') {
-                    adminOrdersList.innerHTML = `
+The DODCH Team`;window.location.href=`mailto:${E.shipping.email}?subject=${encodeURIComponent(_e)}&body=${encodeURIComponent(rt)}`}}catch(E){console.error(E),window.showToast("Failed to update status","error")}else W.target.value=""})}),i.addEventListener("click",Ee=>{const W=Ee.target.closest(".admin-download-receipt-btn");if(W){const $=W.dataset.id,ge=g.find(E=>E.id===$);ge&&di(ge)}})}catch(k){console.error("Error loading orders:",k),k.code==="permission-denied"?i.innerHTML='<p style="color: #ff4d4d;">Permission Denied. Please update Firestore Rules to allow Admin access.</p>':k.code==="failed-precondition"?i.innerHTML=`
                         <div style="text-align: center; padding: 2rem; color: #ff4d4d; border: 1px dashed #ff4d4d; border-radius: 8px;">
                             <h3 style="margin-bottom: 0.5rem;">Missing Index</h3>
                             <p style="margin-bottom: 1rem;">Firestore requires a specific index for this Filter + Sort combination.</p>
@@ -6336,294 +966,68 @@ The DODCH Team`;
                                 <li>Look for the error message containing a long link.</li>
                                 <li>Click the link to create the index automatically.</li>
                             </ol>
-                        </div>`;
-                } else {
-                    adminOrdersList.innerHTML = `<p style="color: #ff4d4d;">Error: ${error.message}</p>`;
-                }
-            }
-        };
-
-        const syncCatalogLocally = async () => {
-            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-                return;
-            }
-            try {
-                const localCatalog = {};
-                Object.keys(productCatalog).forEach(id => {
-                    const prod = productCatalog[id];
-                    localCatalog[id] = {
-                        name: prod.name || "",
-                        category: prod.category || "uncategorized",
-                        subCategory: prod.subCategory || "",
-                        subtitle: prod.subtitle || "",
-                        price: null,
-                        image: prod.image || "",
-                        images: prod.images || [],
-                        description: prod.description || "",
-                        style: prod.style || "",
-                        storyUrl: prod.storyUrl || `${id}.html`,
-                        orderIndex: prod.orderIndex || 0,
-                        outOfStock: prod.outOfStock || false,
-                        isPermanentlyUnavailable: prod.isPermanentlyUnavailable || false,
-                        sizes: []
-                    };
-                });
-                const response = await fetch('/api/sync-catalog', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(localCatalog)
-                });
-                const resData = await response.json();
-                if (resData.success) {
-                    console.log("Local catalog sync complete.");
-                } else {
-                    console.error("Local sync API error:", resData.error);
-                }
-            } catch (err) {
-                console.error("Local catalog sync request failed:", err);
-            }
-        };
-
-        const loadAdminProducts = async () => {
-            if (!adminProductsList) return;
-            adminProductsList.innerHTML = '<p style="color:#888; padding: 1rem;">Loading inventory from Firestore...</p>';
-
-            // Always fetch fresh data from Firestore before rendering
-            try {
-                const snapshot = await getDocs(collection(db, "products"));
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const id = docSnap.id;
-                    if (data.deleted) {
-                        delete productCatalog[id];
-                        return;
-                    }
-                    if (productCatalog[id]) {
-                        // Overwrite fields from Firestore (including edited name, subtitle, description, etc.)
-                        if (data.name) productCatalog[id].name = data.name;
-                        if (data.subtitle) productCatalog[id].subtitle = data.subtitle;
-                        if (data.description) productCatalog[id].description = data.description;
-                        if (data.inci) productCatalog[id].inci = data.inci;
-                        productCatalog[id].notice = data.notice || "";
-                        productCatalog[id].price = data.price || null;
-                        productCatalog[id].originalPrice = data.originalPrice || null;
-                        productCatalog[id].outOfStock = data.outOfStock === true;
-                        productCatalog[id].isPermanentlyUnavailable = data.isPermanentlyUnavailable === true;
-                        productCatalog[id].sizes = data.sizes || [];
-                        productCatalog[id].image = data.image || '';
-                        productCatalog[id].images = data.images || [];
-                        productCatalog[id].batchHistory = data.batchHistory || [];
-                    } else {
-                        // Product exists only in Firestore (added via admin), add to local catalog
-                        productCatalog[id] = {
-                            name: data.name || id,
-                            subtitle: data.subtitle || '',
-                            description: data.description || '',
-                            image: data.image || '',
-                            images: data.images || [],
-                            price: data.price || null,
-                            sizes: data.sizes || [],
-                            outOfStock: data.outOfStock === true,
-                            isPermanentlyUnavailable: data.isPermanentlyUnavailable === true,
-                            orderIndex: data.orderIndex || 99,
-                            style: data.style || '',
-                            storyUrl: data.storyUrl || null,
-                            category: data.category || 'uncategorized',
-                            subCategory: data.subCategory || '',
-                            notice: data.notice || '',
-                            batchHistory: data.batchHistory || []
-                        };
-                    }
-                });
-            } catch (e) {
-                console.error("Failed to fetch products from Firestore:", e);
-                adminProductsList.innerHTML = `<p style="color: #ff4d4d;">Error loading inventory: ${e.message}</p>`;
-                return;
-            }
-
-            adminProductsList.innerHTML = '';
-            const sortedEntries = Object.entries(productCatalog).sort(([, a], [, b]) => {
-                const orderDiff = (a.orderIndex || 0) - (b.orderIndex || 0);
-                if (orderDiff !== 0) return orderDiff;
-                return a.name.localeCompare(b.name);
-            });
-
-            sortedEntries.forEach(([id, product], index) => {
-                const el = document.createElement('div');
-                el.className = 'admin-product-card';
-                let priceInputsHTML = '';
-                if (product.sizes && product.sizes.length > 0) {
-                    priceInputsHTML = '<div class="price-inputs-container">';
-                    product.sizes.forEach((size, index) => {
-                        priceInputsHTML += `
+                        </div>`:i.innerHTML=`<p style="color: #ff4d4d;">Error: ${k.message}</p>`}},Eo=async()=>{if(!(window.location.hostname!=="localhost"&&window.location.hostname!=="127.0.0.1"))try{const m={};Object.keys(x).forEach(H=>{const A=x[H];m[H]={name:A.name||"",category:A.category||"uncategorized",subCategory:A.subCategory||"",subtitle:A.subtitle||"",price:null,image:A.image||"",images:A.images||[],description:A.description||"",style:A.style||"",storyUrl:A.storyUrl||`${H}.html`,orderIndex:A.orderIndex||0,outOfStock:A.outOfStock||!1,isPermanentlyUnavailable:A.isPermanentlyUnavailable||!1,sizes:[]}});const B=await(await fetch("/api/sync-catalog",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(m)})).json();B.success?console.log("Local catalog sync complete."):console.error("Local sync API error:",B.error)}catch(m){console.error("Local catalog sync request failed:",m)}},Gt=async()=>{if(!e)return;e.innerHTML='<p style="color:#888; padding: 1rem;">Loading inventory from Firestore...</p>';try{(await nt(Ne(se,"products"))).forEach(A=>{const h=A.data(),g=A.id;if(h.deleted){delete x[g];return}x[g]?(h.name&&(x[g].name=h.name),h.subtitle&&(x[g].subtitle=h.subtitle),h.description&&(x[g].description=h.description),h.inci&&(x[g].inci=h.inci),x[g].notice=h.notice||"",x[g].price=h.price||null,x[g].originalPrice=h.originalPrice||null,x[g].outOfStock=h.outOfStock===!0,x[g].isPermanentlyUnavailable=h.isPermanentlyUnavailable===!0,x[g].sizes=h.sizes||[],x[g].image=h.image||"",x[g].images=h.images||[],x[g].batchHistory=h.batchHistory||[]):x[g]={name:h.name||g,subtitle:h.subtitle||"",description:h.description||"",image:h.image||"",images:h.images||[],price:h.price||null,sizes:h.sizes||[],outOfStock:h.outOfStock===!0,isPermanentlyUnavailable:h.isPermanentlyUnavailable===!0,orderIndex:h.orderIndex||99,style:h.style||"",storyUrl:h.storyUrl||null,category:h.category||"uncategorized",subCategory:h.subCategory||"",notice:h.notice||"",batchHistory:h.batchHistory||[]}})}catch(H){console.error("Failed to fetch products from Firestore:",H),e.innerHTML=`<p style="color: #ff4d4d;">Error loading inventory: ${H.message}</p>`;return}e.innerHTML="";const m=Object.entries(x).sort(([,H],[,A])=>{const h=(H.orderIndex||0)-(A.orderIndex||0);return h!==0?h:H.name.localeCompare(A.name)});m.forEach(([H,A],h)=>{const g=document.createElement("div");g.className="admin-product-card";let ae="";A.sizes&&A.sizes.length>0?(ae='<div class="price-inputs-container">',A.sizes.forEach(($,ge)=>{ae+=`
                             <div style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee;">
                                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                                <span style="font-size: 0.8rem; color: #666; flex: 1;">${size.label}</span>
+                                <span style="font-size: 0.8rem; color: #666; flex: 1;">${$.label}</span>
                                 <div style="display: flex; align-items: center; gap: 5px; flex: 3;">
-                                    <input type="number" class="admin-size-price-input" data-index="${index}" value="${parseFloat(size.price)}" placeholder="Price" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
-                                    <input type="number" class="admin-size-original-price-input" data-index="${index}" value="${size.originalPrice ? parseFloat(size.originalPrice) : ''}" placeholder="Old" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
-                                    <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-size-stock-check" data-index="${index}" ${size.outOfStock ? 'checked' : ''}> OOS</label>
+                                    <input type="number" class="admin-size-price-input" data-index="${ge}" value="${parseFloat($.price)}" placeholder="Price" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <input type="number" class="admin-size-original-price-input" data-index="${ge}" value="${$.originalPrice?parseFloat($.originalPrice):""}" placeholder="Old" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-size-stock-check" data-index="${ge}" ${$.outOfStock?"checked":""}> OOS</label>
                                 </div>
                                 </div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;">
-                                    <input type="text" class="admin-size-batch-input" data-index="${index}" value="${size.batchNumber || ''}" placeholder="Batch #" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Batch Number">
-                                    <input type="date" class="admin-size-expiry-input" data-index="${index}" value="${size.expiryDate || ''}" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Expiry Date">
-                                    <input type="text" class="admin-size-formula-input" data-index="${index}" value="${size.formulaVersion || ''}" placeholder="Formula v" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Formula Version">
+                                    <input type="text" class="admin-size-batch-input" data-index="${ge}" value="${$.batchNumber||""}" placeholder="Batch #" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Batch Number">
+                                    <input type="date" class="admin-size-expiry-input" data-index="${ge}" value="${$.expiryDate||""}" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Expiry Date">
+                                    <input type="text" class="admin-size-formula-input" data-index="${ge}" value="${$.formulaVersion||""}" placeholder="Formula v" style="padding: 4px; border: 1px solid #eee; border-radius: 4px; font-size: 0.75rem;" title="Formula Version">
                                 </div>
                             </div>
-                        `;
-                    });
-                    priceInputsHTML += '</div>';
-                } else {
-                    priceInputsHTML = `
+                        `}),ae+="</div>"):ae=`
                         <div class="price-inputs-container">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="font-size: 0.85rem; color: #666; flex: 1;">Price (TND)</span>
-                                <input type="number" class="admin-price-input" value="${parseFloat(product.price)}" style="flex: 2; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
-                                <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-single-stock-check" ${product.outOfStock ? 'checked' : ''}> OOS</label>
+                                <input type="number" class="admin-price-input" value="${parseFloat(A.price)}" style="flex: 2; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label class="stock-label" style="flex: 0 0 auto; font-size: 0.75rem;"><input type="checkbox" class="admin-single-stock-check" ${A.outOfStock?"checked":""}> OOS</label>
                             </div>
-                        </div>`;
-                }
-
-                const isFirst = index === 0;
-                const isLast = index === sortedEntries.length - 1;
-
-                el.innerHTML = `
+                        </div>`;const pe=h===0,ue=h===m.length-1;g.innerHTML=`
                     <div class="admin-product-info">
-                        <img src="${getProductPrimaryImage(product)}" alt="${product.name}">
+                        <img src="${St(A)}" alt="${A.name}">
                         <div class="admin-product-details">
-                            <h4>${product.name}</h4>
-                            <p>${product.subtitle}</p>
+                            <h4>${A.name}</h4>
+                            <p>${A.subtitle}</p>
                         </div>
                         <div class="admin-move-controls">
-                            <button class="btn-move up admin-move-btn" data-id="${id}" ${isFirst ? 'disabled' : ''}>
+                            <button class="btn-move up admin-move-btn" data-id="${H}" ${pe?"disabled":""}>
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
                             </button>
-                            <button class="btn-move down admin-move-btn" data-id="${id}" ${isLast ? 'disabled' : ''}>
+                            <button class="btn-move down admin-move-btn" data-id="${H}" ${ue?"disabled":""}>
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
                             </button>
                         </div>
                     </div>
                     <div class="admin-product-controls">
-                        ${priceInputsHTML}
+                        ${ae}
                         <div class="admin-actions-row">
-                            <button class="admin-btn btn-edit admin-edit-prod-btn" data-id="${id}">
+                            <button class="admin-btn btn-edit admin-edit-prod-btn" data-id="${H}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 Edit
                             </button>
-                            <button class="admin-btn btn-save admin-save-prod-btn" data-id="${id}" disabled>
+                            <button class="admin-btn btn-save admin-save-prod-btn" data-id="${H}" disabled>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                                 Save
                             </button>
-                            <button class="admin-btn btn-delete admin-delete-prod-btn" data-id="${id}">
+                            <button class="admin-btn btn-delete admin-delete-prod-btn" data-id="${H}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                 Delete
                             </button>
-                            <button class="admin-btn btn-history admin-history-prod-btn" data-id="${id}" title="View Batch History" style="background: linear-gradient(135deg, #6c63ff, #a78bfa); border-color: #6c63ff; color: #fff;">
+                            <button class="admin-btn btn-history admin-history-prod-btn" data-id="${H}" title="View Batch History" style="background: linear-gradient(135deg, #6c63ff, #a78bfa); border-color: #6c63ff; color: #fff;">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                 History
                             </button>
                         </div>
                     </div>
-                `;
-                adminProductsList.appendChild(el);
-
-                // --- Change Detection Logic ---
-                const saveBtn = el.querySelector('.admin-save-prod-btn');
-                const inputs = el.querySelectorAll('input');
-
-                const checkChanges = () => {
-                    let hasChanged = false;
-
-                    // Check Prices & Size-specific Stock
-
-                    // Check Prices & Size-specific Stock
-                    if (product.sizes && product.sizes.length > 0) {
-                        const sizeRows = el.querySelectorAll('.price-inputs-container > div');
-                        sizeRows.forEach((row, idx) => {
-                            const pInput = row.querySelector('.admin-size-price-input');
-                            const opInput = row.querySelector('.admin-size-original-price-input');
-                            const sCheck = row.querySelector('.admin-size-stock-check');
-                            const bInput = row.querySelector('.admin-size-batch-input');
-                            const eInput = row.querySelector('.admin-size-expiry-input');
-
-                            const original = product.sizes[idx];
-                            if (parseFloat(pInput.value).toFixed(2) !== parseFloat(original.price).toFixed(2)) hasChanged = true;
-                            const currentOp = opInput.value ? parseFloat(opInput.value).toFixed(2) : null;
-                            const originalOp = original.originalPrice ? parseFloat(original.originalPrice).toFixed(2) : null;
-                            if (currentOp !== originalOp) hasChanged = true;
-                            if (sCheck.checked !== (original.outOfStock === true)) hasChanged = true;
-                            const fInput = row.querySelector('.admin-size-formula-input');
-                            if ((bInput.value || '') !== (original.batchNumber || '')) hasChanged = true;
-                            if ((eInput.value || '') !== (original.expiryDate || '')) hasChanged = true;
-                            if (fInput && (fInput.value || '') !== (original.formulaVersion || '')) hasChanged = true;
-                        });
-                    } else {
-                        const pInput = el.querySelector('.admin-price-input');
-                        const sCheck = el.querySelector('.admin-single-stock-check');
-                        if (pInput && parseFloat(pInput.value).toFixed(2) !== parseFloat(product.price).toFixed(2)) hasChanged = true;
-                        if (sCheck && sCheck.checked !== (product.outOfStock === true)) hasChanged = true;
-                    }
-
-                    saveBtn.disabled = !hasChanged;
-                };
-
-                inputs.forEach(input => {
-                    input.addEventListener('input', checkChanges);
-                    input.addEventListener('change', checkChanges);
-                });
-            });
-
-            document.querySelectorAll('.admin-edit-prod-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.currentTarget.dataset.id;
-                    const product = productCatalog[id];
-                    if (!product) return;
-
-                    const modalTitle = document.getElementById('product-modal-title');
-                    if (modalTitle) modalTitle.textContent = 'Edit Product';
-
-                    currentModalProductId = id; // Track for change detection
-
-                    openProductModal(); // Inject section container first (ensures notice textarea exists)
-
-                    const idInput = document.getElementById('product-id-input');
-                    if (idInput) idInput.value = id;
-
-                    document.getElementById('new-prod-name').value = product.name || '';
-                    document.getElementById('new-prod-subtitle').value = product.subtitle || '';
-                    document.getElementById('new-prod-desc').value = product.description || '';
-                    document.getElementById('new-prod-inci').value = product.inci || '';
-                    if (document.getElementById('new-prod-notice')) document.getElementById('new-prod-notice').value = product.notice || '';
-                    if (document.getElementById('new-prod-story-url')) document.getElementById('new-prod-story-url').value = product.storyUrl || '';
-
-                    if (imagePathInput) {
-                        const paths = product.images && Array.isArray(product.images) && product.images.length > 0
-                            ? product.images
-                            : (product.image ? [product.image] : []);
-                        imagePathInput.value = paths.join('\n');
-                        renderImagePreviews();
-                    }
-
-                    if (sizesContainer) sizesContainer.innerHTML = '';
-                    if (product.sizes && Array.isArray(product.sizes)) {
-                        product.sizes.forEach(size => addSizeInputRow(size));
-                    }
-
-                    const perfContainer = document.getElementById('new-prod-performance-container');
-                    if (perfContainer) perfContainer.innerHTML = '';
-                    if (product.performance && Array.isArray(product.performance)) {
-                        product.performance.forEach(m => addPerformanceMetricRow(m));
-                    }
-
-                    // Render Batch History in tabbed modal
-                    const historyTabBtn = document.getElementById('aem-history-tab-btn');
-                    const historyContainer = document.getElementById('batch-history-container');
-                    if (historyTabBtn && historyContainer) {
-                        if (product.batchHistory && product.batchHistory.length > 0) {
-                            historyTabBtn.style.display = '';
-                            const sortedHistory = [...product.batchHistory].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                            historyContainer.innerHTML = `
+                `,e.appendChild(g);const ne=g.querySelector(".admin-save-prod-btn"),Ee=g.querySelectorAll("input"),W=()=>{let $=!1;if(A.sizes&&A.sizes.length>0)g.querySelectorAll(".price-inputs-container > div").forEach((E,Te)=>{const Oe=E.querySelector(".admin-size-price-input"),Ke=E.querySelector(".admin-size-original-price-input"),He=E.querySelector(".admin-size-stock-check"),Re=E.querySelector(".admin-size-batch-input"),Lt=E.querySelector(".admin-size-expiry-input"),it=A.sizes[Te];parseFloat(Oe.value).toFixed(2)!==parseFloat(it.price).toFixed(2)&&($=!0);const _e=Ke.value?parseFloat(Ke.value).toFixed(2):null,Ge=it.originalPrice?parseFloat(it.originalPrice).toFixed(2):null;_e!==Ge&&($=!0),He.checked!==(it.outOfStock===!0)&&($=!0);const tt=E.querySelector(".admin-size-formula-input");(Re.value||"")!==(it.batchNumber||"")&&($=!0),(Lt.value||"")!==(it.expiryDate||"")&&($=!0),tt&&(tt.value||"")!==(it.formulaVersion||"")&&($=!0)});else{const ge=g.querySelector(".admin-price-input"),E=g.querySelector(".admin-single-stock-check");ge&&parseFloat(ge.value).toFixed(2)!==parseFloat(A.price).toFixed(2)&&($=!0),E&&E.checked!==(A.outOfStock===!0)&&($=!0)}ne.disabled=!$};Ee.forEach($=>{$.addEventListener("input",W),$.addEventListener("change",W)})}),document.querySelectorAll(".admin-edit-prod-btn").forEach(H=>{H.addEventListener("click",A=>{const h=A.currentTarget.dataset.id,g=x[h];if(!g)return;const ae=document.getElementById("product-modal-title");ae&&(ae.textContent="Edit Product"),Ie=h,et();const pe=document.getElementById("product-id-input");if(pe&&(pe.value=h),document.getElementById("new-prod-name").value=g.name||"",document.getElementById("new-prod-subtitle").value=g.subtitle||"",document.getElementById("new-prod-desc").value=g.description||"",document.getElementById("new-prod-inci").value=g.inci||"",document.getElementById("new-prod-notice")&&(document.getElementById("new-prod-notice").value=g.notice||""),document.getElementById("new-prod-story-url")&&(document.getElementById("new-prod-story-url").value=g.storyUrl||""),we){const W=g.images&&Array.isArray(g.images)&&g.images.length>0?g.images:g.image?[g.image]:[];we.value=W.join(`
+`),bt()}ye&&(ye.innerHTML=""),g.sizes&&Array.isArray(g.sizes)&&g.sizes.forEach(W=>Vt(W));const ue=document.getElementById("new-prod-performance-container");ue&&(ue.innerHTML=""),g.performance&&Array.isArray(g.performance)&&g.performance.forEach(W=>Tt(W));const ne=document.getElementById("aem-history-tab-btn"),Ee=document.getElementById("batch-history-container");if(ne&&Ee)if(g.batchHistory&&g.batchHistory.length>0){ne.style.display="";const W=[...g.batchHistory].sort(($,ge)=>new Date(ge.timestamp)-new Date($.timestamp));Ee.innerHTML=`
                                 <table style="width: 100%; border-collapse: collapse; font-family: var(--font-sans); font-size: 0.85rem; text-align: left;">
                                     <thead>
                                         <tr style="border-bottom: 2px solid #eee; font-weight: 600; color: #333;">
@@ -6636,175 +1040,27 @@ The DODCH Team`;
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${sortedHistory.map((h, i) => `
+                                        ${W.map(($,ge)=>`
                                             <tr style="border-bottom: 1px solid #eee;">
-                                                <td style="padding: 8px; font-weight: 500;">${h.size}</td>
-                                                <td style="padding: 8px; color: var(--accent-gold-text); font-weight: 600;">${h.batchNumber}</td>
-                                                <td style="padding: 8px; color: #555;">${h.formulaVersion || '—'}</td>
-                                                <td style="padding: 8px; color: #666;">${h.expiryDate || 'N/A'}</td>
-                                                <td style="padding: 8px; color: #666; font-size: 0.8rem;">${new Date(h.timestamp).toLocaleString()}</td>
+                                                <td style="padding: 8px; font-weight: 500;">${$.size}</td>
+                                                <td style="padding: 8px; color: var(--accent-gold-text); font-weight: 600;">${$.batchNumber}</td>
+                                                <td style="padding: 8px; color: #555;">${$.formulaVersion||"\u2014"}</td>
+                                                <td style="padding: 8px; color: #666;">${$.expiryDate||"N/A"}</td>
+                                                <td style="padding: 8px; color: #666; font-size: 0.8rem;">${new Date($.timestamp).toLocaleString()}</td>
                                                 <td style="padding: 8px; position: relative;">
                                                     <button type="button" class="admin-btn-sm" style="padding: 2px 6px; font-size: 0.75rem;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">View INCI</button>
-                                                    <div style="display: none; position: absolute; right: 10px; top: 35px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; max-width: 300px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-size: 0.75rem; white-space: normal; color: #333;">${h.inci || 'None'}</div>
+                                                    <div style="display: none; position: absolute; right: 10px; top: 35px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; max-width: 300px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-size: 0.75rem; white-space: normal; color: #333;">${$.inci||"None"}</div>
                                                 </td>
                                             </tr>
-                                        `).join('')}
+                                        `).join("")}
                                     </tbody>
                                 </table>
-                            `;
-                        } else {
-                            historyTabBtn.style.display = 'none';
-                            historyContainer.innerHTML = '';
-                        }
-                    }
-
-                    checkModalChanges(); // Initial check to disable Save button
-                });
-            });
-
-            document.querySelectorAll('.admin-save-prod-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const id = e.currentTarget.dataset.id;
-                    const card = e.currentTarget.closest('.admin-product-card');
-                    const saveBtn = e.currentTarget;
-
-                    saveBtn.disabled = true;
-                    const originalHTML = saveBtn.innerHTML;
-                    saveBtn.innerHTML = 'Saving...';
-
-                    try {
-                        const sizeInputs = card.querySelectorAll('.admin-size-price-input');
-                        if (sizeInputs.length > 0) {
-                            productCatalog[id].batchHistory = productCatalog[id].batchHistory || [];
-                            sizeInputs.forEach(input => {
-                                const index = input.dataset.index;
-                                const newPrice = parseFloat(input.value).toFixed(2);
-                                const originalPriceInput = card.querySelector(`.admin-size-original-price-input[data-index="${index}"]`);
-                                const oldPrice = originalPriceInput ? (originalPriceInput.value ? parseFloat(originalPriceInput.value).toFixed(2) : null) : null;
-                                const stockCheck = card.querySelector(`.admin-size-stock-check[data-index="${index}"]`);
-                                const isOutOfStock = stockCheck ? stockCheck.checked : false;
-                                const batchInput = card.querySelector(`.admin-size-batch-input[data-index="${index}"]`);
-                                const newBatch = batchInput ? batchInput.value.trim() : '';
-                                const expiryInput = card.querySelector(`.admin-size-expiry-input[data-index="${index}"]`);
-                                const expiryDateVal = expiryInput ? expiryInput.value : '';
-                                const formulaInput = card.querySelector(`.admin-size-formula-input[data-index="${index}"]`);
-                                const formulaVersionVal = formulaInput ? formulaInput.value.trim() : '';
-
-                                const oldSize = productCatalog[id].sizes[index];
-                                const oldBatch = oldSize ? (oldSize.batchNumber || '') : '';
-
-                                if (newBatch && newBatch !== oldBatch) {
-                                    productCatalog[id].batchHistory.push({
-                                        size: oldSize.label,
-                                        batchNumber: newBatch,
-                                        expiryDate: expiryDateVal,
-                                        formulaVersion: formulaVersionVal,
-                                        timestamp: new Date().toISOString(),
-                                        inci: productCatalog[id].inci || ''
-                                    });
-                                }
-
-                                // Check for Back In Stock status change (from outOfStock=true to false)
-                                if (oldSize && oldSize.outOfStock && !isOutOfStock) {
-                                    triggerBackInStockNotifications(id, oldSize.label, productCatalog[id].name);
-                                }
-
-                                productCatalog[id].sizes[index].price = newPrice;
-                                productCatalog[id].sizes[index].originalPrice = oldPrice;
-                                productCatalog[id].sizes[index].outOfStock = isOutOfStock;
-                                productCatalog[id].sizes[index].batchNumber = newBatch;
-                                productCatalog[id].sizes[index].expiryDate = expiryDateVal;
-                                productCatalog[id].sizes[index].formulaVersion = formulaVersionVal;
-                            });
-                            const prices = productCatalog[id].sizes.map(s => parseFloat(s.price));
-                            productCatalog[id].price = Math.min(...prices).toFixed(2);
-                        } else {
-                            const priceInput = card.querySelector('.admin-price-input');
-                            const stockCheck = card.querySelector('.admin-single-stock-check');
-                            const wasOOS = productCatalog[id].outOfStock === true;
-                            
-                            if (priceInput) {
-                                productCatalog[id].price = parseFloat(priceInput.value).toFixed(2);
-                            }
-                            if (stockCheck) {
-                                const isOOS = stockCheck.checked;
-                                if (wasOOS && !isOOS) {
-                                    triggerBackInStockNotifications(id, 'Standard', productCatalog[id].name);
-                                }
-                                productCatalog[id].outOfStock = isOOS;
-                            }
-                        }
-                        const cleanedData = JSON.parse(JSON.stringify(productCatalog[id]));
-                        await setDoc(doc(db, "products", id), cleanedData, { merge: true });
-                        window.showToast("Product updated", "success");
-                        saveBtn.innerHTML = originalHTML;
-                        // Button stays disabled because data now matches catalog
-                    } catch (err) {
-                        console.error(err);
-                        window.showToast("Failed to update product", "error");
-                        saveBtn.innerHTML = originalHTML;
-                        saveBtn.disabled = false;
-                    }
-                });
-            });
-
-            document.querySelectorAll('.admin-delete-prod-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const id = e.currentTarget.dataset.id;
-                    const prodName = productCatalog[id]?.name || id;
-                    
-                    if (await window.showConfirm(`Are you sure you want to delete <strong>${prodName}</strong>? This action cannot be undone.`, "Delete Product")) {
-                        if (await window.showConfirm(`FINAL WARNING: This will permanently remove <strong>${prodName}</strong> from the shop and database. Are you absolutely certain?`, "Confirm Permanent Deletion")) {
-                            if (await window.showConfirm(`This is your last chance to cancel. Proceed with deleting <strong>${prodName}</strong>?`, "Last Chance")) {
-                        try {
-                            console.log("Deleting product:", id);
-                            if (defaultProductCatalog.hasOwnProperty(id)) {
-                                await setDoc(doc(db, "products", id), { deleted: true }, { merge: true });
-                                console.log("Soft delete executed (marked as deleted in DB)");
-                            } else {
-                                await deleteDoc(doc(db, "products", id));
-                                console.log("Hard delete executed (removed from DB)");
-                            }
-
-                            delete productCatalog[id];
-                            await syncCatalogLocally();
-                            loadAdminProducts();
-                            window.showToast("Product deleted successfully.", "success");
-                        } catch (error) {
-                            console.error("Error deleting product:", error);
-                            window.showToast("Failed to delete product.", "error");
-                        }
-                    }
-                        }
-                    }
-                });
-            });
-
-            // --- Batch History Button Handler ---
-            document.querySelectorAll('.admin-history-prod-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.currentTarget.dataset.id;
-                    const product = productCatalog[id];
-                    if (!product) return;
-
-                    const modal = document.getElementById('batch-history-modal');
-                    const titleEl = document.getElementById('history-modal-title');
-                    const bodyEl = document.getElementById('history-modal-body');
-                    if (!modal || !bodyEl) return;
-
-                    if (titleEl) titleEl.textContent = `Batch History — ${product.name}`;
-
-                    const history = product.batchHistory || [];
-                    if (history.length === 0) {
-                        bodyEl.innerHTML = `
+                            `}else ne.style.display="none",Ee.innerHTML="";ze()})}),document.querySelectorAll(".admin-save-prod-btn").forEach(H=>{H.addEventListener("click",async A=>{const h=A.currentTarget.dataset.id,g=A.currentTarget.closest(".admin-product-card"),ae=A.currentTarget;ae.disabled=!0;const pe=ae.innerHTML;ae.innerHTML="Saving...";try{const ue=g.querySelectorAll(".admin-size-price-input");if(ue.length>0){x[h].batchHistory=x[h].batchHistory||[],ue.forEach(W=>{const $=W.dataset.index,ge=parseFloat(W.value).toFixed(2),E=g.querySelector(`.admin-size-original-price-input[data-index="${$}"]`),Te=E&&E.value?parseFloat(E.value).toFixed(2):null,Oe=g.querySelector(`.admin-size-stock-check[data-index="${$}"]`),Ke=Oe?Oe.checked:!1,He=g.querySelector(`.admin-size-batch-input[data-index="${$}"]`),Re=He?He.value.trim():"",Lt=g.querySelector(`.admin-size-expiry-input[data-index="${$}"]`),it=Lt?Lt.value:"",_e=g.querySelector(`.admin-size-formula-input[data-index="${$}"]`),Ge=_e?_e.value.trim():"",tt=x[h].sizes[$],rt=tt&&tt.batchNumber||"";Re&&Re!==rt&&x[h].batchHistory.push({size:tt.label,batchNumber:Re,expiryDate:it,formulaVersion:Ge,timestamp:new Date().toISOString(),inci:x[h].inci||""}),tt&&tt.outOfStock&&!Ke&&ti(h,tt.label,x[h].name),x[h].sizes[$].price=ge,x[h].sizes[$].originalPrice=Te,x[h].sizes[$].outOfStock=Ke,x[h].sizes[$].batchNumber=Re,x[h].sizes[$].expiryDate=it,x[h].sizes[$].formulaVersion=Ge});const Ee=x[h].sizes.map(W=>parseFloat(W.price));x[h].price=Math.min(...Ee).toFixed(2)}else{const Ee=g.querySelector(".admin-price-input"),W=g.querySelector(".admin-single-stock-check"),$=x[h].outOfStock===!0;if(Ee&&(x[h].price=parseFloat(Ee.value).toFixed(2)),W){const ge=W.checked;$&&!ge&&ti(h,"Standard",x[h].name),x[h].outOfStock=ge}}const ne=JSON.parse(JSON.stringify(x[h]));await lt(Ae(se,"products",h),ne,{merge:!0}),window.showToast("Product updated","success"),ae.innerHTML=pe}catch(ue){console.error(ue),window.showToast("Failed to update product","error"),ae.innerHTML=pe,ae.disabled=!1}})}),document.querySelectorAll(".admin-delete-prod-btn").forEach(H=>{H.addEventListener("click",async A=>{const h=A.currentTarget.dataset.id,g=x[h]?.name||h;if(await window.showConfirm(`Are you sure you want to delete <strong>${g}</strong>? This action cannot be undone.`,"Delete Product")&&await window.showConfirm(`FINAL WARNING: This will permanently remove <strong>${g}</strong> from the shop and database. Are you absolutely certain?`,"Confirm Permanent Deletion")&&await window.showConfirm(`This is your last chance to cancel. Proceed with deleting <strong>${g}</strong>?`,"Last Chance"))try{console.log("Deleting product:",h),dt.hasOwnProperty(h)?(await lt(Ae(se,"products",h),{deleted:!0},{merge:!0}),console.log("Soft delete executed (marked as deleted in DB)")):(await Lo(Ae(se,"products",h)),console.log("Hard delete executed (removed from DB)")),delete x[h],await Eo(),Gt(),window.showToast("Product deleted successfully.","success")}catch(ae){console.error("Error deleting product:",ae),window.showToast("Failed to delete product.","error")}})}),document.querySelectorAll(".admin-history-prod-btn").forEach(H=>{H.addEventListener("click",A=>{const h=A.currentTarget.dataset.id,g=x[h];if(!g)return;const ae=document.getElementById("batch-history-modal"),pe=document.getElementById("history-modal-title"),ue=document.getElementById("history-modal-body");if(!ae||!ue)return;pe&&(pe.textContent=`Batch History \u2014 ${g.name}`);const ne=g.batchHistory||[];if(ne.length===0)ue.innerHTML=`
                             <div style="text-align:center; padding: 2rem; color: #999;">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin-bottom:0.75rem;opacity:0.4;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                 <p style="font-size:0.95rem;">No batch history recorded yet.</p>
                                 <p style="font-size:0.82rem;margin-top:0.25rem;">History is saved each time a batch number is changed.</p>
-                            </div>`;
-                    } else {
-                        const sorted = [...history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                        bodyEl.innerHTML = `
+                            </div>`;else{const Ee=[...ne].sort((W,$)=>new Date($.timestamp)-new Date(W.timestamp));ue.innerHTML=`
                             <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
                                 <thead>
                                     <tr style="border-bottom:2px solid #e8e0ff;">
@@ -6816,173 +1072,25 @@ The DODCH Team`;
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${sorted.map((h, i) => {
-                                        const rowId = `inci-row-${i}`;
-                                        return `
-                                        <tr style="border-bottom:1px solid #f0eeff;background:${i % 2 === 0 ? '#fff' : '#faf8ff'};">
-                                            <td style="padding:12px 8px;font-weight:500;color:#333;">${h.size || '—'}</td>
-                                            <td style="padding:12px 8px;color:#6c63ff;font-weight:700;letter-spacing:0.02em;">${h.batchNumber}</td>
-                                            <td style="padding:12px 8px;color:#555;">${h.expiryDate || 'N/A'}</td>
-                                            <td style="padding:12px 8px;color:#888;font-size:0.78rem;white-space:nowrap;">${new Date(h.timestamp).toLocaleString()}</td>
+                                    ${Ee.map((W,$)=>{const ge=`inci-row-${$}`;return`
+                                        <tr style="border-bottom:1px solid #f0eeff;background:${$%2===0?"#fff":"#faf8ff"};">
+                                            <td style="padding:12px 8px;font-weight:500;color:#333;">${W.size||"\u2014"}</td>
+                                            <td style="padding:12px 8px;color:#6c63ff;font-weight:700;letter-spacing:0.02em;">${W.batchNumber}</td>
+                                            <td style="padding:12px 8px;color:#555;">${W.expiryDate||"N/A"}</td>
+                                            <td style="padding:12px 8px;color:#888;font-size:0.78rem;white-space:nowrap;">${new Date(W.timestamp).toLocaleString()}</td>
                                             <td style="padding:12px 8px;">
-                                                <button type="button" style="background:#f0eeff;border:none;color:#6c63ff;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;cursor:pointer;" onclick="const d=document.getElementById('${rowId}');d.style.display=d.style.display==='none'?'table-row':'none';this.textContent=d.style.display==='table-row'?'Hide':'View';">View</button>
+                                                <button type="button" style="background:#f0eeff;border:none;color:#6c63ff;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;cursor:pointer;" onclick="const d=document.getElementById('${ge}');d.style.display=d.style.display==='none'?'table-row':'none';this.textContent=d.style.display==='table-row'?'Hide':'View';">View</button>
                                             </td>
                                         </tr>
-                                        <tr id="${rowId}" style="display:none;background:${i % 2 === 0 ? '#fff' : '#faf8ff'};border-bottom:1px solid #f0eeff;">
+                                        <tr id="${ge}" style="display:none;background:${$%2===0?"#fff":"#faf8ff"};border-bottom:1px solid #f0eeff;">
                                             <td colspan="5" style="padding:12px 16px;font-size:0.8rem;color:#555;line-height:1.5;background:#f9f9ff;">
                                                 <div style="font-weight:600;margin-bottom:6px;color:#6c63ff;">INCI Ingredients:</div>
-                                                <div style="white-space:normal;word-break:break-word;">${h.inci || 'No INCI recorded'}</div>
+                                                <div style="white-space:normal;word-break:break-word;">${W.inci||"No INCI recorded"}</div>
                                             </td>
                                         </tr>
-                                        `;
-                                    }).join('')}
+                                        `}).join("")}
                                 </tbody>
-                            </table>`;
-                    }
-
-                    modal.classList.add('active');
-                    document.body.style.overflow = 'hidden';
-                });
-            });
-
-            // Close batch history modal
-            const closeHistoryBtn = document.getElementById('close-history-modal-btn');
-            if (closeHistoryBtn) {
-                closeHistoryBtn.onclick = () => {
-                    const modal = document.getElementById('batch-history-modal');
-                    if (modal) modal.classList.remove('active');
-                    document.body.style.overflow = '';
-                };
-            }
-            const historyModalOverlay = document.getElementById('batch-history-modal');
-            if (historyModalOverlay) {
-                historyModalOverlay.addEventListener('click', (e) => {
-                    if (e.target === historyModalOverlay) {
-                        historyModalOverlay.classList.remove('active');
-                        document.body.style.overflow = '';
-                    }
-                });
-            }
-
-            document.querySelectorAll('.admin-move-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const id = e.currentTarget.dataset.id;
-                    const direction = e.currentTarget.classList.contains('up') ? -1 : 1;
-                    const currentIndex = sortedEntries.findIndex(([pid]) => pid === id);
-                    const targetIndex = currentIndex + direction;
-
-                    if (targetIndex >= 0 && targetIndex < sortedEntries.length) {
-                        const batchPromises = [];
-
-                        sortedEntries.forEach(([pid, p], idx) => {
-                            let newIndex = idx;
-                            if (idx === currentIndex) newIndex = targetIndex;
-                            if (idx === targetIndex) newIndex = currentIndex;
-
-                            if ((p.orderIndex !== newIndex)) {
-                                p.orderIndex = newIndex;
-                                productCatalog[pid].orderIndex = newIndex; // Update local immediately
-                                batchPromises.push(updateDoc(doc(db, "products", pid), { orderIndex: newIndex }));
-                            }
-                        });
-
-                        try {
-                            await Promise.all(batchPromises);
-                            await syncCatalogLocally();
-                            loadAdminProducts(); // Re-render admin list
-                            initShopPage(); // Re-render shop page if visible
-                        } catch (err) {
-                            console.error("Error reordering:", err);
-                            window.showToast("Failed to reorder products.", "error");
-                        }
-                    }
-                });
-            });
-        };
-        window.refreshAdminProducts = loadAdminProducts;
-
-        const loadRevenueChart = async () => {
-            const ctx = document.getElementById('revenueChart');
-            if (!ctx) return;
-
-            try {
-                const q = query(collection(db, "orders"), orderBy("timestamp", "asc"));
-                const querySnapshot = await getDocs(q);
-
-                const revenueByDate = {};
-                let totalRevenue = 0;
-                let totalOrdersCount = 0;
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                const validStatuses = ['Confirmed', 'In Delivery', 'Delivered', 'Local Order'];
-
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    totalOrdersCount++;
-                    if (data.timestamp && data.status && validStatuses.includes(data.status)) {
-                        // Exclude shipping fee from revenue (Use subtotal if available, otherwise calculate it)
-                        let orderRevenue = data.subtotal || (data.total ? (data.total - (data.shippingFee || 0)) : 0);
-
-                        // Deduct value of refunded items
-                        if (data.items) {
-                            data.items.forEach(item => {
-                                if (item.refunded === true || item.refunded === 'true') {
-                                    const itemPrice = parseFloat(item.price) || 0;
-                                    orderRevenue -= itemPrice * (item.quantity || 1);
-                                }
-                            });
-                        }
-
-                        totalRevenue += orderRevenue;
-
-                        const date = new Date(data.timestamp.seconds * 1000);
-                        if (date >= thirtyDaysAgo) {
-                            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                            revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + orderRevenue;
-                        }
-                    }
-                });
-                const totalRevEl = document.getElementById('total-revenue-display');
-                if (totalRevEl) totalRevEl.textContent = `${totalRevenue.toFixed(2)} TND`;
-                const totalOrdersEl = document.getElementById('total-orders-display');
-                if (totalOrdersEl) totalOrdersEl.textContent = totalOrdersCount.toLocaleString();
-
-                const labels = Object.keys(revenueByDate);
-                const data = Object.values(revenueByDate);
-
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Revenue (TND)',
-                            data: data,
-                            borderColor: '#D4AF37',
-                            backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.05)' } },
-                            x: { grid: { display: false } }
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error("Error loading revenue chart:", error);
-            }
-        };
-
-    };
-    initAdminPage();
-    const initQuickView = () => {
-        const qvModalHTML = `
+                            </table>`}ae.classList.add("active"),document.body.style.overflow="hidden"})});const k=document.getElementById("close-history-modal-btn");k&&(k.onclick=()=>{const H=document.getElementById("batch-history-modal");H&&H.classList.remove("active"),document.body.style.overflow=""});const B=document.getElementById("batch-history-modal");B&&B.addEventListener("click",H=>{H.target===B&&(B.classList.remove("active"),document.body.style.overflow="")}),document.querySelectorAll(".admin-move-btn").forEach(H=>{H.addEventListener("click",async A=>{const h=A.currentTarget.dataset.id,g=A.currentTarget.classList.contains("up")?-1:1,ae=m.findIndex(([ue])=>ue===h),pe=ae+g;if(pe>=0&&pe<m.length){const ue=[];m.forEach(([ne,Ee],W)=>{let $=W;W===ae&&($=pe),W===pe&&($=ae),Ee.orderIndex!==$&&(Ee.orderIndex=$,x[ne].orderIndex=$,ue.push(at(Ae(se,"products",ne),{orderIndex:$})))});try{await Promise.all(ue),await Eo(),Gt(),Xe()}catch(ne){console.error("Error reordering:",ne),window.showToast("Failed to reorder products.","error")}}})})};window.refreshAdminProducts=Gt;const Wo=async()=>{const m=document.getElementById("revenueChart");if(m)try{const k=Ye(Ne(se,"orders"),io("timestamp","asc")),B=await nt(k),H={};let A=0,h=0;const g=new Date;g.setDate(g.getDate()-30);const ae=["Confirmed","In Delivery","Delivered","Local Order"];B.forEach(W=>{const $=W.data();if(h++,$.timestamp&&$.status&&ae.includes($.status)){let ge=$.subtotal||($.total?$.total-($.shippingFee||0):0);$.items&&$.items.forEach(Te=>{if(Te.refunded===!0||Te.refunded==="true"){const Oe=parseFloat(Te.price)||0;ge-=Oe*(Te.quantity||1)}}),A+=ge;const E=new Date($.timestamp.seconds*1e3);if(E>=g){const Te=E.toLocaleDateString("en-US",{month:"short",day:"numeric"});H[Te]=(H[Te]||0)+ge}}});const pe=document.getElementById("total-revenue-display");pe&&(pe.textContent=`${A.toFixed(2)} TND`);const ue=document.getElementById("total-orders-display");ue&&(ue.textContent=h.toLocaleString());const ne=Object.keys(H),Ee=Object.values(H);new Chart(m,{type:"line",data:{labels:ne,datasets:[{label:"Revenue (TND)",data:Ee,borderColor:"#D4AF37",backgroundColor:"rgba(212, 175, 55, 0.1)",borderWidth:2,fill:!0,tension:.4}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1}},scales:{y:{beginAtZero:!0,grid:{color:"rgba(0, 0, 0, 0.05)"}},x:{grid:{display:!1}}}}})}catch(k){console.error("Error loading revenue chart:",k)}}})(),(()=>{document.getElementById("qv-modal")||document.body.insertAdjacentHTML("beforeend",`
             <div id="qv-modal" class="qv-modal-overlay">
 
                 <div class="qv-modal-content">
@@ -7024,894 +1132,78 @@ The DODCH Team`;
                     </div>
                 </div>
             </div>
-        `;
-
-        if (!document.getElementById('qv-modal')) {
-            document.body.insertAdjacentHTML('beforeend', qvModalHTML);
-        }
-
-        const modal = document.getElementById('qv-modal');
-        const closeBtn = document.getElementById('qv-close-btn');
-        const qvImage = document.getElementById('qv-image');
-        const qvTitle = document.getElementById('qv-title');
-        const qvPrice = document.getElementById('qv-price');
-        const qvDesc = document.getElementById('qv-desc');
-        const qvAddToCart = document.getElementById('qv-add-to-cart');
-        const qvLearnMore = document.getElementById('qv-learn-more');
-        const qvExpandPage = document.getElementById('qv-expand-page');
-
-        let currentProduct = {};
-        document.body.addEventListener('click', (e) => {
-            if (e.target.classList.contains('quick-view-btn')) {
-                window.triggerHaptic('quickview');
-                const btn = e.target;
-                e.preventDefault();
-                e.stopPropagation();
-
-                const id = btn.dataset.id;
-                const product = productCatalog[id];
-
-                if (product && product.isPermanentlyUnavailable) {
-                    window.showToast('This product is no longer available.', 'error');
-                    return;
-                }
-
-                const title = product ? product.name : btn.dataset.title;
-                const price = product ? product.price : btn.dataset.price;
-                const desc = product ? product.description : btn.dataset.desc;
-                const style = product ? product.style : btn.dataset.style;
-                const productImages = product ? getProductImages(product) : [btn.dataset.img];
-                const qvPrimaryImage = productImages[0] || '';
-
-                currentProduct = { id, title, price, img: qvPrimaryImage, desc };
-                document.body.style.overflow = 'hidden';
-
-                qvImage.src = qvPrimaryImage;
-                qvImage.style = style || '';
-                qvTitle.textContent = title;
-                qvDesc.textContent = desc;
-
-                const qvThumbnails = document.getElementById('qv-thumbnails');
-                if (qvThumbnails) {
-                    qvThumbnails.innerHTML = '';
-                    productImages.forEach((imageSrc, index) => {
-                        const thumbBtn = document.createElement('button');
-                        thumbBtn.type = 'button';
-                        thumbBtn.className = 'qv-thumbnail-btn' + (index === 0 ? ' active' : '');
-                        thumbBtn.innerHTML = `<img src="${imageSrc}" alt="Thumbnail ${index + 1}">`;
-                        thumbBtn.addEventListener('click', () => {
-                            qvImage.src = imageSrc;
-                            const qs = qvImage.parentElement.querySelector('.qv-tinted-shadow');
-                            if (qs) qs.style.backgroundImage = `url('${imageSrc}')`;
-
-                            qvThumbnails.querySelectorAll('.qv-thumbnail-btn').forEach(b => b.classList.remove('active'));
-                            thumbBtn.classList.add('active');
-                        });
-                        qvThumbnails.appendChild(thumbBtn);
-                    });
-                }
-
-                if (qvLearnMore) {
-                    const hasStory = hasStandaloneStoryPage(product);
-                    qvLearnMore.textContent = hasStory ? 'View Story Page' : '';
-                    qvLearnMore.href = hasStory ? product.storyUrl : '#';
-                    qvLearnMore.style.display = hasStory ? 'inline-block' : 'none';
-                    if (qvExpandPage) {
-                        qvExpandPage.href = `product.html?id=${id}`;
-                        const expandSVG = `
+        `);const i=document.getElementById("qv-modal"),e=document.getElementById("qv-close-btn"),o=document.getElementById("qv-image"),s=document.getElementById("qv-title"),r=document.getElementById("qv-price"),R=document.getElementById("qv-desc"),v=document.getElementById("qv-add-to-cart"),b=document.getElementById("qv-learn-more"),y=document.getElementById("qv-expand-page");let S={};document.body.addEventListener("click",z=>{if(z.target.classList.contains("quick-view-btn")){window.triggerHaptic("quickview");const j=z.target;z.preventDefault(),z.stopPropagation();const Z=j.dataset.id,q=x[Z];if(q&&q.isPermanentlyUnavailable){window.showToast("This product is no longer available.","error");return}const V=q?q.name:j.dataset.title,f=q?q.price:j.dataset.price,T=q?q.description:j.dataset.desc,re=q?q.style:j.dataset.style,xe=q?Co(q):[j.dataset.img],me=xe[0]||"";S={id:Z,title:V,price:f,img:me,desc:T},document.body.style.overflow="hidden",o.src=me,o.style=re||"",s.textContent=V,R.textContent=T;const oe=document.getElementById("qv-thumbnails");if(oe&&(oe.innerHTML="",xe.forEach((Q,de)=>{const P=document.createElement("button");P.type="button",P.className="qv-thumbnail-btn"+(de===0?" active":""),P.innerHTML=`<img src="${Q}" alt="Thumbnail ${de+1}">`,P.addEventListener("click",()=>{o.src=Q;const C=o.parentElement.querySelector(".qv-tinted-shadow");C&&(C.style.backgroundImage=`url('${Q}')`),oe.querySelectorAll(".qv-thumbnail-btn").forEach(ee=>ee.classList.remove("active")),P.classList.add("active")}),oe.appendChild(P)})),b){const Q=Uo(q);if(b.textContent=Q?"View Story Page":"",b.href=Q?q.storyUrl:"#",b.style.display=Q?"inline-block":"none",y){y.href=`product.html?id=${Z}`;const de=`
                             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="expand-svg">
                                 <g class="arrow-tr"><polyline points="15 3 21 3 21 9"></polyline><line x1="21" y1="3" x2="14" y2="10"></line></g>
                                 <g class="arrow-bl"><polyline points="9 21 3 21 3 15"></polyline><line x1="3" y1="21" x2="10" y2="14"></line></g>
                                 <g class="arrow-br"><polyline points="21 15 21 21 15 21"></polyline><line x1="21" y1="21" x2="14" y2="14"></line></g>
                                 <g class="arrow-tl"><polyline points="3 9 3 3 9 3"></polyline><line x1="3" y1="3" x2="10" y2="10"></line></g>
                             </svg>
-                        `;
-                        if (hasStory) {
-                            qvExpandPage.classList.remove('pill-button');
-                            qvExpandPage.innerHTML = expandSVG;
-                            qvExpandPage.title = "Open Product Page";
-                        } else {
-                            qvExpandPage.classList.add('pill-button');
-                            qvExpandPage.innerHTML = `View Full Product Page ${expandSVG}`;
-                            qvExpandPage.removeAttribute('title');
-                        }
-                    }
-                }
-                const sizeOptionsContainer = modal.querySelector('.size-options');
-                const sizeSelector = modal.querySelector('.size-selector');
-                sizeOptionsContainer.innerHTML = ''; // Clear previous
-
-                const updateQuickViewATC = (sizeObj) => {
-                    let notifyBtn = document.getElementById('qv-back-in-stock-notify-btn');
-                    if (notifyBtn) notifyBtn.remove();
-
-                    const isActuallyOOS = product.sizes && product.sizes.length > 0
-                        ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                        : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                    
-                    const isOOS = isActuallyOOS || (sizeObj && (sizeObj.outOfStock === true || String(sizeObj.outOfStock).toLowerCase() === 'true'));
-
-                    if (isOOS) {
-                        qvAddToCart.style.display = 'none';
-                        notifyBtn = document.createElement('button');
-                        notifyBtn.id = 'qv-back-in-stock-notify-btn';
-                        notifyBtn.className = 'qv-notify-btn';
-
-                        const qvSizeLabel = sizeObj ? sizeObj.label : 'Default';
-                        // Check localStorage — if already subscribed, show persisted state
-                        if (isNotifySubscribed(id, qvSizeLabel)) {
-                            applySubscribedState(notifyBtn);
-                        } else {
-                            notifyBtn.innerHTML = `
+                        `;Q?(y.classList.remove("pill-button"),y.innerHTML=de,y.title="Open Product Page"):(y.classList.add("pill-button"),y.innerHTML=`View Full Product Page ${de}`,y.removeAttribute("title"))}}const ve=i.querySelector(".size-options"),be=i.querySelector(".size-selector");ve.innerHTML="";const ke=Q=>{let de=document.getElementById("qv-back-in-stock-notify-btn");if(de&&de.remove(),(q.sizes&&q.sizes.length>0?q.sizes.every(ee=>ee.outOfStock===!0||String(ee.outOfStock).toLowerCase()==="true"):q.outOfStock===!0||String(q.outOfStock).toLowerCase()==="true")||Q&&(Q.outOfStock===!0||String(Q.outOfStock).toLowerCase()==="true")){v.style.display="none",de=document.createElement("button"),de.id="qv-back-in-stock-notify-btn",de.className="qv-notify-btn";const ee=Q?Q.label:"Default";Ao(Z,ee)?no(de):de.innerHTML=`
                                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                 </svg>
                                 Notify Me When Back in Stock
-                            `;
-                        }
-
-                        qvAddToCart.before(notifyBtn);
-                        
-                        notifyBtn.addEventListener('click', async () => {
-                            if (notifyBtn.disabled) return;
-                            window.triggerHaptic('medium');
-                            notifyBtn.classList.add('loading');
-                            notifyBtn.disabled = true;
-                            await handleBackInStockSubscription(id, qvSizeLabel, notifyBtn);
-                            notifyBtn.classList.remove('loading');
-                            if (!notifyBtn.classList.contains('subscribed')) notifyBtn.disabled = false;
-                        });
-                    } else {
-                        // In Stock state — clear any stale notify subscription so button resets for next OOS cycle
-                        const qvSizeLabelInStock = sizeObj ? sizeObj.label : 'Default';
-                        try { localStorage.removeItem(getNotifyStorageKey(id, qvSizeLabelInStock)); } catch(e) {}
-                        qvAddToCart.style.display = 'flex';
-                        qvAddToCart.disabled = false;
-                        const cartIcon = '<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';
-                        qvAddToCart.querySelector('span').innerHTML = cartIcon + "Add to Cart";
-                        qvAddToCart.style.backgroundColor = "";
-                        qvAddToCart.style.cursor = "pointer";
-                    }
-                };
-
-                if (product && product.sizes && product.sizes.length > 0) {
-                    sizeSelector.style.display = 'block';
-                    const sortedSizes = product.sizes.map((s, i) => ({ ...s, i })).sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-                    const firstInStock = sortedSizes.find(s => !s.outOfStock);
-                    const minIndex = firstInStock ? firstInStock.i : sortedSizes[0].i;
-
-                    product.sizes.forEach((sizeObj, index) => {
-                        const btn = document.createElement('button');
-                        btn.className = 'size-btn';
-
-                        if (index === minIndex) {
-                            btn.classList.add('active'); // Default to lowest
-                        }
-                        btn.dataset.size = sizeObj.label;
-                        btn.dataset.price = sizeObj.price;
-                        btn.textContent = sizeObj.label;
-
-                        btn.addEventListener('click', () => {
-                            if (btn.classList.contains('active')) return;
-                            window.triggerHaptic('light');
-                            sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
-
-                            const animTargets = [qvPrice].filter(Boolean);
-                            animTargets.forEach(el => el.classList.add('text-switch-anim', 'text-switch-blur'));
-
-                            setTimeout(() => {
-                                const isActuallyOOS = product.sizes && product.sizes.length > 0
-                                    ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                                    : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                                const isOOS = isActuallyOOS || sizeObj.outOfStock;
-                                const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
-
-                                if (sizeObj.originalPrice) {
-                                    qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${sizeObj.originalPrice} TND</span> ${sizeObj.price} TND ${outOfStockLabel}`;
-                                } else {
-                                    qvPrice.innerHTML = `${sizeObj.price} TND ${outOfStockLabel}`;
-                                }
-
-                                updateQuickViewATC(sizeObj);
-                                animTargets.forEach(el => el.classList.remove('text-switch-blur', 'text-switch-anim'));
-                            }, 250);
-                        });
-
-                        if (sizeObj.outOfStock) {
-                            btn.style.textDecoration = "line-through";
-                            btn.style.opacity = "0.6";
-                        }
-
-                        sizeOptionsContainer.appendChild(btn);
-                    });
-                    const initialSize = product.sizes[minIndex];
-                    const isActuallyOOS = product.sizes && product.sizes.length > 0
-                        ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                        : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                    const isOOS = isActuallyOOS || initialSize.outOfStock;
-                    const outOfStockLabel = isOOS ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
-
-                    if (initialSize.originalPrice) {
-                        qvPrice.innerHTML = `<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${initialSize.originalPrice} TND</span> ${initialSize.price} TND ${outOfStockLabel}`;
-                    } else {
-                        qvPrice.innerHTML = `${initialSize.price} TND ${outOfStockLabel}`;
-                    }
-                    updateQuickViewATC(initialSize);
-                } else {
-                    sizeSelector.style.display = 'none';
-                    const isActuallyOOS = (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-                    const outOfStockLabel = isActuallyOOS ? `<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>` : '';
-                    qvPrice.innerHTML = `${price} TND ${outOfStockLabel}`;
-                    updateQuickViewATC(null);
-                }
-
-                modal.classList.add('active');
-            }
-        });
-
-        const closeModal = () => {
-            window.triggerHaptic('light');
-            document.body.style.overflow = '';
-            modal.classList.remove('active');
-            const qvNotify = document.getElementById('qv-back-in-stock-notify-btn');
-            if (qvNotify) qvNotify.remove();
-        };
-        if (closeBtn) closeBtn.addEventListener('click', closeModal);
-        if (modal) modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-
-        if (qvAddToCart) {
-            qvAddToCart.addEventListener('click', () => {
-                window.triggerHaptic('medium');
-                const activeSizeBtn = modal.querySelector('.size-btn.active');
-                const size = activeSizeBtn.dataset.size;
-                const price = activeSizeBtn.dataset.price;
-
-                const newItemId = `${currentProduct.title}-${size}`;
-                const existingItem = cart.find(item => item.id === newItemId);
-
-                if (existingItem) {
-                    existingItem.quantity++;
-                } else {
-                    cart.push({
-                        id: newItemId,
-                        productId: currentProduct.id, // Pass ID for server verification
-                        name: currentProduct.title,
-                        size: size,
-                        price: `${price} TND`,
-                        image: currentProduct.img,
-                        quantity: 1
-                    });
-                }
-
-                updateCartUI();
-                closeModal();
-                openCart();
-            });
-        }
-    };
-
-    initQuickView();
-    const loadRelatedProducts = () => {
-        const productDetail = document.querySelector('.product-detail-container');
-        const foamHero = document.querySelector('.foam-hero');
-        const homeHero = document.getElementById('hero');
-        const silkHero = document.getElementById('hero-silk');
-        const serumPage = document.querySelector('.serum-page');
-
-        if (!productDetail && !foamHero && !homeHero && !silkHero && !serumPage) return;
-        let container = document.getElementById('related-products-container');
-        if (!container) {
-            container = document.createElement('section');
-            container.id = 'related-products-container';
-            container.classList.add('section-padding', 'bg-white');
-
-            if (productDetail) {
-                productDetail.after(container);
-            } else if (foamHero || silkHero || serumPage) {
-                const main = document.querySelector('main');
-                if (main) main.appendChild(container);
-            } else if (homeHero) {
-                const contactSection = document.getElementById('contact');
-                const main = document.querySelector('main');
-                if (contactSection && main.contains(contactSection)) {
-                    main.insertBefore(container, contactSection);
-                } else if (main) {
-                    main.appendChild(container);
-                }
-            }
-        }
-        const urlParams = new URLSearchParams(window.location.search);
-        let currentId = urlParams.get('id');
-        if (foamHero) {
-            currentId = 'foaming-cleanser';
-        } else if (silkHero) {
-            currentId = 'silk-therapy-mask';
-        } else if (serumPage) {
-            currentId = 'advanced-ha-serum';
-        }
-        if (!currentId || !productCatalog[currentId]) {
-            currentId = 'glass-glow-shampoo';
-        }
-        const currentProduct = productCatalog[currentId];
-        const allProductIds = Object.keys(productCatalog);
-
-        const getProductType = (id, prod) => {
-            const lowerId = id.toLowerCase();
-            const lowerName = (prod && prod.name) ? prod.name.toLowerCase() : '';
-            const lowerSubtitle = (prod && prod.subtitle) ? prod.subtitle.toLowerCase() : '';
-            const lowerCategory = (prod && prod.category) ? prod.category.toLowerCase() : '';
-
-            // Hair Keywords (Matching 'hair-care' sidebar section)
-            if (lowerCategory.includes('hair') || lowerId.includes('shampoo') || lowerId.includes('mask') || lowerId.includes('hair') || lowerId.includes('silk') ||
-                lowerName.includes('shampoo') || lowerName.includes('mask') || lowerName.includes('hair') ||
-                lowerSubtitle.includes('hair') || lowerSubtitle.includes('scalp')) return 'hair-care';
-
-            // Face Keywords (Matching 'skin-care' sidebar section)
-            if (lowerCategory.includes('face') || lowerCategory.includes('skin') || lowerId.includes('foam') || lowerId.includes('serum') || lowerId.includes('face') || lowerId.includes('cleanser') || lowerId.includes('mellow') ||
-                lowerName.includes('serum') || lowerName.includes('cleanser') || lowerName.includes('face') || lowerName.includes('mellow') ||
-                lowerSubtitle.includes('face') || lowerSubtitle.includes('skin')) return 'skin-care';
-
-            if (lowerCategory.includes('set') || lowerCategory.includes('bundle') || lowerId.includes('set') || lowerName.includes('set')) return 'sets';
-
-            return 'general';
-        };
-
-        const currentType = getProductType(currentId, currentProduct);
-        const allRelated = allProductIds.filter(id => id !== currentId && productCatalog[id] && !productCatalog[id].isPermanentlyUnavailable);
-
-        // STRICT filtering: Only find products of the EXACT same type
-        let relatedIds = allRelated.filter(id => getProductType(id, productCatalog[id]) === currentType);
-
-        // Shuffle and limit to 4
-        relatedIds.sort(() => 0.5 - Math.random());
-        relatedIds = relatedIds.slice(0, 4);
-
-        if (relatedIds.length === 0) {
-            if (container) container.style.display = 'none';
-            return;
-        } else {
-            if (container) container.style.display = 'block';
-        }
-
-        let productsHtml = '';
-        relatedIds.forEach(id => {
-            const product = productCatalog[id];
-            if (!product) return;
-            const primaryImg = getProductPrimaryImage(product);
-            let displayPrice = product.price;
-            let originalPriceDisplay = '';
-            let hasDiscount = false;
-            let discountPercentage = 0;
-
-            if (product.sizes && product.sizes.length > 0) {
-                const prices = product.sizes.map(s => parseFloat(s.price)).filter(p => !isNaN(p));
-                if (prices.length > 0) {
-                    const basePriceIndex = product.sizes.findIndex(s => parseFloat(s.price) === Math.min(...prices));
-                    const baseSize = product.sizes[basePriceIndex] || product.sizes[0];
-                    displayPrice = parseFloat(baseSize.price).toFixed(2);
-
-                    if (baseSize.originalPrice && parseFloat(baseSize.originalPrice) > parseFloat(baseSize.price)) {
-                        hasDiscount = true;
-                        discountPercentage = Math.round(((parseFloat(baseSize.originalPrice) - parseFloat(baseSize.price)) / parseFloat(baseSize.originalPrice)) * 100);
-                        originalPriceDisplay = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(baseSize.originalPrice).toFixed(2)} TND</span>`;
-                    }
-                }
-            }
-
-            const isActuallyOOS = product.sizes && product.sizes.length > 0
-                ? product.sizes.every(s => s.outOfStock === true || String(s.outOfStock).toLowerCase() === 'true')
-                : (product.outOfStock === true || String(product.outOfStock).toLowerCase() === 'true');
-
-            let badgeHTML = '';
-            if (product.isPermanentlyUnavailable) {
-                badgeHTML = '<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>';
-            } else if (isActuallyOOS) {
-                badgeHTML = '<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>';
-            } else if (hasDiscount && discountPercentage > 0) {
-                badgeHTML = `<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${discountPercentage}%</span>`;
-            }
-
-            let priceHTML = '';
-            if (displayPrice) {
-                priceHTML = `${originalPriceDisplay}<span style="color: ${hasDiscount ? 'var(--accent-gold-text)' : 'inherit'}; font-weight: ${hasDiscount ? '700' : '500'};">${displayPrice} TND</span>`;
-            } else {
-                priceHTML = `<span class="price-shimmer"></span>`;
-            }
-
-            productsHtml += `
-                <div class="product-card reveal" ${isActuallyOOS ? 'style="opacity: 0.8;"' : ''} data-product-id="${id}">
-                    <a href="product.html?id=${id}">
-                        <div class="tinted-shadow" style="background-image: url('${primaryImg || 'https://via.placeholder.com/300'}');"></div>
+                            `,v.before(de),de.addEventListener("click",async()=>{de.disabled||(window.triggerHaptic("medium"),de.classList.add("loading"),de.disabled=!0,await so(Z,ee,de),de.classList.remove("loading"),de.classList.contains("subscribed")||(de.disabled=!1))})}else{const ee=Q?Q.label:"Default";try{localStorage.removeItem(Kt(Z,ee))}catch{}v.style.display="flex",v.disabled=!1;const F='<img src="free-add-to-cart-icon-3046-thumb.png" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle; filter: brightness(0) invert(1);">';v.querySelector("span").innerHTML=F+"Add to Cart",v.style.backgroundColor="",v.style.cursor="pointer"}};if(q&&q.sizes&&q.sizes.length>0){be.style.display="block";const Q=q.sizes.map((fe,he)=>({...fe,i:he})).sort((fe,he)=>parseFloat(fe.price)-parseFloat(he.price)),de=Q.find(fe=>!fe.outOfStock),P=de?de.i:Q[0].i;q.sizes.forEach((fe,he)=>{const $e=document.createElement("button");$e.className="size-btn",he===P&&$e.classList.add("active"),$e.dataset.size=fe.label,$e.dataset.price=fe.price,$e.textContent=fe.label,$e.addEventListener("click",()=>{if($e.classList.contains("active"))return;window.triggerHaptic("light"),ve.querySelectorAll(".size-btn").forEach(we=>we.classList.remove("active")),$e.classList.add("active");const ye=[r].filter(Boolean);ye.forEach(we=>we.classList.add("text-switch-anim","text-switch-blur")),setTimeout(()=>{const ze=(q.sizes&&q.sizes.length>0?q.sizes.every(Ve=>Ve.outOfStock===!0||String(Ve.outOfStock).toLowerCase()==="true"):q.outOfStock===!0||String(q.outOfStock).toLowerCase()==="true")||fe.outOfStock?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";fe.originalPrice?r.innerHTML=`<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${fe.originalPrice} TND</span> ${fe.price} TND ${ze}`:r.innerHTML=`${fe.price} TND ${ze}`,ke(fe),ye.forEach(Ve=>Ve.classList.remove("text-switch-blur","text-switch-anim"))},250)}),fe.outOfStock&&($e.style.textDecoration="line-through",$e.style.opacity="0.6"),ve.appendChild($e)});const C=q.sizes[P],Se=(q.sizes&&q.sizes.length>0?q.sizes.every(fe=>fe.outOfStock===!0||String(fe.outOfStock).toLowerCase()==="true"):q.outOfStock===!0||String(q.outOfStock).toLowerCase()==="true")||C.outOfStock?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";C.originalPrice?r.innerHTML=`<span style="text-decoration: line-through; color: #bbb; margin-right: 8px; font-size: 0.8em;">${C.originalPrice} TND</span> ${C.price} TND ${Se}`:r.innerHTML=`${C.price} TND ${Se}`,ke(C)}else{be.style.display="none";const de=q.outOfStock===!0||String(q.outOfStock).toLowerCase()==="true"?'<span style="color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-weight: 700; display: inline-flex; align-items: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; line-height: 1; vertical-align: middle;">Out of Stock</span>':"";r.innerHTML=`${f} TND ${de}`,ke(null)}i.classList.add("active")}});const L=()=>{window.triggerHaptic("light"),document.body.style.overflow="",i.classList.remove("active");const z=document.getElementById("qv-back-in-stock-notify-btn");z&&z.remove()};e&&e.addEventListener("click",L),i&&i.addEventListener("click",z=>{z.target===i&&L()}),v&&v.addEventListener("click",()=>{window.triggerHaptic("medium");const z=i.querySelector(".size-btn.active"),j=z.dataset.size,Z=z.dataset.price,q=`${S.title}-${j}`,V=Be.find(f=>f.id===q);V?V.quantity++:Be.push({id:q,productId:S.id,name:S.title,size:j,price:`${Z} TND`,image:S.img,quantity:1}),ft(),L(),Ut()})})(),(()=>{const d=document.querySelector(".product-detail-container"),i=document.querySelector(".foam-hero"),e=document.getElementById("hero"),o=document.getElementById("hero-silk"),s=document.querySelector(".serum-page");if(!d&&!i&&!e&&!o&&!s)return;let r=document.getElementById("related-products-container");if(!r){if(r=document.createElement("section"),r.id="related-products-container",r.classList.add("section-padding","bg-white"),d)d.after(r);else if(i||o||s){const V=document.querySelector("main");V&&V.appendChild(r)}else if(e){const V=document.getElementById("contact"),f=document.querySelector("main");V&&f.contains(V)?f.insertBefore(r,V):f&&f.appendChild(r)}}let v=new URLSearchParams(window.location.search).get("id");i?v="foaming-cleanser":o?v="silk-therapy-mask":s&&(v="advanced-ha-serum"),(!v||!x[v])&&(v="glass-glow-shampoo");const b=x[v],y=Object.keys(x),S=(V,f)=>{const T=V.toLowerCase(),re=f&&f.name?f.name.toLowerCase():"",xe=f&&f.subtitle?f.subtitle.toLowerCase():"",me=f&&f.category?f.category.toLowerCase():"";return me.includes("hair")||T.includes("shampoo")||T.includes("mask")||T.includes("hair")||T.includes("silk")||re.includes("shampoo")||re.includes("mask")||re.includes("hair")||xe.includes("hair")||xe.includes("scalp")?"hair-care":me.includes("face")||me.includes("skin")||T.includes("foam")||T.includes("serum")||T.includes("face")||T.includes("cleanser")||T.includes("mellow")||re.includes("serum")||re.includes("cleanser")||re.includes("face")||re.includes("mellow")||xe.includes("face")||xe.includes("skin")?"skin-care":me.includes("set")||me.includes("bundle")||T.includes("set")||re.includes("set")?"sets":"general"},L=S(v,b);let j=y.filter(V=>V!==v&&x[V]&&!x[V].isPermanentlyUnavailable).filter(V=>S(V,x[V])===L);if(j.sort(()=>.5-Math.random()),j=j.slice(0,4),j.length===0){r&&(r.style.display="none");return}else r&&(r.style.display="block");let Z="";j.forEach(V=>{const f=x[V];if(!f)return;const T=St(f);let re=f.price,xe="",me=!1,oe=0;if(f.sizes&&f.sizes.length>0){const Q=f.sizes.map(de=>parseFloat(de.price)).filter(de=>!isNaN(de));if(Q.length>0){const de=f.sizes.findIndex(C=>parseFloat(C.price)===Math.min(...Q)),P=f.sizes[de]||f.sizes[0];re=parseFloat(P.price).toFixed(2),P.originalPrice&&parseFloat(P.originalPrice)>parseFloat(P.price)&&(me=!0,oe=Math.round((parseFloat(P.originalPrice)-parseFloat(P.price))/parseFloat(P.originalPrice)*100),xe=`<span style="text-decoration: line-through; opacity: 0.5; font-size: 0.85em; margin-right: 6px;">${parseFloat(P.originalPrice).toFixed(2)} TND</span>`)}}const ve=f.sizes&&f.sizes.length>0?f.sizes.every(Q=>Q.outOfStock===!0||String(Q.outOfStock).toLowerCase()==="true"):f.outOfStock===!0||String(f.outOfStock).toLowerCase()==="true";let be="";f.isPermanentlyUnavailable?be='<span class="product-badge unavailable" style="position: absolute; top: 10px; left: 10px; background: #555; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">UNAVAILABLE</span>':ve?be='<span class="product-badge out-of-stock" style="position: absolute; top: 10px; left: 10px; background: #A8A8A8; color: white; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">OUT OF STOCK</span>':me&&oe>0&&(be=`<span class="product-badge sale" style="position: absolute; top: 10px; left: 10px; background: var(--text-charcoal); color: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); line-height: 1; opacity: 0; filter: blur(5px); transform: translateY(5px); animation: blurFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;">-${oe}%</span>`);let ke="";re?ke=`${xe}<span style="color: ${me?"var(--accent-gold-text)":"inherit"}; font-weight: ${me?"700":"500"};">${re} TND</span>`:ke='<span class="price-shimmer"></span>',Z+=`
+                <div class="product-card reveal" ${ve?'style="opacity: 0.8;"':""} data-product-id="${V}">
+                    <a href="product.html?id=${V}">
+                        <div class="tinted-shadow" style="background-image: url('${T||"https://via.placeholder.com/300"}');"></div>
                         <div class="product-image-wrapper">
-                            ${badgeHTML}
-                            <img loading="lazy" src="${primaryImg || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}; view-transition-name: prod-img-${id};">
+                            ${be}
+                            <img loading="lazy" src="${T||"https://via.placeholder.com/300"}" alt="${f.name}" class="product-card-img" style="${f.style||""}; view-transition-name: prod-img-${V};">
                             <button class="quick-view-btn" 
-                                data-id="${id}" 
-                                data-title="${product.name}" 
-                                data-price="${displayPrice || ''}" 
-                                data-img="${primaryImg || 'https://via.placeholder.com/300'}" 
-                                data-style="${product.style || ''}"
-                                data-desc="${product.description || ''}">
+                                data-id="${V}" 
+                                data-title="${f.name}" 
+                                data-price="${re||""}" 
+                                data-img="${T||"https://via.placeholder.com/300"}" 
+                                data-style="${f.style||""}"
+                                data-desc="${f.description||""}">
                                 Quick View
                             </button>
                         </div>
                         <div class="product-card-info">
-                            <h3 class="product-card-title" data-name-target="${id}" style="view-transition-name: prod-title-${id};">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
-                            <p class="product-card-price" data-price-target="${id}">${priceHTML}</p>
+                            <h3 class="product-card-title" data-name-target="${V}" style="view-transition-name: prod-title-${V};">${Pe?f.name:'<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
+                            <p class="product-card-price" data-price-target="${V}">${ke}</p>
                         </div>
                     </a>
                 </div>
-            `;
-        });
-
-        const sectionTitle = homeHero ? "Explore Our Collection" : "You May Also Like";
-
-        container.innerHTML = `
+            `});const q=e?"Explore Our Collection":"You May Also Like";r.innerHTML=`
             <div class="container">
-                <h2 class="section-title reveal active">${sectionTitle}</h2>
+                <h2 class="section-title reveal active">${q}</h2>
                 <div class="related-products-wrapper">
                     <button class="scroll-arrow prev" id="rel-prev"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
                     <div class="shop-grid related-products-grid">
-                        ${productsHtml}
+                        ${Z}
                     </div>
                     <button class="scroll-arrow next" id="rel-next"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
                 </div>
             </div>
-        `;
-
-        setTimeout(() => {
-            const grid = container.querySelector('.related-products-grid');
-            const btnPrev = container.querySelector('#rel-prev');
-            const btnNext = container.querySelector('#rel-next');
-
-            if (grid && btnPrev && btnNext) {
-                const wrapper = container.querySelector('.related-products-wrapper');
-
-                btnPrev.addEventListener('click', () => {
-                    grid.scrollBy({ left: -300, behavior: 'smooth' });
-                });
-                btnNext.addEventListener('click', () => {
-                    grid.scrollBy({ left: 300, behavior: 'smooth' });
-                });
-
-                const updateScrollUI = () => {
-                    const isScrollable = grid.scrollWidth > grid.clientWidth + 10;
-                    
-                    if (!isScrollable) {
-                        btnPrev.style.display = 'none';
-                        btnNext.style.display = 'none';
-                        if (wrapper) {
-                            wrapper.classList.remove('show-left-fade', 'show-right-fade');
-                        }
-                        return;
-                    }
-
-                    btnPrev.style.display = 'flex';
-                    btnNext.style.display = 'flex';
-
-                    const isStart = grid.scrollLeft <= 10;
-                    const isEnd = grid.scrollLeft + grid.clientWidth >= grid.scrollWidth - 10;
-
-                    btnPrev.style.opacity = isStart ? '0.3' : '1';
-                    btnPrev.style.pointerEvents = isStart ? 'none' : 'auto';
-                    btnNext.style.opacity = isEnd ? '0.3' : '1';
-                    btnNext.style.pointerEvents = isEnd ? 'none' : 'auto';
-
-                    if (wrapper) {
-                        wrapper.classList.toggle('show-left-fade', !isStart);
-                        wrapper.classList.toggle('show-right-fade', !isEnd);
-                    }
-                };
-
-                grid.addEventListener('scroll', updateScrollUI);
-                const resizeObserver = new ResizeObserver(updateScrollUI);
-                resizeObserver.observe(grid);
-                updateScrollUI();
-            }
-        }, 0);
-        setTimeout(() => {
-            const newReveals = container.querySelectorAll('.reveal');
-            newReveals.forEach(el => el.classList.add('active'));
-        }, 100);
-    };
-
-    loadRelatedProducts();
-    const searchToggleBtn = document.getElementById('search-toggle-btn');
-    const searchContainer = document.querySelector('.search-container');
-    const searchInput = document.getElementById('navbar-search-input');
-
-    if (searchToggleBtn && searchContainer && searchInput) {
-        let searchJustOpened = false;
-
-        searchToggleBtn.addEventListener('click', (e) => {
-            window.triggerHaptic('light');
-            e.preventDefault();
-            e.stopPropagation(); // Prevent the doc click listener from firing on this same event
-
-            if (!searchContainer.classList.contains('active')) {
-                searchJustOpened = true;
-                searchContainer.classList.add('active');
-                navbar.classList.add('search-active');
-                searchInput.focus();
-                setTimeout(() => { searchJustOpened = false; }, 300);
-            }
-        });
-        // The halo now catches all outside clicks via its pointer-events: auto rule,
-        // so we completely delete the fragile document.addEventListener('click') here.
-
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                searchContainer.classList.remove('active');
-                navbar.classList.remove('search-active');
-            }
-        });
-    }
-    window.addEventListener('popstate', () => {
-        if (typeof closeSidebar === 'function') closeSidebar();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname === '') {
-            initShopPage(true);
-            if (typeof updateSidebarActiveState === 'function') updateSidebarActiveState();
-            if (typeof initBreadcrumbs === 'function') initBreadcrumbs();
-            if (typeof updateMainPageSEO === 'function') updateMainPageSEO();
-            if (window.dodchSEO) window.dodchSEO.runSEO();
-        }
-    });
-    const silkTabs = document.querySelectorAll('.hair-type-btn');
-    const silkPanels = document.querySelectorAll('.hair-panel');
-
-    if (silkTabs.length > 0 && silkPanels.length > 0) {
-        silkTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                silkTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                const targetType = tab.dataset.type;
-                const targetPanel = document.getElementById(`panel-${targetType}`);
-                silkPanels.forEach(panel => {
-                    panel.classList.remove('active');
-                });
-
-                if (targetPanel) {
-                    void targetPanel.offsetWidth;
-                    targetPanel.classList.add('active');
-                }
-            });
-        });
-    }
-
-});
-const initTrackingPage = () => {
-    const trackingInfoContainer = document.getElementById('tracking-info');
-    if (!trackingInfoContainer) return;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const orderId = urlParams.get('orderId');
-    const trackingNumber = urlParams.get('trackingNumber');
-    const orderRef = urlParams.get('orderRef');
-
-    const orderIdEl = document.getElementById('tracking-order-id');
-    const trackingNumberEl = document.getElementById('tracking-number');
-
-    if (orderId && trackingNumber && orderIdEl && trackingNumberEl) {
-        orderIdEl.textContent = orderRef ? orderRef : orderId.slice(0, 8).toUpperCase();
-        trackingNumberEl.textContent = trackingNumber;
-    } else {
-        trackingInfoContainer.innerHTML = `
+        `,setTimeout(()=>{const V=r.querySelector(".related-products-grid"),f=r.querySelector("#rel-prev"),T=r.querySelector("#rel-next");if(V&&f&&T){const re=r.querySelector(".related-products-wrapper");f.addEventListener("click",()=>{V.scrollBy({left:-300,behavior:"smooth"})}),T.addEventListener("click",()=>{V.scrollBy({left:300,behavior:"smooth"})});const xe=()=>{if(!(V.scrollWidth>V.clientWidth+10)){f.style.display="none",T.style.display="none",re&&re.classList.remove("show-left-fade","show-right-fade");return}f.style.display="flex",T.style.display="flex";const ve=V.scrollLeft<=10,be=V.scrollLeft+V.clientWidth>=V.scrollWidth-10;f.style.opacity=ve?"0.3":"1",f.style.pointerEvents=ve?"none":"auto",T.style.opacity=be?"0.3":"1",T.style.pointerEvents=be?"none":"auto",re&&(re.classList.toggle("show-left-fade",!ve),re.classList.toggle("show-right-fade",!be))};V.addEventListener("scroll",xe),new ResizeObserver(xe).observe(V),xe()}},0),setTimeout(()=>{r.querySelectorAll(".reveal").forEach(f=>f.classList.add("active"))},100)})();const Vo=document.getElementById("search-toggle-btn"),Zt=document.querySelector(".search-container"),wo=document.getElementById("navbar-search-input");if(Vo&&Zt&&wo){let d=!1;Vo.addEventListener("click",i=>{window.triggerHaptic("light"),i.preventDefault(),i.stopPropagation(),Zt.classList.contains("active")||(d=!0,Zt.classList.add("active"),t.classList.add("search-active"),wo.focus(),setTimeout(()=>{d=!1},300))}),wo.addEventListener("keypress",i=>{i.key==="Enter"&&(Zt.classList.remove("active"),t.classList.remove("search-active"))})}window.addEventListener("popstate",()=>{typeof ce=="function"&&ce(),window.scrollTo({top:0,behavior:"smooth"}),(window.location.pathname.includes("index.html")||window.location.pathname==="/"||window.location.pathname==="")&&(Xe(!0),typeof Ft=="function"&&Ft(),typeof It=="function"&&It(),typeof updateMainPageSEO=="function"&&updateMainPageSEO(),window.dodchSEO&&window.dodchSEO.runSEO())});const xo=document.querySelectorAll(".hair-type-btn"),Go=document.querySelectorAll(".hair-panel");xo.length>0&&Go.length>0&&xo.forEach(d=>{d.addEventListener("click",()=>{xo.forEach(o=>o.classList.remove("active")),d.classList.add("active");const i=d.dataset.type,e=document.getElementById(`panel-${i}`);Go.forEach(o=>{o.classList.remove("active")}),e&&(e.offsetWidth,e.classList.add("active"))})})});const Hi=()=>{const c=document.getElementById("tracking-info");if(!c)return;const t=new URLSearchParams(window.location.search),n=t.get("orderId"),p=t.get("trackingNumber"),a=t.get("orderRef"),l=document.getElementById("tracking-order-id"),D=document.getElementById("tracking-number");n&&p&&l&&D?(l.textContent=a||n.slice(0,8).toUpperCase(),D.textContent=p):c.innerHTML=`
             <div class="account-header">
                 <h1>Tracking Not Found</h1>
                 <p>The provided order or tracking number is invalid. Please check the link and try again.</p>
                 <a href="my-account.html" class="cta-button" style="margin-top: 2rem; display: inline-block; width: auto;">Go to My Account</a>
             </div>
-        `;
-    }
-};
-
-initTrackingPage();
-const initVideoBackground = () => {
-    const candidates = document.querySelectorAll('h1, h2, h3, h4, p, span, .section-title, .subtitle');
-    candidates.forEach(el => {
-        const text = el.textContent.toLowerCase();
-        if ((text.includes('elixir') || text.includes('elexir')) && text.includes('seeds')) {
-            if (el.closest('.admin-container') || el.closest('.admin-section')) return;
-
-            const section = el.closest('section') || el.closest('.hero') || el.closest('.banner');
-            if (section && !section.querySelector('.bg-video-layer') && !section.classList.contains('admin-section')) {
-                if (window.getComputedStyle(section).position === 'static') {
-                    section.style.position = 'relative';
-                }
-                section.style.overflow = 'hidden';
-
-                const video = document.createElement('video');
-                video.src = '6d3b1f62-a267-49f9-a4fd-5d47d471b174.mp4';
-                video.autoplay = false;
-                video.loop = false;
-                video.muted = true;
-                video.playsInline = true;
-                video.className = 'bg-video-layer';
-
-                Object.assign(video.style, {
-                    position: 'absolute',
-                    top: '-15%',
-                    left: '0',
-                    width: '100%',
-                    height: '130%',
-                    objectFit: 'cover',
-                    zIndex: '0',
-                    opacity: '0',
-                    transition: 'opacity 1.5s ease',
-                    willChange: 'transform'
-                });
-
-                const overlay = document.createElement('div');
-                Object.assign(overlay.style, {
-                    position: 'absolute',
-                    top: '0',
-                    left: '0',
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    zIndex: '1',
-                    pointerEvents: 'none'
-                });
-                Array.from(section.children).forEach(child => {
-                    if (child !== video && child !== overlay) {
-                        child.style.position = 'relative';
-                        child.style.zIndex = '2';
-                    }
-                });
-                section.style.color = '#FFFFFF';
-                section.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, .section-title, .subtitle').forEach(textEl => {
-                    textEl.style.color = '#FFFFFF';
-                    textEl.style.textShadow = '0 2px 4px rgba(0,0,0,0.9), 0 8px 24px rgba(0,0,0,0.7)';
-                });
-
-                section.insertBefore(overlay, section.firstChild);
-                section.insertBefore(video, section.firstChild);
-                video.addEventListener('loadeddata', () => {
-                    video.style.opacity = '1';
-                });
-                const animateBlur = () => {
-                    if (!video.paused && !video.ended) {
-                        const progress = video.currentTime / video.duration || 0;
-                        video.style.filter = `blur(${progress * 2.5}px)`; // Max 8px blur
-                        requestAnimationFrame(animateBlur);
-                    }
-                };
-                video.addEventListener('play', () => requestAnimationFrame(animateBlur));
-                let videoScrollTicking = false;
-                window.addEventListener('scroll', () => {
-                    if (!videoScrollTicking) {
-                        window.requestAnimationFrame(() => {
-                            const rect = section.getBoundingClientRect();
-                            const windowHeight = window.innerHeight;
-                            if (rect.top < windowHeight && rect.bottom > 0) {
-                                const sectionCenter = rect.top + rect.height / 2;
-                                const screenCenter = windowHeight / 2;
-                                const diff = screenCenter - sectionCenter;
-                                video.style.transform = `translateY(${diff * 0.15}px)`;
-                            }
-                            videoScrollTicking = false;
-                        });
-                        videoScrollTicking = true;
-                    }
-                }, { passive: true });
-                const observer = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            if (!video.ended) {
-                                video.play().catch(e => console.log("Autoplay prevented:", e));
-                            }
-                        } else {
-                            video.pause();
-                        }
-                    });
-                }, { threshold: 0.1 });
-
-                observer.observe(section);
-            }
-        }
-    });
-};
-setTimeout(initVideoBackground, 800);
-const listenForAdminNotifications = () => {
-    const adminBtn = document.getElementById('sidebar-admin-btn');
-    if (!adminBtn) return; // Don't run if not on a page with the admin button
-
-    const q = query(collection(db, "orders"), where("status", "in", ["Pending", "Confirmed"]));
-    onSnapshot(q, (snapshot) => {
-        const newOrderCount = snapshot.size;
-
-        let badge = adminBtn.querySelector('.notification-badge');
-        if (!badge) {
-            badge = document.createElement('span');
-            badge.className = 'notification-badge';
-            adminBtn.appendChild(badge);
-        }
-
-        if (newOrderCount > 0) {
-            badge.textContent = newOrderCount;
-            badge.classList.add('visible');
-        } else {
-            badge.classList.remove('visible');
-        }
-    }, (error) => {
-        console.error("Admin notification listener failed:", error);
-    });
-};
-
-const listenForUserNotifications = (userId) => {
-    // --- Listener 1: Order status updates ---
-    const ordersQ = query(collection(db, "orders"), where("userId", "==", userId), orderBy("timestamp", "desc"));
-    let isInitialLoad = true;
-
-    onSnapshot(ordersQ, (snapshot) => {
-        const hasUnseen = snapshot.docs.some(doc => doc.data().hasUnseenUpdate === true);
-
-        if (hasUnseen) {
-            document.body.classList.add('has-notification');
-        } else {
-            document.body.classList.remove('has-notification');
-        }
-        if (!isInitialLoad) {
-            snapshot.docChanges().forEach((change) => {
-                const data = change.doc.data();
-                if (change.type === "modified" && data.hasUnseenUpdate === true) {
-                    const orderRef = data.orderReference || change.doc.id.slice(0, 8).toUpperCase();
-                    window.showToast(`Order #${orderRef}: Status is now ${data.status}.`, 'info');
-                    if (data.status === 'Delivered') {
-                        console.log("Real-time delivery detected! Refreshing review prompt...");
-                        initGlobalReviewPrompt();
-                    }
-                }
-            });
-        }
-        isInitialLoad = false;
-    }, (error) => {
-        console.error("User notification listener failed:", error);
-    });
-
-    // --- Listener 2: DODCH / general notifications (replies, announcements, etc.) ---
-    const notifQ = query(
-        collection(db, "notifications"),
-        where("userId", "==", userId)
-    );
-    let notifInitialLoad = true;
-
-    onSnapshot(notifQ, (snapshot) => {
-        if (!notifInitialLoad) {
-            snapshot.docChanges().forEach(async (change) => {
-                if (change.type === "added") {
-                    const n = change.doc.data();
-                    // Only show toast for unseen notifications
-                    if (n.isSeen === true) return;
-
-                    const notifId = change.doc.id;
-                    const title = n.title || "New Notification";
-                    const message = n.message || "";
-                    const link = n.link || null;
-
-                    // Show a custom toast that navigates on click
-                    const toastEl = document.createElement('div');
-                    toastEl.style.cssText = `
+        `};Hi();const Mi=()=>{document.querySelectorAll("h1, h2, h3, h4, p, span, .section-title, .subtitle").forEach(t=>{const n=t.textContent.toLowerCase();if((n.includes("elixir")||n.includes("elexir"))&&n.includes("seeds")){if(t.closest(".admin-container")||t.closest(".admin-section"))return;const p=t.closest("section")||t.closest(".hero")||t.closest(".banner");if(p&&!p.querySelector(".bg-video-layer")&&!p.classList.contains("admin-section")){window.getComputedStyle(p).position==="static"&&(p.style.position="relative"),p.style.overflow="hidden";const a=document.createElement("video");a.src="6d3b1f62-a267-49f9-a4fd-5d47d471b174.mp4",a.autoplay=!1,a.loop=!1,a.muted=!0,a.playsInline=!0,a.className="bg-video-layer",Object.assign(a.style,{position:"absolute",top:"-15%",left:"0",width:"100%",height:"130%",objectFit:"cover",zIndex:"0",opacity:"0",transition:"opacity 1.5s ease",willChange:"transform"});const l=document.createElement("div");Object.assign(l.style,{position:"absolute",top:"0",left:"0",width:"100%",height:"100%",backgroundColor:"rgba(0, 0, 0, 0.6)",zIndex:"1",pointerEvents:"none"}),Array.from(p.children).forEach(M=>{M!==a&&M!==l&&(M.style.position="relative",M.style.zIndex="2")}),p.style.color="#FFFFFF",p.querySelectorAll("h1, h2, h3, h4, h5, h6, p, span, .section-title, .subtitle").forEach(M=>{M.style.color="#FFFFFF",M.style.textShadow="0 2px 4px rgba(0,0,0,0.9), 0 8px 24px rgba(0,0,0,0.7)"}),p.insertBefore(l,p.firstChild),p.insertBefore(a,p.firstChild),a.addEventListener("loadeddata",()=>{a.style.opacity="1"});const D=()=>{if(!a.paused&&!a.ended){const M=a.currentTime/a.duration||0;a.style.filter=`blur(${M*2.5}px)`,requestAnimationFrame(D)}};a.addEventListener("play",()=>requestAnimationFrame(D));let O=!1;window.addEventListener("scroll",()=>{O||(window.requestAnimationFrame(()=>{const M=p.getBoundingClientRect(),u=window.innerHeight;if(M.top<u&&M.bottom>0){const U=M.top+M.height/2,N=u/2-U;a.style.transform=`translateY(${N*.15}px)`}O=!1}),O=!0)},{passive:!0}),new IntersectionObserver(M=>{M.forEach(u=>{u.isIntersecting?a.ended||a.play().catch(U=>console.log("Autoplay prevented:",U)):a.pause()})},{threshold:.1}).observe(p)}}})};setTimeout(Mi,800);const Ri=()=>{const c=document.getElementById("sidebar-admin-btn");if(!c)return;const t=Ye(Ne(se,"orders"),ot("status","in",["Pending","Confirmed"]));Jt(t,n=>{const p=n.size;let a=c.querySelector(".notification-badge");a||(a=document.createElement("span"),a.className="notification-badge",c.appendChild(a)),p>0?(a.textContent=p,a.classList.add("visible")):a.classList.remove("visible")},n=>{console.error("Admin notification listener failed:",n)})},Oi=c=>{const t=Ye(Ne(se,"orders"),ot("userId","==",c),io("timestamp","desc"));let n=!0;Jt(t,l=>{l.docs.some(O=>O.data().hasUnseenUpdate===!0)?document.body.classList.add("has-notification"):document.body.classList.remove("has-notification"),n||l.docChanges().forEach(O=>{const te=O.doc.data();if(O.type==="modified"&&te.hasUnseenUpdate===!0){const M=te.orderReference||O.doc.id.slice(0,8).toUpperCase();window.showToast(`Order #${M}: Status is now ${te.status}.`,"info"),te.status==="Delivered"&&(console.log("Real-time delivery detected! Refreshing review prompt..."),Bo())}}),n=!1},l=>{console.error("User notification listener failed:",l)});const p=Ye(Ne(se,"notifications"),ot("userId","==",c));let a=!0;Jt(p,l=>{a||l.docChanges().forEach(async D=>{if(D.type==="added"){const O=D.doc.data();if(O.isSeen===!0)return;const te=D.doc.id,M=O.title||"New Notification",u=O.message||"",U=O.link||null,G=document.createElement("div");G.style.cssText=`
                         position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
                         background: linear-gradient(135deg, #18181B 0%, #27272A 100%);
                         color: #FDFBF7; padding: 1rem 1.4rem;
                         border-radius: 14px; border-left: 4px solid #D4AF37;
                         box-shadow: 0 8px 30px rgba(0,0,0,0.25);
                         z-index: 99999; max-width: 360px; width: calc(100% - 2rem);
-                        cursor: ${link ? 'pointer' : 'default'};
+                        cursor: ${U?"pointer":"default"};
                         display: flex; align-items: flex-start; gap: 12px;
                         animation: toastSlideIn 0.35s ease forwards;
                         font-family: var(--font-sans, sans-serif);
-                    `;
-                    toastEl.innerHTML = `
-                        <span style="font-size:1.4rem; flex-shrink:0;">✨</span>
+                    `,G.innerHTML=`
+                        <span style="font-size:1.4rem; flex-shrink:0;">\u2728</span>
                         <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:0.9rem; margin-bottom:3px; color:#FDFBF7;">${title}</div>
-                            <div style="font-size:0.82rem; color:#D1D5DB; line-height:1.45;">${message}</div>
-                            ${link ? `<div style="margin-top:6px; font-size:0.78rem; color:#D4AF37; font-weight:600;">Tap to view →</div>` : ''}
+                            <div style="font-weight:700; font-size:0.9rem; margin-bottom:3px; color:#FDFBF7;">${M}</div>
+                            <div style="font-size:0.82rem; color:#D1D5DB; line-height:1.45;">${u}</div>
+                            ${U?'<div style="margin-top:6px; font-size:0.78rem; color:#D4AF37; font-weight:600;">Tap to view \u2192</div>':""}
                         </div>
-                        <button style="background:none;border:none;color:#9CA3AF;font-size:1.2rem;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" onclick="this.parentElement.remove(); event.stopPropagation();">×</button>
-                    `;
-                    if (link) {
-                        toastEl.addEventListener('click', (e) => {
-                            if (e.target.tagName !== 'BUTTON') {
-                                window.location.href = link;
-                            }
-                        });
-                    }
-                    document.body.appendChild(toastEl);
-
-                    // Auto-dismiss after 8s
-                    setTimeout(() => { if (toastEl.parentNode) toastEl.remove(); }, 8000);
-
-                    // Mark as seen in Firestore
-                    try {
-                        await updateDoc(doc(db, "notifications", notifId), { isSeen: true });
-                    } catch (e) {
-                        console.warn("Could not mark notification as seen:", e);
-                    }
-                }
-            });
-        }
-        notifInitialLoad = false;
-    }, (error) => {
-        console.error("Notification listener error:", error);
-    });
-};
-
-if (window.location.pathname.includes('my-account.html')) {
-}
-const initProductReviews = () => {
-    const reviewsContainer = document.getElementById('product-reviews-container');
-    if (!reviewsContainer) return; // Not on a product page
-    const path = window.location.pathname;
-    let productId = null;
-    if (path.includes('glass-glow-shampoo.html')) productId = 'glass-glow-shampoo';
-    else if (path.includes('dodchmellow-pro-v.html')) productId = 'dodchmellow-pro-v';
-    else if (path.includes('face-foam.html')) productId = 'foaming-cleanser';
-    else if (path.includes('silk-mask.html')) productId = 'silk-therapy-mask';
-    else if (path.includes('face-serum.html')) productId = 'advanced-ha-serum';
-    
-    if (!productId && path.includes('product.html')) {
-        const urlParams = new URLSearchParams(window.location.search);
-        productId = urlParams.get('id');
-    }
-    
-    if (!productId) {
-        const buyBtn = document.querySelector('.buy-now-btn, .cta-button[data-id]');
-        if (buyBtn) productId = buyBtn.getAttribute('data-id');
-    }
-
-    if (!productId) return;
-
-    const reviewModal = document.getElementById('review-modal');
-    if (reviewModal && reviewModal.parentElement !== document.body) {
-        document.body.appendChild(reviewModal);
-    }
-    const reviewForm = document.getElementById('product-review-form');
-    const writeReviewBtn = document.getElementById('write-review-toggle-btn');
-    const closeReviewModal = document.getElementById('close-review-modal');
-    const imageInput = document.getElementById('review-images');
-    const imagePreviewContainer = document.getElementById('image-preview-container');
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('open_review') === 'true') {
-        const reviewsSection = document.getElementById('reviews');
-        if (reviewsSection) {
-            setTimeout(() => {
-                reviewsSection.scrollIntoView({ behavior: 'smooth' });
-            }, 800);
-        }
-    }
-
-
-    let userState = {
-        loggedIn: false,
-        eligible: false,
-        alreadyReviewed: false,
-        canEditAfterRefund: false,
-        orderId: null,
-        orderReference: null,
-        allOrderReferences: [],
-        user: null
-    };
-
-    const renderReviews = (reviews) => {
-        if (reviews.length === 0) {
-            reviewsContainer.innerHTML = '<p class="text-center" style="color: #666; font-style: italic;">No reviews yet. Be the first to share your experience!</p>';
-            return;
-        }
-
-        reviewsContainer.innerHTML = '';
-        reviews.forEach(review => {
-            const reviewEl = document.createElement('div');
-            reviewEl.id = `review-${review.id}`;
-            reviewEl.className = 'review-card-item content-fade visible';
-            reviewEl.style.cssText = `
+                        <button style="background:none;border:none;color:#9CA3AF;font-size:1.2rem;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" onclick="this.parentElement.remove(); event.stopPropagation();">\xD7</button>
+                    `,U&&G.addEventListener("click",N=>{N.target.tagName!=="BUTTON"&&(window.location.href=U)}),document.body.appendChild(G),setTimeout(()=>{G.parentNode&&G.remove()},8e3);try{await at(Ae(se,"notifications",te),{isSeen:!0})}catch(N){console.warn("Could not mark notification as seen:",N)}}}),a=!1},l=>{console.error("Notification listener error:",l)})};window.location.pathname.includes("my-account.html");const Zo=()=>{const c=document.getElementById("product-reviews-container");if(!c)return;const t=window.location.pathname;let n=null;if(t.includes("glass-glow-shampoo.html")?n="glass-glow-shampoo":t.includes("dodchmellow-pro-v.html")?n="dodchmellow-pro-v":t.includes("face-foam.html")?n="foaming-cleanser":t.includes("silk-mask.html")?n="silk-therapy-mask":t.includes("face-serum.html")&&(n="advanced-ha-serum"),!n&&t.includes("product.html")&&(n=new URLSearchParams(window.location.search).get("id")),!n){const X=document.querySelector(".buy-now-btn, .cta-button[data-id]");X&&(n=X.getAttribute("data-id"))}if(!n)return;const p=document.getElementById("review-modal");p&&p.parentElement!==document.body&&document.body.appendChild(p);const a=document.getElementById("product-review-form"),l=document.getElementById("write-review-toggle-btn"),D=document.getElementById("close-review-modal"),O=document.getElementById("review-images"),te=document.getElementById("image-preview-container");if(new URLSearchParams(window.location.search).get("open_review")==="true"){const X=document.getElementById("reviews");X&&setTimeout(()=>{X.scrollIntoView({behavior:"smooth"})},800)}let u={loggedIn:!1,eligible:!1,alreadyReviewed:!1,canEditAfterRefund:!1,orderId:null,orderReference:null,allOrderReferences:[],user:null};const U=X=>{if(X.length===0){c.innerHTML='<p class="text-center" style="color: #666; font-style: italic;">No reviews yet. Be the first to share your experience!</p>';return}c.innerHTML="",X.forEach(w=>{const I=document.createElement("div");I.id=`review-${w.id}`,I.className="review-card-item content-fade visible",I.style.cssText=`
                 padding: 1.5rem;
                 background: var(--card-white, #ffffff);
                 border: 1px solid rgba(0, 0, 0, 0.06);
@@ -7919,76 +1211,14 @@ const initProductReviews = () => {
                 margin-bottom: 1.25rem;
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
                 transition: transform 0.3s ease, box-shadow 0.3s ease;
-            `;
-            reviewEl.onmouseenter = () => {
-                reviewEl.style.transform = 'translateY(-2px)';
-                reviewEl.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.06)';
-            };
-            reviewEl.onmouseleave = () => {
-                reviewEl.style.transform = 'none';
-                reviewEl.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.03)';
-            };
-
-            const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#E4E4E7'}; font-size: 1.15rem; margin-right: 1px;">★</span>`).join('');
-            const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Just now';
-            const authorName = review.authorName || 'Verified Buyer';
-
-            const isAuthor = auth.currentUser && review.userId === auth.currentUser.uid;
-            const isAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_UID;
-
-            // Admin-only: show order reference info with sleek modern badge styling & copy button
-            let adminInfoHtml = '';
-            if (isAdmin) {
-                const refundedBadge = review.refunded ? '<span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;margin-left:4px;border:1px solid #FCA5A5;">Refunded</span>' : '';
-                const rawRefs = review.orderReferences && review.orderReferences.length > 0
-                    ? review.orderReferences.join(', ')
-                    : (review.orderReference || '');
-                const displayRefs = review.orderReferences && review.orderReferences.length > 0
-                    ? review.orderReferences.map(r => `#${r}`).join(', ')
-                    : (review.orderReference ? `#${review.orderReference}` : 'N/A');
-
-                adminInfoHtml = `
+            `,I.onmouseenter=()=>{I.style.transform="translateY(-2px)",I.style.boxShadow="0 8px 30px rgba(0, 0, 0, 0.06)"},I.onmouseleave=()=>{I.style.transform="none",I.style.boxShadow="0 4px 20px rgba(0, 0, 0, 0.03)"};const Y=Array(5).fill(0).map((Me,pt)=>`<span style="color: ${pt<w.rating?"#F5A623":"#E4E4E7"}; font-size: 1.15rem; margin-right: 1px;">\u2605</span>`).join(""),ce=w.createdAt?new Date(w.createdAt.seconds*1e3).toLocaleDateString(void 0,{year:"numeric",month:"short",day:"numeric"}):"Just now",J=w.authorName||"Verified Buyer",_=Qe.currentUser&&w.userId===Qe.currentUser.uid,ie=Qe.currentUser&&Qe.currentUser.uid===Xt;let Le="";if(ie){const Me=w.refunded?'<span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;margin-left:4px;border:1px solid #FCA5A5;">Refunded</span>':"",pt=w.orderReferences&&w.orderReferences.length>0?w.orderReferences.join(", "):w.orderReference||"";Le=`
                     <div style="padding: 0.4rem 0.8rem; background: #F3F4F6; border-radius: 12px; font-size: 0.75rem; color: #4B5563; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 8px; font-weight: 500;">
-                        <span style="font-size: 0.85rem;">🔑</span>
-                        <span>Order Ref: <strong style="color: #1F2937;">${displayRefs}</strong></span>
-                        ${rawRefs ? `<button onclick="window.copyOrderRefToClipboard('${rawRefs}', this)" title="Copy Order Reference" style="background: #FFFFFF; border: 1px solid #D1D5DB; color: #374151; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s ease;" onmouseenter="this.style.borderColor='#9CA3AF'" onmouseleave="this.style.borderColor='#D1D5DB'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>` : ''}
-                        ${refundedBadge}
+                        <span style="font-size: 0.85rem;">\u{1F511}</span>
+                        <span>Order Ref: <strong style="color: #1F2937;">${w.orderReferences&&w.orderReferences.length>0?w.orderReferences.map(zt=>`#${zt}`).join(", "):w.orderReference?`#${w.orderReference}`:"N/A"}</strong></span>
+                        ${pt?`<button onclick="window.copyOrderRefToClipboard('${pt}', this)" title="Copy Order Reference" style="background: #FFFFFF; border: 1px solid #D1D5DB; color: #374151; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s ease;" onmouseenter="this.style.borderColor='#9CA3AF'" onmouseleave="this.style.borderColor='#D1D5DB'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>`:""}
+                        ${Me}
                     </div>
-                `;
-            }
-
-            let deleteBtnHtml = '';
-            // Delete button ONLY for the author of the review
-            if (isAuthor) {
-                deleteBtnHtml = `<button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')" style="background:none;border:none;color:#EF4444;font-size:0.78rem;font-weight:500;cursor:pointer;padding:4px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Delete</button>`;
-            }
-
-            const batchHtml = review.batch ? `<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${review.batch}</span>` : '';
-
-            const initialLetter = (authorName || 'V').charAt(0).toUpperCase();
-            const avatarHtml = review.authorPhoto 
-                ? `<img src="${review.authorPhoto}" alt="${authorName}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #F3F4F6; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" />`
-                : `<div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #18181B 0%, #3F3F46 100%); color: #FFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; text-transform: uppercase; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">${initialLetter}</div>`;
-
-            const likesArray = review.likedBy || [];
-            const likesCount = review.likesCount || likesArray.length || 0;
-            const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
-            const isLikedByCurrentUser = currentUserId && likesArray.includes(currentUserId);
-            
-            const likeBtnStyle = isLikedByCurrentUser 
-                ? 'background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE;' 
-                : 'background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB;';
-            const thumbsColor = isLikedByCurrentUser ? '#4F46E5' : 'currentColor';
-            const thumbsFill = isLikedByCurrentUser ? '#4F46E5' : 'none';
-
-            // Render DODCH Official Reply if present (simple clean indented thread line)
-            let adminReplyDisplayHtml = '';
-            if (review.adminReply) {
-                const rText = typeof review.adminReply === 'object' ? (review.adminReply.text || '') : String(review.adminReply);
-                const rTimestamp = typeof review.adminReply === 'object' && review.adminReply.updatedAt ? review.adminReply.updatedAt : null;
-                const rDateStr = rTimestamp ? new Date(rTimestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
-                if (rText.trim()) {
-                    adminReplyDisplayHtml = `
+                `}let Ce="";_&&(Ce=`<button class="review-delete-btn" onclick="window.handleReviewDelete('${w.id}')" style="background:none;border:none;color:#EF4444;font-size:0.78rem;font-weight:500;cursor:pointer;padding:4px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Delete</button>`);const De=w.batch?`<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${w.batch}</span>`:"",Je=(J||"V").charAt(0).toUpperCase(),Ze=w.authorPhoto?`<img src="${w.authorPhoto}" alt="${J}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #F3F4F6; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" />`:`<div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #18181B 0%, #3F3F46 100%); color: #FFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; text-transform: uppercase; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">${Je}</div>`,qe=w.likedBy||[],dt=w.likesCount||qe.length||0,Ue=Qe.currentUser?Qe.currentUser.uid:null,Pe=Ue&&qe.includes(Ue),Xe=Pe?"background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE;":"background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB;",wt=Pe?"#4F46E5":"currentColor",Nt=Pe?"#4F46E5":"none";let Be="";if(w.adminReply){const Me=typeof w.adminReply=="object"?w.adminReply.text||"":String(w.adminReply),pt=typeof w.adminReply=="object"&&w.adminReply.updatedAt?w.adminReply.updatedAt:null,At=pt?new Date(pt).toLocaleDateString(void 0,{year:"numeric",month:"short",day:"numeric"}):"";Me.trim()&&(Be=`
                         <div class="dodch-reply-thread-wrap" style="margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;">
                             <div class="dodch-reply-card" style="padding: 0.9rem 1.1rem; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 12px; border-left: 3.5px solid #D4AF37; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
                                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
@@ -7996,795 +1226,79 @@ const initProductReviews = () => {
                                         <span style="background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%); color: #000; font-weight: 800; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Official</span>
                                         <strong style="color: #FDFBF7; font-size: 0.9rem; font-family: var(--font-sans);">DODCH Reply</strong>
                                     </div>
-                                    ${rDateStr ? `<span style="font-size: 0.74rem; color: #9CA3AF;">${rDateStr}</span>` : ''}
+                                    ${At?`<span style="font-size: 0.74rem; color: #9CA3AF;">${At}</span>`:""}
                                 </div>
-                                <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${rText}</p>
+                                <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${Me}</p>
                             </div>
                         </div>
-                    `;
-                }
-            }
-
-            // Admin-only controls to publish / edit / delete DODCH reply
-            let adminReplyControlHtml = '';
-            if (isAdmin) {
-                const hasReply = !!(review.adminReply && (typeof review.adminReply === 'object' ? review.adminReply.text : review.adminReply));
-                const currentReplyText = hasReply ? (typeof review.adminReply === 'object' ? review.adminReply.text : review.adminReply) : '';
-
-                adminReplyControlHtml = `
+                    `)}let ao="";if(ie){const Me=!!(w.adminReply&&(typeof w.adminReply=="object"?w.adminReply.text:w.adminReply)),pt=Me?typeof w.adminReply=="object"?w.adminReply.text:w.adminReply:"";ao=`
                     <div class="admin-reply-wrapper" style="margin-top: 0.75rem; width: 100%;">
-                        <button type="button" class="admin-btn-reply-toggle" onclick="window.toggleAdminReplyForm('${review.id}')" style="background: #27272A; color: #D4AF37; border: 1px solid #3F3F46; padding: 5px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        <button type="button" class="admin-btn-reply-toggle" onclick="window.toggleAdminReplyForm('${w.id}')" style="background: #27272A; color: #D4AF37; border: 1px solid #3F3F46; padding: 5px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                            <span>${hasReply ? 'Edit DODCH Reply' : '💬 Reply as DODCH'}</span>
+                            <span>${Me?"Edit DODCH Reply":"\u{1F4AC} Reply as DODCH"}</span>
                         </button>
-                        <div id="admin-reply-form-${review.id}" style="display: none; margin-top: 0.6rem; background: #27272A; padding: 1rem; border-radius: 12px; border: 1px solid #3F3F46;">
+                        <div id="admin-reply-form-${w.id}" style="display: none; margin-top: 0.6rem; background: #27272A; padding: 1rem; border-radius: 12px; border: 1px solid #3F3F46;">
                             <label style="display: block; color: #D4AF37; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem;">
                                 DODCH Official Reply
                             </label>
-                            <textarea id="admin-reply-input-${review.id}" class="modern-input" rows="3" placeholder="Write an official response as DODCH..." style="background: #18181B; color: #FFF; border-color: #3F3F46; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0.6rem;">${currentReplyText}</textarea>
+                            <textarea id="admin-reply-input-${w.id}" class="modern-input" rows="3" placeholder="Write an official response as DODCH..." style="background: #18181B; color: #FFF; border-color: #3F3F46; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0.6rem;">${pt}</textarea>
                             <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-                                ${hasReply ? `<button type="button" onclick="window.handleDeleteAdminReply('${review.id}')" style="background: #7F1D1D; color: #FCA5A5; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Delete Reply</button>` : ''}
-                                <button type="button" onclick="window.toggleAdminReplyForm('${review.id}')" style="background: transparent; color: #A1A1AA; border: 1px solid #52525B; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer;">Cancel</button>
-                                <button type="button" onclick="window.handleSaveAdminReply('${review.id}')" style="background: #D4AF37; color: #000; border: none; padding: 5px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">Publish DODCH Reply</button>
+                                ${Me?`<button type="button" onclick="window.handleDeleteAdminReply('${w.id}')" style="background: #7F1D1D; color: #FCA5A5; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Delete Reply</button>`:""}
+                                <button type="button" onclick="window.toggleAdminReplyForm('${w.id}')" style="background: transparent; color: #A1A1AA; border: 1px solid #52525B; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; cursor: pointer;">Cancel</button>
+                                <button type="button" onclick="window.handleSaveAdminReply('${w.id}')" style="background: #D4AF37; color: #000; border: none; padding: 5px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">Publish DODCH Reply</button>
                             </div>
                         </div>
                     </div>
-                `;
-            }
-
-            reviewEl.innerHTML = `
+                `}I.innerHTML=`
                 <div style="display: flex; gap: 16px; align-items: flex-start;">
-                    ${avatarHtml}
+                    ${Ze}
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 0.4rem;">
                             <div>
                                 <div style="font-weight: 700; font-size: 1rem; color: #18181B; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                    <span>${authorName}</span>
+                                    <span>${J}</span>
                                     <span style="background: #ECFDF5; color: #059669; padding: 3px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; border: 1px solid #A7F3D0; display: inline-flex; align-items: center; gap: 3px;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                         Verified Buyer
                                     </span>
-                                    ${batchHtml}
+                                    ${De}
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 0.6rem;">
-                                <div style="color: #9CA3AF; font-size: 0.82rem; font-weight: 400;">${date}</div>
-                                ${deleteBtnHtml}
+                                <div style="color: #9CA3AF; font-size: 0.82rem; font-weight: 400;">${ce}</div>
+                                ${Ce}
                             </div>
                         </div>
                         <div style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
-                            <div>${starsHtml}</div>
+                            <div>${Y}</div>
                         </div>
                         <div class="review-text-bubble" style="background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 4px 14px 14px 14px; padding: 0.9rem 1.1rem; margin-bottom: 0.85rem; color: #212529; font-size: 0.95rem; line-height: 1.65; word-break: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                            ${review.text}
+                            ${w.text}
                         </div>
                         
                         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid #F3F4F6;">
-                            <button onclick="window.handleReviewLike('${review.id}', this)" data-liked="${isLikedByCurrentUser ? 'true' : 'false'}" style="${likeBtnStyle} font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="${thumbsFill}" stroke="${thumbsColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-                                <span>Helpful (${likesCount})</span>
+                            <button onclick="window.handleReviewLike('${w.id}', this)" data-liked="${Pe?"true":"false"}" style="${Xe} font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="${Nt}" stroke="${wt}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                                <span>Helpful (${dt})</span>
                             </button>
-                            ${adminInfoHtml}
+                            ${Le}
                         </div>
-                        ${adminReplyDisplayHtml}
-                        ${adminReplyControlHtml}
+                        ${Be}
+                        ${ao}
                     </div>
                 </div>
-            `;
-
-            reviewsContainer.appendChild(reviewEl);
-        });
-    };
-    const fetchReviews = async () => {
-        try {
-            const q = query(collection(db, "product_reviews"), where("productId", "==", productId));
-            const querySnapshot = await getDocs(q);
-            let reviews = [];
-            querySnapshot.forEach((doc) => {
-                reviews.push({ id: doc.id, ...doc.data() });
-            });
-            reviews.sort((a, b) => {
-                const timeA = a.createdAt ? a.createdAt.seconds : 0;
-                const timeB = b.createdAt ? b.createdAt.seconds : 0;
-                return timeB - timeA;
-            });
-
-            // Bulk fetch private order references if user is Admin
-            if (auth.currentUser && auth.currentUser.uid === ADMIN_UID) {
-                const privatePromises = reviews.map(async (review) => {
-                    try {
-                        const privateDoc = await getDoc(doc(db, "product_reviews", review.id, "private_data", "info"));
-                        if (privateDoc.exists()) {
-                            const pData = privateDoc.data();
-                            review.orderReference = pData.orderReference;
-                            review.orderReferences = pData.orderReferences;
-                        }
-                    } catch (e) {
-                        console.warn("Failed to fetch private review data for admin", e);
-                    }
-                });
-                await Promise.all(privatePromises);
-            }
-
-            renderReviews(reviews);
-            updateDynamicRatings(reviews);
-
-            // Auto-scroll & highlight target review if opened from a reply notification
-            const urlParams = new URLSearchParams(window.location.search);
-            const targetReviewId = urlParams.get('reviewId');
-            if (targetReviewId) {
-                setTimeout(() => {
-                    const targetEl = document.getElementById(`review-${targetReviewId}`);
-                    if (targetEl) {
-                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        targetEl.classList.add('review-highlight-pulse');
-                        setTimeout(() => targetEl.classList.remove('review-highlight-pulse'), 3500);
-                    }
-                }, 500);
-            }
-        } catch (error) {
-            console.error("Error fetching reviews:", error);
-            reviewsContainer.innerHTML = '<p class="text-center" style="color: red;">Failed to load reviews.</p>';
-        }
-    };
-
-    const updateDynamicRatings = (reviews) => {
-        const ratingHeader = document.querySelector('.ratings-dynamic-header');
-        if (!ratingHeader) return;
-
-        const count = reviews.length;
-        const totalStars = reviews.reduce((acc, r) => acc + r.rating, 0);
-        const average = count > 0 ? (totalStars / count).toFixed(1) : 0;
-
-        const starsContainer = ratingHeader.querySelector('.stars-display');
-        const countDisplay = ratingHeader.querySelector('.count-display');
-
-        if (starsContainer) {
-            const starsHtml = Array(5).fill(0).map((_, i) =>
-                `<span style="color: ${i < Math.round(average) ? '#F5A623' : '#e0e0e0'};">★</span>`
-            ).join('');
-            starsContainer.innerHTML = starsHtml;
-        }
-
-        if (countDisplay) {
-            countDisplay.textContent = `(${average} / ${count} Reviews)`;
-        }
-
-        // Sync JSON-LD structured data for Google Search & Merchant Center
-        if (count > 0) {
-            const schemas = document.querySelectorAll('script[type="application/ld+json"]');
-            schemas.forEach(schema => {
-                try {
-                    let schemaData = JSON.parse(schema.textContent);
-                    if (schemaData['@type'] === 'Product') {
-                        schemaData.aggregateRating = {
-                            "@type": "AggregateRating",
-                            "ratingValue": String(average),
-                            "reviewCount": String(count)
-                        };
-                        schema.textContent = JSON.stringify(schemaData, null, 2);
-                    }
-                } catch (e) {}
-            });
-        }
-    };
-
-    fetchReviews();
-    const openModal = () => {
-        if (reviewModal) reviewModal.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Prevent scroll
-    };
-
-    const closeModal = () => {
-        if (reviewModal) reviewModal.classList.remove('active');
-        document.body.style.overflow = ''; // Restore scroll
-        if (reviewForm) reviewForm.reset();
-    };
-
-
-    if (writeReviewBtn) {
-        writeReviewBtn.addEventListener('click', () => {
-            if (!userState.loggedIn) {
-                window.showToast("Please log in to post a review.", "warning");
-                return;
-            }
-            if (userState.alreadyReviewed) {
-                window.showToast("You have already reviewed this product.", "info");
-                return;
-            }
-            if (!userState.eligible) {
-                window.showToast("You must purchase and receive this product before reviewing.", "warning");
-                return;
-            }
-            openModal();
-        });
-    }
-
-    if (closeReviewModal) {
-        closeReviewModal.addEventListener('click', closeModal);
-    }
-    if (reviewModal) {
-        reviewModal.addEventListener('click', (e) => {
-            if (e.target === reviewModal) closeModal();
-        });
-    }
-    onAuthStateChanged(auth, async (user) => {
-        const params = new URLSearchParams(window.location.search);
-        const shouldOpenReview = params.get('open_review') === 'true';
-
-        if (!user) {
-            userState = { loggedIn: false, eligible: false, user: null };
-            if (writeReviewBtn) {
-                writeReviewBtn.classList.remove('eligible');
-                writeReviewBtn.classList.add('ineligible');
-                writeReviewBtn.removeAttribute('style');
-            }
-            if (shouldOpenReview) {
-                window.showToast("Please log in to share your thoughts.", "info");
-            }
-            return;
-        }
-
-        userState.loggedIn = true;
-        userState.user = user;
-
-        try {
-            // 1. Fetch existing review for this user+product
-            const reviewDocId = `${user.uid}_${productId}`;
-            const existingReviewSnap = await getDoc(doc(db, "product_reviews", reviewDocId));
-            const existingReview = existingReviewSnap.exists() ? existingReviewSnap.data() : null;
-
-            // 2. Fetch all user orders containing this product
-            const ordersRef = collection(db, "orders");
-            const qOrders = query(ordersRef, where("userId", "==", user.uid));
-            const ordersSnapshot = await getDocs(qOrders);
-
-            let allDeliveredOrders = []; // All delivered orders with this product
-            let nonRefundedDeliveredOrders = []; // Delivered orders where this item is NOT refunded
-            let allOrderRefs = [];
-
-            ordersSnapshot.forEach((docSnap) => {
-                const order = docSnap.data();
-                if (order.status === 'Delivered' && order.items && Array.isArray(order.items)) {
-                    const matchingItem = order.items.find(item => item.id === productId || item.productId === productId);
-                    if (matchingItem) {
-                        allDeliveredOrders.push({ id: docSnap.id, ...order, matchingItem });
-                        if (order.orderReference) allOrderRefs.push(order.orderReference);
-                        const isItemRefunded = matchingItem.refunded === true || matchingItem.refunded === 'true';
-                        if (!isItemRefunded) {
-                            nonRefundedDeliveredOrders.push({ id: docSnap.id, ...order, matchingItem });
-                        }
-                    }
-                }
-            });
-
-            // Sort by timestamp descending to get most recent
-            const sortByTime = (a, b) => {
-                const tA = a.timestamp ? a.timestamp.seconds : 0;
-                const tB = b.timestamp ? b.timestamp.seconds : 0;
-                return tB - tA;
-            };
-            allDeliveredOrders.sort(sortByTime);
-            nonRefundedDeliveredOrders.sort(sortByTime);
-
-            const latestNonRefunded = nonRefundedDeliveredOrders[0] || null;
-            const latestOrderRef = latestNonRefunded ? (latestNonRefunded.orderReference || latestNonRefunded.id) : null;
-
-            userState.allOrderReferences = allOrderRefs;
-            userState.orderId = latestNonRefunded ? latestNonRefunded.id : null;
-            userState.orderReference = latestOrderRef;
-            userState.batch = latestNonRefunded && latestNonRefunded.matchingItem ? (latestNonRefunded.matchingItem.batch || latestNonRefunded.matchingItem.batchNumber || latestNonRefunded.matchingItem.batchNo || null) : null;
-
-            // Decision tree
-            if (allDeliveredOrders.length === 0) {
-                // Never purchased + delivered
-                userState.eligible = false;
-                userState.alreadyReviewed = false;
-                if (writeReviewBtn) {
-                    writeReviewBtn.classList.remove('eligible');
-                    writeReviewBtn.classList.add('ineligible');
-                    writeReviewBtn.removeAttribute('style');
-                }
-                if (shouldOpenReview) window.showToast("Only verified purchasers can leave reviews.", "warning");
-                return;
-            }
-
-            if (nonRefundedDeliveredOrders.length === 0) {
-                // All deliveries were refunded - block reviewing
-                userState.eligible = false;
-                userState.alreadyReviewed = false;
-                if (writeReviewBtn) {
-                    writeReviewBtn.classList.remove('eligible');
-                    writeReviewBtn.classList.add('ineligible');
-                    writeReviewBtn.innerText = 'Product Refunded';
-                }
-                if (shouldOpenReview) window.showToast("This product was refunded. You cannot review it.", "warning");
-                return;
-            }
-
-            // Has at least one non-refunded delivered order
-            if (!existingReview) {
-                // No existing review — standard eligible
-                userState.eligible = true;
-                userState.alreadyReviewed = false;
-                if (writeReviewBtn) {
-                    writeReviewBtn.classList.remove('ineligible');
-                    writeReviewBtn.classList.add('eligible');
-                    writeReviewBtn.removeAttribute('style');
-                }
-                if (shouldOpenReview) {
-                    setTimeout(() => {
-                        openModal();
-                        window.showToast("Fill in the form to post your review!", "success");
-                    }, 1200);
-                }
-                return;
-            }
-
-            // Has existing review
-            if (existingReview.reviewedAfterRefund === true) {
-                // Already used the one-time post-refund edit — permanently blocked
-                userState.eligible = false;
-                userState.alreadyReviewed = true;
-                if (writeReviewBtn) {
-                    writeReviewBtn.classList.remove('eligible');
-                    writeReviewBtn.classList.add('ineligible');
-                    writeReviewBtn.innerText = 'Reviewed ✅';
-                }
-                if (shouldOpenReview) window.showToast("You have already reviewed this product. Thank you!", "info");
-                return;
-            }
-
-            if (existingReview.refunded === true) {
-                // Review was refunded but user has a new non-refunded order — allow one-time edit
-                const refundedAt = existingReview.refundedAt ? new Date(existingReview.refundedAt).getTime() : 0;
-                const hasNewerOrder = nonRefundedDeliveredOrders.some(o => {
-                    const orderTime = o.timestamp ? o.timestamp.seconds * 1000 : 0;
-                    return orderTime > refundedAt;
-                });
-                if (hasNewerOrder) {
-                    userState.eligible = true;
-                    userState.alreadyReviewed = false;
-                    userState.canEditAfterRefund = true;
-                    if (writeReviewBtn) {
-                        writeReviewBtn.classList.remove('ineligible');
-                        writeReviewBtn.classList.add('eligible');
-                        writeReviewBtn.innerText = 'Edit Review';
-                    }
-                    if (shouldOpenReview) {
-                        setTimeout(() => {
-                            openModal();
-                            window.showToast("You can update your review after reordering!", "success");
-                        }, 1200);
-                    }
-                } else {
-                    userState.eligible = false;
-                    userState.alreadyReviewed = true;
-                    if (writeReviewBtn) {
-                        writeReviewBtn.classList.remove('eligible');
-                        writeReviewBtn.classList.add('ineligible');
-                        writeReviewBtn.innerText = 'Product Refunded';
-                    }
-                }
-                return;
-            }
-
-            // Standard — already reviewed, not refunded
-            userState.eligible = false;
-            userState.alreadyReviewed = true;
-            if (writeReviewBtn) {
-                writeReviewBtn.classList.remove('eligible');
-                writeReviewBtn.classList.add('ineligible');
-                writeReviewBtn.innerText = 'Reviewed ✅';
-            }
-            if (shouldOpenReview) window.showToast("You have already reviewed this product. Thank you!", "info");
-
-        } catch (error) {
-            console.error("Error checking review eligibility:", error);
-        }
-    });
-
-    if (reviewForm) {
-        reviewForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!userState.user) return;
-
-            const submitBtn = document.getElementById('submit-review-btn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
-
-            const rating = parseInt(document.getElementById('review-rating').value);
-            const text = document.getElementById('review-text').value.trim();
-
-            if (!rating || !text) {
-                window.showToast("Please provide both rating and review text.", "error");
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Review';
-                return;
-            }
-
-            if (text.length > 3000) {
-                window.showToast("Review text is too long (max 3000 characters).", "error");
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Review';
-                return;
-            }
-
-
-            if (SecurityValidator.isProfane(text)) {
-                window.showToast("Inappropriate language detected.", "error");
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Review';
-                return;
-            }
-
-            if (SecurityValidator.isGibberish(text)) {
-                window.showToast("Review appears to be bot-generated. Please use real text.", "error");
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Review';
-                return;
-            }
-
-            try {
-                // Collect all order references for this product
-                const orderRefs = userState.allOrderReferences.length > 0
-                    ? userState.allOrderReferences
-                    : (userState.orderReference ? [userState.orderReference] : []);
-
-                const reviewDocId = `${userState.user.uid}_${productId}`;
-                const newReview = {
-                    productId: productId,
-                    userId: userState.user.uid,
-                    orderId: userState.orderId,
-                    batch: userState.batch || null,
-                    authorName: userState.user.displayName || 'Verified Buyer',
-                    authorPhoto: userState.user.photoURL || null,
-                    rating: rating,
-                    text: text,
-                    images: [],
-                    createdAt: serverTimestamp(),
-                    refunded: false,
-                    reviewedAfterRefund: userState.canEditAfterRefund === true
-                };
-
-                await setDoc(doc(db, "product_reviews", reviewDocId), newReview);
-
-                // Save private data securely in a subcollection
-                const privateData = {
-                    orderReference: userState.orderReference || null,
-                    orderReferences: orderRefs
-                };
-                await setDoc(doc(db, "product_reviews", reviewDocId, "private_data", "info"), privateData);
-
-                window.showToast("Review submitted successfully!", "success");
-                closeModal();
-                fetchReviews();
-                userState.alreadyReviewed = true;
-                if (writeReviewBtn) {
-                    writeReviewBtn.classList.remove('eligible');
-                    writeReviewBtn.classList.add('ineligible');
-                    writeReviewBtn.innerText = "Reviewed ✅";
-                }
-            } catch (error) {
-                console.error("Error submitting review:", error);
-                window.showToast("Failed to submit review. You might have already reviewed this product.", "error");
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Review';
-            }
-        });
-    }
-};
-window.copyOrderRefToClipboard = (text, btn) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text).then(() => {
-        window.showToast("Order Reference copied to clipboard!", "success");
-        if (btn) {
-            const originalSvg = btn.innerHTML;
-            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-            btn.style.borderColor = '#A7F3D0';
-            btn.style.background = '#ECFDF5';
-            setTimeout(() => {
-                btn.innerHTML = originalSvg;
-                btn.style.borderColor = '#D1D5DB';
-                btn.style.background = '#FFFFFF';
-            }, 1800);
-        }
-    }).catch(err => {
-        console.error("Copy failed", err);
-        window.showToast("Failed to copy text.", "error");
-    });
-};
-
-window.handleReviewDelete = async (reviewId) => {
-    const confirmation = prompt("To delete your review, please type 'DELETE' (all caps):");
-    if (confirmation !== 'DELETE') {
-        if (confirmation !== null) window.showToast("Deletion cancelled. Text mismatch.", "info");
-        return;
-    }
-
-    try {
-        await deleteDoc(doc(db, "product_reviews", reviewId));
-        window.showToast("Review deleted successfully.", "success");
-        setTimeout(() => window.location.reload(), 1500);
-    } catch (error) {
-        console.error("Error deleting review:", error);
-        window.showToast("Failed to delete review.", "error");
-    }
-};
-
-window.handleReviewLike = async (reviewId, btnElement) => {
-    const user = auth.currentUser;
-    if (!user) {
-        window.showToast("Please log in to react to reviews.", "warning");
-        return;
-    }
-
-    const btn = btnElement || (event ? event.currentTarget : null);
-    if (!btn) return;
-
-    // Optimistic UI toggle
-    const span = btn.querySelector('span');
-    const svg = btn.querySelector('svg');
-    const currentText = span ? span.textContent : '';
-    const match = currentText.match(/\d+/);
-    let count = match ? parseInt(match[0]) : 0;
-
-    const isCurrentlyLiked = btn.dataset.liked === 'true' || btn.style.color === 'rgb(79, 70, 229)';
-    const nextLiked = !isCurrentlyLiked;
-    const nextCount = nextLiked ? count + 1 : Math.max(0, count - 1);
-
-    // Apply immediate UI state
-    btn.dataset.liked = nextLiked ? 'true' : 'false';
-    if (span) span.textContent = `Helpful (${nextCount})`;
-    btn.style.cssText = nextLiked 
-        ? 'background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;' 
-        : 'background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;';
-    if (svg) {
-        svg.setAttribute('fill', nextLiked ? '#4F46E5' : 'none');
-        svg.setAttribute('stroke', nextLiked ? '#4F46E5' : 'currentColor');
-    }
-
-    try {
-        const reviewRef = doc(db, "product_reviews", reviewId);
-        const reviewSnap = await getDoc(reviewRef);
-        if (!reviewSnap.exists()) return;
-
-        const data = reviewSnap.data();
-        let likedBy = Array.isArray(data.likedBy) ? data.likedBy : [];
-
-        if (likedBy.includes(user.uid)) {
-            likedBy = likedBy.filter(uid => uid !== user.uid);
-        } else {
-            likedBy.push(user.uid);
-        }
-
-        await updateDoc(reviewRef, {
-            likedBy: likedBy,
-            likesCount: likedBy.length
-        });
-
-        window.showToast(nextLiked ? "Marked review as helpful!" : "Unmarked as helpful.", nextLiked ? "success" : "info");
-    } catch (error) {
-        console.error("Error updating review reaction:", error);
-        // Rollback UI state if failed
-        btn.dataset.liked = isCurrentlyLiked ? 'true' : 'false';
-        if (span) span.textContent = `Helpful (${count})`;
-        btn.style.cssText = isCurrentlyLiked 
-            ? 'background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;' 
-            : 'background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;';
-        if (svg) {
-            svg.setAttribute('fill', isCurrentlyLiked ? '#4F46E5' : 'none');
-            svg.setAttribute('stroke', isCurrentlyLiked ? '#4F46E5' : 'currentColor');
-        }
-        window.showToast("Failed to register reaction.", "error");
-    }
-};
-
-window.toggleAdminReplyForm = (reviewId) => {
-    const form = document.getElementById(`admin-reply-form-${reviewId}`);
-    if (form) {
-        form.style.display = form.style.display === 'none' ? 'block' : 'none';
-    }
-};
-
-window.handleSaveAdminReply = async (reviewId) => {
-    const input = document.getElementById(`admin-reply-input-${reviewId}`);
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) {
-        window.showToast("Please enter reply text.", "error");
-        return;
-    }
-
-    try {
-        const reviewRef = doc(db, "product_reviews", reviewId);
-        const now = Date.now();
-        await updateDoc(reviewRef, {
-            adminReply: {
-                text: text,
-                updatedAt: now
-            }
-        });
-
-        // Live DOM Update — No Page Reload required
-        const reviewCard = document.getElementById(`review-${reviewId}`);
-        if (reviewCard) {
-            const dateStr = new Date(now).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-            let threadWrap = reviewCard.querySelector('.dodch-reply-thread-wrap');
-
-            if (threadWrap) {
-                // Update existing reply text & date
-                const replyPara = threadWrap.querySelector('p');
-                if (replyPara) replyPara.textContent = text;
-                const dateSpan = threadWrap.querySelector('.reply-date');
-                if (dateSpan) dateSpan.textContent = dateStr;
-            } else {
-                // Create new reply element dynamically
-                threadWrap = document.createElement('div');
-                threadWrap.className = 'dodch-reply-thread-wrap';
-                threadWrap.style.cssText = 'margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;';
-                threadWrap.innerHTML = `
+            `,c.appendChild(I)})},G=async()=>{try{const X=Ye(Ne(se,"product_reviews"),ot("productId","==",n)),w=await nt(X);let I=[];if(w.forEach(J=>{I.push({id:J.id,...J.data()})}),I.sort((J,_)=>{const ie=J.createdAt?J.createdAt.seconds:0;return(_.createdAt?_.createdAt.seconds:0)-ie}),Qe.currentUser&&Qe.currentUser.uid===Xt){const J=I.map(async _=>{try{const ie=await mt(Ae(se,"product_reviews",_.id,"private_data","info"));if(ie.exists()){const Le=ie.data();_.orderReference=Le.orderReference,_.orderReferences=Le.orderReferences}}catch(ie){console.warn("Failed to fetch private review data for admin",ie)}});await Promise.all(J)}U(I),N(I);const ce=new URLSearchParams(window.location.search).get("reviewId");ce&&setTimeout(()=>{const J=document.getElementById(`review-${ce}`);J&&(J.scrollIntoView({behavior:"smooth",block:"center"}),J.classList.add("review-highlight-pulse"),setTimeout(()=>J.classList.remove("review-highlight-pulse"),3500))},500)}catch(X){console.error("Error fetching reviews:",X),c.innerHTML='<p class="text-center" style="color: red;">Failed to load reviews.</p>'}},N=X=>{const w=document.querySelector(".ratings-dynamic-header");if(!w)return;const I=X.length,Y=X.reduce((ie,Le)=>ie+Le.rating,0),ce=I>0?(Y/I).toFixed(1):0,J=w.querySelector(".stars-display"),_=w.querySelector(".count-display");if(J){const ie=Array(5).fill(0).map((Le,Ce)=>`<span style="color: ${Ce<Math.round(ce)?"#F5A623":"#e0e0e0"};">\u2605</span>`).join("");J.innerHTML=ie}_&&(_.textContent=`(${ce} / ${I} Reviews)`),I>0&&document.querySelectorAll('script[type="application/ld+json"]').forEach(Le=>{try{let Ce=JSON.parse(Le.textContent);Ce["@type"]==="Product"&&(Ce.aggregateRating={"@type":"AggregateRating",ratingValue:String(ce),reviewCount:String(I)},Le.textContent=JSON.stringify(Ce,null,2))}catch{}})};G();const le=()=>{p&&p.classList.add("active"),document.body.style.overflow="hidden"},K=()=>{p&&p.classList.remove("active"),document.body.style.overflow="",a&&a.reset()};l&&l.addEventListener("click",()=>{if(!u.loggedIn){window.showToast("Please log in to post a review.","warning");return}if(u.alreadyReviewed){window.showToast("You have already reviewed this product.","info");return}if(!u.eligible){window.showToast("You must purchase and receive this product before reviewing.","warning");return}le()}),D&&D.addEventListener("click",K),p&&p.addEventListener("click",X=>{X.target===p&&K()}),Yt(Qe,async X=>{const I=new URLSearchParams(window.location.search).get("open_review")==="true";if(!X){u={loggedIn:!1,eligible:!1,user:null},l&&(l.classList.remove("eligible"),l.classList.add("ineligible"),l.removeAttribute("style")),I&&window.showToast("Please log in to share your thoughts.","info");return}u.loggedIn=!0,u.user=X;try{const Y=`${X.uid}_${n}`,ce=await mt(Ae(se,"product_reviews",Y)),J=ce.exists()?ce.data():null,_=Ne(se,"orders"),ie=Ye(_,ot("userId","==",X.uid)),Le=await nt(ie);let Ce=[],De=[],Je=[];Le.forEach(Ue=>{const Pe=Ue.data();if(Pe.status==="Delivered"&&Pe.items&&Array.isArray(Pe.items)){const Xe=Pe.items.find(wt=>wt.id===n||wt.productId===n);Xe&&(Ce.push({id:Ue.id,...Pe,matchingItem:Xe}),Pe.orderReference&&Je.push(Pe.orderReference),Xe.refunded===!0||Xe.refunded==="true"||De.push({id:Ue.id,...Pe,matchingItem:Xe}))}});const Ze=(Ue,Pe)=>{const Xe=Ue.timestamp?Ue.timestamp.seconds:0;return(Pe.timestamp?Pe.timestamp.seconds:0)-Xe};Ce.sort(Ze),De.sort(Ze);const qe=De[0]||null,dt=qe?qe.orderReference||qe.id:null;if(u.allOrderReferences=Je,u.orderId=qe?qe.id:null,u.orderReference=dt,u.batch=qe&&qe.matchingItem&&(qe.matchingItem.batch||qe.matchingItem.batchNumber||qe.matchingItem.batchNo)||null,Ce.length===0){u.eligible=!1,u.alreadyReviewed=!1,l&&(l.classList.remove("eligible"),l.classList.add("ineligible"),l.removeAttribute("style")),I&&window.showToast("Only verified purchasers can leave reviews.","warning");return}if(De.length===0){u.eligible=!1,u.alreadyReviewed=!1,l&&(l.classList.remove("eligible"),l.classList.add("ineligible"),l.innerText="Product Refunded"),I&&window.showToast("This product was refunded. You cannot review it.","warning");return}if(!J){u.eligible=!0,u.alreadyReviewed=!1,l&&(l.classList.remove("ineligible"),l.classList.add("eligible"),l.removeAttribute("style")),I&&setTimeout(()=>{le(),window.showToast("Fill in the form to post your review!","success")},1200);return}if(J.reviewedAfterRefund===!0){u.eligible=!1,u.alreadyReviewed=!0,l&&(l.classList.remove("eligible"),l.classList.add("ineligible"),l.innerText="Reviewed \u2705"),I&&window.showToast("You have already reviewed this product. Thank you!","info");return}if(J.refunded===!0){const Ue=J.refundedAt?new Date(J.refundedAt).getTime():0;De.some(Xe=>(Xe.timestamp?Xe.timestamp.seconds*1e3:0)>Ue)?(u.eligible=!0,u.alreadyReviewed=!1,u.canEditAfterRefund=!0,l&&(l.classList.remove("ineligible"),l.classList.add("eligible"),l.innerText="Edit Review"),I&&setTimeout(()=>{le(),window.showToast("You can update your review after reordering!","success")},1200)):(u.eligible=!1,u.alreadyReviewed=!0,l&&(l.classList.remove("eligible"),l.classList.add("ineligible"),l.innerText="Product Refunded"));return}u.eligible=!1,u.alreadyReviewed=!0,l&&(l.classList.remove("eligible"),l.classList.add("ineligible"),l.innerText="Reviewed \u2705"),I&&window.showToast("You have already reviewed this product. Thank you!","info")}catch(Y){console.error("Error checking review eligibility:",Y)}}),a&&a.addEventListener("submit",async X=>{if(X.preventDefault(),!u.user)return;const w=document.getElementById("submit-review-btn");w.disabled=!0,w.textContent="Submitting...";const I=parseInt(document.getElementById("review-rating").value),Y=document.getElementById("review-text").value.trim();if(!I||!Y){window.showToast("Please provide both rating and review text.","error"),w.disabled=!1,w.textContent="Submit Review";return}if(Y.length>3e3){window.showToast("Review text is too long (max 3000 characters).","error"),w.disabled=!1,w.textContent="Submit Review";return}if(We.isProfane(Y)){window.showToast("Inappropriate language detected.","error"),w.disabled=!1,w.textContent="Submit Review";return}if(We.isGibberish(Y)){window.showToast("Review appears to be bot-generated. Please use real text.","error"),w.disabled=!1,w.textContent="Submit Review";return}try{const ce=u.allOrderReferences.length>0?u.allOrderReferences:u.orderReference?[u.orderReference]:[],J=`${u.user.uid}_${n}`,_={productId:n,userId:u.user.uid,orderId:u.orderId,batch:u.batch||null,authorName:u.user.displayName||"Verified Buyer",authorPhoto:u.user.photoURL||null,rating:I,text:Y,images:[],createdAt:kt(),refunded:!1,reviewedAfterRefund:u.canEditAfterRefund===!0};await lt(Ae(se,"product_reviews",J),_);const ie={orderReference:u.orderReference||null,orderReferences:ce};await lt(Ae(se,"product_reviews",J,"private_data","info"),ie),window.showToast("Review submitted successfully!","success"),K(),G(),u.alreadyReviewed=!0,l&&(l.classList.remove("eligible"),l.classList.add("ineligible"),l.innerText="Reviewed \u2705")}catch(ce){console.error("Error submitting review:",ce),window.showToast("Failed to submit review. You might have already reviewed this product.","error")}finally{w.disabled=!1,w.textContent="Submit Review"}})};window.copyOrderRefToClipboard=(c,t)=>{c&&navigator.clipboard.writeText(c).then(()=>{if(window.showToast("Order Reference copied to clipboard!","success"),t){const n=t.innerHTML;t.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',t.style.borderColor="#A7F3D0",t.style.background="#ECFDF5",setTimeout(()=>{t.innerHTML=n,t.style.borderColor="#D1D5DB",t.style.background="#FFFFFF"},1800)}}).catch(n=>{console.error("Copy failed",n),window.showToast("Failed to copy text.","error")})},window.handleReviewDelete=async c=>{const t=prompt("To delete your review, please type 'DELETE' (all caps):");if(t!=="DELETE"){t!==null&&window.showToast("Deletion cancelled. Text mismatch.","info");return}try{await Lo(Ae(se,"product_reviews",c)),window.showToast("Review deleted successfully.","success"),setTimeout(()=>window.location.reload(),1500)}catch(n){console.error("Error deleting review:",n),window.showToast("Failed to delete review.","error")}},window.handleReviewLike=async(c,t)=>{const n=Qe.currentUser;if(!n){window.showToast("Please log in to react to reviews.","warning");return}const p=t||(event?event.currentTarget:null);if(!p)return;const a=p.querySelector("span"),l=p.querySelector("svg"),O=(a?a.textContent:"").match(/\d+/);let te=O?parseInt(O[0]):0;const M=p.dataset.liked==="true"||p.style.color==="rgb(79, 70, 229)",u=!M,U=u?te+1:Math.max(0,te-1);p.dataset.liked=u?"true":"false",a&&(a.textContent=`Helpful (${U})`),p.style.cssText=u?"background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;":"background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;",l&&(l.setAttribute("fill",u?"#4F46E5":"none"),l.setAttribute("stroke",u?"#4F46E5":"currentColor"));try{const G=Ae(se,"product_reviews",c),N=await mt(G);if(!N.exists())return;const le=N.data();let K=Array.isArray(le.likedBy)?le.likedBy:[];K.includes(n.uid)?K=K.filter(X=>X!==n.uid):K.push(n.uid),await at(G,{likedBy:K,likesCount:K.length}),window.showToast(u?"Marked review as helpful!":"Unmarked as helpful.",u?"success":"info")}catch(G){console.error("Error updating review reaction:",G),p.dataset.liked=M?"true":"false",a&&(a.textContent=`Helpful (${te})`),p.style.cssText=M?"background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;":"background: #F9FAFB; color: #6B7280; border: 1px solid #E5E7EB; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;",l&&(l.setAttribute("fill",M?"#4F46E5":"none"),l.setAttribute("stroke",M?"#4F46E5":"currentColor")),window.showToast("Failed to register reaction.","error")}},window.toggleAdminReplyForm=c=>{const t=document.getElementById(`admin-reply-form-${c}`);t&&(t.style.display=t.style.display==="none"?"block":"none")},window.handleSaveAdminReply=async c=>{const t=document.getElementById(`admin-reply-input-${c}`);if(!t)return;const n=t.value.trim();if(!n){window.showToast("Please enter reply text.","error");return}try{const p=Ae(se,"product_reviews",c),a=Date.now();await at(p,{adminReply:{text:n,updatedAt:a}});const l=document.getElementById(`review-${c}`);if(l){const D=new Date(a).toLocaleDateString(void 0,{year:"numeric",month:"short",day:"numeric"});let O=l.querySelector(".dodch-reply-thread-wrap");if(O){const u=O.querySelector("p");u&&(u.textContent=n);const U=O.querySelector(".reply-date");U&&(U.textContent=D)}else{O=document.createElement("div"),O.className="dodch-reply-thread-wrap",O.style.cssText="margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;",O.innerHTML=`
                     <div class="dodch-reply-card" style="padding: 0.9rem 1.1rem; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 12px; border-left: 3.5px solid #D4AF37; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span style="background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%); color: #000; font-weight: 800; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Official</span>
                                 <strong style="color: #FDFBF7; font-size: 0.9rem; font-family: var(--font-sans);">DODCH Reply</strong>
                             </div>
-                            <span class="reply-date" style="font-size: 0.74rem; color: #9CA3AF;">${dateStr}</span>
+                            <span class="reply-date" style="font-size: 0.74rem; color: #9CA3AF;">${D}</span>
                         </div>
-                        <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${text}</p>
+                        <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${n}</p>
                     </div>
-                `;
-
-                const adminReplyWrap = reviewCard.querySelector('.admin-reply-wrapper');
-                const contentCol = reviewCard.querySelector('div[style*="flex: 1"]');
-                if (contentCol && adminReplyWrap) {
-                    contentCol.insertBefore(threadWrap, adminReplyWrap);
-                } else if (contentCol) {
-                    contentCol.appendChild(threadWrap);
-                } else {
-                    reviewCard.appendChild(threadWrap);
-                }
-            }
-
-            // Update toggle button label to 'Edit DODCH Reply'
-            const toggleBtnSpan = reviewCard.querySelector('.admin-btn-reply-toggle span');
-            if (toggleBtnSpan) toggleBtnSpan.textContent = 'Edit DODCH Reply';
-
-            // Ensure delete button exists in form
-            const formBtnRow = reviewCard.querySelector(`#admin-reply-form-${reviewId} div[style*="justify-content: flex-end"]`);
-            if (formBtnRow && !formBtnRow.querySelector('button[onclick*="handleDeleteAdminReply"]')) {
-                const delBtn = document.createElement('button');
-                delBtn.type = 'button';
-                delBtn.setAttribute('onclick', `window.handleDeleteAdminReply('${reviewId}')`);
-                delBtn.style.cssText = 'background: #7F1D1D; color: #FCA5A5; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;';
-                delBtn.textContent = 'Delete Reply';
-                formBtnRow.insertBefore(delBtn, formBtnRow.firstChild);
-            }
-
-            // Close form
-            window.toggleAdminReplyForm(reviewId);
-        }
-
-        // Notify user in background
-        try {
-            const reviewSnap = await getDoc(reviewRef);
-            if (reviewSnap.exists()) {
-                const rData = reviewSnap.data();
-                const targetUserId = rData.userId;
-                const productId = rData.productId;
-                let prodName = "your product";
-                if (window.productCatalog && window.productCatalog[productId]) {
-                    prodName = window.productCatalog[productId].name || "your product";
-                }
-                const redirectUrl = `product.html?id=${productId}&reviewId=${reviewId}`;
-
-                if (targetUserId && targetUserId !== auth.currentUser?.uid) {
-                    await addDoc(collection(db, "notifications"), {
-                        userId: targetUserId,
-                        title: "DODCH Replied to Your Review ✨",
-                        message: `We've responded to your review for ${prodName}. Tap to view!`,
-                        link: redirectUrl,
-                        productId: productId,
-                        reviewId: reviewId,
-                        isSeen: false,
-                        createdAt: serverTimestamp()
-                    });
-
-                    if (typeof window.sendTargetedPushNotification === 'function') {
-                        window.sendTargetedPushNotification(
-                            db,
-                            targetUserId,
-                            "DODCH Replied to Your Review ✨",
-                            `We've responded to your review for ${prodName}. Tap to view!`,
-                            redirectUrl
-                        ).catch(pErr => console.warn("Push notification error:", pErr));
-                    }
-                }
-            }
-        } catch (nErr) {
-            console.warn("Notification dispatch error:", nErr);
-        }
-
-        window.showToast("DODCH reply published & notification sent!", "success");
-    } catch (e) {
-        console.error("Error saving admin reply:", e);
-        window.showToast("Failed to save reply: " + e.message, "error");
-    }
-};
-
-window.handleDeleteAdminReply = async (reviewId) => {
-    if (!await window.showConfirm("Are you sure you want to delete this DODCH reply?", "Delete Reply")) return;
-
-    try {
-        const reviewRef = doc(db, "product_reviews", reviewId);
-        await updateDoc(reviewRef, {
-            adminReply: deleteField()
-        });
-
-        // Live DOM Update — No Page Reload
-        const reviewCard = document.getElementById(`review-${reviewId}`);
-        if (reviewCard) {
-            const threadWrap = reviewCard.querySelector('.dodch-reply-thread-wrap');
-            if (threadWrap) threadWrap.remove();
-
-            const toggleBtnSpan = reviewCard.querySelector('.admin-btn-reply-toggle span');
-            if (toggleBtnSpan) toggleBtnSpan.textContent = '💬 Reply as DODCH';
-
-            const delBtn = reviewCard.querySelector(`button[onclick*="handleDeleteAdminReply('${reviewId}')"]`);
-            if (delBtn) delBtn.remove();
-
-            const input = document.getElementById(`admin-reply-input-${reviewId}`);
-            if (input) input.value = '';
-
-            const form = document.getElementById(`admin-reply-form-${reviewId}`);
-            if (form) form.style.display = 'none';
-        }
-
-        window.showToast("DODCH reply removed.", "info");
-    } catch (e) {
-        console.error("Error deleting admin reply:", e);
-        window.showToast("Failed to delete reply: " + e.message, "error");
-    }
-};
-
-const initUserReviewsHistory = async (user) => {
-    const listContainer = document.getElementById('user-reviews-list');
-    const reviewsLoader = document.getElementById('reviews-loader');
-    const loadMoreContainer = document.getElementById('load-more-reviews-container');
-    const loadMoreBtn = document.getElementById('load-more-reviews-btn');
-    if (!listContainer) return;
-
-    if (reviewsLoader) reviewsLoader.classList.add('active');
-    listContainer.classList.remove('visible');
-    if (loadMoreContainer) loadMoreContainer.style.display = 'none';
-
-    try {
-        const q = query(collection(db, "product_reviews"), where("userId", "==", user.uid));
-        const snap = await getDocs(q);
-        const allReviews = [];
-        snap.forEach(doc => allReviews.push({ id: doc.id, ...doc.data() }));
-        allReviews.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
-        let visibleReviewsCount = 10;
-
-        const renderReviewChunk = (append = false) => {
-            if (!append) listContainer.innerHTML = '';
-
-            const chunk = allReviews.slice(append ? visibleReviewsCount - 10 : 0, visibleReviewsCount);
-
-            if (!append && allReviews.length === 0) {
-                listContainer.innerHTML = '<p style="color: #666; font-style: italic;">You haven\'t written any reviews yet.</p>';
-                if (loadMoreContainer) loadMoreContainer.style.display = 'none';
-                return;
-            }
-
-            chunk.forEach((review) => {
-                const reviewEl = document.createElement('div');
-                reviewEl.id = `review-${review.id}`;
-                reviewEl.className = 'review-card-item content-fade visible';
-                reviewEl.style.cssText = `
+                `;const u=l.querySelector(".admin-reply-wrapper"),U=l.querySelector('div[style*="flex: 1"]');U&&u?U.insertBefore(O,u):U?U.appendChild(O):l.appendChild(O)}const te=l.querySelector(".admin-btn-reply-toggle span");te&&(te.textContent="Edit DODCH Reply");const M=l.querySelector(`#admin-reply-form-${c} div[style*="justify-content: flex-end"]`);if(M&&!M.querySelector('button[onclick*="handleDeleteAdminReply"]')){const u=document.createElement("button");u.type="button",u.setAttribute("onclick",`window.handleDeleteAdminReply('${c}')`),u.style.cssText="background: #7F1D1D; color: #FCA5A5; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;",u.textContent="Delete Reply",M.insertBefore(u,M.firstChild)}window.toggleAdminReplyForm(c)}try{const D=await mt(p);if(D.exists()){const O=D.data(),te=O.userId,M=O.productId;let u="your product";window.productCatalog&&window.productCatalog[M]&&(u=window.productCatalog[M].name||"your product");const U=`product.html?id=${M}&reviewId=${c}`;te&&te!==Qe.currentUser?.uid&&(await Wt(Ne(se,"notifications"),{userId:te,title:"DODCH Replied to Your Review \u2728",message:`We've responded to your review for ${u}. Tap to view!`,link:U,productId:M,reviewId:c,isSeen:!1,createdAt:kt()}),typeof window.sendTargetedPushNotification=="function"&&window.sendTargetedPushNotification(se,te,"DODCH Replied to Your Review \u2728",`We've responded to your review for ${u}. Tap to view!`,U).catch(G=>console.warn("Push notification error:",G)))}}catch(D){console.warn("Notification dispatch error:",D)}window.showToast("DODCH reply published & notification sent!","success")}catch(p){console.error("Error saving admin reply:",p),window.showToast("Failed to save reply: "+p.message,"error")}},window.handleDeleteAdminReply=async c=>{if(await window.showConfirm("Are you sure you want to delete this DODCH reply?","Delete Reply"))try{const t=Ae(se,"product_reviews",c);await at(t,{adminReply:Bi()});const n=document.getElementById(`review-${c}`);if(n){const p=n.querySelector(".dodch-reply-thread-wrap");p&&p.remove();const a=n.querySelector(".admin-btn-reply-toggle span");a&&(a.textContent="\u{1F4AC} Reply as DODCH");const l=n.querySelector(`button[onclick*="handleDeleteAdminReply('${c}')"]`);l&&l.remove();const D=document.getElementById(`admin-reply-input-${c}`);D&&(D.value="");const O=document.getElementById(`admin-reply-form-${c}`);O&&(O.style.display="none")}window.showToast("DODCH reply removed.","info")}catch(t){console.error("Error deleting admin reply:",t),window.showToast("Failed to delete reply: "+t.message,"error")}};const Ni=async c=>{const t=document.getElementById("user-reviews-list"),n=document.getElementById("reviews-loader"),p=document.getElementById("load-more-reviews-container"),a=document.getElementById("load-more-reviews-btn");if(t){n&&n.classList.add("active"),t.classList.remove("visible"),p&&(p.style.display="none");try{const l=Ye(Ne(se,"product_reviews"),ot("userId","==",c.uid)),D=await nt(l),O=[];D.forEach(u=>O.push({id:u.id,...u.data()})),O.sort((u,U)=>(U.createdAt?.seconds||0)-(u.createdAt?.seconds||0));let te=10;const M=(u=!1)=>{u||(t.innerHTML="");const U=O.slice(u?te-10:0,te);if(!u&&O.length===0){t.innerHTML=`<p style="color: #666; font-style: italic;">You haven't written any reviews yet.</p>`,p&&(p.style.display="none");return}U.forEach(G=>{const N=document.createElement("div");N.id=`review-${G.id}`,N.className="review-card-item content-fade visible",N.style.cssText=`
                     padding: 1.5rem;
                     background: #FFFFFF;
                     border: 1px solid rgba(0, 0, 0, 0.06);
@@ -8792,57 +1306,7 @@ const initUserReviewsHistory = async (user) => {
                     margin-bottom: 1.25rem;
                     box-shadow: 0 4px 20px rgba(0,0,0,0.03);
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
-                `;
-                reviewEl.onmouseenter = () => {
-                    reviewEl.style.transform = 'translateY(-2px)';
-                    reviewEl.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.06)';
-                };
-                reviewEl.onmouseleave = () => {
-                    reviewEl.style.transform = 'none';
-                    reviewEl.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.03)';
-                };
-
-                let productName = 'Product';
-                let productLink = '#';
-                let productImg = 'placeholder-glow.webp';
-
-                if (review.productId === 'glass-glow-shampoo') {
-                    productName = 'Glass Glow Shampoo';
-                    productLink = 'glass-glow-shampoo.html';
-                    productImg = productCatalog['glass-glow-shampoo']?.image || 'IMG_3489.webp';
-                } else if (review.productId === 'dodchmellow-pro-v') {
-                    productName = 'DODCHmellow Pro-V';
-                    productLink = 'dodchmellow-pro-v.html';
-                    productImg = productCatalog['dodchmellow-pro-v']?.image || 'IMG_3851.webp';
-                } else if (review.productId === 'foaming-cleanser') {
-                    productName = 'Advanced Face Foam';
-                    productLink = 'face-foam.html';
-                    productImg = productCatalog['foaming-cleanser']?.image || 'IMG_3352.webp';
-                } else if (review.productId === 'silk-therapy-mask') {
-                    productName = 'Silk Therapy Mask';
-                    productLink = 'silk-mask.html';
-                    productImg = productCatalog['silk-therapy-mask']?.image || 'IMG_4188 (2).webp';
-                } else if (productCatalog && productCatalog[review.productId]) {
-                    const prod = productCatalog[review.productId];
-                    productName = prod.name || 'Product';
-                    productImg = prod.image || 'placeholder-glow.webp';
-                    productLink = prod.storyUrl || `product.html?id=${review.productId}`;
-                } else {
-                    productName = `Product (${review.productId || 'Unknown'})`;
-                }
-
-                const starsHtml = Array(5).fill(0).map((_, i) => `<span style="color: ${i < review.rating ? '#F5A623' : '#E4E4E7'}; font-size: 1.15rem; margin-right: 1px;">★</span>`).join('');
-                const date = review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recent';
-                const accountBatchBadge = review.batch ? `<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${review.batch}</span>` : '';
-
-                // Render DODCH Official Reply on user account page if present (simple clean indented thread line)
-                let accountAdminReplyHtml = '';
-                if (review.adminReply) {
-                    const rText = typeof review.adminReply === 'object' ? (review.adminReply.text || '') : String(review.adminReply);
-                    const rTimestamp = typeof review.adminReply === 'object' && review.adminReply.updatedAt ? review.adminReply.updatedAt : null;
-                    const rDateStr = rTimestamp ? new Date(rTimestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
-                    if (rText.trim()) {
-                        accountAdminReplyHtml = `
+                `,N.onmouseenter=()=>{N.style.transform="translateY(-2px)",N.style.boxShadow="0 8px 30px rgba(0, 0, 0, 0.06)"},N.onmouseleave=()=>{N.style.transform="none",N.style.boxShadow="0 4px 20px rgba(0, 0, 0, 0.03)"};let le="Product",K="#",X="placeholder-glow.webp";if(G.productId==="glass-glow-shampoo")le="Glass Glow Shampoo",K="glass-glow-shampoo.html",X=x["glass-glow-shampoo"]?.image||"IMG_3489.webp";else if(G.productId==="dodchmellow-pro-v")le="DODCHmellow Pro-V",K="dodchmellow-pro-v.html",X=x["dodchmellow-pro-v"]?.image||"IMG_3851.webp";else if(G.productId==="foaming-cleanser")le="Advanced Face Foam",K="face-foam.html",X=x["foaming-cleanser"]?.image||"IMG_3352.webp";else if(G.productId==="silk-therapy-mask")le="Silk Therapy Mask",K="silk-mask.html",X=x["silk-therapy-mask"]?.image||"IMG_4188 (2).webp";else if(x&&x[G.productId]){const J=x[G.productId];le=J.name||"Product",X=J.image||"placeholder-glow.webp",K=J.storyUrl||`product.html?id=${G.productId}`}else le=`Product (${G.productId||"Unknown"})`;const w=Array(5).fill(0).map((J,_)=>`<span style="color: ${_<G.rating?"#F5A623":"#E4E4E7"}; font-size: 1.15rem; margin-right: 1px;">\u2605</span>`).join(""),I=G.createdAt?new Date(G.createdAt.seconds*1e3).toLocaleDateString(void 0,{year:"numeric",month:"short",day:"numeric"}):"Recent",Y=G.batch?`<span style="background: #F3F4F6; color: #4B5563; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; border: 1px solid #E5E7EB; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Batch #${G.batch}</span>`:"";let ce="";if(G.adminReply){const J=typeof G.adminReply=="object"?G.adminReply.text||"":String(G.adminReply),_=typeof G.adminReply=="object"&&G.adminReply.updatedAt?G.adminReply.updatedAt:null,ie=_?new Date(_).toLocaleDateString(void 0,{year:"numeric",month:"short",day:"numeric"}):"";J.trim()&&(ce=`
                             <div class="dodch-reply-thread-wrap" style="margin-top: 0.75rem; margin-left: 0.75rem; padding-left: 0.85rem; border-left: 2px solid #E5E7EB;">
                                 <div class="dodch-reply-card" style="padding: 0.9rem 1.1rem; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 12px; border-left: 3.5px solid #D4AF37; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
                                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
@@ -8850,818 +1314,77 @@ const initUserReviewsHistory = async (user) => {
                                             <span style="background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%); color: #000; font-weight: 800; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Official</span>
                                             <strong style="color: #FDFBF7; font-size: 0.9rem; font-family: var(--font-sans);">DODCH Reply</strong>
                                         </div>
-                                        ${rDateStr ? `<span style="font-size: 0.74rem; color: #9CA3AF;">${rDateStr}</span>` : ''}
+                                        ${ie?`<span style="font-size: 0.74rem; color: #9CA3AF;">${ie}</span>`:""}
                                     </div>
-                                    <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${rText}</p>
+                                    <p style="margin: 0; color: #E4E4E7; font-size: 0.9rem; line-height: 1.55; white-space: pre-line;">${J}</p>
                                 </div>
                             </div>
-                        `;
-                    }
-                }
-
-                reviewEl.innerHTML = `
+                        `)}N.innerHTML=`
                 <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 1rem;">
-                    <img src="${productImg}" class="account-item-mini-img" alt="${productName}" style="width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 1px solid #F3F4F6;">
+                    <img src="${X}" class="account-item-mini-img" alt="${le}" style="width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 1px solid #F3F4F6;">
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <a href="${productLink}" style="text-decoration: none; color: #18181B; font-family: var(--font-serif, 'Playfair Display', serif); font-size: 1.1rem; font-weight: 700;">${productName}</a>
-                            ${accountBatchBadge}
+                            <a href="${K}" style="text-decoration: none; color: #18181B; font-family: var(--font-serif, 'Playfair Display', serif); font-size: 1.1rem; font-weight: 700;">${le}</a>
+                            ${Y}
                         </div>
-                        <div style="color: #9CA3AF; font-size: 0.82rem; margin-top: 3px;">Reviewed on ${date}</div>
+                        <div style="color: #9CA3AF; font-size: 0.82rem; margin-top: 3px;">Reviewed on ${I}</div>
                     </div>
                 </div>
-                <div style="margin-bottom: 0.75rem;">${starsHtml}</div>
+                <div style="margin-bottom: 0.75rem;">${w}</div>
                 <div class="review-text-bubble" style="background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 4px 14px 14px 14px; padding: 0.9rem 1.1rem; margin-bottom: 0.85rem; color: #212529; font-size: 0.95rem; line-height: 1.65; word-break: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                    ${review.text}
+                    ${G.text}
                 </div>
-                ${accountAdminReplyHtml}
+                ${ce}
                 <div style="display: flex; justify-content: flex-end; border-top: 1px solid #F3F4F6; padding-top: 0.75rem; margin-top: 0.75rem;">
-                    <button class="review-delete-btn" onclick="window.handleReviewDelete('${review.id}')" style="background: none; border: none; color: #EF4444; font-size: 0.82rem; font-weight: 500; cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'">Delete My Review</button>
+                    <button class="review-delete-btn" onclick="window.handleReviewDelete('${G.id}')" style="background: none; border: none; color: #EF4444; font-size: 0.82rem; font-weight: 500; cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: background 0.2s ease;" onmouseenter="this.style.background='#FEE2E2'" onmouseleave="this.style.background='none'">Delete My Review</button>
                 </div>
-            `;
-                listContainer.appendChild(reviewEl);
-            });
-
-            if (visibleReviewsCount < allReviews.length) {
-                if (loadMoreContainer) loadMoreContainer.style.display = 'flex';
-            } else {
-                if (loadMoreContainer) loadMoreContainer.style.display = 'none';
-            }
-        };
-
-        setTimeout(() => {
-            if (reviewsLoader) reviewsLoader.classList.remove('active');
-            listContainer.classList.add('visible');
-            renderReviewChunk();
-
-            // Auto-scroll & highlight target review if opened from notification
-            const urlParams = new URLSearchParams(window.location.search);
-            const targetReviewId = urlParams.get('reviewId');
-            if (targetReviewId) {
-                setTimeout(() => {
-                    const targetEl = document.getElementById(`review-${targetReviewId}`);
-                    if (targetEl) {
-                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        targetEl.classList.add('review-highlight-pulse');
-                        setTimeout(() => targetEl.classList.remove('review-highlight-pulse'), 3500);
-                    }
-                }, 400);
-            }
-        }, 800);
-
-        if (loadMoreBtn) {
-            loadMoreBtn.onclick = () => {
-                loadMoreBtn.innerText = "Loading...";
-                setTimeout(() => {
-                    visibleReviewsCount += 10;
-                    renderReviewChunk(true);
-                    loadMoreBtn.innerText = "View More Reviews";
-                }, 500);
-            };
-        }
-    } catch (error) {
-        console.error("Error loading user reviews:", error);
-        if (reviewsLoader) reviewsLoader.classList.remove('active');
-        listContainer.classList.add('visible');
-        listContainer.innerHTML = '<p style="color: red;">Error loading your reviews.</p>';
-    }
-};
-const initGlobalReviewPrompt = (forceShow = false) => {
-    // Suppress popup if the user is already on the page to write a review
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('open_review') === 'true') {
-        console.log("Global review prompt suppressed on review page.");
-        return;
-    }
-
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) return;
-
-        try {
-            const ordersRef = collection(db, "orders");
-            let orders = [];
-            const qOrdersUid = query(ordersRef, where("userId", "==", user.uid));
-            const snapUid = await getDocs(qOrdersUid);
-            snapUid.forEach(doc => orders.push(doc.data()));
-            if (user.email) {
-                const qOrdersEmail = query(ordersRef, where("shipping.email", "==", user.email));
-                const snapEmail = await getDocs(qOrdersEmail);
-                snapEmail.forEach(doc => {
-                    const data = doc.data();
-                    if (!orders.some(o => o.orderReference === data.orderReference)) {
-                        orders.push(data);
-                    }
-                });
-            }
-            let latestOrderTime = 0;
-            orders.forEach(order => {
-                const ts = order.timestamp ? (typeof order.timestamp.toMillis === 'function' ? order.timestamp.toMillis() : order.timestamp) : 0;
-                if (ts > latestOrderTime) latestOrderTime = ts;
-            });
-            const dismissedAt = parseInt(localStorage.getItem('reviewPromptDismissedAt') || '0');
-            if (dismissedAt > latestOrderTime && !forceShow) {
-                console.log("Global review prompt suppressed by user dismissal (no new purchase since).");
-                return;
-            }
-
-            let deliveredProducts = new Set();
-            orders.forEach((order) => {
-                const isDelivered = order.status && order.status.toLowerCase() === 'delivered';
-                if (isDelivered && order.items && Array.isArray(order.items)) {
-                    order.items.forEach(item => {
-                        const isRefunded = item.refunded === true || item.refunded === 'true';
-                        if (!isRefunded) {
-                            deliveredProducts.add(item.productId || item.id);
-                        }
-                    });
-                }
-            });
-
-            if (deliveredProducts.size === 0) {
-                console.log("No delivered products found for user.");
-                return;
-            }
-
-            console.log("Delivered products found:", [...deliveredProducts]);
-            const reviewsRef = collection(db, "product_reviews");
-            const qReviews = query(reviewsRef, where("userId", "==", user.uid));
-            const reviewsSnapshot = await getDocs(qReviews);
-
-            let reviewedProducts = new Set();
-            reviewsSnapshot.forEach((docSnap) => {
-                const review = docSnap.data();
-                if (review.productId) {
-                    reviewedProducts.add(review.productId);
-                }
-            });
-
-            console.log("Already reviewed items:", [...reviewedProducts]);
-            let productToReview = null;
-            for (let pId of deliveredProducts) {
-                if (!reviewedProducts.has(pId)) {
-                    productToReview = pId;
-                    break;
-                }
-            }
-
-            if (productToReview) {
-                let pageUrl = '';
-                let productName = 'your recent purchase';
-
-                if (productToReview === 'glass-glow-shampoo') {
-                    pageUrl = 'glass-glow-shampoo.html';
-                    productName = 'Glass Glow Shampoo';
-                } else if (productToReview === 'dodchmellow-pro-v') {
-                    pageUrl = 'dodchmellow-pro-v.html';
-                    productName = 'DODCHmellow Pro-V';
-                } else if (productToReview === 'foaming-cleanser') {
-                    pageUrl = 'face-foam.html';
-                    productName = 'Advanced Face Foam';
-                } else if (productToReview === 'silk-therapy-mask') {
-                    pageUrl = 'silk-mask.html';
-                    productName = 'Silk Therapy Mask';
-                } else if (productToReview === 'advanced-ha-serum') {
-                    pageUrl = 'face-serum.html';
-                    productName = 'Advanced HA Serum';
-                } else {
-                    const catEntry = productCatalog[productToReview];
-                    if (catEntry && catEntry.storyUrl) {
-                        pageUrl = catEntry.storyUrl;
-                        productName = catEntry.name;
-                    } else {
-                        pageUrl = `product.html?id=${productToReview}`;
-                    }
-                }
-                showReviewPromptToast(productName, pageUrl);
-            }
-
-        } catch (error) {
-            console.error("Error checking global review eligibility:", error);
-        }
-    });
-};
-
-const showReviewPromptToast = (productName, pageUrl) => {
-    if (document.getElementById('review-prompt-toast')) return;
-
-    const toastHTML = `
+            `,t.appendChild(N)}),te<O.length?p&&(p.style.display="flex"):p&&(p.style.display="none")};setTimeout(()=>{n&&n.classList.remove("active"),t.classList.add("visible"),M();const U=new URLSearchParams(window.location.search).get("reviewId");U&&setTimeout(()=>{const G=document.getElementById(`review-${U}`);G&&(G.scrollIntoView({behavior:"smooth",block:"center"}),G.classList.add("review-highlight-pulse"),setTimeout(()=>G.classList.remove("review-highlight-pulse"),3500))},400)},800),a&&(a.onclick=()=>{a.innerText="Loading...",setTimeout(()=>{te+=10,M(!0),a.innerText="View More Reviews"},500)})}catch(l){console.error("Error loading user reviews:",l),n&&n.classList.remove("active"),t.classList.add("visible"),t.innerHTML='<p style="color: red;">Error loading your reviews.</p>'}}},Bo=(c=!1)=>{if(new URLSearchParams(window.location.search).get("open_review")==="true"){console.log("Global review prompt suppressed on review page.");return}Yt(Qe,async n=>{if(n)try{const p=Ne(se,"orders");let a=[];const l=Ye(p,ot("userId","==",n.uid));if((await nt(l)).forEach(K=>a.push(K.data())),n.email){const K=Ye(p,ot("shipping.email","==",n.email));(await nt(K)).forEach(w=>{const I=w.data();a.some(Y=>Y.orderReference===I.orderReference)||a.push(I)})}let O=0;if(a.forEach(K=>{const X=K.timestamp?typeof K.timestamp.toMillis=="function"?K.timestamp.toMillis():K.timestamp:0;X>O&&(O=X)}),parseInt(localStorage.getItem("reviewPromptDismissedAt")||"0")>O&&!c){console.log("Global review prompt suppressed by user dismissal (no new purchase since).");return}let M=new Set;if(a.forEach(K=>{K.status&&K.status.toLowerCase()==="delivered"&&K.items&&Array.isArray(K.items)&&K.items.forEach(w=>{w.refunded===!0||w.refunded==="true"||M.add(w.productId||w.id)})}),M.size===0){console.log("No delivered products found for user.");return}console.log("Delivered products found:",[...M]);const u=Ne(se,"product_reviews"),U=Ye(u,ot("userId","==",n.uid)),G=await nt(U);let N=new Set;G.forEach(K=>{const X=K.data();X.productId&&N.add(X.productId)}),console.log("Already reviewed items:",[...N]);let le=null;for(let K of M)if(!N.has(K)){le=K;break}if(le){let K="",X="your recent purchase";if(le==="glass-glow-shampoo")K="glass-glow-shampoo.html",X="Glass Glow Shampoo";else if(le==="dodchmellow-pro-v")K="dodchmellow-pro-v.html",X="DODCHmellow Pro-V";else if(le==="foaming-cleanser")K="face-foam.html",X="Advanced Face Foam";else if(le==="silk-therapy-mask")K="silk-mask.html",X="Silk Therapy Mask";else if(le==="advanced-ha-serum")K="face-serum.html",X="Advanced HA Serum";else{const w=x[le];w&&w.storyUrl?(K=w.storyUrl,X=w.name):K=`product.html?id=${le}`}_i(X,K)}}catch(p){console.error("Error checking global review eligibility:",p)}})},_i=(c,t)=>{if(document.getElementById("review-prompt-toast"))return;const n=`
         <div id="review-prompt-toast" class="review-prompt-toast">
             <div class="rpt-content">
                 <span class="brand-tag">DODCH</span>
-                <p>How was your <strong>${productName}</strong>? We'd love to hear your thoughts!</p>
+                <p>How was your <strong>${c}</strong>? We'd love to hear your thoughts!</p>
                 <div class="rpt-actions">
-                    <a href="${pageUrl}?open_review=true" class="rpt-btn">Leave a Review</a>
+                    <a href="${t}?open_review=true" class="rpt-btn">Leave a Review</a>
                     <button class="rpt-close" id="rpt-close-btn">&times;</button>
                 </div>
             </div>
         </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', toastHTML);
-
-    const toast = document.getElementById('review-prompt-toast');
-    const closeBtn = document.getElementById('rpt-close-btn');
-    setTimeout(() => {
-        if (toast) toast.classList.add('active');
-    }, 1500);
-
-    closeBtn.addEventListener('click', () => {
-        if (toast) toast.classList.remove('active');
-        localStorage.setItem('reviewPromptDismissedAt', Date.now().toString());
-        setTimeout(() => {
-            window.showToast("Review dismissed. You can still leave feedback later from your Account or Product pages.", "info", 6000);
-            setTimeout(() => toast && toast.remove(), 1000);
-        }, 800);
-    });
-};
-const initAccountTabs = () => {
-    const tabBtns = document.querySelectorAll('.account-tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    if (tabBtns.length === 0) return;
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetTab = btn.getAttribute('data-tab');
-            tabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            tabContents.forEach(content => {
-                if (content.id === `${targetTab}-tab-content`) {
-                    content.style.display = 'block';
-                    setTimeout(() => {
-                        content.classList.add('active');
-                    }, 10);
-                } else {
-                    content.classList.remove('active');
-                    setTimeout(() => {
-                        if (!content.classList.contains('active')) {
-                            content.style.display = 'none';
-                        }
-                    }, 500);
-                }
-            });
-        });
-    });
-};
-
-function applyPerformanceColors() {
-    const getLevelColor = (level) => {
-        const colorScale = ["#B8995E", "#8EA35E", "#5DA35E", "#2E7D32"];
-        return colorScale[level - 1] || "#B8995E";
-    };
-
-    const perfItems = document.querySelectorAll('.perf-item');
-    perfItems.forEach(item => {
-        const steps = item.querySelectorAll('.level-step');
-        const activeSteps = item.querySelectorAll('.level-step.active').length;
-        const valueEl = item.querySelector('.perf-value');
-
-        if (activeSteps > 0) {
-            const color = getLevelColor(activeSteps);
-            steps.forEach((step, i) => {
-                if (i < activeSteps) step.style.background = color;
-            });
-            if (valueEl) valueEl.style.color = color;
-        }
-    });
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        initProductReviews();
-        initGlobalReviewPrompt();
-        initAccountTabs();
-        applyPerformanceColors();
-    });
-} else {
-    initProductReviews();
-    initGlobalReviewPrompt();
-    initAccountTabs();
-    applyPerformanceColors();
-}
-
-const SEARCH_SYNONYMS = {
-    'shampoo': ['shampoing', 'شامبو', 'shampoo'],
-    'oil': ['huile', 'زيت', 'oil', 'elixir', 'drops', 'gouttes', 'قطرات'],
-    'serum': ['سيروم', 'concentre', 'serum', 'booster', 'ampoule', 'essence'],
-    'mask': ['masque', 'قناع', 'mask', 'wrap'],
-    'pear': ['figue', 'صبار', 'barbarie', 'prickly', 'cactus', 'pear'],
-    'fig': ['figue', 'صبار', 'barbarie', 'fig'],
-    'silk': ['soie', 'حرير', 'silk'],
-    'glow': ['eclat', 'اللمعان', 'bright', 'shine', 'radiant', 'brillance', 'glow'],
-    'face': ['visage', 'وجه', 'face'],
-    'body': ['corps', 'جسم', 'body'],
-    'hair': ['cheveux', 'شعر', 'hair'],
-    'cleanser': ['wash', 'cleaning', 'cleanser', 'nettoyant', 'غسول', 'cleansing'],
-    'skin': ['skin', 'peau', 'بشرة']
-};
-
-const SEARCH_INTENTS = {
-    'needs_hydration': ['dry', 'dehydrated', 'thirsty', 'brittle', 'جاف', 'عطشان', 'sec', 'deshydrate', 'moisture', 'hydratation', 'ترطيب', 'ashy', 'flakey'],
-    'needs_repair': ['damaged', 'breakage', 'split ends', 'weak', 'تالف', 'مكسر', 'abime', 'casse', 'repair', 'reparer', 'اصلاح', 'fragile', 'weakness'],
-    'wants_luxury': ['premium', 'luxury', 'exclusive', 'best', 'فاخر', 'راقي', 'luxe', 'precieux', 'high-end', 'expensive', 'gold', 'or'],
-    'wants_scent': ['smell', 'scent', 'fragrance', 'perfume', 'neroli', 'flower', 'رائحة', 'عطر', 'parfum', 'fleur', 'sweet', 'sucre', 'odeur'],
-    'wants_growth': ['grow', 'loss', 'thinning', 'volume', 'chute', 'pousse', 'تساقط', 'نمو', 'thick', 'density'],
-    'wants_smooth': ['frizz', 'frizzy', 'tangle', 'smooth', 'frisottis', 'lisse', 'tame', 'مجعد', 'ناعم', 'detangle', 'demelant'],
-    'wants_antiaging': ['wrinkle', 'aging', 'youth', 'rides', 'anti-age', 'تجاعيد', 'شيخوخة', 'firm', 'lift', 'fermete']
-}; const SITE_SEO_KNOWLEDGE = {
-    'shampoo': [
-        'sulfate-free', 'sans sulfate', 'خالي من السلفات', 'color-safe', 'daily use', 'usage quotidien', 'استخدام يومي',
-        'cleansing', 'scalp care', 'purifying', 'purifiant', 'تطهير', 'mellow', 'marshmallow', 'guimauve'
-    ],
-    'mask': [
-        'deep conditioning', 'soin profond', 'عناية عميقة', 'protein', 'keratin', 'ceramides', '10 minutes',
-        'overnight', 'nuit', 'leave-in', 'sans rincage', 'بدون غسل', 'revitalize', 'revitalisant'
-    ],
-    'serum': [
-        'hyaluronic', 'vitamin c', 'niacinamide', 'glass skin', 'peau de verre', 'بشرة زجاجية', 'fast-absorbing',
-        'absorbtion rapide', 'سريع الامتصاص', 'lightweight', 'leger', 'خفيف', 'youth booster'
-    ],
-    'oil': [
-        'argan', 'jojoba', 'vitamin e', 'anti-oxidant', 'antioxydant', 'مضاد اكسدة', 'pure', 'cold-pressed',
-        'pressee a froid', 'عصرة باردة', 'multipurpose', 'multi-usages', 'متعدد الاستخدامات', 'nail cuticles', 'cuticules', 'beard', 'barbe'
-    ]
-};
-
-class DODCHSearchEngine {
-    constructor() {
-        this.catalog = {};
-        this.index = [];
-    } normalize(str) {
-        if (!str) return '';
-        return str.toLowerCase()
-            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove French accents
-            .replace(/[آأإا]/g, 'ا') // Normalize Arabic Alef
-            .replace(/ة/g, 'ه')     // Normalize Arabic Tehmabuta
-            .replace(/ى/g, 'ي')     // Normalize Arabic Alef Maksura
-            .trim();
-    } init(catalog) {
-        this.catalog = catalog;
-        this.index = Object.entries(catalog).map(([id, item]) => {
-            let tags = (item.tags || []).map(t => this.normalize(t)); const synonyms = [];
-            const subCatText = Array.isArray(item.subCategory) ? item.subCategory.join(' ') : (item.subCategory || '');
-            const allText = (item.name + ' ' + (item.category || '') + ' ' + subCatText).toLowerCase();
-
-            for (const [key, list] of Object.entries(SEARCH_SYNONYMS)) {
-                if (allText.includes(key) || list.some(l => allText.includes(l))) {
-                    synonyms.push(...list, key);
-                }
-            } const seoTags = [];
-            for (const [category, knowledgeList] of Object.entries(SITE_SEO_KNOWLEDGE)) {
-                if (allText.includes(category)) {
-                    seoTags.push(...knowledgeList.map(k => this.normalize(k)));
-                }
-            } if (allText.includes('shampoo') || allText.includes('mask')) {
-                tags.push('needs_hydration', 'needs_repair', 'wants_smooth');
-            }
-            if (allText.includes('shampoo')) {
-                tags.push('wants_scent');
-            }
-            if (allText.includes('serum') || allText.includes('oil')) {
-                tags.push('wants_antiaging', 'wants_glow', 'needs_repair');
-            }
-            if (allText.includes('oil')) {
-                tags.push('wants_growth'); // Often used for scalp/beard growth
-            }
-
-            const indexItem = {
-                id: id,
-                name: this.normalize(item.name),
-                category: this.normalize(item.category || ''),
-                description: this.normalize(item.description || ''),
-                tags: [...new Set([...tags, ...synonyms, ...seoTags])],
-                price: item.price,
-                scrapedText: '' // Will be populated asynchronously
-            }; if (item.storyUrl && !item.storyUrl.startsWith('http')) {
-                fetch(item.storyUrl)
-                    .then(response => response.text())
-                    .then(html => {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html'); const scrapeTargets = doc.querySelectorAll('main p, main h1, main h2, main h3, main li, .inci-list span, .product-story');
-                        let textAccumulator = '';
-                        scrapeTargets.forEach(el => {
-                            textAccumulator += ' ' + el.textContent;
-                        });
-
-                        indexItem.scrapedText = this.normalize(textAccumulator);
-                    })
-                    .catch(err => console.warn(`Silent scrape failed for ${item.storyUrl}:`, err));
-            }
-
-            return indexItem;
-        });
-    } levenshtein(a, b) {
-        const matrix = [];
-        if (a.length === 0) return b.length;
-        if (b.length === 0) return a.length;
-        for (let i = 0; i <= b.length; i++) { matrix[i] = [i]; }
-        for (let j = 0; j <= a.length; j++) { matrix[0][j] = j; }
-        for (let i = 1; i <= b.length; i++) {
-            for (let j = 1; j <= a.length; j++) {
-                if (b.charAt(i - 1) == a.charAt(j - 1)) {
-                    matrix[i][j] = matrix[i - 1][j - 1];
-                } else {
-                    matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
-                }
-            }
-        }
-        return matrix[b.length][a.length];
-    } isFuzzyMatch(token, targetString) {
-        if (targetString.includes(token)) return true; const threshold = token.length > 6 ? 2 : 1;
-
-        if (token.length > 3) {
-            const words = targetString.split(/\s+/);
-            for (let word of words) {
-                if (word.length > 3 && this.levenshtein(token, word) <= threshold) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    search(query) {
-        if (!query || query.trim().length === 0) return [];
-
-        const normalizedQuery = this.normalize(query);
-        const tokens = normalizedQuery.split(/\s+/).filter(t => t.length > 0);
-        if (tokens.length === 0) return [];
-
-        const results = [];
-
-        for (const item of this.index) {
-            let score = 0;
-            let matchesAll = true;
-            let matchedReasons = [];
-
-            for (const token of tokens) {
-                let tokenMatched = false; if (item.name.includes(token)) {
-                    score += 15;
-                    tokenMatched = true;
-                } else if (!tokenMatched) {
-                    for (const [intent, keywords] of Object.entries(SEARCH_INTENTS)) {
-                        if (keywords.includes(token) && item.tags.includes(intent)) {
-                            score += 12; // High priority for semantic needs
-                            tokenMatched = true;
-                            matchedReasons.push(`Solves intent for "${intent.replace(/_/g, ' ')}"`);
-                            break;
-                        }
-                    }
-                } if (!tokenMatched && item.tags.some(t => t.includes(token) || this.isFuzzyMatch(token, t))) {
-                    score += 10;
-                    tokenMatched = true;
-                    matchedReasons.push(`Matches deep semantic tags related to "${token}"`);
-                } else if (!tokenMatched && this.isFuzzyMatch(token, item.name)) {
-                    score += 8;
-                    tokenMatched = true;
-                } else if (!tokenMatched && item.category.includes(token)) {
-                    score += 5;
-                    tokenMatched = true;
-                    matchedReasons.push(`Category match`);
-                } else if (!tokenMatched && item.scrapedText && (item.scrapedText.includes(token) || this.isFuzzyMatch(token, item.scrapedText))) {
-                    score += 3;
-                    tokenMatched = true;
-                    matchedReasons.push(`Content explicitly found inside product details`);
-                } else if (!tokenMatched && this.isFuzzyMatch(token, item.description)) {
-                    score += 2;
-                    tokenMatched = true;
-                }
-
-                if (!tokenMatched) {
-                    matchesAll = false;
-                    break;
-                }
-            }
-
-            if (matchesAll && score > 0) {
-                const uniqueReasons = [...new Set(matchedReasons)];
-                const topReason = uniqueReasons.length > 0 ? uniqueReasons[0] : "Identified as a strong contextual match";
-                results.push({ item: this.catalog[item.id], id: item.id, score: score, matchedReason: topReason });
-            }
-        }
-
-        return results.sort((a, b) => b.score - a.score).slice(0, 5);
-    }
-
-    getHistory() {
-        try {
-            return JSON.parse(localStorage.getItem('dodch_search_history') || '[]');
-        } catch (e) { return []; }
-    }
-
-    addToHistory(query) {
-        if (!query || query.length < 2) return;
-        let history = this.getHistory();
-        history = [query, ...history.filter(h => h !== query)].slice(0, 5);
-        localStorage.setItem('dodch_search_history', JSON.stringify(history));
-    }
-}
-
-window.dodchSearchEngine = new DODCHSearchEngine();
-document.addEventListener("DOMContentLoaded", () => {
-    setTimeout(() => {
-        if (window.productCatalog && Object.keys(window.productCatalog).length > 0) {
-            window.dodchSearchEngine.init(window.productCatalog);
-            console.log("Search Engine Initialized with", Object.keys(window.productCatalog).length, "products");
-        }
-    }, 1500); // Wait for potential firebase load
-
-    // --- SEARCH ENGINE UI LOGIC ---
-    const searchContainers = document.querySelectorAll(".search-container");
-    const halo = document.createElement("div");
-    halo.id = "search-results-halo";
-    document.body.appendChild(halo);
-    const dropdown = document.createElement("div");
-    dropdown.id = "search-results-dropdown";
-    document.body.appendChild(dropdown);
-
-    // Tapping the dimmed halo overlay should always fully dismiss the search
-    halo.addEventListener("click", () => closeSearchUI(null, activeInput));
-    halo.addEventListener("touchend", (e) => { e.preventDefault(); closeSearchUI(null, activeInput); });
-
-    // Safety-net: ESC anywhere always resets everything
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && halo.classList.contains("active")) {
-            closeSearchUI(null, activeInput);
-        }
-    });
-
-    let activeInput = null;
-    let selectedIndex = -1;
-    let currentResults = [];
-
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    window.dodchSearchTrendClick = (q) => {
-        const inp = document.getElementById('navbar-search-input');
-        if (inp) {
-            inp.value = q;
-            inp.focus();
-            inp.dispatchEvent(new Event('input'));
-        }
-    };
-
-    const populateWidgets = (container) => {
-        const trends = [
-            { query: 'Shampoo', label: 'Shampoo for Daily Use' },
-            { query: 'Serum', label: 'Hydrating Serums' },
-            { query: 'Mask', label: 'Silk Therapy Mask' }
-        ];
-
-        let listHtml = '';
-        trends.forEach(t => {
-            listHtml += `<div class="search-widget-list-item" onclick="window.dodchSearchTrendClick('${t.query}')" style="padding: 10px 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.03); border-radius: 8px; font-size: 0.9rem; color: #333; cursor: pointer; display: flex; align-items: center; gap: 12px; margin-bottom: 2px;">
+    `;document.body.insertAdjacentHTML("beforeend",n);const p=document.getElementById("review-prompt-toast"),a=document.getElementById("rpt-close-btn");setTimeout(()=>{p&&p.classList.add("active")},1500),a.addEventListener("click",()=>{p&&p.classList.remove("active"),localStorage.setItem("reviewPromptDismissedAt",Date.now().toString()),setTimeout(()=>{window.showToast("Review dismissed. You can still leave feedback later from your Account or Product pages.","info",6e3),setTimeout(()=>p&&p.remove(),1e3)},800)})},ei=()=>{const c=document.querySelectorAll(".account-tab-btn"),t=document.querySelectorAll(".tab-content");c.length!==0&&c.forEach(n=>{n.addEventListener("click",()=>{const p=n.getAttribute("data-tab");c.forEach(a=>a.classList.remove("active")),n.classList.add("active"),t.forEach(a=>{a.id===`${p}-tab-content`?(a.style.display="block",setTimeout(()=>{a.classList.add("active")},10)):(a.classList.remove("active"),setTimeout(()=>{a.classList.contains("active")||(a.style.display="none")},500))})})})};function $o(){const c=n=>["#B8995E","#8EA35E","#5DA35E","#2E7D32"][n-1]||"#B8995E";document.querySelectorAll(".perf-item").forEach(n=>{const p=n.querySelectorAll(".level-step"),a=n.querySelectorAll(".level-step.active").length,l=n.querySelector(".perf-value");if(a>0){const D=c(a);p.forEach((O,te)=>{te<a&&(O.style.background=D)}),l&&(l.style.color=D)}})}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>{Zo(),Bo(),ei(),$o()}):(Zo(),Bo(),ei(),$o());const Ui={shampoo:["shampoing","\u0634\u0627\u0645\u0628\u0648","shampoo"],oil:["huile","\u0632\u064A\u062A","oil","elixir","drops","gouttes","\u0642\u0637\u0631\u0627\u062A"],serum:["\u0633\u064A\u0631\u0648\u0645","concentre","serum","booster","ampoule","essence"],mask:["masque","\u0642\u0646\u0627\u0639","mask","wrap"],pear:["figue","\u0635\u0628\u0627\u0631","barbarie","prickly","cactus","pear"],fig:["figue","\u0635\u0628\u0627\u0631","barbarie","fig"],silk:["soie","\u062D\u0631\u064A\u0631","silk"],glow:["eclat","\u0627\u0644\u0644\u0645\u0639\u0627\u0646","bright","shine","radiant","brillance","glow"],face:["visage","\u0648\u062C\u0647","face"],body:["corps","\u062C\u0633\u0645","body"],hair:["cheveux","\u0634\u0639\u0631","hair"],cleanser:["wash","cleaning","cleanser","nettoyant","\u063A\u0633\u0648\u0644","cleansing"],skin:["skin","peau","\u0628\u0634\u0631\u0629"]},ji={needs_hydration:["dry","dehydrated","thirsty","brittle","\u062C\u0627\u0641","\u0639\u0637\u0634\u0627\u0646","sec","deshydrate","moisture","hydratation","\u062A\u0631\u0637\u064A\u0628","ashy","flakey"],needs_repair:["damaged","breakage","split ends","weak","\u062A\u0627\u0644\u0641","\u0645\u0643\u0633\u0631","abime","casse","repair","reparer","\u0627\u0635\u0644\u0627\u062D","fragile","weakness"],wants_luxury:["premium","luxury","exclusive","best","\u0641\u0627\u062E\u0631","\u0631\u0627\u0642\u064A","luxe","precieux","high-end","expensive","gold","or"],wants_scent:["smell","scent","fragrance","perfume","neroli","flower","\u0631\u0627\u0626\u062D\u0629","\u0639\u0637\u0631","parfum","fleur","sweet","sucre","odeur"],wants_growth:["grow","loss","thinning","volume","chute","pousse","\u062A\u0633\u0627\u0642\u0637","\u0646\u0645\u0648","thick","density"],wants_smooth:["frizz","frizzy","tangle","smooth","frisottis","lisse","tame","\u0645\u062C\u0639\u062F","\u0646\u0627\u0639\u0645","detangle","demelant"],wants_antiaging:["wrinkle","aging","youth","rides","anti-age","\u062A\u062C\u0627\u0639\u064A\u062F","\u0634\u064A\u062E\u0648\u062E\u0629","firm","lift","fermete"]},Vi={shampoo:["sulfate-free","sans sulfate","\u062E\u0627\u0644\u064A \u0645\u0646 \u0627\u0644\u0633\u0644\u0641\u0627\u062A","color-safe","daily use","usage quotidien","\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u064A\u0648\u0645\u064A","cleansing","scalp care","purifying","purifiant","\u062A\u0637\u0647\u064A\u0631","mellow","marshmallow","guimauve"],mask:["deep conditioning","soin profond","\u0639\u0646\u0627\u064A\u0629 \u0639\u0645\u064A\u0642\u0629","protein","keratin","ceramides","10 minutes","overnight","nuit","leave-in","sans rincage","\u0628\u062F\u0648\u0646 \u063A\u0633\u0644","revitalize","revitalisant"],serum:["hyaluronic","vitamin c","niacinamide","glass skin","peau de verre","\u0628\u0634\u0631\u0629 \u0632\u062C\u0627\u062C\u064A\u0629","fast-absorbing","absorbtion rapide","\u0633\u0631\u064A\u0639 \u0627\u0644\u0627\u0645\u062A\u0635\u0627\u0635","lightweight","leger","\u062E\u0641\u064A\u0641","youth booster"],oil:["argan","jojoba","vitamin e","anti-oxidant","antioxydant","\u0645\u0636\u0627\u062F \u0627\u0643\u0633\u062F\u0629","pure","cold-pressed","pressee a froid","\u0639\u0635\u0631\u0629 \u0628\u0627\u0631\u062F\u0629","multipurpose","multi-usages","\u0645\u062A\u0639\u062F\u062F \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0627\u062A","nail cuticles","cuticules","beard","barbe"]};class Gi{constructor(){this.catalog={},this.index=[]}normalize(t){return t?t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[آأإا]/g,"\u0627").replace(/ة/g,"\u0647").replace(/ى/g,"\u064A").trim():""}init(t){this.catalog=t,this.index=Object.entries(t).map(([n,p])=>{let a=(p.tags||[]).map(u=>this.normalize(u));const l=[],D=Array.isArray(p.subCategory)?p.subCategory.join(" "):p.subCategory||"",O=(p.name+" "+(p.category||"")+" "+D).toLowerCase();for(const[u,U]of Object.entries(Ui))(O.includes(u)||U.some(G=>O.includes(G)))&&l.push(...U,u);const te=[];for(const[u,U]of Object.entries(Vi))O.includes(u)&&te.push(...U.map(G=>this.normalize(G)));(O.includes("shampoo")||O.includes("mask"))&&a.push("needs_hydration","needs_repair","wants_smooth"),O.includes("shampoo")&&a.push("wants_scent"),(O.includes("serum")||O.includes("oil"))&&a.push("wants_antiaging","wants_glow","needs_repair"),O.includes("oil")&&a.push("wants_growth");const M={id:n,name:this.normalize(p.name),category:this.normalize(p.category||""),description:this.normalize(p.description||""),tags:[...new Set([...a,...l,...te])],price:p.price,scrapedText:""};return p.storyUrl&&!p.storyUrl.startsWith("http")&&fetch(p.storyUrl).then(u=>u.text()).then(u=>{const N=new DOMParser().parseFromString(u,"text/html").querySelectorAll("main p, main h1, main h2, main h3, main li, .inci-list span, .product-story");let le="";N.forEach(K=>{le+=" "+K.textContent}),M.scrapedText=this.normalize(le)}).catch(u=>console.warn(`Silent scrape failed for ${p.storyUrl}:`,u)),M})}levenshtein(t,n){const p=[];if(t.length===0)return n.length;if(n.length===0)return t.length;for(let a=0;a<=n.length;a++)p[a]=[a];for(let a=0;a<=t.length;a++)p[0][a]=a;for(let a=1;a<=n.length;a++)for(let l=1;l<=t.length;l++)n.charAt(a-1)==t.charAt(l-1)?p[a][l]=p[a-1][l-1]:p[a][l]=Math.min(p[a-1][l-1]+1,Math.min(p[a][l-1]+1,p[a-1][l]+1));return p[n.length][t.length]}isFuzzyMatch(t,n){if(n.includes(t))return!0;const p=t.length>6?2:1;if(t.length>3){const a=n.split(/\s+/);for(let l of a)if(l.length>3&&this.levenshtein(t,l)<=p)return!0}return!1}search(t){if(!t||t.trim().length===0)return[];const p=this.normalize(t).split(/\s+/).filter(l=>l.length>0);if(p.length===0)return[];const a=[];for(const l of this.index){let D=0,O=!0,te=[];for(const M of p){let u=!1;if(l.name.includes(M))D+=15,u=!0;else if(!u){for(const[U,G]of Object.entries(ji))if(G.includes(M)&&l.tags.includes(U)){D+=12,u=!0,te.push(`Solves intent for "${U.replace(/_/g," ")}"`);break}}if(!u&&l.tags.some(U=>U.includes(M)||this.isFuzzyMatch(M,U))?(D+=10,u=!0,te.push(`Matches deep semantic tags related to "${M}"`)):!u&&this.isFuzzyMatch(M,l.name)?(D+=8,u=!0):!u&&l.category.includes(M)?(D+=5,u=!0,te.push("Category match")):!u&&l.scrapedText&&(l.scrapedText.includes(M)||this.isFuzzyMatch(M,l.scrapedText))?(D+=3,u=!0,te.push("Content explicitly found inside product details")):!u&&this.isFuzzyMatch(M,l.description)&&(D+=2,u=!0),!u){O=!1;break}}if(O&&D>0){const M=[...new Set(te)],u=M.length>0?M[0]:"Identified as a strong contextual match";a.push({item:this.catalog[l.id],id:l.id,score:D,matchedReason:u})}}return a.sort((l,D)=>D.score-l.score).slice(0,5)}getHistory(){try{return JSON.parse(localStorage.getItem("dodch_search_history")||"[]")}catch{return[]}}addToHistory(t){if(!t||t.length<2)return;let n=this.getHistory();n=[t,...n.filter(p=>p!==t)].slice(0,5),localStorage.setItem("dodch_search_history",JSON.stringify(n))}}window.dodchSearchEngine=new Gi,document.addEventListener("DOMContentLoaded",()=>{setTimeout(()=>{window.productCatalog&&Object.keys(window.productCatalog).length>0&&(window.dodchSearchEngine.init(window.productCatalog),console.log("Search Engine Initialized with",Object.keys(window.productCatalog).length,"products"))},1500);const c=document.querySelectorAll(".search-container"),t=document.createElement("div");t.id="search-results-halo",document.body.appendChild(t);const n=document.createElement("div");n.id="search-results-dropdown",document.body.appendChild(n),t.addEventListener("click",()=>M(null,p)),t.addEventListener("touchend",I=>{I.preventDefault(),M(null,p)}),document.addEventListener("keydown",I=>{I.key==="Escape"&&t.classList.contains("active")&&M(null,p)});let p=null,a=-1,l=[];function D(I,Y){let ce;return function(..._){const ie=()=>{clearTimeout(ce),I(..._)};clearTimeout(ce),ce=setTimeout(ie,Y)}}window.dodchSearchTrendClick=I=>{const Y=document.getElementById("navbar-search-input");Y&&(Y.value=I,Y.focus(),Y.dispatchEvent(new Event("input")))};const O=I=>{const Y=[{query:"Shampoo",label:"Shampoo for Daily Use"},{query:"Serum",label:"Hydrating Serums"},{query:"Mask",label:"Silk Therapy Mask"}];let ce="";Y.forEach(_=>{ce+=`<div class="search-widget-list-item" onclick="window.dodchSearchTrendClick('${_.query}')" style="padding: 10px 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.03); border-radius: 8px; font-size: 0.9rem; color: #333; cursor: pointer; display: flex; align-items: center; gap: 12px; margin-bottom: 2px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #D4AF37; flex-shrink: 0; opacity: 0.8;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <span style="font-weight: 500;">${t.label}</span>
-            </div>`;
-        });
-
-        const trendingWidget = document.createElement("div");
-        trendingWidget.className = "search-widget";
-        trendingWidget.innerHTML = `
+                <span style="font-weight: 500;">${_.label}</span>
+            </div>`});const J=document.createElement("div");J.className="search-widget",J.innerHTML=`
             <div class="search-widget-title">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                 Trending Searches
             </div>
             <div class="search-widget-list-container" style="margin-top: 10px; display: flex; flex-direction: column;">
-                ${listHtml}
+                ${ce}
             </div>
-        `;
-
-        container.innerHTML = "";
-        container.appendChild(trendingWidget);
-    };
-
-    const positionDropdown = (inputEl) => {
-        const container = inputEl.closest(".search-container");
-        if (container && dropdown.parentNode !== container) {
-            container.appendChild(dropdown);
-            if (!container.querySelector("#search-close-btn")) {
-                const closeBtn = document.createElement("button");
-                closeBtn.id = "search-close-btn";
-                closeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px; stroke: currentColor;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-                closeBtn.style.position = "absolute";
-                container.appendChild(closeBtn);
-
-                closeBtn.addEventListener("mousedown", (e) => {
-                    e.preventDefault();
-                    closeSearchUI(container, inputEl);
-                });
-            }
-        }
-    };
-
-    const closeSearchUI = (container, inputEl) => {
-        if (inputEl) {
-            inputEl.value = "";
-            inputEl.blur();
-        }
-        dropdown.classList.remove("active");
-        halo.classList.remove("active");
-        const nav = document.getElementById("navbar");
-        if (nav) nav.classList.remove("search-active");
-        if (container) {
-            container.classList.remove("active");
-        } else {
-            searchContainers.forEach(c => c.classList.remove("active"));
-        }
-        document.body.classList.remove("search-active");
-        document.documentElement.classList.remove("search-active");
-        selectedIndex = -1;
-    };
-
-    // Handle tab switching and keyboard dismissal/backgrounding
-    window.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') closeSearchUI(null, activeInput);
-    });
-
-    const layoutDiv = document.createElement("div");
-    layoutDiv.className = "search-dropdown-layout";
-
-    const mainResultsDiv = document.createElement("div");
-    mainResultsDiv.className = "search-main-results";
-
-    layoutDiv.appendChild(mainResultsDiv);
-
-    // --- DEEP LINK SEARCH INTEGRATION ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialSearch = urlParams.get('search');
-    if (initialSearch) {
-        setTimeout(() => {
-            const inp = document.getElementById('navbar-search-input');
-            const toggle = document.getElementById('search-toggle-btn');
-            if (inp && toggle) {
-                if (!document.querySelector('.search-container').classList.contains('active')) {
-                    toggle.click();
-                }
-                inp.value = initialSearch;
-                inp.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        }, 2000);
-    }
-
-
-
-
-    const syncHeight = () => {
-        if (!dropdown || !dropdown.classList.contains("active")) return;
-
-        // 1. Disable transition to measure natural height instantly
-        dropdown.style.transition = 'none';
-        const currentHeight = dropdown.offsetHeight;
-        dropdown.style.height = 'auto';
-
-        // 2. Measure the exact height the content *wants* to be
-        const targetHeight = Math.min(layoutDiv.offsetHeight + 40, window.innerHeight - 110);
-
-        // 3. Snap back to the starting height before the browser paints
-        dropdown.style.height = `${currentHeight}px`;
-
-        // 4. Force a layout recalculation
-        void dropdown.offsetHeight;
-
-        // 5. Apply the transition and target height in the next frame for a smooth glide
-        requestAnimationFrame(() => {
-            dropdown.style.transition = 'height 0.3s ease';
-            dropdown.style.height = `${targetHeight}px`;
-
-            // Clean up inline transition so CSS takes over again
-            setTimeout(() => {
-                dropdown.style.transition = '';
-            }, 350);
-        });
-    };
-
-    const renderResults = (results, query) => {
-        currentResults = results;
-        selectedIndex = -1;
-        mainResultsDiv.innerHTML = ""; // Only clear the results pane
-        if (!query || query.length < 2) {
-            layoutDiv.classList.remove("has-query");
-        } else {
-            layoutDiv.classList.add("has-query");
-        }
-
-        const history = window.dodchSearchEngine.getHistory();
-        if (!dropdown.contains(layoutDiv)) {
-            dropdown.innerHTML = "";
-            dropdown.appendChild(layoutDiv);
-        }
-
-        // --- State 1: Dashboard (Empty Query) ---
-        if (!query || query.length < 2) {
-            const historyPart = history.length > 0 ? `
+        `,I.innerHTML="",I.appendChild(J)},te=I=>{const Y=I.closest(".search-container");if(Y&&n.parentNode!==Y&&(Y.appendChild(n),!Y.querySelector("#search-close-btn"))){const ce=document.createElement("button");ce.id="search-close-btn",ce.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px; stroke: currentColor;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',ce.style.position="absolute",Y.appendChild(ce),ce.addEventListener("mousedown",J=>{J.preventDefault(),M(Y,I)})}},M=(I,Y)=>{Y&&(Y.value="",Y.blur()),n.classList.remove("active"),t.classList.remove("active");const ce=document.getElementById("navbar");ce&&ce.classList.remove("search-active"),I?I.classList.remove("active"):c.forEach(J=>J.classList.remove("active")),document.body.classList.remove("search-active"),document.documentElement.classList.remove("search-active"),a=-1};window.addEventListener("visibilitychange",()=>{document.visibilityState==="hidden"&&M(null,p)});const u=document.createElement("div");u.className="search-dropdown-layout";const U=document.createElement("div");U.className="search-main-results",u.appendChild(U);const N=new URLSearchParams(window.location.search).get("search");N&&setTimeout(()=>{const I=document.getElementById("navbar-search-input"),Y=document.getElementById("search-toggle-btn");I&&Y&&(document.querySelector(".search-container").classList.contains("active")||Y.click(),I.value=N,I.dispatchEvent(new Event("input",{bubbles:!0})))},2e3);const le=()=>{if(!n||!n.classList.contains("active"))return;n.style.transition="none";const I=n.offsetHeight;n.style.height="auto";const Y=Math.min(u.offsetHeight+40,window.innerHeight-110);n.style.height=`${I}px`,n.offsetHeight,requestAnimationFrame(()=>{n.style.transition="height 0.3s ease",n.style.height=`${Y}px`,setTimeout(()=>{n.style.transition=""},350)})},K=(I,Y)=>{l=I,a=-1,U.innerHTML="",!Y||Y.length<2?u.classList.remove("has-query"):u.classList.add("has-query");const ce=window.dodchSearchEngine.getHistory();if(n.contains(u)||(n.innerHTML="",n.appendChild(u)),!Y||Y.length<2){const J=ce.length>0?`
                 <div class="search-dashboard-section">
                     <div class="search-widget-title" style="margin-bottom: 12px; font-size: 0.8rem; color: var(--accent-gold-text); font-weight: 800;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         Recently Viewed
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 30px;">
-                        ${history.map((h, i) => `
-                            <div class="history-pill search-reveal-item" onclick="var inp=document.getElementById('navbar-search-input'); if(inp){ inp.value='${h}'; inp.focus(); inp.dispatchEvent(new Event('input')); }" style="padding: 10px 18px; background: #fafafa; border-radius: 20px; font-size: 0.85rem; color: #333; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); transition: all 0.2s; font-weight: 600; animation-delay: ${0.35 + (i * 0.08)}s;">
-                                ${h}
+                        ${ce.map((_,ie)=>`
+                            <div class="history-pill search-reveal-item" onclick="var inp=document.getElementById('navbar-search-input'); if(inp){ inp.value='${_}'; inp.focus(); inp.dispatchEvent(new Event('input')); }" style="padding: 10px 18px; background: #fafafa; border-radius: 20px; font-size: 0.85rem; color: #333; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); transition: all 0.2s; font-weight: 600; animation-delay: ${.35+ie*.08}s;">
+                                ${_}
                             </div>
-                        `).join('')}
+                        `).join("")}
                     </div>
                 </div>
-            ` : '';
-
-            mainResultsDiv.innerHTML = `
+            `:"";U.innerHTML=`
                 <div class="search-dashboard" style="display: flex; flex-direction: column;">
-                    ${historyPart}
+                    ${J}
                 </div>
-            `;
-            dropdown.classList.add("active");
-            halo.classList.add("active");
-            return;
-        }
-
-        if (results.length === 0 && query.length > 0) {
-            mainResultsDiv.innerHTML = `<div class="search-no-results" style="padding: 20px; color: #666;">No products found for "${query}". Try searching for categories like "shampoo" or "mask".</div>`;
-            dropdown.classList.add("active");
-            halo.classList.add("active");
-            return;
-        }
-
-        // --- State 3: Filtering & Suggestions ---
-        results.forEach((res, index) => {
-            const item = res.item;
-            const minPrice = item.sizes && item.sizes.length > 0
-                ? Math.min(...item.sizes.map(s => parseFloat(s.price)))
-                : parseFloat(item.price);
-
-            const priceStr = item.sizes && item.sizes.length > 0 ? `From ${minPrice.toFixed(2)} TND` : `${minPrice.toFixed(2)} TND`;
-
-            const div = document.createElement("div");
-            div.className = "search-result-item search-reveal-item" + (index === 0 ? " highlighted" : "");
-            div.style.animationDelay = (0.15 + (index * 0.08)) + "s";
-            if (index === 0) selectedIndex = 0;
-
-            let imgUrl = item.images && item.images.length > 0 ? item.images[0] : (item.image || "");
-
-            div.innerHTML = `
-                <img src="${imgUrl}" class="search-result-image" alt="${item.name}">
+            `,n.classList.add("active"),t.classList.add("active");return}if(I.length===0&&Y.length>0){U.innerHTML=`<div class="search-no-results" style="padding: 20px; color: #666;">No products found for "${Y}". Try searching for categories like "shampoo" or "mask".</div>`,n.classList.add("active"),t.classList.add("active");return}I.forEach((J,_)=>{const ie=J.item,Le=ie.sizes&&ie.sizes.length>0?Math.min(...ie.sizes.map(qe=>parseFloat(qe.price))):parseFloat(ie.price),Ce=ie.sizes&&ie.sizes.length>0?`From ${Le.toFixed(2)} TND`:`${Le.toFixed(2)} TND`,De=document.createElement("div");De.className="search-result-item search-reveal-item"+(_===0?" highlighted":""),De.style.animationDelay=.15+_*.08+"s",_===0&&(a=0);let Je=ie.images&&ie.images.length>0?ie.images[0]:ie.image||"";if(De.innerHTML=`
+                <img src="${Je}" class="search-result-image" alt="${ie.name}">
                 <div class="search-result-info">
-                    <div class="search-result-title">${item.name}</div>
-                    <div class="search-result-price" style="margin-top: 4px;">${priceStr}</div>
+                    <div class="search-result-title">${ie.name}</div>
+                    <div class="search-result-price" style="margin-top: 4px;">${Ce}</div>
                 </div>
-            `;
-
-            const lowerTitle = item.name.toLowerCase();
-            if (lowerTitle.includes(query.toLowerCase())) {
-                const regex = new RegExp(`(${query})`, "gi");
-                div.querySelector(".search-result-title").innerHTML = item.name.replace(regex, "<strong>$1</strong>");
-            }
-
-            div.addEventListener("mousedown", (e) => {
-                e.preventDefault();
-                window.dodchSearchEngine.addToHistory(query);
-                window.location.href = `product.html?id=${res.id}`;
-            });
-
-            div.addEventListener("mouseenter", () => {
-                updateSelection(index);
-            });
-
-            mainResultsDiv.appendChild(div);
-        });
-
-        dropdown.classList.add("active");
-        halo.classList.add("active");
-        syncHeight();
-    };
-
-    const updateSelection = (index) => {
-        const items = mainResultsDiv.querySelectorAll(".search-result-item");
-        items.forEach(i => i.classList.remove("highlighted"));
-        if (index >= 0 && index < items.length) {
-            items[index].classList.add("highlighted");
-            selectedIndex = index;
-        }
-    };
-
-    const handleSearch = debounce((e) => {
-        const query = e.target.value.trim();
-        if (query.length < 2) {
-            renderResults([], query);
-            return;
-        }
-        if (!dropdown.contains(layoutDiv)) {
-            dropdown.innerHTML = "";
-            dropdown.appendChild(layoutDiv);
-        }
-
-        mainResultsDiv.innerHTML = `
+            `,ie.name.toLowerCase().includes(Y.toLowerCase())){const qe=new RegExp(`(${Y})`,"gi");De.querySelector(".search-result-title").innerHTML=ie.name.replace(qe,"<strong>$1</strong>")}De.addEventListener("mousedown",qe=>{qe.preventDefault(),window.dodchSearchEngine.addToHistory(Y),window.location.href=`product.html?id=${J.id}`}),De.addEventListener("mouseenter",()=>{X(_)}),U.appendChild(De)}),n.classList.add("active"),t.classList.add("active"),le()},X=I=>{const Y=U.querySelectorAll(".search-result-item");Y.forEach(ce=>ce.classList.remove("highlighted")),I>=0&&I<Y.length&&(Y[I].classList.add("highlighted"),a=I)},w=D(I=>{const Y=I.target.value.trim();if(Y.length<2){K([],Y);return}n.contains(u)||(n.innerHTML="",n.appendChild(u)),U.innerHTML=`
             <div style="padding: 2rem; text-align: center; color: var(--accent-gold-text);">
                 <div class="ai-thinking-dots" style="display: flex; gap: 8px; justify-content: center; margin-bottom: 1rem;">
                     <span style="width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 0.6s infinite alternate;"></span>
@@ -9670,249 +1393,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <div style="font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; opacity: 0.7;">Thinking...</div>
             </div>
-        `;
-
-        dropdown.classList.add("active");
-        halo.classList.add("active");
-        syncHeight();
-
-        setTimeout(() => {
-            if (Object.keys(window.dodchSearchEngine.catalog).length === 0 && window.productCatalog) {
-                window.dodchSearchEngine.init(window.productCatalog);
-            }
-            const results = window.dodchSearchEngine.search(query);
-            renderResults(results, query);
-        }, 400);
-    }, 250); // 250ms debounce
-
-    searchContainers.forEach(container => {
-        const input = container.querySelector("input");
-        const clearBtn = container.querySelector("#search-clear-btn");
-        if (!input) return;
-
-        if (clearBtn) {
-            clearBtn.addEventListener("mousedown", (e) => {
-                e.preventDefault();
-                input.value = "";
-                renderResults([], ""); // Show history immediately
-                syncHeight();
-                input.focus();
-            });
-        }
-
-        input.addEventListener("focus", (e) => {
-            window.triggerHaptic('light');
-            activeInput = e.target;
-            positionDropdown(activeInput);
-            const query = e.target.value.trim();
-
-            document.body.classList.add("search-active");
-            document.documentElement.classList.add("search-active");
-            const nav = document.getElementById("navbar");
-            if (nav) nav.classList.add("search-active");
-
-            container.classList.add("active");
-            halo.classList.add("active");
-            if (query.length === 0) {
-                renderResults([], "");
-                syncHeight();
-            } else {
-                handleSearch(e);
-            }
-        });
-        // The halo now catches all outside interaction via pointer-events: auto
-
-        input.addEventListener("input", (e) => {
-            activeInput = e.target;
-            positionDropdown(activeInput);
-            handleSearch(e);
-        });
-
-        // NOTE: blur listener intentionally removed — it was causing the dropdown to
-        // collapse whenever ANY element inside it was clicked/tapped, because focus
-        // momentarily leaves the input. Outside-click is handled by the mousedown/
-        // touchstart document listeners above instead.
-
-        input.addEventListener("keydown", (e) => {
-            if (!dropdown.classList.contains("active")) return;
-
-            const items = dropdown.querySelectorAll(".search-result-item");
-
-            if (e.key === "ArrowDown") {
-                e.preventDefault();
-                selectedIndex = (selectedIndex + 1) % items.length;
-                updateSelection(selectedIndex);
-            } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                selectedIndex = selectedIndex - 1;
-                if (selectedIndex < 0) selectedIndex = items.length - 1;
-                updateSelection(selectedIndex);
-            } else if (e.key === "Enter") {
-                e.preventDefault();
-                if (selectedIndex >= 0 && currentResults[selectedIndex]) {
-                    const id = currentResults[selectedIndex].id;
-                    const item = currentResults[selectedIndex].item;
-                    window.dodchSearchEngine.addToHistory(input.value.trim()); // Save to history
-                    window.location.href = `product.html?id=${id}`;
-                }
-            } else if (e.key === "Escape") {
-                selectedIndex = -1;
-                dropdown.classList.remove("active");
-                halo.classList.remove("active");
-                const nav = document.getElementById("navbar");
-                if (nav) nav.classList.remove("search-active");
-                container.classList.remove("active");
-                document.body.classList.remove("search-active");
-                document.documentElement.classList.remove("search-active");
-                input.blur();
-            } else if (e.key === "Tab") {
-                // Tab navigating away — close cleanly
-                closeSearchUI(container, input);
-            }
-        });
-
-    });
-});
-
-// --- Consolidated Contact Form Submission Handler ---
-document.addEventListener('submit', async (e) => {
-    const form = e.target;
-    if (!form || (!form.id?.includes('contact') && !form.classList.contains('contact-form'))) return;
-    const lastSubmit = localStorage.getItem('dodch_last_contact_ts');
-    const now = Date.now();
-    if (lastSubmit && (now - parseInt(lastSubmit)) < 120000 && !window.DEBUG_BYPASS_TIMER) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        const waitSec = Math.ceil((120000 - (now - parseInt(lastSubmit))) / 1000);
-        if (window.showToast) window.showToast(`Please wait ${waitSec}s before sending another message.`, "error");
-        return;
-    }
-    const honeypot = form.querySelector('input[name="__hp_website"]');
-    if (honeypot && honeypot.value) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (window.showToast) window.showToast("Message sent successfully!", "success");
-        form.reset();
-        return;
-    }
-    e.preventDefault();
-    const submitBtn = form.querySelector('button[type="submit"], .cta-button, .contact-submit-btn');
-    const originalText = submitBtn ? submitBtn.textContent : 'Send';
-
-    if (submitBtn) {
-        submitBtn.textContent = 'Sending...';
-        submitBtn.disabled = true;
-    }
-
-    const nameInput = form.querySelector('input[type="text"]:not([name="__hp_website"])');
-    const emailInput = form.querySelector('input[type="email"]');
-    const messageInput = form.querySelector('textarea');
-
-    const name = nameInput ? nameInput.value.trim() : "";
-    const email = emailInput ? emailInput.value.trim() : "";
-    const message = messageInput ? messageInput.value.trim() : "";
-
-    // --- SMART VALIDATION ---
-    if (!name || !email || !message) {
-        if (window.showToast) window.showToast("Please fill in all fields.", "error");
-        if (submitBtn) {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-        return;
-    }
-
-    if (!SecurityValidator.validateEmail(email)) {
-        if (window.showToast) window.showToast("Please enter a valid email address.", "error");
-        if (submitBtn) {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-        return;
-    }
-
-    if (SecurityValidator.isProfane(name) || SecurityValidator.isProfane(message)) {
-        if (window.showToast) window.showToast("Inappropriate language detected.", "error");
-        if (submitBtn) {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-        return;
-    }
-
-    if (SecurityValidator.isGibberish(message)) {
-        if (window.showToast) window.showToast("Message appears to be bot-generated. Please use real text.", "error");
-        if (submitBtn) {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-        return;
-    }
-
-    if (name.length > SecurityValidator.MAX_NAME_LENGTH || message.length > SecurityValidator.MAX_MESSAGE_LENGTH) {
-        if (window.showToast) window.showToast("Input length exceeds safety limits.", "error");
-        if (submitBtn) {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-        return;
-    }
-
-    // Basic size check to prevent multi-megabyte payloads hitting the network
-    if (new Blob([name, email, message]).size > 10000) {
-        if (window.showToast) window.showToast("Message payload is too large.", "error");
-        if (submitBtn) {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-        return;
-    }
-    // --- END SMART VALIDATION ---
-
-    try {
-        if (typeof appCheckReady !== 'undefined') {
-            await appCheckReady;
-        }
-        // Direct Firestore write (Spark-compatible)
-        // Using addDoc to ensure every message is stored uniquely
-        await addDoc(collection(db, "messages"), {
-            name,
-            email,
-            message,
-            status: 'unread',
-            createdAt: serverTimestamp()
-        });
-
-        localStorage.setItem('dodch_last_contact_ts', Date.now());
-        if (window.showToast) window.showToast("Message sent successfully!", "success");
-        form.reset();
-    } catch (error) {
-        console.error("Detailed Submission Error:", error);
-        if (error.code === 'permission-denied') {
-            if (window.showToast) window.showToast(`Security check failed (${error.code}). Check for duplicates or refresh.`, "error");
-        } else {
-            if (window.showToast) window.showToast(`Submission Error: ${error.code || error.message}`, "error");
-        }
-    } finally {
-        if (submitBtn) {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-    }
-});
-
-// --- iOS Add to Home Screen Banner ---
-function showIOSInstallBanner() {
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
-    const isStandalone = window.navigator.standalone === true;
-    const dismissed = localStorage.getItem('dodch_ios_banner_dismissed');
-    const hasOrdered = localStorage.getItem('dodch_has_ordered') === '1';
-
-    if (!isIOS || !isSafari || isStandalone || dismissed || !hasOrdered) return;
-    localStorage.setItem('dodch_ios_banner_dismissed', '1');
-    const styles = document.createElement('style');
-    styles.textContent = `
+        `,n.classList.add("active"),t.classList.add("active"),le(),setTimeout(()=>{Object.keys(window.dodchSearchEngine.catalog).length===0&&window.productCatalog&&window.dodchSearchEngine.init(window.productCatalog);const ce=window.dodchSearchEngine.search(Y);K(ce,Y)},400)},250);c.forEach(I=>{const Y=I.querySelector("input"),ce=I.querySelector("#search-clear-btn");Y&&(ce&&ce.addEventListener("mousedown",J=>{J.preventDefault(),Y.value="",K([],""),le(),Y.focus()}),Y.addEventListener("focus",J=>{window.triggerHaptic("light"),p=J.target,te(p);const _=J.target.value.trim();document.body.classList.add("search-active"),document.documentElement.classList.add("search-active");const ie=document.getElementById("navbar");ie&&ie.classList.add("search-active"),I.classList.add("active"),t.classList.add("active"),_.length===0?(K([],""),le()):w(J)}),Y.addEventListener("input",J=>{p=J.target,te(p),w(J)}),Y.addEventListener("keydown",J=>{if(!n.classList.contains("active"))return;const _=n.querySelectorAll(".search-result-item");if(J.key==="ArrowDown")J.preventDefault(),a=(a+1)%_.length,X(a);else if(J.key==="ArrowUp")J.preventDefault(),a=a-1,a<0&&(a=_.length-1),X(a);else if(J.key==="Enter"){if(J.preventDefault(),a>=0&&l[a]){const ie=l[a].id,Le=l[a].item;window.dodchSearchEngine.addToHistory(Y.value.trim()),window.location.href=`product.html?id=${ie}`}}else if(J.key==="Escape"){a=-1,n.classList.remove("active"),t.classList.remove("active");const ie=document.getElementById("navbar");ie&&ie.classList.remove("search-active"),I.classList.remove("active"),document.body.classList.remove("search-active"),document.documentElement.classList.remove("search-active"),Y.blur()}else J.key==="Tab"&&M(I,Y)}))})}),document.addEventListener("submit",async c=>{const t=c.target;if(!t||!t.id?.includes("contact")&&!t.classList.contains("contact-form"))return;const n=localStorage.getItem("dodch_last_contact_ts"),p=Date.now();if(n&&p-parseInt(n)<12e4&&!window.DEBUG_BYPASS_TIMER){c.preventDefault(),c.stopImmediatePropagation();const N=Math.ceil((12e4-(p-parseInt(n)))/1e3);window.showToast&&window.showToast(`Please wait ${N}s before sending another message.`,"error");return}const a=t.querySelector('input[name="__hp_website"]');if(a&&a.value){c.preventDefault(),c.stopImmediatePropagation(),window.showToast&&window.showToast("Message sent successfully!","success"),t.reset();return}c.preventDefault();const l=t.querySelector('button[type="submit"], .cta-button, .contact-submit-btn'),D=l?l.textContent:"Send";l&&(l.textContent="Sending...",l.disabled=!0);const O=t.querySelector('input[type="text"]:not([name="__hp_website"])'),te=t.querySelector('input[type="email"]'),M=t.querySelector("textarea"),u=O?O.value.trim():"",U=te?te.value.trim():"",G=M?M.value.trim():"";if(!u||!U||!G){window.showToast&&window.showToast("Please fill in all fields.","error"),l&&(l.textContent=D,l.disabled=!1);return}if(!We.validateEmail(U)){window.showToast&&window.showToast("Please enter a valid email address.","error"),l&&(l.textContent=D,l.disabled=!1);return}if(We.isProfane(u)||We.isProfane(G)){window.showToast&&window.showToast("Inappropriate language detected.","error"),l&&(l.textContent=D,l.disabled=!1);return}if(We.isGibberish(G)){window.showToast&&window.showToast("Message appears to be bot-generated. Please use real text.","error"),l&&(l.textContent=D,l.disabled=!1);return}if(u.length>We.MAX_NAME_LENGTH||G.length>We.MAX_MESSAGE_LENGTH){window.showToast&&window.showToast("Input length exceeds safety limits.","error"),l&&(l.textContent=D,l.disabled=!1);return}if(new Blob([u,U,G]).size>1e4){window.showToast&&window.showToast("Message payload is too large.","error"),l&&(l.textContent=D,l.disabled=!1);return}try{typeof Ot<"u"&&await Ot,await Wt(Ne(se,"messages"),{name:u,email:U,message:G,status:"unread",createdAt:kt()}),localStorage.setItem("dodch_last_contact_ts",Date.now()),window.showToast&&window.showToast("Message sent successfully!","success"),t.reset()}catch(N){console.error("Detailed Submission Error:",N),N.code==="permission-denied"?window.showToast&&window.showToast(`Security check failed (${N.code}). Check for duplicates or refresh.`,"error"):window.showToast&&window.showToast(`Submission Error: ${N.code||N.message}`,"error")}finally{l&&(l.textContent=D,l.disabled=!1)}});function Yi(){const c=/iphone|ipad|ipod/i.test(navigator.userAgent),t=/safari/i.test(navigator.userAgent)&&!/chrome|crios|fxios/i.test(navigator.userAgent),n=window.navigator.standalone===!0,p=localStorage.getItem("dodch_ios_banner_dismissed"),a=localStorage.getItem("dodch_has_ordered")==="1";if(!c||!t||n||p||!a)return;localStorage.setItem("dodch_ios_banner_dismissed","1");const l=document.createElement("style");l.textContent=`
         #dodch-ios-banner {
             position: fixed;
             bottom: 0; left: 0; right: 0;
@@ -10019,12 +1500,7 @@ function showIOSInstallBanner() {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(4px); }
         }
-    `;
-    document.head.appendChild(styles);
-
-    const banner = document.createElement('div');
-    banner.id = 'dodch-ios-banner';
-    banner.innerHTML = `
+    `,document.head.appendChild(l);const D=document.createElement("div");D.id="dodch-ios-banner",D.innerHTML=`
         <div id="dodch-ios-banner-inner">
             <div id="dodch-ios-banner-icon-wrap">
                 <img id="dodch-ios-banner-icon" src="IMG_3352.webp" alt="DODCH">
@@ -10034,72 +1510,15 @@ function showIOSInstallBanner() {
                 <p id="dodch-ios-banner-body">Receive order updates &amp; exclusive offers as push notifications.</p>
                 <div id="dodch-ios-banner-steps">
                     <span>Tap</span>
-                    <span class="step-badge">⬆️ Share</span>
+                    <span class="step-badge">\u2B06\uFE0F Share</span>
                     <span>then</span>
-                    <span class="step-badge">＋ Add to Home Screen</span>
+                    <span class="step-badge">\uFF0B Add to Home Screen</span>
                 </div>
             </div>
             <button id="dodch-ios-banner-close" aria-label="Dismiss">&times;</button>
         </div>
-        <div id="dodch-ios-banner-arrow">↓</div>
-    `;
-    document.body.appendChild(banner);
-    setTimeout(() => banner.classList.add('visible'), 1500);
-    document.getElementById('dodch-ios-banner-close').addEventListener('click', () => {
-        banner.classList.remove('visible');
-        localStorage.setItem('dodch_ios_banner_dismissed', '1');
-        setTimeout(() => banner.remove(), 500);
-    });
-    setTimeout(() => {
-        if (banner.parentNode) {
-            banner.classList.remove('visible');
-            setTimeout(() => { if (banner.parentNode) banner.remove(); }, 500);
-        }
-    }, 18000);
-}
-
-window.addEventListener('load', showIOSInstallBanner);
-
-// --- Web Push Notifications ---
-async function syncPushTokenToUser(user) {
-    if (window.location.protocol === 'file:') return;
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-    if (Notification.permission !== 'granted') return;
-
-    try {
-        const supported = await isSupported();
-        if (!supported) return;
-
-        if (!messaging) messaging = getMessaging(app);
-
-        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
-        const token = await getMessagingToken(messaging, { vapidKey: VAPID });
-
-        if (token) {
-            await setDoc(doc(db, 'subscribers', token), {
-                token,
-                userId: user ? user.uid : null,
-                lastSeen: serverTimestamp()
-            }, { merge: true });
-        }
-    } catch (err) {
-        console.warn('Silent token sync failed:', err);
-    }
-}
-
-function triggerIOSInstallFlow() {
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    if (isIOS) {
-        const existing = document.getElementById('dodch-ios-banner');
-        if (existing) {
-            existing.classList.add('visible');
-            return true;
-        }
-
-        if (!document.querySelector('style[data-ios-banner]')) {
-            const styles = document.createElement('style');
-            styles.setAttribute('data-ios-banner', 'true');
-            styles.textContent = `
+        <div id="dodch-ios-banner-arrow">\u2193</div>
+    `,document.body.appendChild(D),setTimeout(()=>D.classList.add("visible"),1500),document.getElementById("dodch-ios-banner-close").addEventListener("click",()=>{D.classList.remove("visible"),localStorage.setItem("dodch_ios_banner_dismissed","1"),setTimeout(()=>D.remove(),500)}),setTimeout(()=>{D.parentNode&&(D.classList.remove("visible"),setTimeout(()=>{D.parentNode&&D.remove()},500))},18e3)}window.addEventListener("load",Yi);async function ro(c){if(window.location.protocol!=="file:"&&!(!("Notification"in window)||!("serviceWorker"in navigator))&&Notification.permission==="granted")try{if(!await To())return;Et||(Et=Io(ct));const p=await Ko(Et,{vapidKey:"BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM"});p&&await lt(Ae(se,"subscribers",p),{token:p,userId:c?c.uid:null,lastSeen:kt()},{merge:!0})}catch(t){console.warn("Silent token sync failed:",t)}}function Wi(){if(/iphone|ipad|ipod/i.test(navigator.userAgent)){const t=document.getElementById("dodch-ios-banner");if(t)return t.classList.add("visible"),!0;if(!document.querySelector("style[data-ios-banner]")){const p=document.createElement("style");p.setAttribute("data-ios-banner","true"),p.textContent=`
                 #dodch-ios-banner {
                     position: fixed;
                     bottom: 0; left: 0; right: 0;
@@ -10195,13 +1614,7 @@ function triggerIOSInstallFlow() {
                     0%, 100% { transform: translate(-50%, 0); }
                     50% { transform: translate(-50%, 5px); }
                 }
-            `;
-            document.head.appendChild(styles);
-        }
-
-        const banner = document.createElement('div');
-        banner.id = 'dodch-ios-banner';
-        banner.innerHTML = `
+            `,document.head.appendChild(p)}const n=document.createElement("div");return n.id="dodch-ios-banner",n.innerHTML=`
             <div id="dodch-ios-banner-inner">
                 <div id="dodch-ios-banner-icon-wrap">
                     <img id="dodch-ios-banner-icon" src="IMG_3352.webp" alt="DODCH">
@@ -10211,365 +1624,34 @@ function triggerIOSInstallFlow() {
                     <p id="dodch-ios-banner-body">Receive order updates &amp; exclusive offers as push notifications.</p>
                     <div id="dodch-ios-banner-steps">
                         <span>Tap</span>
-                        <span class="step-badge">⬆️ Share</span>
+                        <span class="step-badge">\u2B06\uFE0F Share</span>
                         <span>then</span>
-                        <span class="step-badge">＋ Add to Home Screen</span>
+                        <span class="step-badge">\uFF0B Add to Home Screen</span>
                     </div>
                 </div>
                 <button id="dodch-ios-banner-close" aria-label="Dismiss">&times;</button>
             </div>
-            <div id="dodch-ios-banner-arrow">↓</div>
-        `;
-        document.body.appendChild(banner);
-        setTimeout(() => banner.classList.add('visible'), 100);
-        document.getElementById('dodch-ios-banner-close').addEventListener('click', () => {
-            banner.classList.remove('visible');
-            setTimeout(() => banner.remove(), 500);
-        });
-        return true;
-    }
-    return false;
-}
-
-// --- Back In Stock Subscription Logic ---
-// --- Notify-Me localStorage Persistence Helpers ---
-function getNotifyStorageKey(productId, sizeLabel) {
-    return `dodch_notify_${productId}_${(sizeLabel || 'default').replace(/\s+/g, '_').toLowerCase()}`;
-}
-function markNotifySubscribed(productId, sizeLabel) {
-    try { localStorage.setItem(getNotifyStorageKey(productId, sizeLabel), '1'); } catch(e) {}
-}
-function isNotifySubscribed(productId, sizeLabel) {
-    try { return localStorage.getItem(getNotifyStorageKey(productId, sizeLabel)) === '1'; } catch(e) { return false; }
-}
-function applySubscribedState(btnEl) {
-    btnEl.classList.add('subscribed');
-    btnEl.innerHTML = `
+            <div id="dodch-ios-banner-arrow">\u2193</div>
+        `,document.body.appendChild(n),setTimeout(()=>n.classList.add("visible"),100),document.getElementById("dodch-ios-banner-close").addEventListener("click",()=>{n.classList.remove("visible"),setTimeout(()=>n.remove(),500)}),!0}return!1}function Kt(c,t){return`dodch_notify_${c}_${(t||"default").replace(/\s+/g,"_").toLowerCase()}`}function Ji(c,t){try{localStorage.setItem(Kt(c,t),"1")}catch{}}function Ao(c,t){try{return localStorage.getItem(Kt(c,t))==="1"}catch{return!1}}function no(c){c.classList.add("subscribed"),c.innerHTML=`
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
         </svg>
         You're On the List!
-    `;
-    btnEl.disabled = true;
-}
-
-async function handleBackInStockSubscription(productId, sizeLabel, btnEl) {
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    if (isIOS) {
-        const isStandalone = window.navigator.standalone === true;
-        if (!isStandalone) {
-            // App not installed — show the install prompt every click.
-            // Do NOT change the button or save to localStorage; the notification
-            // hasn't actually been registered yet.
-            triggerIOSInstallFlow();
-            return;
-        }
-        // Standalone (PWA installed) — fall through to the real notification
-        // flow below so the subscription is actually registered and the button
-        // only turns to "You're On the List!" on genuine success.
-    }
-
-    if (!('Notification' in window)) {
-        window.showToast("Notifications are not supported by this browser.", "warning");
-        return;
-    }
-
-    try {
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            window.showToast("Notifications must be enabled to receive stock updates.", "info");
-            return;
-        }
-
-        const supported = await isSupported();
-        if (!supported) return;
-
-        if (!messaging) messaging = getMessaging(app);
-        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
-        const token = await getMessagingToken(messaging, { vapidKey: VAPID });
-
-        if (!token) {
-            window.showToast("Failed to retrieve notification registration token.", "error");
-            return;
-        }
-
-        const user = getAuth(app).currentUser;
-        const subId = `${token.substring(0, 30)}_${productId}_${sizeLabel.replace(/\s+/g, '')}`;
-        
-        await setDoc(doc(db, 'back_in_stock_subscriptions', subId), {
-            token,
-            productId,
-            size: sizeLabel,
-            userId: user ? user.uid : null,
-            createdAt: serverTimestamp(),
-            active: true
-        }, { merge: true });
-
-        // Save token to general subscribers collection to ensure device is tracked
-        await setDoc(doc(db, 'subscribers', token), {
-            token,
-            userId: user ? user.uid : null,
-            lastSeen: serverTimestamp()
-        }, { merge: true });
-
-        // Persist to localStorage so button state survives page reload
-        markNotifySubscribed(productId, sizeLabel);
-
-        // Update button to subscribed state
-        if (btnEl) applySubscribedState(btnEl);
-
-        window.showToast("Radiance is returning! You will be notified the instant it's back in stock. ✨", "success", 5000);
-    } catch (err) {
-        console.error("Back-in-stock subscription error:", err);
-        window.showToast("Failed to register back-in-stock alert. Please try again.", "error");
-    }
-}
-
-// --- Trigger Back In Stock Notifications (called by admin when marking product back in stock) ---
-async function triggerBackInStockNotifications(productId, sizeLabel, productName) {
-    try {
-        // Query all active back-in-stock subscriptions for this product + size
-        const q = query(
-            collection(db, 'back_in_stock_subscriptions'),
-            where('productId', '==', productId),
-            where('active', '==', true)
-        );
-        const snap = await getDocs(q);
-        if (snap.empty) {
-            console.log(`No back-in-stock subscribers for ${productId} / ${sizeLabel}`);
-            return;
-        }
-
-        // Filter to matching size (or notify all if size is 'Standard')
-        const subs = [];
-        snap.forEach(docSnap => {
-            const d = docSnap.data();
-            if (sizeLabel === 'Standard' || !d.size || d.size === sizeLabel) {
-                subs.push({ id: docSnap.id, ...d });
-            }
-        });
-
-        if (subs.length === 0) return;
-
-        const credsStr = localStorage.getItem('dodchUrlFCMCreds');
-        if (!credsStr) {
-            console.warn('Cannot send back-in-stock push: Missing FCM credentials.');
-            window.showToast(`${subs.length} subscriber(s) waiting — push not sent (missing FCM creds).`, 'info');
-            return;
-        }
-
-        // Use the existing push infrastructure from admin-push.js
-        const { importPKCS8, SignJWT } = await import('https://cdn.jsdelivr.net/npm/jose@5.2.3/dist/browser/index.js');
-        const creds = JSON.parse(credsStr);
-        const privateKey = await importPKCS8(creds.private_key, 'RS256');
-        const jwt = await new SignJWT({
-            iss: creds.client_email,
-            scope: 'https://www.googleapis.com/auth/firebase.messaging',
-            aud: 'https://oauth2.googleapis.com/token'
-        })
-        .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
-        .setIssuedAt()
-        .setExpirationTime('1h')
-        .sign(privateKey);
-
-        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                assertion: jwt
-            })
-        });
-        if (!tokenRes.ok) throw new Error('Failed to get Google Access Token for back-in-stock push.');
-        const { access_token: accessToken } = await tokenRes.json();
-
-        const displaySize = sizeLabel && sizeLabel !== 'Standard' ? ` (${sizeLabel})` : '';
-        const notifTitle = `${productName || 'Your product'} is Back in Stock! 🎉`;
-        const notifBody = `${productName}${displaySize} is now available again. Shop before it sells out!`;
-        const notifUrl = `/product.html?id=${productId}`;
-
-        let sent = 0;
-        const deactivatePromises = [];
-        for (const sub of subs) {
-            const payload = {
-                message: {
-                    token: sub.token,
-                    webpush: {
-                        notification: {
-                            title: notifTitle,
-                            body: notifBody,
-                            icon: '/IMG_3352.webp'
-                        },
-                        fcmOptions: { link: notifUrl }
-                    },
-                    data: { title: notifTitle, body: notifBody, url: notifUrl }
-                }
-            };
-            const res = await fetch(`https://fcm.googleapis.com/v1/projects/${creds.project_id}/messages:send`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (res.ok) {
-                sent++;
-                // Deactivate the subscription so they're not notified again for the same restock
-                deactivatePromises.push(updateDoc(doc(db, 'back_in_stock_subscriptions', sub.id), { active: false }));
-            }
-        }
-        await Promise.all(deactivatePromises);
-        console.log(`Back-in-stock: sent ${sent}/${subs.length} notifications for ${productId} / ${sizeLabel}`);
-        if (window.showToast) window.showToast(`✅ ${sent} back-in-stock notification(s) sent!`, 'success');
-    } catch (err) {
-        console.error('triggerBackInStockNotifications error:', err);
-    }
-}
-
-async function initPushNotifications() {
-    if (window.location.protocol === 'file:') return;
-
-    // Auth listener - runs regardless of push support so shipping info + credits load on mobile
-    const authObj = getAuth(app);
-    onAuthStateChanged(authObj, async (user) => {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            syncPushTokenToUser(user);
-        }
-        if (user) {
-            initShippingInfo(user);
-            if (window.location.pathname.includes('my-account.html')) {
-                const q = query(collection(db, "orders"), where("userId", "==", user.uid), where("hasUnseenUpdate", "==", true));
-                const snap = await getDocs(q);
-                snap.forEach(async (orderDoc) => {
-                    await updateDoc(doc(db, "orders", orderDoc.id), { hasUnseenUpdate: false });
-                });
-                document.body.classList.remove('has-notification');
-                const tabBtns = document.querySelectorAll('.account-tab-btn');
-                const tabContents = document.querySelectorAll('.tab-content');
-
-                tabBtns.forEach(btn => {
-                    if (btn.dataset.tabBound) return;
-                    btn.dataset.tabBound = "true";
-
-                    btn.addEventListener('click', () => {
-                        const targetTab = btn.getAttribute('data-tab');
-                        tabBtns.forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        tabContents.forEach(content => {
-                            if (content.id === `${targetTab}-tab-content`) {
-                                content.classList.add('active');
-                                if (targetTab === 'shipping') initShippingInfo(user);
-                            } else {
-                                content.classList.remove('active');
-                            }
-                        });
-                    });
-                });
-                setTimeout(() => initUserReviewsHistory(user), 500);
-            }
-        }
-    });
-
-    // Push notification setup - only if the browser supports it
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-
-    try {
-        const supported = await isSupported();
-        if (!supported) return;
-
-        if (!messaging) messaging = getMessaging(app);
-
-        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        onMessage(messaging, (payload) => {
-            const title = payload.notification?.title || payload.data?.title || 'DODCH';
-            const body = payload.notification?.body || payload.data?.body || '';
-            if (window.showToast) window.showToast(`🔔 ${title} — ${body}`, 'info', 6000);
-        });
-
-        const VAPID = 'BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM';
-        const showBell = () => {
-            if (document.getElementById('push-bell-container')) return;
-            const bell = document.createElement('div');
-            bell.id = 'push-bell-container';
-            bell.setAttribute('role', 'button');
-            bell.setAttribute('aria-label', 'Enable Push Notifications');
-            bell.innerHTML = `
+    `,c.disabled=!0}async function so(c,t,n){if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!(window.navigator.standalone===!0)){Wi();return}if(!("Notification"in window)){window.showToast("Notifications are not supported by this browser.","warning");return}try{if(await Notification.requestPermission()!=="granted"){window.showToast("Notifications must be enabled to receive stock updates.","info");return}if(!await To())return;Et||(Et=Io(ct));const O=await Ko(Et,{vapidKey:"BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM"});if(!O){window.showToast("Failed to retrieve notification registration token.","error");return}const te=So(ct).currentUser,M=`${O.substring(0,30)}_${c}_${t.replace(/\s+/g,"")}`;await lt(Ae(se,"back_in_stock_subscriptions",M),{token:O,productId:c,size:t,userId:te?te.uid:null,createdAt:kt(),active:!0},{merge:!0}),await lt(Ae(se,"subscribers",O),{token:O,userId:te?te.uid:null,lastSeen:kt()},{merge:!0}),Ji(c,t),n&&no(n),window.showToast("Radiance is returning! You will be notified the instant it's back in stock. \u2728","success",5e3)}catch(a){console.error("Back-in-stock subscription error:",a),window.showToast("Failed to register back-in-stock alert. Please try again.","error")}}async function ti(c,t,n){try{const p=Ye(Ne(se,"back_in_stock_subscriptions"),ot("productId","==",c),ot("active","==",!0)),a=await nt(p);if(a.empty){console.log(`No back-in-stock subscribers for ${c} / ${t}`);return}const l=[];if(a.forEach(ce=>{const J=ce.data();(t==="Standard"||!J.size||J.size===t)&&l.push({id:ce.id,...J})}),l.length===0)return;const D=localStorage.getItem("dodchUrlFCMCreds");if(!D){console.warn("Cannot send back-in-stock push: Missing FCM credentials."),window.showToast(`${l.length} subscriber(s) waiting \u2014 push not sent (missing FCM creds).`,"info");return}const{importPKCS8:O,SignJWT:te}=await import("https://cdn.jsdelivr.net/npm/jose@5.2.3/dist/browser/index.js"),M=JSON.parse(D),u=await O(M.private_key,"RS256"),U=await new te({iss:M.client_email,scope:"https://www.googleapis.com/auth/firebase.messaging",aud:"https://oauth2.googleapis.com/token"}).setProtectedHeader({alg:"RS256",typ:"JWT"}).setIssuedAt().setExpirationTime("1h").sign(u),G=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",assertion:U})});if(!G.ok)throw new Error("Failed to get Google Access Token for back-in-stock push.");const{access_token:N}=await G.json(),le=t&&t!=="Standard"?` (${t})`:"",K=`${n||"Your product"} is Back in Stock! \u{1F389}`,X=`${n}${le} is now available again. Shop before it sells out!`,w=`/product.html?id=${c}`;let I=0;const Y=[];for(const ce of l){const J={message:{token:ce.token,webpush:{notification:{title:K,body:X,icon:"/IMG_3352.webp"},fcmOptions:{link:w}},data:{title:K,body:X,url:w}}};(await fetch(`https://fcm.googleapis.com/v1/projects/${M.project_id}/messages:send`,{method:"POST",headers:{Authorization:`Bearer ${N}`,"Content-Type":"application/json"},body:JSON.stringify(J)})).ok&&(I++,Y.push(at(Ae(se,"back_in_stock_subscriptions",ce.id),{active:!1})))}await Promise.all(Y),console.log(`Back-in-stock: sent ${I}/${l.length} notifications for ${c} / ${t}`),window.showToast&&window.showToast(`\u2705 ${I} back-in-stock notification(s) sent!`,"success")}catch(p){console.error("triggerBackInStockNotifications error:",p)}}async function Xi(){if(window.location.protocol==="file:")return;const c=So(ct);if(Yt(c,async t=>{if("Notification"in window&&Notification.permission==="granted"&&ro(t),t&&(oi(t),window.location.pathname.includes("my-account.html"))){const n=Ye(Ne(se,"orders"),ot("userId","==",t.uid),ot("hasUnseenUpdate","==",!0));(await nt(n)).forEach(async D=>{await at(Ae(se,"orders",D.id),{hasUnseenUpdate:!1})}),document.body.classList.remove("has-notification");const a=document.querySelectorAll(".account-tab-btn"),l=document.querySelectorAll(".tab-content");a.forEach(D=>{D.dataset.tabBound||(D.dataset.tabBound="true",D.addEventListener("click",()=>{const O=D.getAttribute("data-tab");a.forEach(te=>te.classList.remove("active")),D.classList.add("active"),l.forEach(te=>{te.id===`${O}-tab-content`?(te.classList.add("active"),O==="shipping"&&oi(t)):te.classList.remove("active")})}))}),setTimeout(()=>Ni(t),500)}}),!(!("Notification"in window)||!("serviceWorker"in navigator)))try{if(!await To())return;Et||(Et=Io(ct)),await navigator.serviceWorker.register("/firebase-messaging-sw.js"),zi(Et,a=>{const l=a.notification?.title||a.data?.title||"DODCH",D=a.notification?.body||a.data?.body||"";window.showToast&&window.showToast(`\u{1F514} ${l} \u2014 ${D}`,"info",6e3)});const n="BGEuodfGxJj2adaAQoIRPz5xklVoT6C7YaacYajOWeRIwxigsL0g_qIrs-0jBeK0yu4V6uuBzuv22qSKdS3s-EM",p=()=>{if(document.getElementById("push-bell-container"))return;const a=document.createElement("div");a.id="push-bell-container",a.setAttribute("role","button"),a.setAttribute("aria-label","Enable Push Notifications"),a.innerHTML=`
                 <div class="bell-pulse"></div>
                 <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            `;
-            document.body.appendChild(bell);
-            setTimeout(() => bell.classList.add('visible'), 100);
-
-            bell.addEventListener('click', async () => {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    bell.classList.remove('visible');
-                    setTimeout(() => bell.remove(), 400);
-                    syncPushTokenToUser(authObj.currentUser);
-                    if (window.showToast) window.showToast("Notifications enabled! 🎉", "success");
-                } else if (permission === 'denied') {
-                    if (window.showToast) window.showToast("Notifications blocked. Please enable them in your browser settings.", "info");
-                }
-            });
-        };
-
-        if (Notification.permission === 'default') {
-            setTimeout(showBell, 2000);
-        }
-
-    } catch (err) {
-        console.error('Push init failed:', err);
-    }
-}
-
-// --- Shipping Profiles Logic ---
-async function initShippingInfo(user) {
-    if (!user) return;
-
-    // ── Checkout-page side (profiles panel + auto-fill) ──────────────────────
-    const profilesPanel = document.getElementById('shipping-profiles-panel');
-    const saveProfileRow = document.getElementById('save-profile-row');
-
-    const fillCheckoutForm = (profile) => {
-        const map = {
-            'checkout-email': profile.email,
-            'checkout-name': profile.fullName,
-            'checkout-phone': profile.phone,
-            'checkout-address': profile.address,
-            'checkout-city': profile.city,
-            'checkout-postal-code': profile.postalCode
-        };
-        for (const [id, val] of Object.entries(map)) {
-            const el = document.getElementById(id);
-            if (el && val !== undefined) el.value = val;
-        }
-    };
-
-    const GOVS = ["Ariana","Béja","Ben Arous","Bizerte","Gabès","Gafsa","Jendouba","Kairouan","Kasserine","Kebili","Kef","Mahdia","Manouba","Medenine","Monastir","Nabeul","Sfax","Sidi Bouzid","Siliana","Sousse","Tataouine","Tozeur","Tunis","Zaghouan"];
-    const govOptions = GOVS.map(g => `<option value="${g}">${g === 'Kef' ? 'Le Kef' : g === 'Kebili' ? 'Kébili' : g}</option>`).join('');
-
-    const renderCheckoutProfilesPanel = (profiles, selectedIndex) => {
-        if (!profilesPanel) return;
-        if (profiles.length === 0) {
-            profilesPanel.style.display = 'none';
-            if (saveProfileRow) saveProfileRow.style.display = 'flex';
-            return;
-        }
-        profilesPanel.style.display = 'block';
-        if (saveProfileRow) saveProfileRow.style.display = 'none';
-
-        const cards = profiles.map((p, i) => `
-            <div class="shipping-profile-card ${i === selectedIndex ? 'selected' : ''}" data-index="${i}" onclick="window.selectShippingProfile(${i})" style="cursor:pointer;">
+            `,document.body.appendChild(a),setTimeout(()=>a.classList.add("visible"),100),a.addEventListener("click",async()=>{const l=await Notification.requestPermission();l==="granted"?(a.classList.remove("visible"),setTimeout(()=>a.remove(),400),ro(c.currentUser),window.showToast&&window.showToast("Notifications enabled! \u{1F389}","success")):l==="denied"&&window.showToast&&window.showToast("Notifications blocked. Please enable them in your browser settings.","info")})};Notification.permission==="default"&&setTimeout(p,2e3)}catch(t){console.error("Push init failed:",t)}}async function oi(c){if(!c)return;const t=document.getElementById("shipping-profiles-panel"),n=document.getElementById("save-profile-row"),p=u=>{const U={"checkout-email":u.email,"checkout-name":u.fullName,"checkout-phone":u.phone,"checkout-address":u.address,"checkout-city":u.city,"checkout-postal-code":u.postalCode};for(const[G,N]of Object.entries(U)){const le=document.getElementById(G);le&&N!==void 0&&(le.value=N)}},l=["Ariana","B\xE9ja","Ben Arous","Bizerte","Gab\xE8s","Gafsa","Jendouba","Kairouan","Kasserine","Kebili","Kef","Mahdia","Manouba","Medenine","Monastir","Nabeul","Sfax","Sidi Bouzid","Siliana","Sousse","Tataouine","Tozeur","Tunis","Zaghouan"].map(u=>`<option value="${u}">${u==="Kef"?"Le Kef":u==="Kebili"?"K\xE9bili":u}</option>`).join(""),D=(u,U)=>{if(!t)return;if(u.length===0){t.style.display="none",n&&(n.style.display="flex");return}t.style.display="block",n&&(n.style.display="none");const G=u.map((N,le)=>`
+            <div class="shipping-profile-card ${le===U?"selected":""}" data-index="${le}" onclick="window.selectShippingProfile(${le})" style="cursor:pointer;">
                 <div class="profile-card-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 </div>
                 <div class="profile-card-info">
-                    <div class="profile-card-name">${p.label || p.fullName}</div>
-                    <div class="profile-card-detail">${p.address}, ${p.city}</div>
-                    <div class="profile-card-detail">${p.phone}</div>
+                    <div class="profile-card-name">${N.label||N.fullName}</div>
+                    <div class="profile-card-detail">${N.address}, ${N.city}</div>
+                    <div class="profile-card-detail">${N.phone}</div>
                 </div>
-                ${i === selectedIndex ? `<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>` : ''}
-            </div>`).join('');
-
-        profilesPanel.innerHTML = `
+                ${le===U?'<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>':""}
+            </div>`).join("");t.innerHTML=`
             <div class="profiles-panel-header">
                 <span class="profiles-panel-title">Saved Addresses</span>
                 <button id="add-new-profile-btn" class="add-profile-btn" onclick="window.toggleNewProfileForm()">
@@ -10577,785 +1659,82 @@ async function initShippingInfo(user) {
                     New Address
                 </button>
             </div>
-            <div class="shipping-profiles-list">${cards}</div>
+            <div class="shipping-profiles-list">${G}</div>
             <div id="new-profile-form-wrapper" style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,0,0,0.06);">
-                <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.75rem;">Fill in details and place your order — it will be saved automatically.</p>
+                <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.75rem;">Fill in details and place your order \u2014 it will be saved automatically.</p>
                 <div class="form-group" style="margin-bottom: 0.5rem;">
                     <input type="text" id="new-profile-label" placeholder='Profile name (e.g. "Home", "Work")' style="width:100%; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-family: inherit; font-size: 0.9rem;">
                 </div>
-            </div>`;
-
-        window.toggleNewProfileForm = () => {
-            const wrapper = document.getElementById('new-profile-form-wrapper');
-            const btn = document.getElementById('add-new-profile-btn');
-            const isShowing = wrapper.style.display !== 'none';
-            wrapper.style.display = isShowing ? 'none' : 'block';
-            if (saveProfileRow) saveProfileRow.style.display = isShowing ? 'none' : 'flex';
-            btn.innerHTML = isShowing
-                ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Address`
-                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel`;
-            if (!isShowing) {
-                ['checkout-email','checkout-name','checkout-phone','checkout-address','checkout-postal-code'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-                const city = document.getElementById('checkout-city'); if (city) city.value = '';
-                document.querySelectorAll('.shipping-profile-card').forEach(c => c.classList.remove('selected'));
-            }
-        };
-    };
-
-    // ── Account-page side (full profile manager) ─────────────────────────────
-    const accountRoot = document.getElementById('account-shipping-root');
-
-    // Build the inline edit form HTML
-    const buildProfileForm = (p = {}, isNew = false) => `
+            </div>`,window.toggleNewProfileForm=()=>{const N=document.getElementById("new-profile-form-wrapper"),le=document.getElementById("add-new-profile-btn"),K=N.style.display!=="none";if(N.style.display=K?"none":"block",n&&(n.style.display=K?"none":"flex"),le.innerHTML=K?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Address':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel',!K){["checkout-email","checkout-name","checkout-phone","checkout-address","checkout-postal-code"].forEach(w=>{const I=document.getElementById(w);I&&(I.value="")});const X=document.getElementById("checkout-city");X&&(X.value=""),document.querySelectorAll(".shipping-profile-card").forEach(w=>w.classList.remove("selected"))}}},O=document.getElementById("account-shipping-root"),te=(u={},U=!1)=>`
         <form id="acct-profile-form" class="acct-profile-form" style="margin-top: 1.25rem;">
             <div style="margin-bottom: 1rem;">
                 <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Address Label</label>
-                <input type="text" id="acct-label" value="${p.label || ''}" placeholder='e.g. "Home", "Work"' style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                <input type="text" id="acct-label" value="${u.label||""}" placeholder='e.g. "Home", "Work"' style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:0.75rem;margin-bottom:0.75rem;">
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Full Name</label>
-                    <input type="text" id="acct-name" value="${p.fullName || ''}" placeholder="Nom Complet" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                    <input type="text" id="acct-name" value="${u.fullName||""}" placeholder="Nom Complet" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
                 </div>
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Phone</label>
-                    <input type="tel" id="acct-phone" value="${p.phone || ''}" placeholder="e.g. 21654321" required pattern="[24579][0-9]{7}" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                    <input type="tel" id="acct-phone" value="${u.phone||""}" placeholder="e.g. 21654321" required pattern="[24579][0-9]{7}" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
                 </div>
             </div>
             <div style="margin-bottom:0.75rem;">
                 <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Email</label>
-                <input type="email" id="acct-email" value="${p.email || ''}" placeholder="nom@exemple.tn" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                <input type="email" id="acct-email" value="${u.email||""}" placeholder="nom@exemple.tn" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
             </div>
             <div style="margin-bottom:0.75rem;">
                 <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Address</label>
-                <input type="text" id="acct-address" value="${p.address || ''}" placeholder="Rue, Appartement, Bureau..." required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                <input type="text" id="acct-address" value="${u.address||""}" placeholder="Rue, Appartement, Bureau..." required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:0.75rem;margin-bottom:1.25rem;">
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Governorate</label>
                     <select id="acct-city" required style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
-                        <option value="" disabled ${!p.city ? 'selected' : ''}>Select region</option>
-                        ${govOptions}
+                        <option value="" disabled ${u.city?"":"selected"}>Select region</option>
+                        ${l}
                     </select>
                 </div>
                 <div>
                     <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.85rem;color:#444;">Postal Code</label>
-                    <input type="text" id="acct-postal" value="${p.postalCode || ''}" placeholder="e.g. 1000" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
+                    <input type="text" id="acct-postal" value="${u.postalCode||""}" placeholder="e.g. 1000" style="width:100%;padding:0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;">
                 </div>
             </div>
             <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
                 <button type="submit" style="flex:1;min-width:140px;padding:0.8rem 1.2rem;background:var(--text-charcoal);color:#fff;border:none;border-radius:30px;font-family:inherit;font-weight:600;font-size:0.9rem;cursor:pointer;transition:background 0.2s;">
-                    ${isNew ? 'Add Address' : 'Save Changes'}
+                    ${U?"Add Address":"Save Changes"}
                 </button>
                 <button type="button" id="acct-form-cancel" style="flex:1;min-width:100px;padding:0.8rem 1.2rem;background:transparent;color:#888;border:1.5px solid #e0e0e0;border-radius:30px;font-family:inherit;font-weight:500;font-size:0.9rem;cursor:pointer;">
                     Cancel
                 </button>
             </div>
-        </form>`;
-
-    const renderAccountShipping = (profiles, editingIndex = null, isAdding = false) => {
-        if (!accountRoot) return;
-
-        const hasProfiles = profiles.length > 0;
-
-        const profileCards = profiles.map((p, i) => `
+        </form>`,M=(u,U=null,G=!1)=>{if(!O)return;const N=u.length>0,le=u.map((w,I)=>`
             <div class="shipping-profile-card" style="margin-bottom:0.5rem;">
                 <div class="profile-card-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 </div>
                 <div class="profile-card-info" style="flex:1;min-width:0;">
-                    <div class="profile-card-name">${p.label || p.fullName || 'Address'}</div>
-                    <div class="profile-card-detail">${p.address || ''}, ${p.city || ''}</div>
-                    <div class="profile-card-detail">${p.phone || ''}${p.email ? ' · ' + p.email : ''}</div>
+                    <div class="profile-card-name">${w.label||w.fullName||"Address"}</div>
+                    <div class="profile-card-detail">${w.address||""}, ${w.city||""}</div>
+                    <div class="profile-card-detail">${w.phone||""}${w.email?" \xB7 "+w.email:""}</div>
                 </div>
                 <div style="display:flex;gap:0.4rem;flex-shrink:0;">
-                    <button onclick="window.__acctEditProfile(${i})" title="Edit" style="background:rgba(212,175,55,0.1);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--accent-gold-text);">
+                    <button onclick="window.__acctEditProfile(${I})" title="Edit" style="background:rgba(212,175,55,0.1);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--accent-gold-text);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
-                    <button onclick="window.__acctDeleteProfile(${i})" title="Delete" style="background:rgba(231,76,60,0.08);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#e74c3c;">
+                    <button onclick="window.__acctDeleteProfile(${I})" title="Delete" style="background:rgba(231,76,60,0.08);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#e74c3c;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                     </button>
                 </div>
             </div>
-            ${editingIndex === i ? buildProfileForm(p, false) : ''}`).join('');
-
-        accountRoot.innerHTML = `
+            ${U===I?te(w,!1):""}`).join("");O.innerHTML=`
             <h3 style="margin-bottom:0.5rem;font-family:var(--font-serif);font-size:1.4rem;">Delivery Addresses</h3>
             <p style="margin-bottom:1.5rem;color:#888;font-size:0.88rem;">Manage your saved addresses for faster checkout.</p>
-            ${hasProfiles ? `<div class="shipping-profiles-list" style="margin-bottom:1rem;">${profileCards}</div>` : `<p style="color:#aaa;font-style:italic;margin-bottom:1.5rem;">No addresses saved yet.</p>`}
-            ${!isAdding ? `
+            ${N?`<div class="shipping-profiles-list" style="margin-bottom:1rem;">${le}</div>`:'<p style="color:#aaa;font-style:italic;margin-bottom:1.5rem;">No addresses saved yet.</p>'}
+            ${G?te({},!0):`
                 <button id="acct-add-btn" onclick="window.__acctStartAdd()" style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1.4rem;background:transparent;border:1.5px dashed rgba(0,0,0,0.18);border-radius:12px;color:#666;font-family:inherit;font-size:0.88rem;cursor:pointer;width:100%;justify-content:center;transition:all 0.2s;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Add New Address
-                </button>` : buildProfileForm({}, true)}`;
-
-        // Wire up city select after render
-        const cityEl = document.getElementById('acct-city');
-        if (cityEl) {
-            const profile = editingIndex !== null ? profiles[editingIndex] : {};
-            if (profile.city) cityEl.value = profile.city;
-        }
-
-        // Form submit handler
-        const form = document.getElementById('acct-profile-form');
-        if (form) {
-            document.getElementById('acct-form-cancel')?.addEventListener('click', () => renderAccountShipping(profiles));
-
-            const labelEl = document.getElementById('acct-label');
-            const nameEl = document.getElementById('acct-name');
-            const phoneEl = document.getElementById('acct-phone');
-            const emailEl = document.getElementById('acct-email');
-            const addressEl = document.getElementById('acct-address');
-            const cityEl = document.getElementById('acct-city');
-            const postalEl = document.getElementById('acct-postal');
-            const submitBtn = form.querySelector('button[type="submit"]');
-
-            const getFormValues = () => ({
-                label: labelEl ? labelEl.value.trim() : '',
-                fullName: nameEl ? nameEl.value.trim() : '',
-                phone: phoneEl ? phoneEl.value.trim() : '',
-                email: emailEl ? emailEl.value.trim() : '',
-                address: addressEl ? addressEl.value.trim() : '',
-                city: cityEl ? cityEl.value : '',
-                postalCode: postalEl ? postalEl.value.trim() : ''
-            });
-
-            const initialValues = getFormValues();
-
-            const checkChanges = () => {
-                if (isAdding) return;
-                const currentValues = getFormValues();
-                const hasChanges = Object.keys(initialValues).some(key => initialValues[key] !== currentValues[key]);
-                submitBtn.disabled = !hasChanges;
-                submitBtn.style.opacity = hasChanges ? '1' : '0.5';
-                submitBtn.style.cursor = hasChanges ? 'pointer' : 'not-allowed';
-            };
-
-            if (!isAdding && submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.style.opacity = '0.5';
-                submitBtn.style.cursor = 'not-allowed';
-
-                [labelEl, nameEl, phoneEl, emailEl, addressEl, cityEl, postalEl].forEach(el => {
-                    if (el) {
-                        el.addEventListener('input', checkChanges);
-                        el.addEventListener('change', checkChanges);
-                    }
-                });
-            }
-
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const orig = submitBtn.textContent;
-                submitBtn.textContent = 'Saving...';
-                submitBtn.disabled = true;
-
-                const updated = {
-                    label: document.getElementById('acct-label').value.trim() || 'Address',
-                    fullName: document.getElementById('acct-name').value.trim(),
-                    phone: document.getElementById('acct-phone').value.trim(),
-                    email: document.getElementById('acct-email').value.trim(),
-                    address: document.getElementById('acct-address').value.trim(),
-                    city: document.getElementById('acct-city').value,
-                    postalCode: document.getElementById('acct-postal').value.trim(),
-                    updatedAt: new Date().toISOString()
-                };
-
-                const newProfiles = [...profiles];
-                if (isAdding) {
-                    newProfiles.push(updated);
-                } else {
-                    newProfiles[editingIndex] = updated;
-                }
-
-                try {
-                    await setDoc(doc(db, 'users', user.uid), {
-                        shippingProfiles: newProfiles,
-                        shippingInfo: newProfiles[0],
-                        lastSelectedProfile: isAdding ? newProfiles.length - 1 : editingIndex
-                    }, { merge: true });
-                    window._dodchShippingProfiles = newProfiles;
-                    window.showToast('Address saved! ✨', 'success');
-                    renderAccountShipping(newProfiles);
-                } catch (err) {
-                    console.error(err);
-                    window.showToast('Failed to save. Please try again.', 'error');
-                    submitBtn.textContent = orig;
-                    submitBtn.disabled = false;
-                }
-            });
-        }
-    };
-
-    // ── Load from Firestore ───────────────────────────────────────────────────
-    try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        let profiles = [];
-        let selectedIndex = 0;
-
-        if (userDoc.exists()) {
-            const data = userDoc.data();
-            if (Array.isArray(data.shippingProfiles) && data.shippingProfiles.length > 0) {
-                profiles = data.shippingProfiles;
-                selectedIndex = typeof data.lastSelectedProfile === 'number' ? data.lastSelectedProfile : 0;
-            } else if (data.shippingInfo) {
-                profiles = [{ label: 'Default', ...data.shippingInfo }];
-            }
-            
-            // --- Rewards / Credits System ---
-            const credits = typeof data.credits === 'number' ? data.credits : 0;
-            window._dodchUserCredits = credits;
-            
-            // Update Account UI
-            const accountRewardsBadge = document.getElementById('account-rewards-badge');
-            const accountRewardsBalance = document.getElementById('account-rewards-balance');
-            if (accountRewardsBadge && accountRewardsBalance) {
-                accountRewardsBadge.style.display = 'block';
-                accountRewardsBalance.innerText = `${credits.toFixed(2)} TND`;
-            }
-
-            // Update Checkout UI
-            const checkoutRewardsRow = document.getElementById('checkout-rewards-row');
-            const availableRewardsDisplay = document.getElementById('available-rewards-display');
-            if (checkoutRewardsRow && availableRewardsDisplay && credits > 0) {
-                checkoutRewardsRow.style.display = 'flex';
-                availableRewardsDisplay.innerText = credits.toFixed(2);
-            }
-        }
-
-        window._dodchShippingProfiles = profiles;
-        window._dodchSelectedProfileIndex = selectedIndex;
-        window._dodchCurrentUser = user;
-
-        // Account page actions
-        window.__acctEditProfile = (index) => renderAccountShipping(window._dodchShippingProfiles, index, false);
-        window.__acctStartAdd = () => renderAccountShipping(window._dodchShippingProfiles, null, true);
-        window.__acctDeleteProfile = async (index) => {
-            if (!confirm('Remove this address?')) return;
-            const newProfiles = window._dodchShippingProfiles.filter((_, i) => i !== index);
-            try {
-                await setDoc(doc(db, 'users', user.uid), {
-                    shippingProfiles: newProfiles,
-                    shippingInfo: newProfiles[0] || null
-                }, { merge: true });
-                window._dodchShippingProfiles = newProfiles;
-                window.showToast('Address removed.', 'info');
-                renderAccountShipping(newProfiles);
-            } catch (err) {
-                window.showToast('Failed to delete. Try again.', 'error');
-            }
-        };
-
-        // Checkout page selector
-        window.selectShippingProfile = async (index) => {
-            window._dodchSelectedProfileIndex = index;
-            fillCheckoutForm(window._dodchShippingProfiles[index]);
-            document.querySelectorAll('.shipping-profile-card').forEach((card, i) => {
-                card.classList.toggle('selected', i === index);
-                const checkDiv = card.querySelector('.profile-card-check');
-                if (i === index && !checkDiv) {
-                    card.innerHTML += `<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>`;
-                } else if (i !== index && checkDiv) {
-                    checkDiv.remove();
-                }
-            });
-            try { await setDoc(doc(db, 'users', user.uid), { lastSelectedProfile: index }, { merge: true }); } catch(e) {}
-            const wrapper = document.getElementById('new-profile-form-wrapper');
-            if (wrapper && wrapper.style.display !== 'none') window.toggleNewProfileForm?.();
-        };
-
-        // Render both sides
-        renderCheckoutProfilesPanel(profiles, selectedIndex);
-        renderAccountShipping(profiles);
-
-        // Auto-fill checkout form with selected profile
-        if (profiles.length > 0 && profilesPanel) fillCheckoutForm(profiles[selectedIndex] || profiles[0]);
-
-    } catch (err) {
-        console.error('Error loading shipping profiles:', err);
-        if (accountRoot) accountRoot.innerHTML = `<p style="color:#e74c3c;font-size:0.9rem;">Failed to load addresses. Please refresh.</p>`;
-    }
-}
-
-
-
-window.saveShippingFromCheckout = async function (userId) {
-    if (!userId || userId === 'guest') return;
-    const checkbox = document.getElementById('save-shipping-info');
-    if (!checkbox || !checkbox.checked) return;
-
-    try {
-        const labelInput = document.getElementById('new-profile-label');
-        const newProfile = {
-            label: (labelInput && labelInput.value.trim()) || 'Address',
-            email: document.getElementById('checkout-email').value.trim(),
-            fullName: document.getElementById('checkout-name').value.trim(),
-            phone: document.getElementById('checkout-phone').value.trim(),
-            address: document.getElementById('checkout-address').value.trim(),
-            city: document.getElementById('checkout-city').value,
-            postalCode: document.getElementById('checkout-postal-code').value.trim(),
-            savedAt: new Date().toISOString()
-        };
-
-        // Load existing profiles
-        let profiles = window._dodchShippingProfiles ? [...window._dodchShippingProfiles] : [];
-
-        // Check if this phone already exists — update in place instead of duplicating
-        const existingIdx = profiles.findIndex(p => p.phone === newProfile.phone);
-        if (existingIdx >= 0) {
-            profiles[existingIdx] = { ...profiles[existingIdx], ...newProfile };
-        } else {
-            profiles.push(newProfile);
-            // Cap at 5 profiles; remove the oldest (index 0) if over limit
-            if (profiles.length > 5) profiles.shift();
-        }
-
-        const newSelectedIndex = existingIdx >= 0 ? existingIdx : profiles.length - 1;
-
-        await setDoc(doc(db, "users", userId), {
-            shippingProfiles: profiles,
-            shippingInfo: newProfile, // Keep legacy field in sync
-            lastSelectedProfile: newSelectedIndex
-        }, { merge: true });
-
-        window._dodchShippingProfiles = profiles;
-        window._dodchSelectedProfileIndex = newSelectedIndex;
-
-        if (window.showToast) window.showToast("Address saved to your profile! ✨", "success");
-    } catch (err) {
-        console.error("Firestore Save Error:", err);
-        if (window.showToast) window.showToast(`Save Error: ${err.message}`, "error");
-    }
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Prefetching removed due to WKWebView (iOS in-app browser) script execution bugs.
-});
-
-// --- GLOBAL MOTION BLUR ENGINE ---
-const MotionBlurEngine = {
-    settings: {
-        maxBlur: 4.5,
-        velocityMult: 0.15,
-        lerpFactor: 0.1,
-    },
-    state: {
-        lastScroll: window.pageYOffset || document.documentElement.scrollTop,
-        currentBlur: 0,
-        ticking: false
-    },
-    update() {
-        const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-        const delta = Math.abs(currentScroll - this.state.lastScroll);
-        const targetBlur = Math.min(delta * this.settings.velocityMult, this.settings.maxBlur);
-        this.state.currentBlur += (targetBlur - this.state.currentBlur) * this.settings.lerpFactor;
-        if (this.state.currentBlur < 0.01 && delta < 1) {
-            this.state.currentBlur = 0;
-            document.documentElement.style.setProperty('--scroll-blur', '0px');
-        } else {
-            document.documentElement.style.setProperty('--scroll-blur', this.state.currentBlur.toFixed(3) + 'px');
-        }
-        this.state.lastScroll = currentScroll;
-        if (this.state.currentBlur > 0.01) {
-            requestAnimationFrame(() => this.update());
-        } else {
-            this.state.ticking = false;
-        }
-    },
-    init() {
-        window.addEventListener('scroll', () => {
-            if (!this.state.ticking) {
-                this.state.ticking = true;
-                requestAnimationFrame(() => this.update());
-            }
-        }, { passive: true });
-    }
-};
-
-// --- DEEP LINK SEARCH INTEGRATION ---
-const urlParams = new URLSearchParams(window.location.search);
-const initialSearch = urlParams.get('search');
-if (initialSearch) {
-    setTimeout(() => {
-        const inp = document.getElementById('navbar-search-input');
-        const toggle = document.getElementById('search-toggle-btn');
-        if (inp && toggle) {
-            if (!document.querySelector('.search-container').classList.contains('active')) {
-                toggle.click();
-            }
-            inp.value = initialSearch;
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-    }, 2000);
-}
-
-MotionBlurEngine.init();
-window.addEventListener('load', initPushNotifications);
-
-// --- SPRING SCROLL INDICATOR (Index page only) ---
-(() => {
-    const indicator = document.getElementById('scroll-indicator');
-    const productGrid = document.getElementById('product-grid-start');
-    const container = document.querySelector('.hero-carousel-container');
-    if (!indicator || !productGrid || !container) return;
-
-    let springUsed = false;
-    let isScrolling = false;
-
-    const scrollToProducts = (callback) => {
-        if (isScrolling || springUsed) return;
-        isScrolling = true;
-        productGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        setTimeout(() => {
-            isScrolling = false;
-            if (callback) callback();
-        }, 700);
-    };
-
-    const doSpringDown = () => {
-        scrollToProducts(() => {
-            springUsed = true;
-            indicator.style.opacity = '0.3';
-            indicator.style.pointerEvents = 'none';
-        });
-    };
-
-    indicator.addEventListener('click', doSpringDown);
-
-    let lastScrollY = window.scrollY;
-    const getThreshold = () => container.offsetTop + container.offsetHeight * 0.5;
-
-    window.addEventListener('scroll', () => {
-        if (isScrolling) return;
-        const currentY = window.scrollY;
-        const up = currentY < lastScrollY;
-
-        if (springUsed && currentY > getThreshold() + 100) {
-            indicator.style.opacity = '1';
-            indicator.style.pointerEvents = 'auto';
-        }
-
-        if (springUsed && up && currentY <= getThreshold() && currentY > 0) {
-            springUsed = false;
-            indicator.style.opacity = '1';
-            indicator.style.pointerEvents = 'auto';
-            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        lastScrollY = currentY;
-    }, { passive: true });
-})();
-
-// --- HERO CAROUSEL CONTROLLER ---
-(() => {
-    const wrapper = document.querySelector('.hero-carousel-wrapper');
-    const dots = document.querySelectorAll('.hero-dot');
-    const hairDuoBg = document.getElementById('hair-duo-bg');
-    const hairDuoHero = document.getElementById('hair-duo-hero');
-    const container = document.querySelector('.hero-carousel-container');
-    const rewardsBgs = document.querySelectorAll('.hero-rewards-bg'); // Get all rewards backgrounds (including cloned)
-    if (!wrapper || dots.length === 0 || !container) return;
-
-    let currentSlide = 0;
-    let slideInterval;
-    let isTransitioning = false;
-    const slideDuration = 6000; // 6 seconds auto-slide
-    
-    // Parallax effect for the first hero slide
-    const handleRewardsParallax = (rect) => {
-        const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
-        const shift = (progress - 0.5) * 80; // Unified shift speed (80) and direction
-        rewardsBgs.forEach(bg => {
-            bg.style.transform = `translateY(${shift}px)`;
-        });
-    };
-
-    const startProgressAnimation = (index) => {
-        // Reset all progress spans
-        dots.forEach(dot => {
-            const p = dot.querySelector('.hero-dot-progress');
-            if (p) {
-                p.style.transition = 'none';
-                p.style.width = '0%';
-            }
-        });
-
-        // Trigger transition on the active slide's dot
-        const dotIndex = index % 2;
-        const activeDot = dots[dotIndex];
-        if (activeDot) {
-            const p = activeDot.querySelector('.hero-dot-progress');
-            if (p) {
-                // Force reflow
-                activeDot.offsetHeight;
-                p.style.transition = `width ${slideDuration}ms linear`;
-                p.style.width = '100%';
-            }
-        }
-    };
-
-    // Dynamic Navbar Contrast based on Slide Background
-    const updateNavbarContrastForSlide = (index) => {
-        const heroContainer = document.querySelector('.hero-carousel-container');
-        if (!heroContainer || heroContainer.classList.contains('collapsed')) return;
-
-        const dotIndex = index % 2;
-        const isDarkSlide = (dotIndex === 1);
-        window._activeHeroSlideIsDark = isDarkSlide;
-        
-        const navbar = document.getElementById('navbar');
-        if (navbar && !navbar.classList.contains('scrolled')) {
-            if (isDarkSlide) {
-                navbar.classList.remove('text-dark');
-            } else {
-                navbar.classList.add('text-dark');
-            }
-        }
-    };
-
-    const updateActiveSlide = (index) => {
-        if (isTransitioning) return;
-        currentSlide = index;
-
-        wrapper.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.25, 1)';
-        wrapper.style.transform = `translateX(-${index * 33.3333}%)`;
-
-        const dotIndex = index % 2;
-        // Update dots active class
-        dots.forEach((dot, idx) => {
-            if (idx === dotIndex) {
-                dot.classList.add('active');
-            } else {
-                dot.classList.remove('active');
-            }
-        });
-
-        // Trigger animations for the hair duo hero slide when active
-        if (hairDuoHero) {
-            if (dotIndex === 1) {
-                hairDuoHero.classList.add('in-view');
-            } else {
-                hairDuoHero.classList.remove('in-view');
-            }
-        }
-
-        // Animate the progress bars
-        startProgressAnimation(index);
-        
-        // Update navbar contrast dynamically
-        updateNavbarContrastForSlide(index);
-
-        // Snap back to Slide 0 instantly after Slide 2 transition completes
-        if (index === 2) {
-            isTransitioning = true;
-            setTimeout(() => {
-                wrapper.style.transition = 'none';
-                wrapper.style.transform = 'translateX(0%)';
-                currentSlide = 0;
-                wrapper.offsetHeight; // Reflow
-                isTransitioning = false;
-                startProgressAnimation(0);
-                updateNavbarContrastForSlide(0);
-            }, 800); // 800ms transition duration
-        }
-    };
-
-    const startAutoSlide = () => {
-        stopAutoSlide();
-        startProgressAnimation(currentSlide);
-        slideInterval = setInterval(() => {
-            if (isTransitioning) return;
-            const nextSlide = currentSlide + 1;
-            updateActiveSlide(nextSlide);
-        }, slideDuration);
-    };
-
-    const stopAutoSlide = () => {
-        if (slideInterval) clearInterval(slideInterval);
-        // Reset progress animation
-        dots.forEach(dot => {
-            const p = dot.querySelector('.hero-dot-progress');
-            if (p) {
-                p.style.transition = 'none';
-                p.style.width = '0%';
-            }
-        });
-    };
-
-    dots.forEach(dot => {
-        dot.addEventListener('click', () => {
-            if (isTransitioning) return;
-            const targetSlide = parseInt(dot.getAttribute('data-slide'));
-            updateActiveSlide(targetSlide);
-            startAutoSlide(); // Reset interval
-        });
-    });
-
-    // Start auto slide on page load
-    startAutoSlide();
-
-    // Pause on hover
-    container.addEventListener('mouseenter', stopAutoSlide);
-    container.addEventListener('mouseleave', startAutoSlide);
-
-    // Pointer-based Gestures (Mouse Drag + Mobile Swiping)
-    let pointerStartX = 0;
-    let pointerStartY = 0;
-    let isDragging = false;
-
-    container.addEventListener('pointerdown', (e) => {
-        if (e.button !== 0 && e.pointerType === 'mouse') return;
-        // Don't intercept clicks on buttons or links
-        if (e.target.closest('button') || e.target.closest('a')) return;
-        pointerStartX = e.clientX;
-        pointerStartY = e.clientY;
-        isDragging = true;
-    });
-
-    document.addEventListener('pointerup', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
-
-        const pointerEndX = e.clientX;
-        const pointerEndY = e.clientY;
-        const diffX = pointerStartX - pointerEndX;
-        const diffY = pointerStartY - pointerEndY;
-
-        // Verify swipe is primarily horizontal and passes threshold of 50px
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-            if (diffX > 0) {
-                updateActiveSlide(currentSlide + 1);
-                startAutoSlide();
-            } else {
-                let prevSlide = currentSlide - 1;
-                if (prevSlide < 0) {
-                    isTransitioning = true;
-                    wrapper.style.transition = 'none';
-                    wrapper.style.transform = `translateX(-66.6666%)`;
-                    currentSlide = 2;
-                    wrapper.offsetHeight; // Reflow
-                    isTransitioning = false;
-                    
-                    setTimeout(() => {
-                        updateActiveSlide(1);
-                    }, 50);
-                } else {
-                    updateActiveSlide(prevSlide);
-                }
-                startAutoSlide();
-            }
-        }
-    });
-
-    document.addEventListener('pointercancel', () => {
-        isDragging = false;
-    });
-
-    // Touchpad Two-finger horizontal swipe handling
-    let wheelAccumulator = 0;
-    let wheelDebounce = false;
-    container.addEventListener('wheel', (e) => {
-        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-            e.preventDefault();
-            if (wheelDebounce) return;
-            wheelAccumulator += e.deltaX;
-            if (Math.abs(wheelAccumulator) > 35) {
-                wheelDebounce = true;
-                if (wheelAccumulator > 0) {
-                    updateActiveSlide(currentSlide + 1);
-                } else {
-                    let prevSlide = currentSlide - 1;
-                    if (prevSlide < 0) {
-                        isTransitioning = true;
-                        wrapper.style.transition = 'none';
-                        wrapper.style.transform = `translateX(-66.6666%)`;
-                        currentSlide = 2;
-                        wrapper.offsetHeight;
-                        isTransitioning = false;
-                        setTimeout(() => updateActiveSlide(1), 50);
-                    } else {
-                        updateActiveSlide(prevSlide);
-                    }
-                }
-                startAutoSlide();
-                setTimeout(() => {
-                    wheelDebounce = false;
-                    wheelAccumulator = 0;
-                }, 800);
-            }
-        }
-    }, { passive: false });
-
-    // Scroll Parallax effect on the Hair Duo background image (Slide 2)
-    let ticking = false;
-    window.addEventListener('scroll', () => {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(() => {
-            const rect = container.getBoundingClientRect();
-            const visible = rect.bottom > 0 && rect.top < window.innerHeight;
-            if (visible) {
-                if (currentSlide % 2 === 1) { // Hair Duo slide
-                    const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
-                    const shift = (progress - 0.5) * 80;
-                    if (hairDuoBg) hairDuoBg.style.transform = `translateY(${shift}px)`;
-                }
-                handleRewardsParallax(rect); // Always apply to the rewards hero
-            }
-            ticking = false;
-        });
-    }, { passive: true });
-})();
-
-// import "./admin-edit.js"; // Conflict resolved: logic centralized in Inventory Dashboard
-
-// Scroll performance optimization
-let scrollTimeout;
-window.addEventListener('scroll', function() {
-    if (!document.body.classList.contains('is-scrolling')) {
-        document.body.classList.add('is-scrolling');
-    }
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(function() {
-        document.body.classList.remove('is-scrolling');
-    }, 150);
-}, { passive: true });
-
-// --- Liquid Glass WebGL Engine Integration ---
-(async () => {
-    try {
-        const rootEl = document.querySelector('#hair-duo-hero');
-        const glassEl = document.querySelector('#hair-duo-hero .liquid-glass-btn');
-        if (!rootEl || !glassEl) return;
-
-        let LiquidGlass;
-        try {
-            const mod = await import('./liquidglass.js');
-            LiquidGlass = mod.LiquidGlass;
-        } catch (e) {
-            const mod = await import('https://cdn.jsdelivr.net/npm/@ybouane/liquidglass/dist/index.js');
-            LiquidGlass = mod.LiquidGlass;
-        }
-
-        if (LiquidGlass && typeof LiquidGlass.init === 'function') {
-            window.liquidGlassInstance = await LiquidGlass.init({
-                root: rootEl,
-                glassElements: [glassEl],
-                defaults: {
-                    button: true,
-                    blurAmount: 0.25,
-                    refraction: 0.69,
-                    cornerRadius: 30,
-                    zRadius: 25,
-                    specular: 0.5,
-                    edgeHighlight: 0.2,
-                    chromAberration: 0.05
-                }
-            });
-            console.log('✨ Liquid Glass WebGL Engine initialized successfully on Shop Hair Care button');
-        }
-    } catch (err) {
-        console.warn('⚠️ Liquid Glass WebGL initialization skipped or failed:', err);
-    }
-})();
-
+                </button>`}`;const K=document.getElementById("acct-city");if(K){const w=U!==null?u[U]:{};w.city&&(K.value=w.city)}const X=document.getElementById("acct-profile-form");if(X){document.getElementById("acct-form-cancel")?.addEventListener("click",()=>M(u));const w=document.getElementById("acct-label"),I=document.getElementById("acct-name"),Y=document.getElementById("acct-phone"),ce=document.getElementById("acct-email"),J=document.getElementById("acct-address"),_=document.getElementById("acct-city"),ie=document.getElementById("acct-postal"),Le=X.querySelector('button[type="submit"]'),Ce=()=>({label:w?w.value.trim():"",fullName:I?I.value.trim():"",phone:Y?Y.value.trim():"",email:ce?ce.value.trim():"",address:J?J.value.trim():"",city:_?_.value:"",postalCode:ie?ie.value.trim():""}),De=Ce(),Je=()=>{if(G)return;const Ze=Ce(),qe=Object.keys(De).some(dt=>De[dt]!==Ze[dt]);Le.disabled=!qe,Le.style.opacity=qe?"1":"0.5",Le.style.cursor=qe?"pointer":"not-allowed"};!G&&Le&&(Le.disabled=!0,Le.style.opacity="0.5",Le.style.cursor="not-allowed",[w,I,Y,ce,J,_,ie].forEach(Ze=>{Ze&&(Ze.addEventListener("input",Je),Ze.addEventListener("change",Je))})),X.addEventListener("submit",async Ze=>{Ze.preventDefault();const qe=Le.textContent;Le.textContent="Saving...",Le.disabled=!0;const dt={label:document.getElementById("acct-label").value.trim()||"Address",fullName:document.getElementById("acct-name").value.trim(),phone:document.getElementById("acct-phone").value.trim(),email:document.getElementById("acct-email").value.trim(),address:document.getElementById("acct-address").value.trim(),city:document.getElementById("acct-city").value,postalCode:document.getElementById("acct-postal").value.trim(),updatedAt:new Date().toISOString()},Ue=[...u];G?Ue.push(dt):Ue[U]=dt;try{await lt(Ae(se,"users",c.uid),{shippingProfiles:Ue,shippingInfo:Ue[0],lastSelectedProfile:G?Ue.length-1:U},{merge:!0}),window._dodchShippingProfiles=Ue,window.showToast("Address saved! \u2728","success"),M(Ue)}catch(Pe){console.error(Pe),window.showToast("Failed to save. Please try again.","error"),Le.textContent=qe,Le.disabled=!1}})}};try{const u=await mt(Ae(se,"users",c.uid));let U=[],G=0;if(u.exists()){const N=u.data();Array.isArray(N.shippingProfiles)&&N.shippingProfiles.length>0?(U=N.shippingProfiles,G=typeof N.lastSelectedProfile=="number"?N.lastSelectedProfile:0):N.shippingInfo&&(U=[{label:"Default",...N.shippingInfo}]);const le=typeof N.credits=="number"?N.credits:0;window._dodchUserCredits=le;const K=document.getElementById("account-rewards-badge"),X=document.getElementById("account-rewards-balance");K&&X&&(K.style.display="block",X.innerText=`${le.toFixed(2)} TND`);const w=document.getElementById("checkout-rewards-row"),I=document.getElementById("available-rewards-display");w&&I&&le>0&&(w.style.display="flex",I.innerText=le.toFixed(2))}window._dodchShippingProfiles=U,window._dodchSelectedProfileIndex=G,window._dodchCurrentUser=c,window.__acctEditProfile=N=>M(window._dodchShippingProfiles,N,!1),window.__acctStartAdd=()=>M(window._dodchShippingProfiles,null,!0),window.__acctDeleteProfile=async N=>{if(!confirm("Remove this address?"))return;const le=window._dodchShippingProfiles.filter((K,X)=>X!==N);try{await lt(Ae(se,"users",c.uid),{shippingProfiles:le,shippingInfo:le[0]||null},{merge:!0}),window._dodchShippingProfiles=le,window.showToast("Address removed.","info"),M(le)}catch{window.showToast("Failed to delete. Try again.","error")}},window.selectShippingProfile=async N=>{window._dodchSelectedProfileIndex=N,p(window._dodchShippingProfiles[N]),document.querySelectorAll(".shipping-profile-card").forEach((K,X)=>{K.classList.toggle("selected",X===N);const w=K.querySelector(".profile-card-check");X===N&&!w?K.innerHTML+='<div class="profile-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg></div>':X!==N&&w&&w.remove()});try{await lt(Ae(se,"users",c.uid),{lastSelectedProfile:N},{merge:!0})}catch{}const le=document.getElementById("new-profile-form-wrapper");le&&le.style.display!=="none"&&window.toggleNewProfileForm?.()},D(U,G),M(U),U.length>0&&t&&p(U[G]||U[0])}catch(u){console.error("Error loading shipping profiles:",u),O&&(O.innerHTML='<p style="color:#e74c3c;font-size:0.9rem;">Failed to load addresses. Please refresh.</p>')}}window.saveShippingFromCheckout=async function(c){if(!c||c==="guest")return;const t=document.getElementById("save-shipping-info");if(!(!t||!t.checked))try{const n=document.getElementById("new-profile-label"),p={label:n&&n.value.trim()||"Address",email:document.getElementById("checkout-email").value.trim(),fullName:document.getElementById("checkout-name").value.trim(),phone:document.getElementById("checkout-phone").value.trim(),address:document.getElementById("checkout-address").value.trim(),city:document.getElementById("checkout-city").value,postalCode:document.getElementById("checkout-postal-code").value.trim(),savedAt:new Date().toISOString()};let a=window._dodchShippingProfiles?[...window._dodchShippingProfiles]:[];const l=a.findIndex(O=>O.phone===p.phone);l>=0?a[l]={...a[l],...p}:(a.push(p),a.length>5&&a.shift());const D=l>=0?l:a.length-1;await lt(Ae(se,"users",c),{shippingProfiles:a,shippingInfo:p,lastSelectedProfile:D},{merge:!0}),window._dodchShippingProfiles=a,window._dodchSelectedProfileIndex=D,window.showToast&&window.showToast("Address saved to your profile! \u2728","success")}catch(n){console.error("Firestore Save Error:",n),window.showToast&&window.showToast(`Save Error: ${n.message}`,"error")}},document.addEventListener("DOMContentLoaded",()=>{});const Ki={settings:{maxBlur:4.5,velocityMult:.15,lerpFactor:.1},state:{lastScroll:window.pageYOffset||document.documentElement.scrollTop,currentBlur:0,ticking:!1},update(){const c=window.pageYOffset||document.documentElement.scrollTop,t=Math.abs(c-this.state.lastScroll),n=Math.min(t*this.settings.velocityMult,this.settings.maxBlur);this.state.currentBlur+=(n-this.state.currentBlur)*this.settings.lerpFactor,this.state.currentBlur<.01&&t<1?(this.state.currentBlur=0,document.documentElement.style.setProperty("--scroll-blur","0px")):document.documentElement.style.setProperty("--scroll-blur",this.state.currentBlur.toFixed(3)+"px"),this.state.lastScroll=c,this.state.currentBlur>.01?requestAnimationFrame(()=>this.update()):this.state.ticking=!1},init(){window.addEventListener("scroll",()=>{this.state.ticking||(this.state.ticking=!0,requestAnimationFrame(()=>this.update()))},{passive:!0})}},Qi=new URLSearchParams(window.location.search),ii=Qi.get("search");ii&&setTimeout(()=>{const c=document.getElementById("navbar-search-input"),t=document.getElementById("search-toggle-btn");c&&t&&(document.querySelector(".search-container").classList.contains("active")||t.click(),c.value=ii,c.dispatchEvent(new Event("input",{bubbles:!0})))},2e3),Ki.init(),window.addEventListener("load",Xi),(()=>{const c=document.getElementById("scroll-indicator"),t=document.getElementById("product-grid-start"),n=document.querySelector(".hero-carousel-container");if(!c||!t||!n)return;let p=!1,a=!1;const l=M=>{a||p||(a=!0,t.scrollIntoView({behavior:"smooth",block:"start"}),setTimeout(()=>{a=!1,M&&M()},700))},D=()=>{l(()=>{p=!0,c.style.opacity="0.3",c.style.pointerEvents="none"})};c.addEventListener("click",D);let O=window.scrollY;const te=()=>n.offsetTop+n.offsetHeight*.5;window.addEventListener("scroll",()=>{if(a)return;const M=window.scrollY,u=M<O;p&&M>te()+100&&(c.style.opacity="1",c.style.pointerEvents="auto"),p&&u&&M<=te()&&M>0&&(p=!1,c.style.opacity="1",c.style.pointerEvents="auto",n.scrollIntoView({behavior:"smooth",block:"start"})),O=M},{passive:!0})})(),(()=>{const c=document.querySelector(".hero-carousel-wrapper"),t=document.querySelectorAll(".hero-dot"),n=document.getElementById("hair-duo-bg"),p=document.getElementById("hair-duo-hero"),a=document.querySelector(".hero-carousel-container"),l=document.querySelectorAll(".hero-rewards-bg");if(!c||t.length===0||!a)return;let D=0,O,te=!1;const M=6e3,u=_=>{const Le=((window.innerHeight-_.top)/(window.innerHeight+_.height)-.5)*80;l.forEach(Ce=>{Ce.style.transform=`translateY(${Le}px)`})},U=_=>{t.forEach(Ce=>{const De=Ce.querySelector(".hero-dot-progress");De&&(De.style.transition="none",De.style.width="0%")});const ie=_%2,Le=t[ie];if(Le){const Ce=Le.querySelector(".hero-dot-progress");Ce&&(Le.offsetHeight,Ce.style.transition=`width ${M}ms linear`,Ce.style.width="100%")}},G=_=>{const ie=document.querySelector(".hero-carousel-container");if(!ie||ie.classList.contains("collapsed"))return;const Ce=_%2===1;window._activeHeroSlideIsDark=Ce;const De=document.getElementById("navbar");De&&!De.classList.contains("scrolled")&&(Ce?De.classList.remove("text-dark"):De.classList.add("text-dark"))},N=_=>{if(te)return;D=_,c.style.transition="transform 0.8s cubic-bezier(0.25, 1, 0.25, 1)",c.style.transform=`translateX(-${_*33.3333}%)`;const ie=_%2;t.forEach((Le,Ce)=>{Ce===ie?Le.classList.add("active"):Le.classList.remove("active")}),p&&(ie===1?p.classList.add("in-view"):p.classList.remove("in-view")),U(_),G(_),_===2&&(te=!0,setTimeout(()=>{c.style.transition="none",c.style.transform="translateX(0%)",D=0,c.offsetHeight,te=!1,U(0),G(0)},800))},le=()=>{K(),U(D),O=setInterval(()=>{if(te)return;const _=D+1;N(_)},M)},K=()=>{O&&clearInterval(O),t.forEach(_=>{const ie=_.querySelector(".hero-dot-progress");ie&&(ie.style.transition="none",ie.style.width="0%")})};t.forEach(_=>{_.addEventListener("click",()=>{if(te)return;const ie=parseInt(_.getAttribute("data-slide"));N(ie),le()})}),le(),a.addEventListener("mouseenter",K),a.addEventListener("mouseleave",le);let X=0,w=0,I=!1;a.addEventListener("pointerdown",_=>{_.button!==0&&_.pointerType==="mouse"||_.target.closest("button")||_.target.closest("a")||(X=_.clientX,w=_.clientY,I=!0)}),document.addEventListener("pointerup",_=>{if(!I)return;I=!1;const ie=_.clientX,Le=_.clientY,Ce=X-ie,De=w-Le;if(Math.abs(Ce)>Math.abs(De)&&Math.abs(Ce)>50)if(Ce>0)N(D+1),le();else{let Je=D-1;Je<0?(te=!0,c.style.transition="none",c.style.transform="translateX(-66.6666%)",D=2,c.offsetHeight,te=!1,setTimeout(()=>{N(1)},50)):N(Je),le()}}),document.addEventListener("pointercancel",()=>{I=!1});let Y=0,ce=!1;a.addEventListener("wheel",_=>{if(Math.abs(_.deltaX)>Math.abs(_.deltaY)){if(_.preventDefault(),ce)return;if(Y+=_.deltaX,Math.abs(Y)>35){if(ce=!0,Y>0)N(D+1);else{let ie=D-1;ie<0?(te=!0,c.style.transition="none",c.style.transform="translateX(-66.6666%)",D=2,c.offsetHeight,te=!1,setTimeout(()=>N(1),50)):N(ie)}le(),setTimeout(()=>{ce=!1,Y=0},800)}}},{passive:!1});let J=!1;window.addEventListener("scroll",()=>{J||(J=!0,requestAnimationFrame(()=>{const _=a.getBoundingClientRect();if(_.bottom>0&&_.top<window.innerHeight){if(D%2===1){const Ce=((window.innerHeight-_.top)/(window.innerHeight+_.height)-.5)*80;n&&(n.style.transform=`translateY(${Ce}px)`)}u(_)}J=!1}))},{passive:!0})})();let ri;window.addEventListener("scroll",function(){document.body.classList.contains("is-scrolling")||document.body.classList.add("is-scrolling"),clearTimeout(ri),ri=setTimeout(function(){document.body.classList.remove("is-scrolling")},150)},{passive:!0}),(async()=>{try{const c=document.querySelector("#hero-rewards-hero")||document.querySelector(".hero-rewards-section"),t=document.querySelector("#hero-rewards-hero .liquid-glass-btn")||document.querySelector("#hero-login-google-btn");if(c&&t){let l;try{l=(await import("./liquidglass.js")).LiquidGlass}catch{l=(await import("https://cdn.jsdelivr.net/npm/@ybouane/liquidglass/dist/index.js")).LiquidGlass}l&&typeof l.init=="function"&&(window.liquidGlassRewardsInstance=await l.init({root:c,glassElements:[t],defaults:{button:!0,blurAmount:.11,refraction:.76,chromAberration:.21,edgeHighlight:.05,specular:0,fresnel:1,distortion:0,cornerRadius:40,zRadius:40,opacity:1,saturation:0,brightness:0,shadowOpacity:.3,shadowSpread:10,bevelMode:0}}),console.log("\u2728 Liquid Glass initialized on Rewards hero button."))}const n=document.querySelector("#hair-duo-hero"),p=document.querySelector("#hair-duo-hero .liquid-glass-btn");if(!n||!p)return;let a;try{a=(await import("./liquidglass.js")).LiquidGlass}catch{a=(await import("https://cdn.jsdelivr.net/npm/@ybouane/liquidglass/dist/index.js")).LiquidGlass}a&&typeof a.init=="function"&&(window.liquidGlassInstance=await a.init({root:n,glassElements:[p],defaults:{button:!0,blurAmount:.11,refraction:.76,chromAberration:.21,edgeHighlight:.05,specular:0,fresnel:1,distortion:0,cornerRadius:40,zRadius:40,opacity:1,saturation:0,brightness:0,shadowOpacity:.3,shadowSpread:10,bevelMode:0}}),console.log("\u2728 Liquid Glass WebGL Engine initialized successfully on Shop Hair Care button"))}catch(c){console.warn("\u26A0\uFE0F Liquid Glass WebGL initialization skipped or failed:",c)}})();
