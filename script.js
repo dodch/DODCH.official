@@ -3103,6 +3103,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const updateHeroButton = (btn) => {
             if (!btn) return;
+
+            const wasInitialized = btn.dataset.liquidglassInitialized === 'true';
+
             if (user) {
                 btn.innerHTML = `Go to My Account`;
             } else {
@@ -3115,6 +3118,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     </svg>
                     Continue with Google
                 `;
+            }
+
+            if (wasInitialized) {
+                const instanceName = btn.id.includes('cloned') ? 'liquidGlassRewardsClonedInstance' : 'liquidGlassRewardsInstance';
+                const instance = window[instanceName];
+                if (instance && typeof instance.reinit === 'function') {
+                    instance.reinit();
+                }
             }
         };
         updateHeroButton(document.getElementById('hero-login-google-btn'));
