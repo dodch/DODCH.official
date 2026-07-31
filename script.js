@@ -1,4 +1,4 @@
-﻿// Universal Image WebP Fallback Fix
+// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -1207,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="product-image-wrapper" style="${isActuallyOOS ? 'background-color: #f0f0f0;' : ''}">
                                 ${badgeHTML}
                                 <img loading="lazy" src="${primaryImg}" alt="${product.name}" class="product-card-img" style="${imgStyle}; view-transition-name: prod-img-${id};">
-                                <button class="quick-view-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${primaryImg}" data-style="${product.style || ''}" data-desc="${product.description}">Quick View</button>
+                                <button class="quick-view-btn liquid-glass-btn" data-id="${id}" data-title="${product.name}" data-price="${displayPrice || ''}" data-img="${primaryImg}" data-style="${product.style || ''}" data-desc="${product.description}" data-config='{"brightness": -0.3, "blurAmount": 0.25, "cornerRadius": 50, "button": true}'>Quick View</button>
                             </div>
                             <div class="product-card-info" style="${isActuallyOOS ? 'opacity: 0.7;' : ''}">
                                 <h3 class="product-card-title" data-name-target="${id}" style="view-transition-name: prod-title-${id};">${firestoreSynced ? product.name : '<span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span>'}</h3>
@@ -7439,13 +7439,14 @@ The DODCH Team`;
                         <div class="product-image-wrapper">
                             ${badgeHTML}
                             <img loading="lazy" src="${primaryImg || 'https://via.placeholder.com/300'}" alt="${product.name}" class="product-card-img" style="${product.style || ''}; view-transition-name: prod-img-${id};">
-                            <button class="quick-view-btn" 
+                            <button class="quick-view-btn liquid-glass-btn" 
                                 data-id="${id}" 
                                 data-title="${product.name}" 
                                 data-price="${displayPrice || ''}" 
                                 data-img="${primaryImg || 'https://via.placeholder.com/300'}" 
                                 data-style="${product.style || ''}"
-                                data-desc="${product.description || ''}">
+                                data-desc="${product.description || ''}"
+                                data-config='{"brightness": -0.3, "blurAmount": 0.25, "cornerRadius": 50, "button": true}'>
                                 Quick View
                             </button>
                         </div>
@@ -11411,6 +11412,94 @@ window.addEventListener('scroll', function() {
                 console.log(config.logMessage);
             }
         }
+
+        // --- Quick View Buttons Liquid Glass ---
+        window.quickViewLiquidGlassInstances = window.quickViewLiquidGlassInstances || [];
+
+        const cleanupOrphanedQuickViewInstances = () => {
+            window.quickViewLiquidGlassInstances = window.quickViewLiquidGlassInstances.filter(instance => {
+                if (!document.body.contains(instance.root)) {
+                    try {
+                        instance.destroy();
+                    } catch (e) {
+                        console.warn('Error destroying orphaned LiquidGlass instance:', e);
+                    }
+                    return false;
+                }
+                return true;
+            });
+        };
+
+        const initQuickViewLiquidGlass = async () => {
+            cleanupOrphanedQuickViewInstances();
+
+            const buttons = document.querySelectorAll('.quick-view-btn:not([data-liquidglass-initialized="true"])');
+            if (buttons.length === 0) return;
+
+            for (const btn of buttons) {
+                btn.dataset.config = JSON.stringify({
+                    brightness: -0.3,
+                    blurAmount: 0.25,
+                    cornerRadius: 50,
+                });
+
+                btn.classList.add('liquid-glass-btn');
+
+                const wrapper = btn.closest('.product-image-wrapper');
+                if (wrapper) {
+                    try {
+                        const instance = await LiquidGlass.init({
+                            root: wrapper,
+                            glassElements: [btn],
+                            defaults: {
+                                button: true,
+                                refraction: 0.76,
+                                chromAberration: 0.21,
+                                edgeHighlight: 0.05,
+                                specular: 0,
+                                fresnel: 1,
+                                distortion: 0,
+                                zRadius: 40,
+                                opacity: 1,
+                                saturation: 0,
+                                shadowOpacity: 0.3,
+                                shadowSpread: 10,
+                                bevelMode: 0
+                            }
+                        });
+                        window.quickViewLiquidGlassInstances.push(instance);
+                        btn.dataset.liquidglassInitialized = 'true';
+                    } catch (err) {
+                        console.warn('⚠️ Failed to initialize LiquidGlass on Quick View button:', err);
+                    }
+                }
+            }
+        };
+
+        // Initialize on existing buttons on page load
+        await initQuickViewLiquidGlass();
+
+        // Watch for dynamically added quick view buttons
+        const qvObserver = new MutationObserver((mutations) => {
+            let added = false;
+            for (const m of mutations) {
+                if (m.addedNodes.length > 0) {
+                    for (const node of m.addedNodes) {
+                        if (node.nodeType === 1) {
+                            if (node.classList?.contains('quick-view-btn') || node.querySelector?.('.quick-view-btn')) {
+                                added = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (added) break;
+            }
+            if (added) {
+                initQuickViewLiquidGlass();
+            }
+        });
+        qvObserver.observe(document.body, { childList: true, subtree: true });
     } catch (err) {
         console.warn('⚠️ Liquid Glass WebGL initialization skipped or failed:', err);
     }

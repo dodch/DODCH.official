@@ -3892,6 +3892,21 @@ footer {
     color: #FFFFFF;
 }
 
+/* Quick View Button Liquid Glass styling */
+.quick-view-btn.liquid-glass-btn {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.quick-view-btn.liquid-glass-btn:hover {
+    background: transparent !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    color: #ffffff !important;
+}
+
 .qv-modal-overlay {
     position: fixed;
     top: 0;
