@@ -3859,7 +3859,7 @@ footer {
 
 .quick-view-btn {
     position: absolute;
-    bottom: -50px;
+    bottom: -15px;
     left: 50%;
     transform: translateX(-50%);
     background-color: var(--card-white);
@@ -3870,11 +3870,12 @@ footer {
     font-size: 0.8rem;
     letter-spacing: 1px;
     cursor: pointer;
-    transition: bottom 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-        opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-        background-color 0.3s ease,
-        color 0.3s ease;
+    transition: bottom 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        transform 0.3s ease,
+        border-color 0.3s ease;
     opacity: 0;
+    pointer-events: none;
     width: 80%;
     font-weight: 600;
     z-index: 2;
@@ -3885,6 +3886,7 @@ footer {
 .product-card:hover .quick-view-btn {
     bottom: 20px;
     opacity: 1;
+    pointer-events: auto;
 }
 
 .quick-view-btn:hover {
@@ -3892,18 +3894,26 @@ footer {
     color: #FFFFFF;
 }
 
-/* Quick View Button Liquid Glass styling */
+/* Quick View & General Liquid Glass Button styling */
+.liquid-glass-btn,
+.liquid-glass-ready,
 .quick-view-btn.liquid-glass-btn {
     background: transparent !important;
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
     color: #ffffff !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
 
+.liquid-glass-btn:hover,
+.liquid-glass-ready:hover,
 .quick-view-btn.liquid-glass-btn:hover {
     background: transparent !important;
-    border-color: rgba(255, 255, 255, 0.5) !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
     color: #ffffff !important;
 }
 
@@ -10423,16 +10433,18 @@ body.is-scrolling * {
     stroke: var(--text-charcoal) !important;
 }
 
-/* Google Login Button Hover contrast fix */
-#hero-login-google-btn:hover,
-#hero-login-google-btn-cloned:hover {
-    background: #fff !important;
-    color: #000 !important;
-    border: 1px solid #000 !important;
+/* Google Login Button Hover — only applies before LiquidGlass loads */
+#hero-login-google-btn:not(.liquid-glass-ready):hover,
+#hero-login-google-btn-cloned:not(.liquid-glass-ready):hover {
+    background: rgba(255,255,255,0.22) !important;
+    border-color: rgba(255,255,255,0.8) !important;
 }
-#hero-login-google-btn:hover svg path,
-#hero-login-google-btn-cloned:hover svg path {
-    fill: #000 !important;
+/* Once LiquidGlass is live, let the shader handle all hover rendering */
+#hero-login-google-btn.liquid-glass-ready:hover,
+#hero-login-google-btn-cloned.liquid-glass-ready:hover {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* --- Batch Number Display --- */

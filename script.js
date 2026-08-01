@@ -3104,7 +3104,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateHeroButton = (btn) => {
             if (!btn) return;
 
-            const wasInitialized = btn.dataset.liquidglassInitialized === 'true';
+            // Preserve the LiquidGlass WebGL <canvas> injected as first child
+            const existingCanvas = btn.querySelector('canvas');
 
             if (user) {
                 btn.innerHTML = `Go to My Account`;
@@ -3120,16 +3121,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
-            if (wasInitialized) {
+            // Re-inject the LiquidGlass canvas so the shader keeps running
+            if (existingCanvas) {
+                btn.insertBefore(existingCanvas, btn.firstChild);
+                // Force the instance to re-sample after DOM change
                 const instanceName = btn.id.includes('cloned') ? 'liquidGlassRewardsClonedInstance' : 'liquidGlassRewardsInstance';
                 const instance = window[instanceName];
-                if (instance && typeof instance.reinit === 'function') {
+                if (instance && typeof instance.markChanged === 'function') {
+                    instance.markChanged();
+                    setTimeout(() => instance.markChanged(), 50);
+                } else if (instance && typeof instance.reinit === 'function') {
                     instance.reinit();
                 }
             }
         };
         updateHeroButton(document.getElementById('hero-login-google-btn'));
         updateHeroButton(document.getElementById('hero-login-google-btn-cloned'));
+        // Store reference so LiquidGlass init can call it again after attaching
+        window._updateHeroButtons = () => {
+            updateHeroButton(document.getElementById('hero-login-google-btn'));
+            updateHeroButton(document.getElementById('hero-login-google-btn-cloned'));
+        };
         if (sidebarUserName) {
             const profileIcon = document.querySelector('.profile-icon');
             if (user) {
@@ -11131,6 +11143,7 @@ window.addEventListener('load', initPushNotifications);
 
         wrapper.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.25, 1)';
         wrapper.style.transform = `translateX(-${index * 33.3333}%)`;
+        window.triggerHeroLiquidGlassAnimation?.(850);
 
         const dotIndex = index % 2;
         // Update dots active class
@@ -11318,6 +11331,9 @@ window.addEventListener('load', initPushNotifications);
                     if (hairDuoBg) hairDuoBg.style.transform = `translateY(${shift}px)`;
                 }
                 handleRewardsParallax(rect); // Always apply to the rewards hero
+
+                // Real-time WebGL refraction update during parallax scroll
+                [window.liquidGlassRewardsInstance, window.liquidGlassRewardsClonedInstance, window.liquidGlassInstance].forEach(inst => inst?.markChanged?.());
             }
             ticking = false;
         });
@@ -11341,27 +11357,21 @@ window.addEventListener('scroll', function() {
 // --- Liquid Glass WebGL Engine Integration ---
 (async () => {
     try {
-        const glassElementsConfig = [
+        const heroButtonConfigs = [
             {
-                // Original Rewards Button
                 rootSelector: '#hero-rewards-hero',
-                glassSelector: '#hero-login-google-btn',
+                btnId: 'hero-login-google-btn',
                 instanceName: 'liquidGlassRewardsInstance',
-                logMessage: '✨ Liquid Glass initialized on Rewards hero button.'
             },
             {
-                // Cloned Rewards Button
                 rootSelector: '#hero-rewards-hero-cloned',
-                glassSelector: '#hero-login-google-btn-cloned',
+                btnId: 'hero-login-google-btn-cloned',
                 instanceName: 'liquidGlassRewardsClonedInstance',
-                logMessage: '✨ Liquid Glass initialized on CLONED Rewards hero button.'
             },
             {
-                // Hair Duo Button
                 rootSelector: '#hair-duo-hero',
-                glassSelector: '#hair-duo-hero .liquid-glass-btn',
+                btnSelector: '#hair-duo-hero .hair-duo-hero__cta',
                 instanceName: 'liquidGlassInstance',
-                logMessage: '✨ Liquid Glass WebGL Engine initialized successfully on Shop Hair Care button'
             }
         ];
 
@@ -11378,40 +11388,74 @@ window.addEventListener('scroll', function() {
             throw new Error('LiquidGlass library not available or invalid.');
         }
 
-        for (const config of glassElementsConfig) {
-            const rootEl = document.querySelector(config.rootSelector);
-            const glassEl = document.querySelector(config.glassSelector);
+        for (const cfg of heroButtonConfigs) {
+            const rootEl = document.querySelector(cfg.rootSelector);
+            const glassEl = cfg.btnId
+                ? document.getElementById(cfg.btnId)
+                : document.querySelector(cfg.btnSelector);
 
-            if (rootEl && glassEl) {
-                // Check if an instance already exists on this element to avoid re-initialization
-                if (glassEl.dataset.liquidglassInitialized) continue;
+            if (!rootEl || !glassEl) continue;
+            if (glassEl.dataset.liquidglassInitialized) continue;
 
-                window[config.instanceName] = await LiquidGlass.init({
+            try {
+                window[cfg.instanceName] = await LiquidGlass.init({
                     root: rootEl,
                     glassElements: [glassEl],
                     defaults: {
                         button: true,
-                        blurAmount: 0.11,
-                        refraction: 0.76,
-                        chromAberration: 0.21,
-                        edgeHighlight: 0.05,
+                        blurAmount: 0.18,
+                        refraction: 0.72,
+                        chromAberration: 0.18,
+                        edgeHighlight: 0.12,
                         specular: 0,
                         fresnel: 1,
                         distortion: 0,
-                        cornerRadius: 40,
+                        cornerRadius: 30,
                         zRadius: 40,
                         opacity: 1,
                         saturation: 0,
                         brightness: 0,
-                        shadowOpacity: 0.3,
-                        shadowSpread: 10,
+                        shadowOpacity: 0.2,
+                        shadowSpread: 8,
                         bevelMode: 0
                     }
                 });
-                glassEl.dataset.liquidglassInitialized = 'true'; // Mark as initialized
-                console.log(config.logMessage);
+
+                glassEl.dataset.liquidglassInitialized = 'true';
+                // Strip CSS fallback now that WebGL shader is live
+                glassEl.classList.add('liquid-glass-ready');
+                console.log(`✨ LiquidGlass initialized on #${glassEl.id || cfg.btnSelector}`);
+            } catch (err) {
+                console.warn(`⚠️ LiquidGlass failed on ${cfg.btnId || cfg.btnSelector}:`, err);
             }
         }
+
+        // Re-run hero button update so any pending auth state change
+        // after innerHTML replacement re-injects the canvas correctly
+        window._updateHeroButtons?.();
+
+        // Global animation function to force real-time WebGL rendering on hero carousel buttons
+        window.triggerHeroLiquidGlassAnimation = (durationMs = 850) => {
+            let animId = null;
+            const startTime = performance.now();
+            const step = (now) => {
+                const instances = [
+                    window.liquidGlassRewardsInstance,
+                    window.liquidGlassRewardsClonedInstance,
+                    window.liquidGlassInstance
+                ];
+                instances.forEach(inst => {
+                    if (inst && typeof inst.markChanged === 'function') {
+                        inst.markChanged();
+                    }
+                });
+                if (now - startTime < durationMs) {
+                    animId = requestAnimationFrame(step);
+                }
+            };
+            animId = requestAnimationFrame(step);
+        };
+        window.triggerHeroLiquidGlassAnimation(500);
 
         // --- Quick View Buttons Liquid Glass ---
         window.quickViewLiquidGlassInstances = window.quickViewLiquidGlassInstances || [];
@@ -11469,6 +11513,47 @@ window.addEventListener('scroll', function() {
                         });
                         window.quickViewLiquidGlassInstances.push(instance);
                         btn.dataset.liquidglassInitialized = 'true';
+                        
+                        // Force immediate render update
+                        if (typeof instance.markChanged === 'function') {
+                            instance.markChanged();
+                            setTimeout(() => instance.markChanged(), 100);
+                            setTimeout(() => instance.markChanged(), 400);
+                        }
+
+                        // Re-sample when the product card image finishes loading
+                        const cardImg = wrapper.querySelector('img');
+                        if (cardImg) {
+                            if (!cardImg.complete) {
+                                cardImg.addEventListener('load', () => {
+                                    if (typeof instance.markChanged === 'function') {
+                                        instance.markChanged(cardImg);
+                                    }
+                                });
+                            }
+                        }
+
+                        // Continuous re-render during hover slide-in / slide-out transitions
+                        const card = btn.closest('.product-card') || wrapper;
+                        if (card) {
+                            let animId = null;
+                            const animateTransition = (durationMs = 400) => {
+                                if (animId) cancelAnimationFrame(animId);
+                                const startTime = performance.now();
+                                const step = (now) => {
+                                    if (typeof instance.markChanged === 'function') {
+                                        instance.markChanged();
+                                    }
+                                    if (now - startTime < durationMs) {
+                                        animId = requestAnimationFrame(step);
+                                    }
+                                };
+                                animId = requestAnimationFrame(step);
+                            };
+
+                            card.addEventListener('pointerenter', () => animateTransition(450));
+                            card.addEventListener('pointerleave', () => animateTransition(350));
+                        }
                     } catch (err) {
                         console.warn('⚠️ Failed to initialize LiquidGlass on Quick View button:', err);
                     }
@@ -11478,6 +11563,13 @@ window.addEventListener('scroll', function() {
 
         // Initialize on existing buttons on page load
         await initQuickViewLiquidGlass();
+        window.addEventListener('load', () => {
+            window.quickViewLiquidGlassInstances.forEach(inst => {
+                if (inst && typeof inst.markChanged === 'function') {
+                    inst.markChanged();
+                }
+            });
+        });
 
         // Watch for dynamically added quick view buttons
         const qvObserver = new MutationObserver((mutations) => {
