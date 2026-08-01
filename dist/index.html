@@ -234,16 +234,16 @@
             <div class="hero-carousel-wrapper" style="display: flex; width: 300%; height: 100%; transition: transform 0.8s cubic-bezier(0.25, 1, 0.25, 1); will-change: transform;">
                 
                 <!-- Slide 1: Rewards Hero -->
-                <section class="hero-rewards-section" id="hero-rewards-hero" style="position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 33.333%; min-height: 42vh; padding: 3rem 2rem 4rem 5%; flex-shrink: 0;">
+                <section class="hero-rewards-section" id="hero-rewards-hero" style="position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 33.333%; min-height: 42vh; padding: 3rem 4rem 4rem 3rem; flex-shrink: 0;">
                     <img src="hero_rewards_bg.png" alt="DODCH Rewards" class="hero-rewards-bg" id="hero-rewards-bg" style="position: absolute; inset: -15%; width: 130%; height: 130%; object-fit: cover; pointer-events: none; will-change: transform; transition: transform 0.05s linear;">
                     <div style="position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.45) 100%); pointer-events: none;"></div>
-                    <div class="hero-content reveal" style="position: relative; z-index: 2; max-width: 600px; text-align: left; width: 100%;">
-                        <span class="hero-eyebrow-minimal" style="display: inline-block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: var(--accent-gold); margin-bottom: 1.25rem;">— DODCH Rewards</span>
+                    <div class="hero-content reveal" style="position: relative; z-index: 2; max-width: 560px; text-align: left; width: 100%;">
                         <h1 class="hero-title-modern" style="font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 6.5vw, 4.2rem); line-height: 1.1; font-weight: 400; color: #ffffff; margin-bottom: 1.5rem; letter-spacing: -0.5px; text-shadow: 0 2px 20px rgba(0,0,0,0.4);">Luxury, Rewarded.</h1>
-                        <p class="hero-subtitle-modern" style="font-family: var(--font-sans); font-size: 1rem; line-height: 1.6; color: #e0e0e0; margin-bottom: 2.25rem; font-weight: 400; max-width: 480px;">Join our exclusive rewards program. Earn 1 TND in cashback for every 10 TND spent.</p>
+                        <p class="hero-subtitle-modern" style="font-family: var(--font-sans); font-size: 1rem; line-height: 1.6; color: #e0e0e0; margin-bottom: 2.25rem; font-weight: 400; max-width: 420px;">Join our exclusive rewards program. Earn 1 TND in cashback for every 10 TND spent.</p>
                     </div>
-                    <!-- Direct child of #hero-rewards-hero root container for LiquidGlass WebGL engine -->
-                    <button id="hero-login-google-btn" class="liquid-glass-btn hero-rewards-login-btn" data-config='{"button": true, "blurAmount": 0.25, "cornerRadius": 30, "refraction": 0.69, "edgeHighlight": 0.2}' style="position: relative; z-index: 3;">
+                    <!-- Direct child of #hero-rewards-hero — must be positioned here for LiquidGlass root capture -->
+                    <button id="hero-login-google-btn" class="hero-rewards-login-btn" style="position: relative; z-index: 3; align-self: flex-start;">
+                        <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
                         Continue with Google
                     </button>
                 </section>
@@ -264,15 +264,16 @@
                 </section>
 
                 <!-- Slide 3: Cloned Rewards Hero (For Infinite loop) -->
-                <section class="hero-rewards-section cloned-rewards-slide" id="hero-rewards-hero-cloned" style="position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 33.333%; min-height: 42vh; padding: 3rem 2rem 4rem 5%; flex-shrink: 0;">
+                <section class="hero-rewards-section cloned-rewards-slide" id="hero-rewards-hero-cloned" style="position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 33.333%; min-height: 42vh; padding: 3rem 4rem 4rem 3rem; flex-shrink: 0;">
                     <img src="hero_rewards_bg.png" alt="DODCH Rewards" class="hero-rewards-bg" style="position: absolute; inset: -15%; width: 130%; height: 130%; object-fit: cover; pointer-events: none; will-change: transform; transition: transform 0.05s linear;">
                     <div style="position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.45) 100%); pointer-events: none;"></div>
-                    <div class="hero-content reveal" style="position: relative; z-index: 2; max-width: 600px; text-align: left; width: 100%;">
-                        <span class="hero-eyebrow-minimal" style="display: inline-block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: var(--accent-gold); margin-bottom: 1.25rem;">— DODCH Rewards</span>
+                    <div class="hero-content reveal" style="position: relative; z-index: 2; max-width: 560px; text-align: left; width: 100%;">
                         <h1 class="hero-title-modern" style="font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 6.5vw, 4.2rem); line-height: 1.1; font-weight: 400; color: #ffffff; margin-bottom: 1.5rem; letter-spacing: -0.5px; text-shadow: 0 2px 20px rgba(0,0,0,0.4);">Luxury, Rewarded.</h1>
-                        <p class="hero-subtitle-modern" style="font-family: var(--font-sans); font-size: 1rem; line-height: 1.6; color: #e0e0e0; margin-bottom: 2.25rem; font-weight: 400; max-width: 480px;">Join our exclusive rewards program. Earn 1 TND in cashback for every 10 TND spent.</p>
+                        <p class="hero-subtitle-modern" style="font-family: var(--font-sans); font-size: 1rem; line-height: 1.6; color: #e0e0e0; margin-bottom: 2.25rem; font-weight: 400; max-width: 420px;">Join our exclusive rewards program. Earn 1 TND in cashback for every 10 TND spent.</p>
                     </div>
-                    <button id="hero-login-google-btn-cloned" class="liquid-glass-btn hero-rewards-login-btn" data-config='{"button": true, "blurAmount": 0.25, "cornerRadius": 30, "refraction": 0.69, "edgeHighlight": 0.2}' style="position: relative; z-index: 3;">
+                    <!-- Direct child of #hero-rewards-hero-cloned — must be positioned here for LiquidGlass root capture -->
+                    <button id="hero-login-google-btn-cloned" class="hero-rewards-login-btn" style="position: relative; z-index: 3; align-self: flex-start;">
+                        <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
                         Continue with Google
                     </button>
                 </section>
@@ -325,7 +326,6 @@
                 align-items: center;
                 gap: 0.6rem;
                 padding: 0.85rem 2rem;
-                border: 1px solid rgba(255, 255, 255, 0.6);
                 color: #fff;
                 font-family: var(--font-sans);
                 font-size: 0.8rem;
@@ -333,20 +333,33 @@
                 text-transform: uppercase;
                 text-decoration: none;
                 border-radius: 30px;
-                background: rgba(255, 255, 255, 0.08);
-                backdrop-filter: blur(6px);
                 cursor: pointer;
+                /* Solid fallback while LiquidGlass loads */
+                background: rgba(255, 255, 255, 0.12);
+                border: 1px solid rgba(255, 255, 255, 0.5);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
                 transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
             }
-            .hero-rewards-login-btn.liquid-glass-btn {
+            /* Once LiquidGlass attaches, strip everything — shader handles visuals */
+            .hero-rewards-login-btn.liquid-glass-ready {
                 background: transparent !important;
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
                 backdrop-filter: none !important;
                 -webkit-backdrop-filter: none !important;
             }
-            .hero-rewards-login-btn:hover {
-                background: rgba(255, 255, 255, 0.18);
-                border-color: var(--accent-gold);
-                color: var(--accent-gold);
+            .hero-rewards-login-btn:not(.liquid-glass-ready):hover {
+                background: rgba(255, 255, 255, 0.22);
+                border-color: rgba(255, 255, 255, 0.8);
+                color: #fff;
+            }
+            /* Once LiquidGlass is live, shader handles all hover visuals */
+            .hero-rewards-login-btn.liquid-glass-ready:hover {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
             }
             .hero-carousel-container {
                 transition: max-height 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
@@ -377,6 +390,47 @@
             @media (min-width: 768px) {
                 .hero-carousel-container:not(.collapsed) ~ .shop-layout {
                     padding-top: 0 !important;
+                }
+            }
+
+            /* --- Hero Rewards Slide Responsive Layout --- */
+            .hero-rewards-section {
+                padding: 4rem 2rem 5rem 2rem !important;
+            }
+            .hero-rewards-section .hero-title-modern {
+                font-size: clamp(1.9rem, 8vw, 4.2rem) !important;
+                margin-bottom: 1rem !important;
+                line-height: 1.12 !important;
+            }
+            .hero-rewards-section .hero-subtitle-modern {
+                font-size: clamp(0.82rem, 2.8vw, 1rem) !important;
+                margin-bottom: 1.75rem !important;
+                line-height: 1.65 !important;
+            }
+            @media (min-width: 600px) {
+                .hero-rewards-section {
+                    padding: 3.5rem 5rem 4.5rem 3.5rem !important;
+                }
+                .hero-rewards-section .hero-title-modern {
+                    font-size: clamp(2.4rem, 5.5vw, 4.2rem) !important;
+                    margin-bottom: 1.25rem !important;
+                }
+                .hero-rewards-section .hero-subtitle-modern {
+                    font-size: 0.97rem !important;
+                    margin-bottom: 2rem !important;
+                }
+            }
+            @media (min-width: 1024px) {
+                .hero-rewards-section {
+                    padding: 3rem 6rem 4rem 4rem !important;
+                }
+                .hero-rewards-section .hero-title-modern {
+                    font-size: clamp(2.8rem, 4.5vw, 4.2rem) !important;
+                    margin-bottom: 1.5rem !important;
+                }
+                .hero-rewards-section .hero-subtitle-modern {
+                    font-size: 1rem !important;
+                    margin-bottom: 2.25rem !important;
                 }
             }
             
@@ -432,6 +486,9 @@
             }
             .hair-duo-hero__cta.liquid-glass-btn {
                 background: transparent !important;
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
                 backdrop-filter: none !important;
                 -webkit-backdrop-filter: none !important;
             }
@@ -472,7 +529,7 @@
                         <a href="product.html?id=dodchmellow-pro-v">
                             <div class="product-image-wrapper">
                                 <img fetchpriority="high" src="IMG_4243.webp" alt="DODCHmellow" class="product-card-img">
-                                <button class="quick-view-btn" data-id="dodchmellow-pro-v">Quick View</button>
+                                <button class="quick-view-btn liquid-glass-btn" data-id="dodchmellow-pro-v" data-config='{"brightness": -0.3, "blurAmount": 0.25, "cornerRadius": 50, "button": true}'>Quick View</button>
                             </div>
                             <div class="product-card-info">
                                 <h3 class="product-card-title" data-name-target="dodchmellow-pro-v"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
@@ -484,7 +541,7 @@
                         <a href="product.html?id=silk-therapy-mask">
                             <div class="product-image-wrapper">
                                 <img loading="lazy" src="IMG_3811.webp" alt="DODCH Pro-V Silk Therapy Mask" class="product-card-img">
-                                <button class="quick-view-btn" data-id="silk-therapy-mask">Quick View</button>
+                                <button class="quick-view-btn liquid-glass-btn" data-id="silk-therapy-mask" data-config='{"brightness": -0.3, "blurAmount": 0.25, "cornerRadius": 50, "button": true}'>Quick View</button>
                             </div>
                             <div class="product-card-info">
                                 <h3 class="product-card-title" data-name-target="silk-therapy-mask"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
@@ -501,7 +558,7 @@
                         <a href="product.html?id=foaming-cleanser">
                             <div class="product-image-wrapper">
                                 <img loading="lazy" src="IMG_4241.webp" alt="DODCH Foaming Cleanser" class="product-card-img" style="filter: brightness(1.05);">
-                                <button class="quick-view-btn" data-id="foaming-cleanser">Quick View</button>
+                                <button class="quick-view-btn liquid-glass-btn" data-id="foaming-cleanser" data-config='{"brightness": -0.3, "blurAmount": 0.25, "cornerRadius": 50, "button": true}'>Quick View</button>
                             </div>
                             <div class="product-card-info">
                                 <h3 class="product-card-title" data-name-target="foaming-cleanser"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
@@ -513,7 +570,7 @@
                         <a href="product.html?id=advanced-ha-serum">
                             <div class="product-image-wrapper">
                                 <img loading="lazy" src="IMG_3407.webp" alt="Advanced HA Serum" class="product-card-img">
-                                <button class="quick-view-btn" data-id="advanced-ha-serum">Quick View</button>
+                                <button class="quick-view-btn liquid-glass-btn" data-id="advanced-ha-serum" data-config='{"brightness": -0.3, "blurAmount": 0.25, "cornerRadius": 50, "button": true}'>Quick View</button>
                             </div>
                             <div class="product-card-info">
                                 <h3 class="product-card-title" data-name-target="advanced-ha-serum"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
@@ -525,7 +582,7 @@
                         <a href="product.html?id=retinol-night-cream">
                             <div class="product-image-wrapper">
                                 <img loading="lazy" src="IMG_3783.webp" alt="0.5 Retinol Night Cream" class="product-card-img">
-                                <button class="quick-view-btn" data-id="retinol-night-cream">Quick View</button>
+                                <button class="quick-view-btn liquid-glass-btn" data-id="retinol-night-cream" data-config='{"brightness": -0.3, "blurAmount": 0.25, "cornerRadius": 50, "button": true}'>Quick View</button>
                             </div>
                             <div class="product-card-info">
                                 <h3 class="product-card-title" data-name-target="retinol-night-cream"><span class="price-shimmer" style="width: 130px; height: 1.2em; display: inline-block; border-radius: 4px;"></span></h3>
