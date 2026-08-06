@@ -11074,10 +11074,8 @@ window.addEventListener('load', initPushNotifications);
 (() => {
     const wrapper = document.querySelector('.hero-carousel-wrapper');
     const dots = document.querySelectorAll('.hero-dot');
-    const hairDuoBg = document.getElementById('hair-duo-bg');
     const hairDuoHero = document.getElementById('hair-duo-hero');
     const container = document.querySelector('.hero-carousel-container');
-    const rewardsBgs = document.querySelectorAll('.hero-rewards-bg'); // Get all rewards backgrounds (including cloned)
     if (!wrapper || dots.length === 0 || !container) return;
 
     let currentSlide = 0;
@@ -11097,15 +11095,6 @@ window.addEventListener('load', initPushNotifications);
         return slideDuration;
     };
     
-    // Parallax effect for the first hero slide
-    const handleRewardsParallax = (rect) => {
-        const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
-        const shift = (progress - 0.5) * 80; // Unified shift speed (80) and direction
-        rewardsBgs.forEach(bg => {
-            bg.style.transform = `translateY(${shift}px)`;
-        });
-    };
-
     const startProgressAnimation = (index) => {
         // Reset all progress spans
         dots.forEach(dot => {
@@ -11168,6 +11157,35 @@ window.addEventListener('load', initPushNotifications);
         });
     };
 
+    let isHeroVisible = true;
+
+    const pauseHeroCarousel = () => {
+        if (slideTimeout) {
+            clearTimeout(slideTimeout);
+            slideTimeout = null;
+        }
+        isHeroVisible = false;
+        const activeSlide = wrapper.children[currentSlide];
+        if (activeSlide) {
+            const video = activeSlide.querySelector('video');
+            if (video) {
+                try { video.pause(); } catch (e) {}
+            }
+        }
+    };
+
+    const resumeHeroCarousel = () => {
+        isHeroVisible = true;
+        const activeSlide = wrapper.children[currentSlide];
+        if (activeSlide) {
+            const video = activeSlide.querySelector('video');
+            if (video) {
+                try { video.play().catch(() => {}); } catch (e) {}
+            }
+        }
+        startAutoSlide();
+    };
+
     const updateActiveSlide = (index) => {
         if (isTransitioning) return;
         currentSlide = index;
@@ -11227,11 +11245,12 @@ window.addEventListener('load', initPushNotifications);
     };
 
     const startAutoSlide = () => {
+        if (!isHeroVisible) return;
         stopAutoSlide();
         startProgressAnimation(currentSlide);
         const delay = getSlideDurationMs(currentSlide);
         slideTimeout = setTimeout(() => {
-            if (isTransitioning) return;
+            if (isTransitioning || !isHeroVisible) return;
             const nextSlide = currentSlide + 1;
             updateActiveSlide(nextSlide);
         }, delay);
@@ -11351,6 +11370,18 @@ window.addEventListener('load', initPushNotifications);
 
     // Scroll Parallax effect on the Hair Duo background image (Slide 2)
     let ticking = false;
+    const heroObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                resumeHeroCarousel();
+            } else {
+                pauseHeroCarousel();
+            }
+        });
+    }, { threshold: 0.1 });
+
+    heroObserver.observe(container);
+
     window.addEventListener('scroll', () => {
         if (ticking) return;
         ticking = true;
@@ -11358,14 +11389,7 @@ window.addEventListener('load', initPushNotifications);
             const rect = container.getBoundingClientRect();
             const visible = rect.bottom > 0 && rect.top < window.innerHeight;
             if (visible) {
-                if (currentSlide % 2 === 1) { // Hair Duo slide
-                    const progress = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
-                    const shift = (progress - 0.5) * 80;
-                    if (hairDuoBg) hairDuoBg.style.transform = `translateY(${shift}px)`;
-                }
-                handleRewardsParallax(rect); // Always apply to the rewards hero
-
-                // Real-time WebGL refraction update during parallax scroll
+                // Real-time WebGL refraction update while the hero is visible
                 [window.liquidGlassRewardsInstance, window.liquidGlassRewardsClonedInstance, window.liquidGlassInstance].forEach(inst => inst?.markChanged?.());
             }
             ticking = false;
