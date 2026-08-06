@@ -1,4 +1,4 @@
-// Universal Image WebP Fallback Fix
+﻿// Universal Image WebP Fallback Fix
 window.addEventListener('error', function (e) {
     if (e.target && e.target.tagName === 'IMG') {
         const src = e.target.getAttribute('src') || '';
@@ -11081,9 +11081,21 @@ window.addEventListener('load', initPushNotifications);
     if (!wrapper || dots.length === 0 || !container) return;
 
     let currentSlide = 0;
-    let slideInterval;
+    let slideTimeout;
     let isTransitioning = false;
     const slideDuration = 6000; // 6 seconds auto-slide
+
+    const getSlideDurationMs = (index) => {
+        const slide = wrapper.children[index];
+        if (!slide) return slideDuration;
+
+        const video = slide.querySelector('video');
+        if (video && Number.isFinite(video.duration) && video.duration > 0) {
+            return Math.max(video.duration * 1000, 1000);
+        }
+
+        return slideDuration;
+    };
     
     // Parallax effect for the first hero slide
     const handleRewardsParallax = (rect) => {
@@ -11112,7 +11124,8 @@ window.addEventListener('load', initPushNotifications);
             if (p) {
                 // Force reflow
                 activeDot.offsetHeight;
-                p.style.transition = `width ${slideDuration}ms linear`;
+                const progressDuration = getSlideDurationMs(index);
+                p.style.transition = `width ${progressDuration}ms linear`;
                 p.style.width = '100%';
             }
         }
@@ -11137,9 +11150,28 @@ window.addEventListener('load', initPushNotifications);
         }
     };
 
+    const syncActiveSlideVideo = (index) => {
+        const slides = Array.from(wrapper.children);
+        slides.forEach((slide, slideIndex) => {
+            const video = slide.querySelector('video');
+            if (!video) return;
+
+            try {
+                video.pause();
+            } catch (e) {}
+
+            video.currentTime = 0;
+
+            if (slideIndex === index) {
+                video.play().catch(() => {});
+            }
+        });
+    };
+
     const updateActiveSlide = (index) => {
         if (isTransitioning) return;
         currentSlide = index;
+        syncActiveSlideVideo(index);
 
         wrapper.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.25, 1)';
         wrapper.style.transform = `translateX(-${index * 33.3333}%)`;
@@ -11186,22 +11218,27 @@ window.addEventListener('load', initPushNotifications);
                 isTransitioning = false;
                 startProgressAnimation(0);
                 updateNavbarContrastForSlide(0);
+                startAutoSlide();
             }, 800); // 800ms transition duration
+            return;
         }
+
+        startAutoSlide();
     };
 
     const startAutoSlide = () => {
         stopAutoSlide();
         startProgressAnimation(currentSlide);
-        slideInterval = setInterval(() => {
+        const delay = getSlideDurationMs(currentSlide);
+        slideTimeout = setTimeout(() => {
             if (isTransitioning) return;
             const nextSlide = currentSlide + 1;
             updateActiveSlide(nextSlide);
-        }, slideDuration);
+        }, delay);
     };
 
     const stopAutoSlide = () => {
-        if (slideInterval) clearInterval(slideInterval);
+        if (slideTimeout) clearTimeout(slideTimeout);
         // Reset progress animation
         dots.forEach(dot => {
             const p = dot.querySelector('.hero-dot-progress');
@@ -11217,7 +11254,6 @@ window.addEventListener('load', initPushNotifications);
             if (isTransitioning) return;
             const targetSlide = parseInt(dot.getAttribute('data-slide'));
             updateActiveSlide(targetSlide);
-            startAutoSlide(); // Reset interval
         });
     });
 
@@ -11255,7 +11291,6 @@ window.addEventListener('load', initPushNotifications);
         if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
             if (diffX > 0) {
                 updateActiveSlide(currentSlide + 1);
-                startAutoSlide();
             } else {
                 let prevSlide = currentSlide - 1;
                 if (prevSlide < 0) {
@@ -11272,7 +11307,6 @@ window.addEventListener('load', initPushNotifications);
                 } else {
                     updateActiveSlide(prevSlide);
                 }
-                startAutoSlide();
             }
         }
     });
@@ -11307,7 +11341,6 @@ window.addEventListener('load', initPushNotifications);
                         updateActiveSlide(prevSlide);
                     }
                 }
-                startAutoSlide();
                 setTimeout(() => {
                     wheelDebounce = false;
                     wheelAccumulator = 0;
