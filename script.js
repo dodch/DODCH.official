@@ -479,7 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSerumPage = document.body.classList.contains('serum-page');
         const serumHero = document.querySelector('.scrollytelling-container');
         const heroCarousel = document.querySelector('.hero-carousel-container');
-        const hairDuoHero = document.querySelector('.hair-duo-hero');
         const pageHero = document.getElementById('hero') || document.querySelector('.foam-hero') || document.getElementById('hero-silk') || document.querySelector('.pro-v-hero');
         
         // A hero is active if it exists and is not collapsed/hidden
@@ -488,7 +487,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const isPageHeroActive = pageHero && !pageHero.classList.contains('collapsed');
 
         // Check if there's an active (visible) hero section at the top
-        const hasHeroAtTop = isHeroCarouselActive || isSerumHeroActive || isPageHeroActive;
+        const isAtTopOfHeroSection = scrollY <= 50 && (isHeroCarouselActive || isSerumHeroActive || isPageHeroActive);
+
+        // Reset classes first for clarity
+        navbar.classList.remove('scrolled');
+        navbar.classList.remove('text-dark'); // Default to white text, then add text-dark if needed
 
         if (isSerumPage && isSerumHeroActive) {
             const threshold = serumHero.offsetHeight - 80;
@@ -499,27 +502,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 navbar.classList.remove('scrolled');
                 navbar.classList.remove('text-dark');
             }
-        } else if (!hasHeroAtTop) {
-            // Normal page without a hero (e.g., Shop) - always dark text
-            if (scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-            navbar.classList.add('text-dark');
+        } else if (isAtTopOfHeroSection) {
+            // If at the top of ANY hero section (excluding serum page special case)
+            // Navbar should be transparent and text should be white.
+            navbar.classList.remove('scrolled');
+            navbar.classList.remove('text-dark'); // Keep text white
         } else if (scrollY > 50) {
-            // Scrolled past hero
+            // Scrolled down past any hero, or on a page without a hero and scrolled
+            // Navbar should be opaque and text should be black.
             navbar.classList.add('scrolled');
             navbar.classList.add('text-dark');
         } else {
-            // At the top of a hero page
+            // At the top of the page, potentially on a hero section
             navbar.classList.remove('scrolled');
-            // For carousel, always use slide-based state
-            if (isHeroCarouselActive) {
-                window._activeHeroSlideIsDark ? navbar.classList.remove('text-dark') : navbar.classList.add('text-dark');
-            } else {
-                window._pageHeroDark ? navbar.classList.remove('text-dark') : navbar.classList.add('text-dark');
-            }
+            navbar.classList.add('text-dark'); // Black text for normal white background pages
         }
     };
     const revealObserver = new IntersectionObserver((entries, observer) => {
@@ -11216,9 +11212,6 @@ window.addEventListener('load', initPushNotifications);
 
         // Animate the progress bars
         startProgressAnimation(index);
-        
-        // Update navbar contrast dynamically
-        updateNavbarContrastForSlide(index);
 
         // Snap back to Slide 0 instantly after Slide 2 transition completes
         if (index === 2) {
@@ -11235,7 +11228,6 @@ window.addEventListener('load', initPushNotifications);
                 wrapper.offsetHeight; // Reflow
                 isTransitioning = false;
                 startProgressAnimation(0);
-                updateNavbarContrastForSlide(0);
                 startAutoSlide();
             }, 800); // 800ms transition duration
             return;
